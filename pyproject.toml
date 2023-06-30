@@ -17,8 +17,6 @@ scipy = "*"
 [tool.poetry.dev-dependencies]
 pytest = "7.2.0"
 pytest-cov = "*"
-yfinance = "*"
-quantstats = "*"
 plotly = "*"
 cvxpy = "*"
 jupyterlab = "*"
