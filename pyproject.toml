@@ -22,8 +22,11 @@ cvxpy = "*"
 jupyterlab = "*"
 jupyter-book = "0.15.1"
 loguru = "*"
-ruff = "*"
 cvxsimulator = "*"
+ruff = "0.0.275"
+pre-commit = "*"
+
+
 
 [build-system]
 requires = ["poetry-core"]
