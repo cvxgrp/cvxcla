@@ -5,6 +5,7 @@
 [![PyPI download month](https://img.shields.io/pypi/dm/cvxcla.svg)](https://pypi.python.org/pypi/cvxcla/)
 [![Coverage Status](https://coveralls.io/repos/github/cvxgrp/cvxcla/badge.png?branch=main)](https://coveralls.io/github/cvxgrp/cvxcla?branch=main)
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
 ## Poetry
 
