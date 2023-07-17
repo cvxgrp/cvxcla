@@ -23,7 +23,7 @@ loguru = "*"
 cvxsimulator = "*"
 ruff = "0.0.275"
 pre-commit = "*"
-black = "^23.1.0"
+black = "23.1.0"
 
 [build-system]
 requires = ["poetry-core"]
