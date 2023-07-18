@@ -183,7 +183,9 @@ class Frontier:
         """
 
         def neg_sharpe(alpha, w_left, w_right):
+            # convex combination of left and right weights
             weight = alpha * w_left + (1 - alpha) * w_right
+            # compute the variance
             var = weight.T @ self.covariance @ weight
             returns = self.mean.T @ weight
             return -returns / np.sqrt(var)
