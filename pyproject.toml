@@ -13,14 +13,19 @@ numpy = "*"
 scipy = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = "7.2.0"
-pytest-cov = "*"
 plotly = "*"
 cvxpy = "*"
-jupyterlab = "*"
-jupyter-book = "0.15.1"
 loguru = "*"
 cvxsimulator = "*"
+
+[tool.poetry.group.test.dependencies]
+pytest = "7.2.0"
+pytest-cov = "4.0.0"
+mock = "*"
+
+[tool.poetry.group.jupyter.dependencies]
+jupyterlab = "*"
+jupyter-book = "0.15.1"
 
 [tool.poetry.group.linting.dependencies]
 pylint = "*"
