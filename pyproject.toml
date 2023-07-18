@@ -21,9 +21,12 @@ jupyterlab = "*"
 jupyter-book = "0.15.1"
 loguru = "*"
 cvxsimulator = "*"
-ruff = "0.0.275"
+
+[tool.poetry.group.linting.dependencies]
+pylint = "*"
+ruff = "0.0.277"
 pre-commit = "*"
-black = "23.1.0"
+black = "23.3.0"
 
 [build-system]
 requires = ["poetry-core"]
