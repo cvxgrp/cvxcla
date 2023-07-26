@@ -1,0 +1,16 @@
+:py:mod:`cla`
+=============
+
+.. py:module:: cla
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   cla/index.rst
+   frontier/index.rst
+
+

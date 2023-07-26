@@ -1,0 +1,156 @@
+:py:mod:`cla.frontier`
+======================
+
+.. py:module:: cla.frontier
+
+.. autoapi-nested-parse::
+
+   The Critical Line algorithm computes a set of points on the efficient frontier.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.frontier.FrontierPoint
+   cla.frontier.Frontier
+
+
+
+
+.. py:class:: FrontierPoint
+
+   A frontier point is a vector of weights.
+
+   .. py:attribute:: weights
+      :annotation: :numpy.array
+
+      
+
+   .. py:method:: __post_init__(self)
+
+
+   .. py:method:: from_turning_point(turning_point)
+      :staticmethod:
+
+      Constructs a frontier point given a turning point
+      :param turning_point: The turning point
+
+      Returns: A frontier point
+
+
+
+   .. py:method:: expected_return(self, mean)
+
+      Computes the expected return for a frontier point
+
+      :param mean: the vector of expected returns per asset
+
+      :returns: Computes the sum of the weighted expected returns
+
+
+   .. py:method:: expected_variance(self, covariance)
+
+      Computes the expected variance for a frontier point
+
+      :param covariance: the covariance matrix
+
+      :returns: Computes $w^T Covariance w$
+
+
+
+.. py:class:: Frontier
+
+   A frontier is a list of frontier points. Some of them might be turning points.
+
+   .. py:attribute:: frontier
+      :annotation: :List[FrontierPoint]
+
+      
+
+   .. py:attribute:: mean
+      :annotation: :numpy.array
+
+      
+
+   .. py:attribute:: covariance
+      :annotation: :numpy.array
+
+      
+
+   .. py:method:: construct(mean, covariance, lower_bounds, upper_bounds)
+      :staticmethod:
+
+      Constructs a frontier by computing a list of turning points.
+
+      :param mean: a vector of expected returns per asset
+      :param covariance: a covariance matrix
+      :param lower_bounds: lower bounds per asset
+      :param upper_bounds: upper bounds per asset
+
+      :returns: A frontier of frontier points each of them a turning point
+
+
+   .. py:method:: interpolate(self, num=100)
+
+      Interpolate the frontier with num-1 points between adjacent frontier points
+      :param num: The number of new points in between each pair
+
+      :returns: A frontier with many new points
+
+
+   .. py:method:: __iter__(self)
+
+      Iterator for all frontier points
+
+
+   .. py:method:: num(self)
+      :property:
+
+      Number of points on Frontier
+
+
+   .. py:method:: weights(self)
+      :property:
+
+      Matrix of weights. One row per point
+
+
+   .. py:method:: returns(self)
+      :property:
+
+      Vector of expected returns.
+
+
+   .. py:method:: variance(self)
+      :property:
+
+      Vector of expected variances.
+
+
+   .. py:method:: sharpe_ratio(self)
+      :property:
+
+      Vector of expected Sharpe ratios.
+
+
+   .. py:method:: volatility(self)
+      :property:
+
+      Vector of expected volatilities.
+
+
+   .. py:method:: max_sharpe(self)
+      :property:
+
+      Maximal Sharpe ratio on the frontier
+
+      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
+
+
+
