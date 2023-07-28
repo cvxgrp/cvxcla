@@ -30,10 +30,9 @@ repos:
   hooks:
     - id: pyupgrade
 
-#- repo: 'https://github.com/pre-commit/mirrors-mypy'
-#  rev: v1.4.1
-#  hooks:
-#    - id: mypy
-#      files: cvx
-#      #args: [--ignore-missing-imports, --explicit-package-bases]
-#      args: [--ignore-missing-imports, --explicit-package-bases]
+- repo: 'https://github.com/pre-commit/mirrors-mypy'
+  rev: v1.4.1
+  hooks:
+    - id: mypy
+      files: cvx
+      args: [--ignore-missing-imports, --explicit-package-bases]

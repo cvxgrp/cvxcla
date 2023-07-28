@@ -9,6 +9,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from .cla import TurningPoint
+from .types import MATRIX
 
 
 @dataclass(frozen=True)
@@ -17,7 +18,7 @@ class FrontierPoint:
     A frontier point is a vector of weights.
     """
 
-    weights: np.array
+    weights: MATRIX
 
     def __post_init__(self):
         # check that the sum is close to 1
@@ -72,8 +73,8 @@ class Frontier:
     """
 
     frontier: list[FrontierPoint]
-    mean: np.array
-    covariance: np.array
+    mean: MATRIX
+    covariance: MATRIX
 
     @staticmethod
     def construct(mean, covariance, lower_bounds, upper_bounds):
