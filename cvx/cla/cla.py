@@ -8,17 +8,19 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from cvx.cla.types import MATRIX
+
 
 @dataclass(frozen=True)
 class TurningPoint:
     """A TurningPoint is a point a new asset comes in / is leaving..."""
 
-    free: np.array
-    weights: np.array
-    lamb: float = None
-    gamma: float = None
+    free: MATRIX
+    weights: MATRIX
+    lamb: float | None = None
+    gamma: float | None = None
 
-    __schur = col.namedtuple(
+    Schur = col.namedtuple(
         "Schur",
         [
             "covariance_free",
@@ -136,7 +138,7 @@ class TurningPoint:
 
         mat = bisect(covariance, free, blocked)
 
-        return self.__schur(
+        return self.Schur(
             covariance_free=mat[0, 0],
             covariance_free_blocked=mat[0, 1],
             covariance_free_inv=np.linalg.inv(mat[0, 0]),
