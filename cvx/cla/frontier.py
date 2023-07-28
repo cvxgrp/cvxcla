@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 The Critical Line algorithm computes a set of points on the efficient frontier.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 from scipy.optimize import minimize
@@ -73,7 +71,7 @@ class Frontier:
     A frontier is a list of frontier points. Some of them might be turning points.
     """
 
-    frontier: List[FrontierPoint]
+    frontier: list[FrontierPoint]
     mean: np.array
     covariance: np.array
 
@@ -128,8 +126,7 @@ class Frontier:
         """
         Iterator for all frontier points
         """
-        for point in self.frontier:
-            yield point
+        yield from self.frontier
 
     @property
     def num(self):
