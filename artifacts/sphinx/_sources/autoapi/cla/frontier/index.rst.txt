@@ -28,7 +28,7 @@ Classes
    A frontier point is a vector of weights.
 
    .. py:attribute:: weights
-      :annotation: :numpy.array
+      :annotation: :cla.types.MATRIX
 
       
 
@@ -74,12 +74,12 @@ Classes
       
 
    .. py:attribute:: mean
-      :annotation: :numpy.array
+      :annotation: :cla.types.MATRIX
 
       
 
    .. py:attribute:: covariance
-      :annotation: :numpy.array
+      :annotation: :cla.types.MATRIX
 
       
 

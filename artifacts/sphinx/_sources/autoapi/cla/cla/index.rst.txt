@@ -27,26 +27,26 @@ Classes
    A TurningPoint is a point a new asset comes in / is leaving...
 
    .. py:attribute:: free
-      :annotation: :numpy.array
+      :annotation: :cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: weights
-      :annotation: :numpy.array
+      :annotation: :cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: lamb
-      :annotation: :float
+      :annotation: :float | None
 
       
 
    .. py:attribute:: gamma
-      :annotation: :float
+      :annotation: :float | None
 
       
 
-   .. py:attribute:: __schur
+   .. py:attribute:: Schur
       
 
       

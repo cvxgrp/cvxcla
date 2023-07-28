@@ -12,5 +12,6 @@ Submodules
 
    cla/index.rst
    frontier/index.rst
+   types/index.rst
 
 

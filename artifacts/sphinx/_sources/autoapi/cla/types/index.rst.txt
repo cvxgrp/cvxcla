@@ -1,0 +1,24 @@
+:py:mod:`cla.types`
+===================
+
+.. py:module:: cla.types
+
+.. autoapi-nested-parse::
+
+   types
+
+
+
+Module Contents
+---------------
+
+.. py:data:: MATRIX
+   :annotation: :typing_extensions.TypeAlias
+
+   
+
+.. py:data:: BLOCKMATRIX
+   :annotation: :typing_extensions.TypeAlias
+
+   
+
