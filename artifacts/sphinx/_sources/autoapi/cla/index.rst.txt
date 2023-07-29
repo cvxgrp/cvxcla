@@ -11,6 +11,7 @@ Submodules
    :maxdepth: 1
 
    cla/index.rst
+   first/index.rst
    frontier/index.rst
    types/index.rst
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cla.types &mdash; cvxcla Documentation</title>
+  <title>cla.first &mdash; cvxcla Documentation</title>
       <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
@@ -22,7 +22,8 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="prev" title="cla.frontier" href="../frontier/index.html" /> 
+    <link rel="next" title="cla.frontier" href="../frontier/index.html" />
+    <link rel="prev" title="cla.cla" href="../cla/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,9 +50,9 @@
 <li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="../cla/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.cla</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../first/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../frontier/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></a></li>
-<li class="toctree-l4 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../types/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -76,9 +77,9 @@
       <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../../index.html">API Reference</a> &raquo;</li>
           <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a> &raquo;</li>
-      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></li>
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../../../_sources/autoapi/cla/types/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../../../_sources/autoapi/cla/first/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -86,31 +87,44 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-cla.types">
-<span id="cla-types"></span><h1><a class="reference internal" href="#module-cla.types" title="cla.types"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></a><a class="headerlink" href="#module-cla.types" title="Permalink to this heading"></a></h1>
-<p>types</p>
+  <section id="module-cla.first">
+<span id="cla-first"></span><h1><a class="reference internal" href="#module-cla.first" title="cla.first"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a><a class="headerlink" href="#module-cla.first" title="Permalink to this heading"></a></h1>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
-<dl class="py data">
-<dt class="sig sig-object py" id="cla.types.MATRIX">
-<span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">MATRIX</span></span><em class="property"><span class="w"> </span><span class="pre">:typing_extensions.TypeAlias</span></em><a class="reference internal" href="../../../_modules/cla/types.html#MATRIX"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.MATRIX" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.first.init_algo" title="cla.first.init_algo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo</span></code></a>(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) → cvx.cla.types.Next</p></td>
+<td><p>The key insight behind Markowitz’s CLA is to find first the</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="cla.first.init_algo">
+<span class="sig-prename descclassname"><span class="pre">cla.first.</span></span><span class="sig-name descname"><span class="pre">init_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">cvx.cla.types.Next</span></span></span><a class="reference internal" href="../../../_modules/cla/first.html#init_algo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.first.init_algo" title="Permalink to this definition"></a></dt>
+<dd><p>The key insight behind Markowitz’s CLA is to find first the
+turning point associated with the highest expected return, and then
+compute the sequence of turning points, each with a lower expected
+return than the previous.That first turning point consists in the
+smallest subset of assets with highest return such that the sum of
+their upper boundaries equals or exceeds one.</p>
+<p>We sort the expected returns in descending order.
+This gives us a sequence for searching for the
+first free asset. All weights are initially set to their lower bounds,
+and following the sequence from the previous step, we move those
+weights from the lower to the upper bound until the sum of weights
+exceeds one. If possible the last iterated weight is then reduced
+to comply with the constraint that the sum of weights equals one.
+This last weight is the first free asset,
+and the resulting vector of weights the first turning point.</p>
+</dd></dl>
 
-<dl class="py data">
-<dt class="sig sig-object py" id="cla.types.BLOCKMATRIX">
-<span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">BLOCKMATRIX</span></span><em class="property"><span class="w"> </span><span class="pre">:typing_extensions.TypeAlias</span></em><a class="reference internal" href="../../../_modules/cla/types.html#BLOCKMATRIX"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.BLOCKMATRIX" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="cla.types.BOOLVECTOR">
-<span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">BOOLVECTOR</span></span><em class="property"><span class="w"> </span><span class="pre">:typing_extensions.TypeAlias</span></em><a class="reference internal" href="../../../_modules/cla/types.html#BOOLVECTOR"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.BOOLVECTOR" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="cla.types.Next">
-<span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">Next</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Next"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
+</section>
 </section>
 </section>
 
@@ -118,7 +132,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../frontier/index.html" class="btn btn-neutral float-left" title="cla.frontier" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../cla/index.html" class="btn btn-neutral float-left" title="cla.cla" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../frontier/index.html" class="btn btn-neutral float-right" title="cla.frontier" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

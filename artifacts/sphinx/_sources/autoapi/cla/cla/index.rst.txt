@@ -51,12 +51,16 @@ Classes
 
       
 
+   .. py:method:: free_assets(self)
+      :property:
+
+
+   .. py:method:: blocked_assets(self)
+      :property:
+
+
    .. py:method:: construct(mean, lower_bounds, upper_bounds, covariance)
       :staticmethod:
-
-
-   .. py:method:: blocked(self)
-      :property:
 
 
    .. py:method:: __repr__(self)

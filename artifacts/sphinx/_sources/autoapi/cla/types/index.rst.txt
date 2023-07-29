@@ -22,3 +22,13 @@ Module Contents
 
    
 
+.. py:data:: BOOLVECTOR
+   :annotation: :typing_extensions.TypeAlias
+
+   
+
+.. py:data:: Next
+   
+
+   
+
