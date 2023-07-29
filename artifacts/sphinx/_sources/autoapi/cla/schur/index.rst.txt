@@ -1,0 +1,51 @@
+:py:mod:`cla.schur`
+===================
+
+.. py:module:: cla.schur
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.schur.Schur
+
+
+
+
+.. py:class:: Schur(covariance, mean, free: cvx.cla.types.BOOLVECTOR, weights: cvx.cla.types.MATRIX)
+
+   .. py:method:: covariance_free(self)
+      :property:
+
+
+   .. py:method:: covariance_free_blocked(self)
+      :property:
+
+
+   .. py:method:: covariance_free_inv(self)
+      :property:
+
+
+   .. py:method:: mean_free(self)
+      :property:
+
+
+   .. py:method:: weights_blocked(self)
+      :property:
+
+
+   .. py:method:: compute_lambda(self, index, bi)
+
+
+   .. py:method:: _compute_weight(self, lamb)
+
+
+   .. py:method:: update_weights(self, lamb, logger=None)
+
+
+

@@ -13,6 +13,7 @@ Submodules
    cla/index.rst
    first/index.rst
    frontier/index.rst
+   schur/index.rst
    types/index.rst
 
 
