@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX
 
 
@@ -43,28 +44,12 @@ class TurningPoint:
 
     @staticmethod
     def construct(mean, lower_bounds, upper_bounds, covariance):
-        def init_algo2():
-            # 1) Structured array
-            sorted_mean = sorted(list(enumerate(mean)), key=lambda x: x[1])
-
-            # 2) First free weights
-            index = len(sorted_mean)
-            weights = np.copy(lower_bounds)
-            while sum(weights) < 1:
-                index -= 1
-                weights[sorted_mean[index][0]] = upper_bounds[sorted_mean[index][0]]
-
-            # correct for overshooting
-            weights[sorted_mean[index][0]] += 1 - sum(weights)
-            return TurningPoint(free=[sorted_mean[index][0]], weights=weights)
-
-        # first = init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
-        #
-        # print(np.where(first.free)[0])
-        # print(len(first.weights))
-        turning_point = init_algo2()
-
-        # TurningPoint(weights=first.weights, free=np.where(first.free)[0])
+        first = init_algo(
+            mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds
+        )
+        turning_point = TurningPoint(
+            weights=first.weights, free=list(np.where(first.free)[0])
+        )
 
         num = mean.shape[0]
 
