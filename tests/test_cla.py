@@ -6,6 +6,17 @@ from cvx.cla.cla import TurningPoint
 from cvx.cla.frontier import Frontier
 
 
+def test_free():
+    free = np.array([1, 2, 4])
+    tp = TurningPoint(free=free, weights=np.zeros(7))
+    #    tp = TurningPoint(free=np.array([False, True, True, False, True, False, False]),
+    #                      weights=np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
+    #                      lamb=2.0)
+
+    assert np.allclose(tp.free_assets, np.array([1, 2, 4]))
+    assert np.allclose(tp.blocked_assets, np.array([0, 3, 5, 6]))
+
+
 def test_cla(resource_dir):
     # 1) Path
     path = resource_dir / "CLA_Data.csv"

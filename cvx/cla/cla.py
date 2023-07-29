@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX
 
 
@@ -31,33 +32,29 @@ class TurningPoint:
         ],
     )
 
+    @property
+    def free_assets(self):
+        return self.free
+
+    @property
+    def blocked_assets(self):
+        f = np.array([False for _ in self.weights])
+        f[self.free_assets] = True
+        return np.where(~f)[0]
+
     @staticmethod
     def construct(mean, lower_bounds, upper_bounds, covariance):
-        def init_algo():
-            # 1) Structured array
-            sorted_mean = sorted(list(enumerate(mean)), key=lambda x: x[1])
-
-            # 2) First free weights
-            index = len(sorted_mean)
-            weights = np.copy(lower_bounds)
-            while sum(weights) < 1:
-                index -= 1
-                weights[sorted_mean[index][0]] = upper_bounds[sorted_mean[index][0]]
-
-            # correct for overshooting
-            weights[sorted_mean[index][0]] += 1 - sum(weights)
-            return TurningPoint(free=[sorted_mean[index][0]], weights=weights)
+        first = init_algo(
+            mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds
+        )
+        turning_point = TurningPoint(
+            weights=first.weights, free=list(np.where(first.free)[0])
+        )
 
         num = mean.shape[0]
 
         # compile a list of turning points
-        turning_points = []
-
-        # compute the first turning point
-        turning_point = init_algo()
-
-        # add turningPoint to list
-        turning_points.append(turning_point)
+        turning_points = [turning_point]
 
         while True:
             # 1) case a):
@@ -101,9 +98,9 @@ class TurningPoint:
 
         return turning_points
 
-    @property
-    def blocked(self):
-        return list(set(range(self.weights.shape[0])).difference(set(self.free)))
+    # @property
+    # def blocked(self):
+    #    return list(set(range(self.weights.shape[0])).difference(set(self.free)))
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.__dict__})"
@@ -224,7 +221,8 @@ class TurningPoint:
         i_out = None
 
         if len(self.free) < covariance.shape[0]:
-            for i in self.blocked:
+            for i in self.blocked_assets:
+                print(f"i {i}")
                 schur = self.__get_matrix(covariance=covariance, mean=mean, blocked=i)
                 lamb, _bi = self.__compute_lambda(
                     schur.covariance_free_inv,
