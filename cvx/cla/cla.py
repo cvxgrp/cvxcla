@@ -40,7 +40,7 @@ class TurningPoint:
     def blocked_assets(self):
         f = np.array([False for _ in self.weights])
         f[self.free_assets] = True
-        return np.where(~f)[0]
+        return list(np.where(~f)[0])
 
     @staticmethod
     def construct(mean, lower_bounds, upper_bounds, covariance):
