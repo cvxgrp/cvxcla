@@ -17,7 +17,7 @@ Classes
 
 
 
-.. py:class:: Schur(covariance, mean, free: cvx.cla.types.BOOLVECTOR, weights: cvx.cla.types.MATRIX)
+.. py:class:: Schur(covariance, mean, free: cvx.cla.types.BOOLEAN_VECTOR, weights: cvx.cla.types.MATRIX)
 
    .. py:method:: covariance_free(self)
       :property:

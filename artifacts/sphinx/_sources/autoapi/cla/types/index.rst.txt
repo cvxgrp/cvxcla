@@ -12,23 +12,65 @@
 Module Contents
 ---------------
 
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.types.Next
+
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   cla.types.MATRIX
+   cla.types.BOOLEAN_VECTOR
+
+
 .. py:data:: MATRIX
    :annotation: :typing_extensions.TypeAlias
 
    
 
-.. py:data:: BLOCKMATRIX
+.. py:data:: BOOLEAN_VECTOR
    :annotation: :typing_extensions.TypeAlias
 
    
 
-.. py:data:: BOOLVECTOR
-   :annotation: :typing_extensions.TypeAlias
+.. py:class:: Next
 
-   
+   .. py:attribute:: free
+      :annotation: :BOOLEAN_VECTOR
 
-.. py:data:: Next
-   
+      
 
-   
+   .. py:attribute:: weights
+      :annotation: :MATRIX
+
+      
+
+   .. py:attribute:: lamb
+      :annotation: :float
+
+      
+
+   .. py:attribute:: mean
+      :annotation: :float
+
+      
+
+   .. py:attribute:: gamma
+      :annotation: :float
+
+      
+
+   .. py:method:: __eq__(self, other)
+
+      Return self==value.
+
+
 
