@@ -2,11 +2,11 @@ import logging
 
 import numpy as np
 
-from cvx.cla.types import BOOLVECTOR, MATRIX
+from cvx.cla.types import BOOLEAN_VECTOR, MATRIX
 
 
 class Schur:
-    def __init__(self, covariance, mean, free: BOOLVECTOR, weights: MATRIX):
+    def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (
             covariance.shape[0]
             == covariance.shape[1]
