@@ -1,29 +1,27 @@
 from __future__ import annotations
 
-import cvxpy as cp
 import numpy as np
 
 from cvx.cla.types import MATRIX, Next
 
 
-def init_algo(
-    mean: MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None
-) -> Next:
-    """Compute the rightmost turning point of the efficient frontier
+def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
+    """The key insight behind Markowitz’s CLA is to find first the
+    turning point associated with the highest expected return, and then
+    compute the sequence of turning points, each with a lower expected
+    return than the previous.That first turning point consists in the
+    smallest subset of assets with highest return such that the sum of
+    their upper boundaries equals or exceeds one.
 
-    We sort the expected returns in descending order and add
-    their associated upper bounds 'til the sum hits or exceeds one.
-    The last added upper bound is then reduced to comply with the
-    constraint that the sum of weights equals one.
-
-    Initially, all weights are set to their lower bounds.
-
-    The last asset added is the first free asset, even if
-    we hit exactly the upper bound.
-
-    We may not be able to construct a fully invested portfolio at all
-    as their upper bounds are too tight. In this case, we raise an
-    exception.
+    We sort the expected returns in descending order.
+    This gives us a sequence for searching for the
+    first free asset. All weights are initially set to their lower bounds,
+    and following the sequence from the previous step, we move those
+    weights from the lower to the upper bound until the sum of weights
+    exceeds one. If possible the last iterated weight is then reduced
+    to comply with the constraint that the sum of weights equals one.
+    This last weight is the first free asset,
+    and the resulting vector of weights the first turning point.
     """
 
     if lower_bounds is None:
