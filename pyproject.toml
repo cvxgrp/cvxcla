@@ -43,5 +43,7 @@ select = ["E", "F", "I"]
 line-length = 120
 target-version = "py38"
 exclude = [
-    "*__init__.py"
+    "*__init__.py",
+    "hist",
+    ".venv"
 ]
