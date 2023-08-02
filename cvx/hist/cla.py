@@ -2,6 +2,8 @@
 # Critical Line Algorithm
 # Personal property of Marcos Lopez de Prado
 # by MLdP <lopezdeprado@gmail.com>
+
+# Modifications by Thomas Schmelzer to make it work again
 import numpy as np
 
 # ---------------------------------------------------------------
