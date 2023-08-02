@@ -4,3 +4,12 @@
 .. py:module:: hist
 
 
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   cla/index.rst
+
+

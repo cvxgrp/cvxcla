@@ -101,8 +101,8 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cla.first.init_algo" title="cla.first.init_algo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo</span></code></a>(mean: cvx.cla.types.MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None) → cvx.cla.types.Next</p></td>
-<td><p>Compute the rightmost turning point of the efficient frontier</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.first.init_algo" title="cla.first.init_algo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo</span></code></a>(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX = None, upper_bounds: cvx.cla.types.MATRIX = None) → cvx.cla.types.Next</p></td>
+<td><p>The key insight behind Markowitz’s CLA is to find first the</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#cla.first.init_algo_lp" title="cla.first.init_algo_lp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo_lp</span></code></a>(mean: cvx.cla.types.MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) → cvx.cla.types.Next</p></td>
 <td><p></p></td>
@@ -125,18 +125,22 @@
 </table>
 <dl class="py function">
 <dt class="sig sig-object py" id="cla.first.init_algo">
-<span class="sig-prename descclassname"><span class="pre">cla.first.</span></span><span class="sig-name descname"><span class="pre">init_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">cvx.cla.types.Next</span></span></span><a class="reference internal" href="../../../_modules/cla/first.html#init_algo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.first.init_algo" title="Permalink to this definition"></a></dt>
-<dd><p>Compute the rightmost turning point of the efficient frontier</p>
-<p>We sort the expected returns in descending order and add
-their associated upper bounds ‘til the sum hits or exceeds one.
-The last added upper bound is then reduced to comply with the
-constraint that the sum of weights equals one.</p>
-<p>Initially, all weights are set to their lower bounds.</p>
-<p>The last asset added is the first free asset, even if
-we hit exactly the upper bound.</p>
-<p>We may not be able to construct a fully invested portfolio at all
-as their upper bounds are too tight. In this case, we identify
-no free asset and all weights are at their upper limit.</p>
+<span class="sig-prename descclassname"><span class="pre">cla.first.</span></span><span class="sig-name descname"><span class="pre">init_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">cvx.cla.types.Next</span></span></span><a class="reference internal" href="../../../_modules/cla/first.html#init_algo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.first.init_algo" title="Permalink to this definition"></a></dt>
+<dd><p>The key insight behind Markowitz’s CLA is to find first the
+turning point associated with the highest expected return, and then
+compute the sequence of turning points, each with a lower expected
+return than the previous.That first turning point consists in the
+smallest subset of assets with highest return such that the sum of
+their upper boundaries equals or exceeds one.</p>
+<p>We sort the expected returns in descending order.
+This gives us a sequence for searching for the
+first free asset. All weights are initially set to their lower bounds,
+and following the sequence from the previous step, we move those
+weights from the lower to the upper bound until the sum of weights
+exceeds one. If possible the last iterated weight is then reduced
+to comply with the constraint that the sum of weights equals one.
+This last weight is the first free asset,
+and the resulting vector of weights the first turning point.</p>
 </dd></dl>
 
 <dl class="py function">

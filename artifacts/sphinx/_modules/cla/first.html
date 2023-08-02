@@ -73,32 +73,29 @@
   <h1>Source code for cla.first</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">Next</span>
 
-<span class="c1"># from scipy.optimize import linprog</span>
 
+<div class="viewcode-block" id="init_algo"><a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.init_algo">[docs]</a><span class="k">def</span> <span class="nf">init_algo</span><span class="p">(</span><span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Next</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The key insight behind Markowitz’s CLA is to find first the</span>
+<span class="sd">    turning point associated with the highest expected return, and then</span>
+<span class="sd">    compute the sequence of turning points, each with a lower expected</span>
+<span class="sd">    return than the previous.That first turning point consists in the</span>
+<span class="sd">    smallest subset of assets with highest return such that the sum of</span>
+<span class="sd">    their upper boundaries equals or exceeds one.</span>
 
-<div class="viewcode-block" id="init_algo"><a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.init_algo">[docs]</a><span class="k">def</span> <span class="nf">init_algo</span><span class="p">(</span>
-    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Next</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the rightmost turning point of the efficient frontier</span>
-
-<span class="sd">    We sort the expected returns in descending order and add</span>
-<span class="sd">    their associated upper bounds &#39;til the sum hits or exceeds one.</span>
-<span class="sd">    The last added upper bound is then reduced to comply with the</span>
-<span class="sd">    constraint that the sum of weights equals one.</span>
-
-<span class="sd">    Initially, all weights are set to their lower bounds.</span>
-
-<span class="sd">    The last asset added is the first free asset, even if</span>
-<span class="sd">    we hit exactly the upper bound.</span>
-
-<span class="sd">    We may not be able to construct a fully invested portfolio at all</span>
-<span class="sd">    as their upper bounds are too tight. In this case, we identify</span>
-<span class="sd">    no free asset and all weights are at their upper limit.</span>
+<span class="sd">    We sort the expected returns in descending order.</span>
+<span class="sd">    This gives us a sequence for searching for the</span>
+<span class="sd">    first free asset. All weights are initially set to their lower bounds,</span>
+<span class="sd">    and following the sequence from the previous step, we move those</span>
+<span class="sd">    weights from the lower to the upper bound until the sum of weights</span>
+<span class="sd">    exceeds one. If possible the last iterated weight is then reduced</span>
+<span class="sd">    to comply with the constraint that the sum of weights equals one.</span>
+<span class="sd">    This last weight is the first free asset,</span>
+<span class="sd">    and the resulting vector of weights the first turning point.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">lower_bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -155,12 +152,6 @@
     <span class="k">if</span> <span class="n">b_ub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">b_ub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">])</span>
 
-    <span class="c1"># I had some problems with cvxpy.</span>
-    <span class="c1"># The corner case is when all means are identical.</span>
-    <span class="c1"># w = linprog(c=-mean,</span>
-    <span class="c1">#             bounds=[(lb, ub) for lb, ub in zip(lower_bounds, upper_bounds)],</span>
-    <span class="c1">#             A_eq=A_eq, b_eq=b_eq, A_ub=A_ub, b_ub=b_ub).x</span>
-
     <span class="n">w</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;weights&quot;</span><span class="p">)</span>
 
     <span class="n">objective</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">w</span><span class="p">)</span>
@@ -195,11 +186,6 @@
     <span class="c1"># mean = np.array([1.0, 1.0, 1.0])</span>
     <span class="c1"># tp = init_algo(mean=mean)</span>
     <span class="c1"># tp_lp = init_algo_cvx(mean=mean)</span>
-
-    <span class="c1"># print(tp.free)</span>
-    <span class="c1"># print(tp.weights)</span>
-    <span class="c1"># print(tp_lp.free)</span>
-    <span class="c1"># print(tp_lp.weights)</span>
 
     <span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span>
 
