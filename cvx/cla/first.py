@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import numpy as np
+import cvxpy as cp
 
 from cvx.cla.types import MATRIX, Next
 
 
-def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
+def init_algo(mean: MATRIX, lower_bounds: MATRIX = None, upper_bounds: MATRIX = None) -> Next:
     """The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
