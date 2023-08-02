@@ -8,9 +8,9 @@ repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0"
+python = ">=3.9,<3.13"
 numpy = "*"
-scipy = "*"
+scipy = ">=1.10.0"
 
 [tool.poetry.dev-dependencies]
 plotly = "*"
