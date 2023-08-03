@@ -3,7 +3,8 @@ import pytest
 
 from cvx.cla.first import init_algo
 from cvx.cla.schur import Schur
-from cvx.hist.cla import CLA
+from cvx.cla.cla import CLA
+
 
 
 def test_cla_hist():
@@ -12,10 +13,8 @@ def test_cla_hist():
     lB = np.array([0.0, 0.0])
     uB = np.array([0.6, 0.7])
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
-    cla = CLA(mean=mean, lB=lB, uB=uB, covar=covar)
-    cla.solve()
-    print(cla.w)
-    print(cla.f)
+    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+
 
 
 # use pytest parameter
@@ -32,10 +31,10 @@ def test_big(resource_dir):
     lB = data[1:2][0]
     uB = data[2:3][0]
     covar = np.array(data[3:])
-    cla = CLA(mean=mean, lB=lB, uB=uB, covar=covar)
-    cla.solve()
-    print(cla.l)
-    print(cla.w)
+    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+    for tp in cla.turning_points:
+        print(tp.lamb)
+
 
 
 @pytest.mark.parametrize("n", [5, 20, 100, 1000])

@@ -169,7 +169,7 @@ class CLA:
         return matrix__
 #---------------------------------------------------------------
     def purgeNumErr(self,tol):
-        # Purge violations of inequality constraints (associated with ill-conditioned covar matrix)
+        # Purge violations of inequality constraints (associated with ill-conditioned covariance matrix)
         i=0
         while True:
             if i==len(self.w):break
