@@ -39,6 +39,7 @@ class CLA:
             f = np.copy(self.f[-1])
             w = np.copy(self.w[-1])
             if np.all(f):
+                print("All points are free now")
                 break
 
             # 1) case a): Bound one free weight
@@ -46,6 +47,8 @@ class CLA:
 
             # only try to bound a free asset if there are least two of them
             if np.sum(f) > 1:
+                f = np.copy(self.f[-1])
+                w = np.copy(self.w[-1])
 
                 schur = Schur(
                     covariance=self.covar,
@@ -68,7 +71,8 @@ class CLA:
             # 2) case b): Free one bounded weight
             l_out = -np.inf
 
-
+            f = np.copy(self.f[-1])
+            w = np.copy(self.w[-1])
             for i in np.where(~f)[0]:
                 fff = np.copy(f)
                 fff[i] = True
@@ -80,8 +84,12 @@ class CLA:
                     weights=w,
                 )
 
+                # count the number of entries that are True below the ith entry in fff
+                j = np.sum(fff[:i])
+
                 lamb, bi = schur.compute_lambda(
-                    index=schur.mean_free.shape[0] - 1,
+                    # index i in fff corresponds to index j in mean_free
+                    index=j,
                     bi=np.array([w[i]]),
                 )
 
@@ -89,6 +97,7 @@ class CLA:
                     l_out, i_out = lamb, i
 
             if l_in > 0 or l_out > 0:
+                print(l_in, l_out)
                 # 4) decide lambda
                 w = np.copy(self.w[-1])
                 if l_in > l_out:
@@ -99,6 +108,8 @@ class CLA:
                     self.l.append(l_out)
                     f[i_out] = True
             else:
+                print(l_in, l_out)
+                print("Both lambdas are negative")
                 break
 
             schur = Schur(
@@ -113,7 +124,7 @@ class CLA:
 
             self.w.append(np.copy(weights))  # store solution
             self.f.append(f)
-            print(l_in, l_out)
+
 
 
 if __name__ == "__main__":

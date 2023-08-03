@@ -21,6 +21,22 @@ def test_cla_hist():
 # use pytest parameter
 # https://docs.pytest.org/en/latest/parametrize.html#parametrize-basics
 
+def test_big(resource_dir):
+
+    # 1) Path
+    path = resource_dir / "CLA_Data.csv"
+    # 2) Load data, set seed
+    data = np.genfromtxt(path, delimiter=",",
+                         skip_header=1)  # load as numpy array
+    mean = data[:1][0]
+    lB = data[1:2][0]
+    uB = data[2:3][0]
+    covar = np.array(data[3:])
+    cla = CLA(mean=mean, lB=lB, uB=uB, covar=covar)
+    cla.solve()
+    print(cla.l)
+    print(cla.w)
+
 
 @pytest.mark.parametrize("n", [5, 20, 100, 1000])
 def test_init_algo(n):

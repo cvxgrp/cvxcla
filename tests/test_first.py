@@ -18,7 +18,9 @@ def test_init_algo():
 
 def test_init_algo_border():
     mean = np.array([1.0, 1.0, 1.0])
-    tp = init_algo(mean=mean)
+    lower_bounds=np.array([0.0, 0.0, 0.0])
+    upper_bounds=np.array([1.0, 1.0, 1.0])
+    tp = init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     assert np.allclose(tp.weights, [0.0, 0.0, 1.0])
     assert tp.lamb == np.inf

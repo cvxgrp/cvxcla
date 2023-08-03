@@ -9,9 +9,6 @@ from cvx.cla.frontier import Frontier
 def test_free():
     free = np.array([1, 2, 4])
     tp = TurningPoint(free=free, weights=np.zeros(7))
-    #    tp = TurningPoint(free=np.array([False, True, True, False, True, False, False]),
-    #                      weights=np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
-    #                      lamb=2.0)
 
     assert np.allclose(tp.free_assets, np.array([1, 2, 4]))
     assert np.allclose(tp.blocked_assets, np.array([0, 3, 5, 6]))
@@ -53,6 +50,21 @@ def test_cla(resource_dir):
     )
 
     np.testing.assert_almost_equal(turningPoints[5].gamma, -0.09312582327537038)
+
+    for tp in turningPoints:
+        print(tp.lamb)
+
+        # 58.30308533333133
+        # 4.1742728458857705
+        # 1.9455661414558965
+        # 0.16458117494477603
+        # 0.14738875089341708
+        # 0.05617220400275154
+        # 0.0520481906745803
+        # 0.03652161374727066
+        # 0.030971168861678788
+        # 0.030971168861678788
+
 
 
 def test_cla_extrem():
