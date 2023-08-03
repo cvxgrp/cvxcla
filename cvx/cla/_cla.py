@@ -172,7 +172,7 @@ class Schur:
 
         bi = compute_bi(aux, bi)
 
-        if self.weights_blocked is None:
+        if self.weights_blocked.size == 0:
             return float((c4[index] - c1 * bi) / aux), bi
 
         l1 = np.sum(self.weights_blocked)
@@ -186,7 +186,7 @@ class Schur:
         g1 = np.dot(np.sum(self.covariance_free_inv, axis=0), self.mean_free)
         g2 = np.sum(np.sum(self.covariance_free_inv))
 
-        if self.weights_blocked is None:
+        if self.weights_blocked.size == 0:
             gamma = -lamb * g1 / g2 + 1 / g2
             w1 = 0
         else:
