@@ -9,19 +9,19 @@
 
 ## Critical Line Algorithm
 
-The code in this repository is an adoption of the paper by Bailey and Lopez de Prado. We have updated their original code
-and covered it in tests. We have made a few noteworthy changes:
+The code in this repository is an adoption of the paper by Bailey and Lopez de Prado. 
+We have updated their original code and covered it in tests. We have made a few
+noteworthy changes:
 
 * Use a boolean numpy array to indicate whether a weight is free or blocked.
 * Rewrote the computation of the first turning point.
 * Isolated the computation of lambdas and the update of weights to make them testable.
 * Use modern and immutable dataclass throughout
 
-Note that for this project we have not addressed the more fundamental bottlenecks of the original implementation.
-We use this code as a baseline to compute to frontiers for our testing. 
-Some loops could be avoided by we may have to sacrifice readability. 
-
-
+Note that for this project we have not addressed the more fundamental bottlenecks 
+of the original implementation.
+We use this code as a baseline to compute to frontiers for our testing.
+Some loops could be avoided by we may have to sacrifice readability.
 
 ## Poetry
 
