@@ -17,7 +17,7 @@ def test_frontier(resource_dir):
     covar = np.array(data[3:])
 
     f = Frontier.construct(
-        mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar
+        mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar, name="test"
     )
 
     np.testing.assert_equal(f.covariance, covar)
@@ -93,7 +93,7 @@ def test_frontiers(n):
     covar = cov @ cov.T
 
     f = Frontier.construct(
-        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar
+        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar, name="test"
     )
 
     assert np.sum(f.frontier[-1].weights) == pytest.approx(1)

@@ -105,6 +105,11 @@ class CLA:
             tp = TurningPoint(weights=weights, lamb=lll, free=f)
             self.turning_points.append(tp)
 
+            # check the turning point
+            assert np.all(tp.weights >= self.lower_bounds)
+            assert np.all(tp.weights <= self.upper_bounds)
+
+
         # 6) compute minimum variance solution
         f = np.full_like(self.mean, True, dtype=np.bool_)
 
