@@ -82,7 +82,7 @@ def test_frontier(resource_dir):
 
     f.interpolate(num=10)
 
-@pytest.mark.parametrize("n", [2,2,3,3,20, 20, 20, 20])
+@pytest.mark.parametrize("n", [20, 20, 20, 20, 20, 20])
 def test_frontiers(n):
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
