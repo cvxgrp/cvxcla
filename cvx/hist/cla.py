@@ -7,6 +7,7 @@
 import numpy as np
 
 from cvx.cla.schur import Schur
+from cvx.cla.first import init_algo
 
 
 # ---------------------------------------------------------------
@@ -28,19 +29,20 @@ class CLA:
     def solve(self):
         # Compute the turning points,free sets and weights
 
-        f, w = CLA.init_algo(mean=self.mean, lB=self.lB, uB=self.uB)
+        first = init_algo(mean=self.mean, lower_bounds=self.lB, upper_bounds=self.uB)
 
-        self.w.append(np.copy(w))  # store solution
+        self.w.append(first.weights)  # store solution
         self.l.append(+np.inf)
-        self.f.append(f)
+        self.f.append(first.free)
 
         while True:
             f = np.copy(self.f[-1])
             w = np.copy(self.w[-1])
+            if np.all(f):
+                break
 
             # 1) case a): Bound one free weight
             l_in = -np.inf
-
 
             # only try to bound a free asset if there are least two of them
             if np.sum(f) > 1:
@@ -67,8 +69,6 @@ class CLA:
             l_out = -np.inf
 
 
-            #b = CLA.getB(f, num=self.mean.shape[0])
-            #f_bool = np.array([x in f for x in self.mean.])
             for i in np.where(~f)[0]:
                 fff = np.copy(f)
                 fff[i] = True
@@ -88,9 +88,7 @@ class CLA:
                 if self.l[-1] > lamb > l_out:
                     l_out, i_out = lamb, i
 
-            if l_in < 0 and l_out < 0:
-                break
-            else:
+            if l_in > 0 or l_out > 0:
                 # 4) decide lambda
                 w = np.copy(self.w[-1])
                 if l_in > l_out:
@@ -100,7 +98,8 @@ class CLA:
                 else:
                     self.l.append(l_out)
                     f[i_out] = True
-
+            else:
+                break
 
             schur = Schur(
                 covariance=self.covar,
@@ -114,27 +113,7 @@ class CLA:
 
             self.w.append(np.copy(weights))  # store solution
             self.f.append(f)
-
-
-    # ---------------------------------------------------------------
-    @staticmethod
-    def init_algo(mean, lB, uB):
-        # Initialize weights to lower bounds
-        weights = np.copy(lB)
-
-        assert np.all(lB <= uB), "Lower bound exceeds upper bound"
-
-        free = np.full_like(mean, False, dtype=np.bool_)
-        # Move weights from lower to upper bound
-        # until sum of weights hits or exceeds 1
-        for index in np.argsort(mean)[::-1]:
-            weights[index] = uB[index]
-            if np.sum(weights) >= 1:
-                weights[index] -= np.sum(weights) - 1
-                free[index] = True
-                return free, weights
-
-        raise ValueError("No fully invested solution exists")
+            print(l_in, l_out)
 
 
 if __name__ == "__main__":
@@ -143,9 +122,9 @@ if __name__ == "__main__":
     mean = np.array([0.3, 0.2, 0.5])
     covar = np.array([[0.005, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.0, 0.01]])
 
-    free, weights = CLA.init_algo(mean=mean, lB=lb, uB=ub)
-    print(free)
-    print(weights)
+    first = init_algo(mean=mean, lower_bounds=lb, upper_bounds=ub)
+    print(first.free)
+    print(first.weights)
 
     x = CLA(covar=covar, mean=mean, lB=lb, uB=ub)
     # try:

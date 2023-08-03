@@ -32,7 +32,7 @@ def test_no_free_asset():
     ub = np.array([0.2, 0.2, 0.2])
 
     with pytest.raises(
-        ArithmeticError, match="Could not construct a fully invested portfolio"
+        ValueError, match="Could not construct a fully invested portfolio"
     ):
         init_algo(mean=mean, lower_bounds=lb, upper_bounds=ub)
 
