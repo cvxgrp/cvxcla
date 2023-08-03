@@ -41,18 +41,18 @@ class CLA:
 
             # only try to bound a free asset if there are least two of them
             if len(f) > 1:
-                covarF, covarFB, meanF, wB = CLA.get_matrices(
-                    f, covar=self.covar, mean=self.mean, w=self.w[-1]
+                fff = np.array([x in f for x in range(self.mean.shape[0])])
+
+                schur = Schur(
+                    covariance=self.covar,
+                    mean=self.mean,
+                    free=fff,
+                    weights=w,
                 )
 
-                covarF_inv = np.linalg.inv(covarF)
                 j = 0
                 for i in f:
-                    lamb, bi = CLA.compute_lambda(
-                        covarF_inv,
-                        covarFB,
-                        meanF,
-                        wB,
+                    lamb, bi = schur.compute_lambda(
                         j,
                         np.array([self.lB[i], self.uB[i]]),
                     )
@@ -112,7 +112,6 @@ class CLA:
             weights = schur.update_weights(lamb=self.l[-1])
 
             self.w.append(np.copy(weights))  # store solution
-            #self.g.append(g)
             self.f.append(f[:])
 
 
@@ -135,90 +134,6 @@ class CLA:
                 return free, weights
 
         raise ValueError("No fully invested solution exists")
-
-    # ---------------------------------------------------------------
-
-
-    # ---------------------------------------------------------------
-    @staticmethod
-    def computeW(covarF_inv, covarFB, meanF, wB, lamb):
-        # 1) compute gamma
-        onesF = np.ones(meanF.shape)
-        g1 = np.dot(np.dot(onesF.T, covarF_inv), meanF)
-        g2 = np.dot(np.dot(onesF.T, covarF_inv), onesF)
-        if not wB.size > 0:
-            g, w1 = float(-lamb * g1 / g2 + 1 / g2), 0
-        else:
-            # onesB=np.ones(wB.shape)
-            g3 = np.sum(wB)
-            g4 = np.dot(covarF_inv, covarFB)
-            w1 = np.dot(g4, wB)
-            g4 = np.sum(w1)
-            g = float(-lamb * g1 / g2 + (1 - g3 + g4) / g2)
-        # 2) compute weights
-        w2 = np.dot(covarF_inv, onesF)
-        w3 = np.dot(covarF_inv, meanF)
-        return -w1 + g * w2 + lamb * w3, g
-
-    # ---------------------------------------------------------------
-    @staticmethod
-    def compute_lambda(covarF_inv, covarFB, meanF, wB, i, bi):
-        def compute_bi(c, bi):
-            if np.shape(bi)[0] == 1 or c < 0:
-                return bi[0]
-            return bi[1]
-
-
-        # 1) C
-        onesF = np.ones(meanF.shape)
-        c1 = np.dot(np.dot(onesF.T, covarF_inv), onesF)
-        c2 = np.dot(covarF_inv, meanF)
-        c3 = np.dot(np.dot(onesF.T, covarF_inv), meanF)
-        c4 = np.dot(covarF_inv, onesF)
-        c = -c1 * c2[i] + c3 * c4[i]
-        if c == 0:
-            return None, None
-        # 2) bi
-        bi = compute_bi(c, bi)
-        assert isinstance(bi, float)
-
-        # 3) Lambda
-        if not wB.size > 0:
-            # All free assets
-            return float((c4[i] - c1 * bi) / c), bi
-        else:
-            l1 = np.sum(wB)
-            l2 = np.dot(covarF_inv, covarFB)
-            l3 = np.dot(l2, wB)
-            l2 = np.sum(l3)
-            return float(((1 - l1 + l2) * c4[i] - c1 * (bi + l3[i])) / c), bi
-
-    # ---------------------------------------------------------------
-    @staticmethod
-    def get_matrices(f, covar, mean, w):
-        assert f is not None
-
-        # Slice covarF,covarFB,covarB,meanF,meanB,wF,wB
-        covarF = covar[f, :][:, f]
-        meanF = mean[f]
-        b = CLA.getB(f, num=mean.shape[0])
-
-        if not b:
-            covarFB = np.array([])
-            wB = np.array([])
-        else:
-            covarFB = covar[f, :][:, b]
-            wB = w[b]
-
-        return covarF, covarFB, meanF, wB
-
-    # ---------------------------------------------------------------
-    @staticmethod
-    def getB(f, num):
-        def diffLists(list1, list2):
-            return list(set(list1) - set(list2))
-
-        return diffLists(range(num), f)
 
 
 if __name__ == "__main__":
