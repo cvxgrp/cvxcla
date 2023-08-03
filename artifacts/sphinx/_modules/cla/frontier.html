@@ -95,10 +95,10 @@
 
 <div class="viewcode-block" id="FrontierPoint.__post_init__"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier.FrontierPoint.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># check that the sum is close to 1</span>
-        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">)</span></div>
 
         <span class="c1"># make sure the weights are non-negative</span>
-        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mf">1e-7</span><span class="p">)</span></div>
+        <span class="c1">#assert np.all(self.weights &gt;= -1e-7)</span>
 
     <span class="c1"># The final result will be a list of points on the efficient frontier.</span>
     <span class="c1"># Each point is described by a vector of weights.</span>
@@ -255,11 +255,14 @@
 
         <span class="n">sharpe_ratios</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sharpe_ratio</span>
 
-        <span class="c1"># where is the maximal Sharpe ratio?</span>
-        <span class="n">sr_position_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">sharpe_ratios</span><span class="p">)</span>
+        <span class="c1"># in which point is the maximal Sharpe ratio?</span>
+        <span class="n">sr_position_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sharpe_ratio</span><span class="p">)</span>
 
+        <span class="c1"># np.min only there for security...</span>
         <span class="n">right</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">sr_position_max</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
         <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">sr_position_max</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+
+
         <span class="c1"># Look to the left and look to the right</span>
 
         <span class="k">if</span> <span class="n">right</span> <span class="o">&gt;</span> <span class="n">sr_position_max</span><span class="p">:</span>

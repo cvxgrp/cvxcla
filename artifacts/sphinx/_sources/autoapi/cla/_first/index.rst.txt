@@ -26,14 +26,6 @@ Functions
 
 
 
-Attributes
-~~~~~~~~~~
-
-.. autoapisummary::
-
-   cla._first.n
-
-
 .. py:class:: Next
 
    .. py:attribute:: free
@@ -56,11 +48,6 @@ Attributes
 
       
 
-   .. py:method:: __eq__(self, other)
-
-      Return self==value.
-
-
 
 .. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> Next
 
@@ -82,11 +69,6 @@ Attributes
    and the resulting vector of weights the first turning point.
 
 
-.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) -> Next
+.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) -> Next
 
-
-.. py:data:: n
-   :annotation: = 10000
-
-   
 
