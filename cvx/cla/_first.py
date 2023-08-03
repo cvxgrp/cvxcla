@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-import cvxpy as cp
 
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR
 
@@ -56,54 +55,3 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
 
     # Return first turning point, the point with the highest expected return.
     return Next(free=free, weights=weights, mean=float(mean.T @ weights))
-
-
-def init_algo_lp(
-    mean: MATRIX,
-    lower_bounds: MATRIX,
-    upper_bounds: MATRIX,
-    A_eq: MATRIX | None = None,
-    b_eq: MATRIX | None = None,
-    A_ub: MATRIX | None = None,
-    b_ub: MATRIX | None = None,
-) -> Next:
-    if A_eq is None:
-        A_eq = np.atleast_2d(np.ones_like(mean))
-
-    if b_eq is None:
-        b_eq = np.array([1.0])
-
-    if A_ub is None:
-        A_ub = np.atleast_2d(np.zeros_like(mean))
-
-    if b_ub is None:
-        b_ub = np.array([0.0])
-
-    w = cp.Variable(mean.shape[0], "weights")
-
-    objective = cp.Maximize(mean.T @ w)
-    constraints = [
-        A_eq @ w == b_eq,
-        A_ub @ w <= b_ub,
-        lower_bounds <= w,
-        w <= upper_bounds,
-    ]
-
-    cp.Problem(objective, constraints).solve()
-
-    w = w.value
-
-    # compute the distance from the closest bound
-    distance = np.min(
-        np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0
-    )
-
-    # which element has the largest distance to any bound?
-    # Even if all assets are at their bounds,
-    # we get a (somewhat random) free asset.
-    index = np.argmax(distance)
-
-    free = np.full_like(mean, False, dtype=np.bool_)
-    free[index] = True
-
-    return Next(free=free, weights=w, mean=mean.T @ w)
