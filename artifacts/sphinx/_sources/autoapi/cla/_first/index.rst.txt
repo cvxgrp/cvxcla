@@ -22,7 +22,6 @@ Functions
 .. autoapisummary::
 
    cla._first.init_algo
-   cla._first.init_algo_lp
 
 
 
@@ -67,8 +66,5 @@ Functions
    to comply with the constraint that the sum of weights equals one.
    This last weight is the first free asset,
    and the resulting vector of weights the first turning point.
-
-
-.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) -> Next
 
 

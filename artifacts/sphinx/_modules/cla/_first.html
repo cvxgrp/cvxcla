@@ -76,7 +76,6 @@
 <span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">BOOLEAN_VECTOR</span>
 
@@ -129,57 +128,6 @@
 
     <span class="c1"># Return first turning point, the point with the highest expected return.</span>
     <span class="k">return</span> <span class="n">Next</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">weights</span><span class="p">))</span></div>
-
-
-<div class="viewcode-block" id="init_algo_lp"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.init_algo_lp">[docs]</a><span class="k">def</span> <span class="nf">init_algo_lp</span><span class="p">(</span>
-    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
-    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
-    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
-    <span class="n">A_eq</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">b_eq</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">A_ub</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">b_ub</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Next</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">A_eq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">A_eq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">mean</span><span class="p">))</span>
-
-    <span class="k">if</span> <span class="n">b_eq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">b_eq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">])</span>
-
-    <span class="k">if</span> <span class="n">A_ub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">A_ub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">mean</span><span class="p">))</span>
-
-    <span class="k">if</span> <span class="n">b_ub</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">b_ub</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">])</span>
-
-    <span class="n">w</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;weights&quot;</span><span class="p">)</span>
-
-    <span class="n">objective</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">w</span><span class="p">)</span>
-    <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="n">A_eq</span> <span class="o">@</span> <span class="n">w</span> <span class="o">==</span> <span class="n">b_eq</span><span class="p">,</span>
-        <span class="n">A_ub</span> <span class="o">@</span> <span class="n">w</span> <span class="o">&lt;=</span> <span class="n">b_ub</span><span class="p">,</span>
-        <span class="n">lower_bounds</span> <span class="o">&lt;=</span> <span class="n">w</span><span class="p">,</span>
-        <span class="n">w</span> <span class="o">&lt;=</span> <span class="n">upper_bounds</span><span class="p">,</span>
-    <span class="p">]</span>
-
-    <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
-
-    <span class="n">w</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">value</span>
-
-    <span class="c1"># compute the distance from the closest bound</span>
-    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w</span> <span class="o">-</span> <span class="n">lower_bounds</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">upper_bounds</span> <span class="o">-</span> <span class="n">w</span><span class="p">)]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
-    <span class="p">)</span>
-
-    <span class="c1"># which element has the largest distance to any bound?</span>
-    <span class="c1"># Even if all assets are at their bounds,</span>
-    <span class="c1"># we get a (somewhat random) free asset.</span>
-    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span>
-
-    <span class="n">free</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
-    <span class="n">free</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-
-    <span class="k">return</span> <span class="n">Next</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">w</span><span class="p">)</span></div>
 </pre></div>
 
            </div>
