@@ -59,11 +59,6 @@ def test_no_fully_invested():
     # print(weights)
 
 
-def test_get_B():
-    f = [2, 4]
-    assert CLA.getB(f, num=5) == [0, 1, 3]
-
-
 def test_get_matrices():
     covarF, covarFB, meanF, wB = CLA.get_matrices(
         f=[0, 2],

@@ -22,7 +22,6 @@ class CLA:
         self.uB = uB
         self.w = []  # solution
         self.l = []  # lambdas
-        self.g = []  # gammas
         self.f = []  # free weights
 
     # ---------------------------------------------------------------
@@ -34,12 +33,12 @@ class CLA:
 
         self.w.append(np.copy(w))  # store solution
         self.l.append(+np.inf)
-        self.g.append(None)
         self.f.append(f[:])
 
         while True:
             # 1) case a): Bound one free weight
             l_in = -np.inf
+
             # only try to bound a free asset if there are least two of them
             if len(f) > 1:
                 covarF, covarFB, meanF, wB = CLA.get_matrices(
@@ -65,19 +64,24 @@ class CLA:
             # 2) case b): Free one bounded weight
             l_out = -np.inf
             # if len(f)<self.mean.shape[0]:
-            b = CLA.getB(f, num=self.mean.shape[0])
-            for i in b:
-                covarF, covarFB, meanF, wB = self.get_matrices(
-                    f + [i], covar=self.covar, mean=self.mean, w=self.w[-1]
+            free_bool = np.array([x in f for x in range(self.mean.shape[0])])
+
+            #b = CLA.getB(f, num=self.mean.shape[0])
+            #f_bool = np.array([x in f for x in self.mean.])
+            for i in np.where(~free_bool)[0]:
+                fff = np.copy(free_bool)
+                fff[i] = True
+
+                schur = Schur(
+                    covariance=self.covar,
+                    mean=self.mean,
+                    free=fff,
+                    weights=w,
                 )
-                covarF_inv = np.linalg.inv(covarF)
-                lamb, bi = CLA.compute_lambda(
-                    covarF_inv,
-                    covarFB,
-                    meanF,
-                    wB,
-                    meanF.shape[0] - 1,
-                    np.array([self.w[-1][i]]),
+
+                lamb, bi = schur.compute_lambda(
+                    index=schur.mean_free.shape[0] - 1,
+                    bi=np.array([self.w[-1][i]]),
                 )
 
                 if self.l[-1] > lamb > l_out:
@@ -96,24 +100,16 @@ class CLA:
                     self.l.append(l_out)
                     f.append(i_out)
 
-                schur = Schur(
-                    covariance=self.covar,
-                    mean=self.mean,
-                    free=np.array([x in f for x in range(self.mean.shape[0])]),
-                    weights=w,
-                )
-                #covarF, covarFB, meanF, wB = CLA.get_matrices(
-                #    f, covar=self.covar, mean=self.mean, w=w
-                #)
-                #covarF_inv = np.linalg.inv(covarF)
+
+            schur = Schur(
+                covariance=self.covar,
+                mean=self.mean,
+                free=np.array([x in self.f[-1] for x in range(self.mean.shape[0])]),
+                weights=w,
+            )
 
             # 5) compute solution vector
             weights = schur.update_weights(lamb=self.l[-1])
-
-            #wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=self.l[-1])
-
-            #for i in range(len(f)):
-            #    w[f[i]] = wF[i]
 
             self.w.append(np.copy(weights))  # store solution
             #self.g.append(g)
