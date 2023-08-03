@@ -17,7 +17,7 @@ Classes
 
 .. autoapisummary::
 
-   cla.types.Next
+   cla.types.TurningPoint
 
 
 
@@ -41,12 +41,7 @@ Attributes
 
    
 
-.. py:class:: Next
-
-   .. py:attribute:: free
-      :annotation: :BOOLEAN_VECTOR
-
-      
+.. py:class:: TurningPoint
 
    .. py:attribute:: weights
       :annotation: :MATRIX
@@ -58,19 +53,17 @@ Attributes
 
       
 
-   .. py:attribute:: mean
-      :annotation: :float
+   .. py:attribute:: free
+      :annotation: :BOOLEAN_VECTOR
 
       
 
-   .. py:attribute:: gamma
-      :annotation: :float
+   .. py:method:: free_indices(self)
+      :property:
 
-      
 
-   .. py:method:: __eq__(self, other)
-
-      Return self==value.
+   .. py:method:: blocked_indices(self)
+      :property:
 
 
 

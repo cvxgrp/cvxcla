@@ -87,17 +87,18 @@
 
 
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<div class="viewcode-block" id="Next"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next">[docs]</a><span class="k">class</span> <span class="nc">Next</span><span class="p">:</span>
-<div class="viewcode-block" id="Next.free"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.free">[docs]</a>    <span class="n">free</span><span class="p">:</span> <span class="n">BOOLEAN_VECTOR</span></div>
-<div class="viewcode-block" id="Next.weights"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.weights">[docs]</a>    <span class="n">weights</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="Next.lamb"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.lamb">[docs]</a>    <span class="n">lamb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span></div>
-<div class="viewcode-block" id="Next.mean"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.mean">[docs]</a>    <span class="n">mean</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span></div>
-<div class="viewcode-block" id="Next.gamma"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.gamma">[docs]</a>    <span class="n">gamma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span></div>
+<div class="viewcode-block" id="TurningPoint"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint">[docs]</a><span class="k">class</span> <span class="nc">TurningPoint</span><span class="p">:</span>
+<div class="viewcode-block" id="TurningPoint.weights"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.weights">[docs]</a>    <span class="n">weights</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="TurningPoint.lamb"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.lamb">[docs]</a>    <span class="n">lamb</span><span class="p">:</span> <span class="nb">float</span></div>
+<div class="viewcode-block" id="TurningPoint.free"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.free">[docs]</a>    <span class="n">free</span><span class="p">:</span> <span class="n">BOOLEAN_VECTOR</span></div>
 
-<div class="viewcode-block" id="Next.__eq__"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.Next.__eq__">[docs]</a>    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">free</span>
-        <span class="p">)</span></div></div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="TurningPoint.free_indices"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.free_indices">[docs]</a>    <span class="k">def</span> <span class="nf">free_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="TurningPoint.blocked_indices"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.blocked_indices">[docs]</a>    <span class="k">def</span> <span class="nf">blocked_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div></div>
 </pre></div>
 
            </div>

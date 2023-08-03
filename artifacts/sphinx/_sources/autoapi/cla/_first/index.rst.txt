@@ -1,11 +1,19 @@
-:py:mod:`cla.first`
-===================
+:py:mod:`cla._first`
+====================
 
-.. py:module:: cla.first
+.. py:module:: cla._first
 
 
 Module Contents
 ---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla._first.Next
+
 
 
 Functions
@@ -13,8 +21,8 @@ Functions
 
 .. autoapisummary::
 
-   cla.first.init_algo
-   cla.first.init_algo_lp
+   cla._first.init_algo
+   cla._first.init_algo_lp
 
 
 
@@ -23,10 +31,38 @@ Attributes
 
 .. autoapisummary::
 
-   cla.first.n
+   cla._first.n
 
 
-.. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX = None, upper_bounds: cvx.cla.types.MATRIX = None) -> cvx.cla.types.Next
+.. py:class:: Next
+
+   .. py:attribute:: free
+      :annotation: :cvx.cla.types.BOOLEAN_VECTOR
+
+      
+
+   .. py:attribute:: weights
+      :annotation: :cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: lamb
+      :annotation: :float
+
+      
+
+   .. py:attribute:: mean
+      :annotation: :float
+
+      
+
+   .. py:method:: __eq__(self, other)
+
+      Return self==value.
+
+
+
+.. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> Next
 
    The key insight behind Markowitz’s CLA is to find first the
    turning point associated with the highest expected return, and then
@@ -46,7 +82,7 @@ Attributes
    and the resulting vector of weights the first turning point.
 
 
-.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) -> cvx.cla.types.Next
+.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: MATRIX | None = None, upper_bounds: MATRIX | None = None, A_eq: MATRIX | None = None, b_eq: MATRIX | None = None, A_ub: MATRIX | None = None, b_ub: MATRIX | None = None) -> Next
 
 
 .. py:data:: n

@@ -22,8 +22,7 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="hist" href="../../hist/index.html" />
-    <link rel="prev" title="cla.schur" href="../schur/index.html" /> 
+    <link rel="prev" title="cla.frontier" href="../frontier/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -49,16 +48,15 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../../index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
-<li class="toctree-l4"><a class="reference internal" href="../cla/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.cla</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../first/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../_cla/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla._cla</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../_first/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla._first</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../frontier/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../schur/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.schur</span></code></a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="../index.html#package-contents">Package Contents</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../hist/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">hist</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -102,7 +100,7 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.Next" title="cla.types.Next"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Next</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.TurningPoint" title="cla.types.TurningPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TurningPoint</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -135,38 +133,32 @@
 <dd></dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="cla.types.Next">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">Next</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Next"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">TurningPoint</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint" title="Permalink to this definition"></a></dt>
 <dd><dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.Next.free">
-<span class="sig-name descname"><span class="pre">free</span></span><em class="property"><span class="w"> </span><span class="pre">:BOOLEAN_VECTOR</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Next.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.free" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.weights">
+<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="w"> </span><span class="pre">:MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.weights" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.Next.weights">
-<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="w"> </span><span class="pre">:MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Next.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.weights" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.lamb">
+<span class="sig-name descname"><span class="pre">lamb</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.lamb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.lamb" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.Next.lamb">
-<span class="sig-name descname"><span class="pre">lamb</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Next.lamb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.lamb" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.Next.mean">
-<span class="sig-name descname"><span class="pre">mean</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Next.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.mean" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.Next.gamma">
-<span class="sig-name descname"><span class="pre">gamma</span></span><em class="property"><span class="w"> </span><span class="pre">:float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Next.gamma"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.gamma" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.free">
+<span class="sig-name descname"><span class="pre">free</span></span><em class="property"><span class="w"> </span><span class="pre">:BOOLEAN_VECTOR</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cla.types.Next.__eq__">
-<span class="sig-name descname"><span class="pre">__eq__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#Next.__eq__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Next.__eq__" title="Permalink to this definition"></a></dt>
-<dd><p>Return self==value.</p>
-</dd></dl>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.free_indices">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">free_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free_indices" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.TurningPoint.blocked_indices">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">blocked_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.blocked_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.blocked_indices" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -178,8 +170,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../schur/index.html" class="btn btn-neutral float-left" title="cla.schur" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../../hist/index.html" class="btn btn-neutral float-right" title="hist" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../frontier/index.html" class="btn btn-neutral float-left" title="cla.frontier" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

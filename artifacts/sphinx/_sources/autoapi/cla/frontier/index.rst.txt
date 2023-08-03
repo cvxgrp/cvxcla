@@ -109,10 +109,7 @@ Classes
       Iterator for all frontier points
 
 
-   .. py:method:: num(self)
-      :property:
-
-      Number of points on Frontier
+   .. py:method:: __len__(self)
 
 
    .. py:method:: weights(self)
