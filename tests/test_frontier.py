@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from cvx.cla.frontier import Frontier
+from cvx.cla import Frontier
 
 
 def test_frontier(resource_dir):
@@ -20,7 +20,7 @@ def test_frontier(resource_dir):
     )
 
     np.testing.assert_equal(f.covariance, covar)
-    np.testing.assert_equal(f.num, 11)
+    assert len(f) == 11
     np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025)
 
     np.testing.assert_almost_equal(f.mean, mean)

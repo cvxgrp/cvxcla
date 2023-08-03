@@ -1,12 +1,26 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 import cvxpy as cp
 
-from cvx.cla.types import MATRIX, Next
+from cvx.cla.types import MATRIX, BOOLEAN_VECTOR
 
 
-def init_algo(mean: MATRIX, lower_bounds: MATRIX = None, upper_bounds: MATRIX = None) -> Next:
+@dataclass(frozen=True)
+class Next:
+    free: BOOLEAN_VECTOR
+    weights: MATRIX
+    lamb: float = np.inf
+    mean: float = -np.inf
+
+    def __eq__(self, other):
+        return np.allclose(self.weights, other.weights, atol=1e-5) and np.allclose(
+            self.free, other.free
+        )
+
+def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
     """The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
@@ -31,6 +45,9 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX = None, upper_bounds: MATRIX = 
     if upper_bounds is None:
         upper_bounds = np.ones_like(mean)
 
+    if np.any(lower_bounds > upper_bounds):
+        raise ValueError("Lower bounds must be less than or equal to upper bounds")
+
     # Initialize weights to lower bounds
     weights = np.copy(lower_bounds)
     free = np.full_like(mean, False, dtype=np.bool_)
@@ -46,7 +63,7 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX = None, upper_bounds: MATRIX = 
 
     if not np.any(free):
         # We have not reached the sum of weights of 1...
-        raise ArithmeticError("Could not construct a fully invested portfolio")
+        raise ValueError("Could not construct a fully invested portfolio")
 
     # Return first turning point, the point with the highest expected return.
     return Next(free=free, weights=weights, mean=float(mean.T @ weights))
@@ -122,7 +139,7 @@ if __name__ == "__main__":
 
     logger.info("Hello")
 
-    tp = init_algo(mean=mean, upper_bounds=upper_bound)
+    tp = init_algo(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
     print(np.where(tp.free)[0])
     print(tp.mean)
 

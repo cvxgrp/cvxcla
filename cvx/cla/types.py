@@ -14,14 +14,15 @@ BOOLEAN_VECTOR: TypeAlias = NDArray[np.bool_]
 
 
 @dataclass(frozen=True)
-class Next:
-    free: BOOLEAN_VECTOR
+class TurningPoint:
     weights: MATRIX
-    lamb: float = np.inf
-    mean: float = -np.inf
-    gamma: float = np.inf
+    lamb: float
+    free: BOOLEAN_VECTOR
 
-    def __eq__(self, other):
-        return np.allclose(self.weights, other.weights, atol=1e-5) and np.allclose(
-            self.free, other.free
-        )
+    @property
+    def free_indices(self):
+        return np.where(self.free)[0]
+
+    @property
+    def blocked_indices(self):
+        return np.where(~self.free)[0]

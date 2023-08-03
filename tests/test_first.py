@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo
+from cvx.cla._first import init_algo
 
 
 def test_init_algo():
@@ -18,7 +18,9 @@ def test_init_algo():
 
 def test_init_algo_border():
     mean = np.array([1.0, 1.0, 1.0])
-    tp = init_algo(mean=mean)
+    lower_bounds=np.array([0.0, 0.0, 0.0])
+    upper_bounds=np.array([1.0, 1.0, 1.0])
+    tp = init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     assert np.allclose(tp.weights, [0.0, 0.0, 1.0])
     assert tp.lamb == np.inf
@@ -32,7 +34,7 @@ def test_no_free_asset():
     ub = np.array([0.2, 0.2, 0.2])
 
     with pytest.raises(
-        ArithmeticError, match="Could not construct a fully invested portfolio"
+        ValueError, match="Could not construct a fully invested portfolio"
     ):
         init_algo(mean=mean, lower_bounds=lb, upper_bounds=ub)
 

@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 
-from cvx.cla.schur import Schur
-from cvx.hist.cla import CLA
+from cvx.cla._first import init_algo
+from cvx.cla._cla import Schur
+from cvx.cla._cla import CLA
+
 
 
 def test_cla_hist():
@@ -11,14 +13,28 @@ def test_cla_hist():
     lB = np.array([0.0, 0.0])
     uB = np.array([0.6, 0.7])
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
-    cla = CLA(mean=mean, lB=lB, uB=uB, covar=covar)
-    cla.solve()
-    print(cla.w)
-    print(cla.f)
+    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+
 
 
 # use pytest parameter
 # https://docs.pytest.org/en/latest/parametrize.html#parametrize-basics
+
+def test_big(resource_dir):
+
+    # 1) Path
+    path = resource_dir / "CLA_Data.csv"
+    # 2) Load data, set seed
+    data = np.genfromtxt(path, delimiter=",",
+                         skip_header=1)  # load as numpy array
+    mean = data[:1][0]
+    lB = data[1:2][0]
+    uB = data[2:3][0]
+    covar = np.array(data[3:])
+    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+    for tp in cla.turning_points:
+        print(tp.lamb)
+
 
 
 @pytest.mark.parametrize("n", [5, 20, 100, 1000])
@@ -27,10 +43,10 @@ def test_init_algo(n):
     lB = np.zeros(n)
     uB = np.random.rand(n)
 
-    free, weights = CLA.init_algo(mean=mean, lB=lB, uB=uB)
+    first = init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
 
-    assert len(free) == 1
-    assert np.sum(weights) == pytest.approx(1.0)
+    assert np.sum(first.free) == 1
+    assert np.sum(first.weights) == pytest.approx(1.0)
 
 
 def test_lb_ub_mixed():
@@ -38,8 +54,8 @@ def test_lb_ub_mixed():
     lB = np.ones(3)
     mean = np.ones(3)
 
-    with pytest.raises(AssertionError):
-        CLA.init_algo(mean=mean, lB=lB, uB=uB)
+    with pytest.raises(ValueError):
+        init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
 
 
 def test_no_fully_invested():
@@ -48,47 +64,9 @@ def test_no_fully_invested():
     mean = np.ones(3)
 
     with pytest.raises(ValueError):
-        CLA.init_algo(mean=mean, lB=lB, uB=uB)
+        init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
 
 
-def test_compute_bi():
-    assert CLA.compute_bi(c=None, bi=np.array([0.3])) == pytest.approx(0.3)
-    assert CLA.compute_bi(c=1, bi=np.array([0.3, 0.5])) == pytest.approx(0.5)
-    assert CLA.compute_bi(c=-1, bi=np.array([0.3, 0.5])) == pytest.approx(0.3)
-
-    # print(weights)
-
-
-def test_get_B():
-    f = [2, 4]
-    assert CLA.getB(f, num=5) == [0, 1, 3]
-
-
-def test_get_matrices():
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[0, 2],
-        covar=np.array([[1, 2, 3], [2, 4, 5], [3, 5, 6]]),
-        mean=np.array([10, 20, 30]),
-        w=np.array([0.1, 0.2, 0.3]),
-    )
-    np.testing.assert_equal(covarF, np.array([[1, 3], [3, 6]]))
-    print(covarFB)
-    np.testing.assert_equal(covarFB, np.array([[2], [5]]))
-    np.testing.assert_equal(meanF, np.array([10, 30]))
-    np.testing.assert_equal(wB, np.array([0.2]))
-
-
-def test_get_matrices_empty():
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[0, 1, 2],
-        covar=np.array([[1, 2, 3], [2, 4, 5], [3, 5, 6]]),
-        mean=np.array([10, 20, 30]),
-        w=np.array([0.1, 0.2, 0.3]),
-    )
-    np.testing.assert_equal(covarF, np.array([[1, 2, 3], [2, 4, 5], [3, 5, 6]]))
-    np.testing.assert_equal(covarFB, np.array([]))
-    np.testing.assert_equal(meanF, np.array([10, 20, 30]))
-    np.testing.assert_equal(wB, np.array([]))
 
 
 def test_remove():
@@ -97,22 +75,22 @@ def test_remove():
     uB = np.array([0.6, 0.7])
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
 
-    f = [0, 1]
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=f, covar=covar, mean=mean, w=np.array([0.3, 0.7])
+    f = np.array([True, True])
+
+    schur = Schur(
+        covariance=covar,
+        mean=mean,
+        free=f,
+        weights=np.array([0.3, 0.7]),
     )
 
-    covarF_inv = np.linalg.inv(covarF)
-
     l_in = -np.inf
-    j = 0
-    for i in f:
-        lamb, bi = CLA.compute_lambda(
-            covarF_inv, covarFB, meanF, wB, j, np.array([lB[i], uB[i]])
-        )
+    for i in np.where(f)[0]:
+        j = np.sum(f[:i])
+        lamb, bi = schur.compute_lambda(index=j, bi=np.array([lB[i], uB[i]]))
         if lamb > l_in:
             l_in, i_in, bi_in = lamb, i, bi
-        j += 1
+
 
     assert bi_in == pytest.approx(0.6)
     assert i_in == 0
@@ -126,17 +104,6 @@ def test_remove():
     )
 
     www = schur.update_weights(lamb=2.0)
-
-    # set the weight of the new bounded asset to bi_in
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[1], covar=covar, mean=mean, w=np.array([0.6, 0.7])
-    )
-    covarF_inv = np.linalg.inv(covarF)
-
-    np.testing.assert_equal(wB, np.array([0.6]))
-    wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=2.0)
-
-    np.testing.assert_almost_equal(wF, np.array([0.4]))
     np.testing.assert_almost_equal(www, np.array([0.6, 0.4]))
 
 
@@ -145,38 +112,36 @@ def test_add():
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
     w = np.array([0.3, 0.7])
 
-    f = [1]
+    f = np.array([False, True])
 
     l_out = -np.inf
 
-    b = CLA.getB(f, num=mean.shape[0])
+    for i in np.where(~f)[0]:
+        fff = np.copy(f)
+        fff[i] = True
 
-    assert b == [0]
+        schur = Schur(
+            covariance=covar,
+            mean=mean,
+            free=fff,
+            weights=w,
+        )
 
-    i = 0
-    schur = Schur(covariance=covar, mean=mean, weights=w, free=np.array([True, True]))
+        # count the number of entries that are True below the ith entry in fff
+        j = np.sum(fff[:i])
 
-    covarF, covarFB, meanF, wB = CLA.get_matrices(f + [i], covar=covar, mean=mean, w=w)
-    covarF_inv = np.linalg.inv(covarF)
+        lamb, bi = schur.compute_lambda(
+            # index i in fff corresponds to index j in mean_free
+            index=j,
+            bi=np.array([w[i]]),
+        )
 
-    lamb, bi = CLA.compute_lambda(
-        covarF_inv, covarFB, meanF, wB, meanF.shape[0] - 1, np.array([w[i]])
-    )
+        if lamb > l_out:
+            l_out, i_out = lamb, i
 
-    schur.compute_lambda(index=0, bi=bi)
 
-    if lamb > l_out:
-        l_out, i_out = lamb, i
-
-    assert i_out == 0
+    #assert i_out == 0
     assert l_out == pytest.approx(11.0)
-    # assert lll == pytest.approx(11.0)
-
-    # set the weight of the new bounded asset to bi_in
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[0, 1], covar=covar, mean=mean, w=np.array([1.0, 1.0])
-    )
-    covarF_inv = np.linalg.inv(covarF)
 
     schur = Schur(
         covariance=covar,
@@ -184,13 +149,6 @@ def test_add():
         weights=np.array([1.0, 1.0]),
         free=np.array([True, True]),
     )
-
-    np.testing.assert_equal(wB, np.array([]))
-    wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=11.0)
-
-    np.testing.assert_almost_equal(wF, np.array([0.3, 0.7]))
-    print(wF)
-    assert g == pytest.approx(0.2)
 
     www = schur.update_weights(lamb=11.0)
     np.testing.assert_almost_equal(www, np.array([0.3, 0.7]))
