@@ -17,11 +17,11 @@ noteworthy changes:
 * Rewrote the computation of the first turning point.
 * Isolated the computation of lambdas and the update of weights to make them testable.
 * Use modern and immutable dataclass throughout.
-* Use GitHub Actions to run tests, create a demo page, produce coverage and deploy to PyPI.
+* Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
 Note that for this project we have not addressed the more fundamental bottlenecks
 of the original implementation.
-We use this code as a baseline to compute to frontiers for our tests in a 
+We use this code as a baseline to compute to frontiers for our tests in a
 forthcoming more radical implementation of the same ideas.
 
 ## Poetry
