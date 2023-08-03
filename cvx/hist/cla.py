@@ -57,16 +57,20 @@ class CLA:
                     weights=w,
                 )
 
-                j = 0
+                #j = 0
+
                 for i in np.where(f)[0]:
+                    # count the number of entries that are True below the ith entry in fff
+                    j = np.sum(f[:i])
+
                     lamb, bi = schur.compute_lambda(
-                        j,
-                        np.array([self.lB[i], self.uB[i]]),
+                        index=j,
+                        bi=np.array([self.lB[i], self.uB[i]]),
                     )
 
                     if lamb > l_in:
                         l_in, i_in, bi_in = lamb, i, bi
-                    j += 1
+                    #j += 1
 
             # 2) case b): Free one bounded weight
             l_out = -np.inf
@@ -138,10 +142,7 @@ if __name__ == "__main__":
     print(first.weights)
 
     x = CLA(covar=covar, mean=mean, lB=lb, uB=ub)
-    # try:
     x.solve()
-    # except AssertionError:
-    #    pass
 
     assert np.allclose(x.lB, lb)
     assert np.allclose(x.uB, ub)

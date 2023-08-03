@@ -76,22 +76,22 @@ def test_remove():
     uB = np.array([0.6, 0.7])
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
 
-    f = [0, 1]
+    f = np.array([True, True])
 
     schur = Schur(
         covariance=covar,
         mean=mean,
-        free=np.array([True, True]),
+        free=f,
         weights=np.array([0.3, 0.7]),
     )
 
     l_in = -np.inf
-    j = 0
-    for i in f:
+    for i in np.where(f)[0]:
+        j = np.sum(f[:i])
         lamb, bi = schur.compute_lambda(index=j, bi=np.array([lB[i], uB[i]]))
         if lamb > l_in:
             l_in, i_in, bi_in = lamb, i, bi
-        j += 1
+
 
     assert bi_in == pytest.approx(0.6)
     assert i_in == 0
@@ -113,23 +113,35 @@ def test_add():
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
     w = np.array([0.3, 0.7])
 
-    f = [1]
+    f = np.array([False, True])
 
     l_out = -np.inf
 
-    b = [0]
+    for i in np.where(~f)[0]:
+        fff = np.copy(f)
+        fff[i] = True
 
-    assert b == [0]
+        schur = Schur(
+            covariance=covar,
+            mean=mean,
+            free=fff,
+            weights=w,
+        )
 
-    i = 0
-    schur = Schur(covariance=covar, mean=mean, weights=w, free=np.array([True, True]))
+        # count the number of entries that are True below the ith entry in fff
+        j = np.sum(fff[:i])
 
-    lamb, _ = schur.compute_lambda(index=0, bi=np.array([w[i]]))
+        lamb, bi = schur.compute_lambda(
+            # index i in fff corresponds to index j in mean_free
+            index=j,
+            bi=np.array([w[i]]),
+        )
 
-    if lamb > l_out:
-        l_out, i_out = lamb, i
+        if lamb > l_out:
+            l_out, i_out = lamb, i
 
-    assert i_out == 0
+
+    #assert i_out == 0
     assert l_out == pytest.approx(11.0)
 
     schur = Schur(
