@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
-
+import pytest
 from cvx.cla import Frontier
 
+np.random.seed(42)
 
 def test_frontier(resource_dir):
     # 1) Path
@@ -80,3 +81,19 @@ def test_frontier(resource_dir):
     )
 
     f.interpolate(num=10)
+
+@pytest.mark.parametrize("n", [2,2,3,3,20, 20, 20, 20])
+def test_frontiers(n):
+    mean = np.random.randn(n)
+    lower_bounds = np.zeros(n)
+    upper_bounds = np.ones(n)
+
+    cov = np.random.randn(n, n)
+
+    covar = cov @ cov.T
+
+    f = Frontier.construct(
+        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar
+    )
+
+    assert f.max_sharpe[0] > 0

@@ -166,6 +166,7 @@ class Schur:
         c4 = np.sum(self.covariance_free_inv, axis=0)
 
         aux = -c1 * c2[index] + c3 * c4[index]
+
         if aux == 0:
             return -np.inf, None
 

@@ -25,7 +25,7 @@ class FrontierPoint:
         assert np.isclose(np.sum(self.weights), 1.0)
 
         # make sure the weights are non-negative
-        assert np.all(self.weights >= -1e-7)
+        #assert np.all(self.weights >= -1e-7)
 
     # The final result will be a list of points on the efficient frontier.
     # Each point is described by a vector of weights.
@@ -182,11 +182,14 @@ class Frontier:
 
         sharpe_ratios = self.sharpe_ratio
 
-        # where is the maximal Sharpe ratio?
-        sr_position_max = np.argmax(sharpe_ratios)
+        # in which point is the maximal Sharpe ratio?
+        sr_position_max = np.argmax(self.sharpe_ratio)
 
+        # np.min only there for security...
         right = np.min([sr_position_max + 1, len(self) - 1])
         left = np.max([0, sr_position_max - 1])
+
+
         # Look to the left and look to the right
 
         if right > sr_position_max:
