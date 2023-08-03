@@ -1,10 +1,24 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 import cvxpy as cp
 
-from cvx.cla.types import MATRIX, Next
+from cvx.cla.types import MATRIX, BOOLEAN_VECTOR
 
+
+@dataclass(frozen=True)
+class Next:
+    free: BOOLEAN_VECTOR
+    weights: MATRIX
+    lamb: float = np.inf
+    mean: float = -np.inf
+
+    def __eq__(self, other):
+        return np.allclose(self.weights, other.weights, atol=1e-5) and np.allclose(
+            self.free, other.free
+        )
 
 def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
     """The key insight behind Markowitz’s CLA is to find first the

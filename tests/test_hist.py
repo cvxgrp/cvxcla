@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo
-from cvx.cla.schur import Schur
-from cvx.cla.cla import CLA
+from cvx.cla._first import init_algo
+from cvx.cla._cla import Schur
+from cvx.cla._cla import CLA
 
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo
+from cvx.cla._first import init_algo
 
 
 def test_init_algo():

@@ -1,6 +1,6 @@
 import numpy as np
 
-from cvx.cla.schur import Schur
+from cvx.cla._cla import Schur
 
 
 def test_compute_lambda():

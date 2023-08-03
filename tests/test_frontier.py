@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from cvx.cla.cla import CLA
-from cvx.cla.frontier import Frontier
+from cvx.cla import Frontier
 
 
 def test_frontier(resource_dir):
