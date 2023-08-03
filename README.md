@@ -7,7 +7,24 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
-## Critical Line Algorithm
+## Critical line algorithm
+
+The critical line algorithm is a method to compute the efficient frontier of a
+portfolio optimization problem.
+
+The algorithm has been introduced by Markowitz in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
+Bailey and Lopez de Prado revisited this algorithm in their paper
+[An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
+There the authors publish a Python implementation of the algorithm.
+
+The algorithm is based on the observation that the efficient frontier is a piecewise
+linear function if expected return is plotted over expected variance.
+The critical line algorithm computes the turning points of the efficient frontier.
+The turning points are the points where the efficient frontier
+changes its slope. The turning points are computed by solving a sequence of quadratic
+programs.
+
+## About the code
 
 The code in this repository is an adoption of the paper by Bailey and Lopez de Prado.
 We have updated their original code and covered it in tests. We have made a few
@@ -21,7 +38,7 @@ noteworthy changes:
 
 Note that for this project we have not addressed the more fundamental bottlenecks
 of the original implementation.
-We use this code as a baseline to compute to frontiers for our tests in a
+We use this code as a baseline to compute frontiers for our tests in a
 forthcoming more radical implementation of the same ideas.
 
 ## Poetry
