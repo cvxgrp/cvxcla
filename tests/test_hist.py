@@ -98,6 +98,14 @@ def test_remove():
     covar = np.array([[2.0, 1.0], [1.0, 3.0]])
 
     f = [0, 1]
+
+    schur = Schur(
+        covariance=covar,
+        mean=mean,
+        free=np.array([True, True]),
+        weights=np.array([0.3, 0.7]),
+    )
+
     covarF, covarFB, meanF, wB = CLA.get_matrices(
         f=f, covar=covar, mean=mean, w=np.array([0.3, 0.7])
     )
@@ -107,9 +115,11 @@ def test_remove():
     l_in = -np.inf
     j = 0
     for i in f:
-        lamb, bi = CLA.compute_lambda(
-            covarF_inv, covarFB, meanF, wB, j, np.array([lB[i], uB[i]])
-        )
+        lamb, bi = schur.compute_lambda(index=j, bi=np.array([lB[i], uB[i]]))
+
+        #lamb, bi = CLA.compute_lambda(
+        #    covarF_inv, covarFB, meanF, wB, j, np.array([lB[i], uB[i]])
+        #)
         if lamb > l_in:
             l_in, i_in, bi_in = lamb, i, bi
         j += 1
@@ -128,15 +138,15 @@ def test_remove():
     www = schur.update_weights(lamb=2.0)
 
     # set the weight of the new bounded asset to bi_in
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[1], covar=covar, mean=mean, w=np.array([0.6, 0.7])
-    )
-    covarF_inv = np.linalg.inv(covarF)
+    #covarF, covarFB, meanF, wB = CLA.get_matrices(
+    #    f=[1], covar=covar, mean=mean, w=np.array([0.6, 0.7])
+    #)
+    #covarF_inv = np.linalg.inv(covarF)
 
-    np.testing.assert_equal(wB, np.array([0.6]))
-    wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=2.0)
+    #np.testing.assert_equal(wB, np.array([0.6]))
+    #wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=2.0)
 
-    np.testing.assert_almost_equal(wF, np.array([0.4]))
+    #np.testing.assert_almost_equal(wF, np.array([0.4]))
     np.testing.assert_almost_equal(www, np.array([0.6, 0.4]))
 
 
@@ -156,14 +166,14 @@ def test_add():
     i = 0
     schur = Schur(covariance=covar, mean=mean, weights=w, free=np.array([True, True]))
 
-    covarF, covarFB, meanF, wB = CLA.get_matrices(f + [i], covar=covar, mean=mean, w=w)
-    covarF_inv = np.linalg.inv(covarF)
+    #covarF, covarFB, meanF, wB = CLA.get_matrices(f + [i], covar=covar, mean=mean, w=w)
+    #covarF_inv = np.linalg.inv(covarF)
 
-    lamb, bi = CLA.compute_lambda(
-        covarF_inv, covarFB, meanF, wB, meanF.shape[0] - 1, bi=np.array([w[i]])
-    )
+    #lamb, bi = CLA.compute_lambda(
+    #    covarF_inv, covarFB, meanF, wB, meanF.shape[0] - 1, bi=np.array([w[i]])
+    #)
 
-    schur.compute_lambda(index=0, bi=np.array([w[i]]))
+    lamb, _ = schur.compute_lambda(index=0, bi=np.array([w[i]]))
 
     if lamb > l_out:
         l_out, i_out = lamb, i
@@ -173,10 +183,10 @@ def test_add():
     # assert lll == pytest.approx(11.0)
 
     # set the weight of the new bounded asset to bi_in
-    covarF, covarFB, meanF, wB = CLA.get_matrices(
-        f=[0, 1], covar=covar, mean=mean, w=np.array([1.0, 1.0])
-    )
-    covarF_inv = np.linalg.inv(covarF)
+    #covarF, covarFB, meanF, wB = CLA.get_matrices(
+    #    f=[0, 1], covar=covar, mean=mean, w=np.array([1.0, 1.0])
+    #)
+    #covarF_inv = np.linalg.inv(covarF)
 
     schur = Schur(
         covariance=covar,
@@ -185,12 +195,12 @@ def test_add():
         free=np.array([True, True]),
     )
 
-    np.testing.assert_equal(wB, np.array([]))
-    wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=11.0)
+    #np.testing.assert_equal(wB, np.array([]))
+    #wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=11.0)
 
-    np.testing.assert_almost_equal(wF, np.array([0.3, 0.7]))
-    print(wF)
-    assert g == pytest.approx(0.2)
+    #np.testing.assert_almost_equal(wF, np.array([0.3, 0.7]))
+    #print(wF)
+    #assert g == pytest.approx(0.2)
 
     www = schur.update_weights(lamb=11.0)
     np.testing.assert_almost_equal(www, np.array([0.3, 0.7]))
