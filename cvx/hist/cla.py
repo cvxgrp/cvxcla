@@ -27,6 +27,7 @@ class CLA:
         # Compute the turning points,free sets and weights
 
         f, w = CLA.init_algo(mean=self.mean, lB=self.lB, uB=self.uB)
+        f = np.where(f)[0].tolist()
 
         self.w.append(np.copy(w))  # store solution
         self.l.append(+np.inf)
@@ -122,13 +123,15 @@ class CLA:
 
         assert np.all(lB <= uB), "Lower bound exceeds upper bound"
 
+        free = np.full_like(mean, False, dtype=np.bool_)
         # Move weights from lower to upper bound
         # until sum of weights hits or exceeds 1
         for index in np.argsort(mean)[::-1]:
             weights[index] = uB[index]
             if np.sum(weights) >= 1:
                 weights[index] -= np.sum(weights) - 1
-                return [index], weights
+                free[index] = True
+                return free, weights
 
         raise ValueError("No fully invested solution exists")
 
