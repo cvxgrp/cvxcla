@@ -29,29 +29,31 @@ class CLA:
         # Compute the turning points,free sets and weights
 
         f, w = CLA.init_algo(mean=self.mean, lB=self.lB, uB=self.uB)
-        f = np.where(f)[0].tolist()
 
         self.w.append(np.copy(w))  # store solution
         self.l.append(+np.inf)
-        self.f.append(f[:])
+        self.f.append(f)
 
         while True:
+            f = np.copy(self.f[-1])
+            w = np.copy(self.w[-1])
+
             # 1) case a): Bound one free weight
             l_in = -np.inf
 
+
             # only try to bound a free asset if there are least two of them
-            if len(f) > 1:
-                fff = np.array([x in f for x in range(self.mean.shape[0])])
+            if np.sum(f) > 1:
 
                 schur = Schur(
                     covariance=self.covar,
                     mean=self.mean,
-                    free=fff,
+                    free=f,
                     weights=w,
                 )
 
                 j = 0
-                for i in f:
+                for i in np.where(f)[0]:
                     lamb, bi = schur.compute_lambda(
                         j,
                         np.array([self.lB[i], self.uB[i]]),
@@ -63,13 +65,12 @@ class CLA:
 
             # 2) case b): Free one bounded weight
             l_out = -np.inf
-            # if len(f)<self.mean.shape[0]:
-            free_bool = np.array([x in f for x in range(self.mean.shape[0])])
+
 
             #b = CLA.getB(f, num=self.mean.shape[0])
             #f_bool = np.array([x in f for x in self.mean.])
-            for i in np.where(~free_bool)[0]:
-                fff = np.copy(free_bool)
+            for i in np.where(~f)[0]:
+                fff = np.copy(f)
                 fff[i] = True
 
                 schur = Schur(
@@ -81,7 +82,7 @@ class CLA:
 
                 lamb, bi = schur.compute_lambda(
                     index=schur.mean_free.shape[0] - 1,
-                    bi=np.array([self.w[-1][i]]),
+                    bi=np.array([w[i]]),
                 )
 
                 if self.l[-1] > lamb > l_out:
@@ -94,17 +95,17 @@ class CLA:
                 w = np.copy(self.w[-1])
                 if l_in > l_out:
                     self.l.append(l_in)
-                    f.remove(i_in)
+                    f[i_in] = False
                     w[i_in] = bi_in  # set value at the correct boundary
                 else:
                     self.l.append(l_out)
-                    f.append(i_out)
+                    f[i_out] = True
 
 
             schur = Schur(
                 covariance=self.covar,
                 mean=self.mean,
-                free=np.array([x in self.f[-1] for x in range(self.mean.shape[0])]),
+                free=f,
                 weights=w,
             )
 
@@ -112,7 +113,7 @@ class CLA:
             weights = schur.update_weights(lamb=self.l[-1])
 
             self.w.append(np.copy(weights))  # store solution
-            self.f.append(f[:])
+            self.f.append(f)
 
 
     # ---------------------------------------------------------------
