@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.optimize import minimize
 
-from .cla import TurningPoint
+from .cla import TurningPoint, CLA
 from .types import MATRIX
 
 
@@ -63,7 +63,7 @@ class FrontierPoint:
         Returns:
             Computes $w^T Covariance w$
         """
-        return self.weights.T @ covariance @ self.weights
+        return self.weights.T @ (covariance @ self.weights)
 
 
 @dataclass(frozen=True)
@@ -90,15 +90,10 @@ class Frontier:
         Returns:
             A frontier of frontier points each of them a turning point
         """
-        t_points = TurningPoint.construct(
-            mean=mean,
-            covariance=covariance,
-            lower_bounds=lower_bounds,
-            upper_bounds=upper_bounds,
-        )
+        cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
         frontier_points = [
-            FrontierPoint.from_turning_point(t_point) for t_point in t_points
+            FrontierPoint.from_turning_point(t_point) for t_point in cla.turning_points
         ]
         return Frontier(frontier=frontier_points, mean=mean, covariance=covariance)
 
@@ -129,12 +124,9 @@ class Frontier:
         """
         yield from self.frontier
 
-    @property
-    def num(self):
-        """
-        Number of points on Frontier
-        """
-        return len(list(self))
+    def __len__(self):
+        return len(self.frontier)
+
 
     @property
     def weights(self):
@@ -193,7 +185,7 @@ class Frontier:
         # where is the maximal Sharpe ratio?
         sr_position_max = np.argmax(sharpe_ratios)
 
-        right = np.min([sr_position_max + 1, self.num - 1])
+        right = np.min([sr_position_max + 1, len(self) - 1])
         left = np.max([0, sr_position_max - 1])
         # Look to the left and look to the right
 
