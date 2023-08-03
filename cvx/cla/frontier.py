@@ -75,9 +75,10 @@ class Frontier:
     frontier: list[FrontierPoint]
     mean: MATRIX
     covariance: MATRIX
+    name: str = "FRONTIER"
 
     @staticmethod
-    def construct(mean, covariance, lower_bounds, upper_bounds):
+    def construct(mean, covariance, lower_bounds, upper_bounds, name):
         """
         Constructs a frontier by computing a list of turning points.
 
@@ -95,7 +96,7 @@ class Frontier:
         frontier_points = [
             FrontierPoint.from_turning_point(t_point) for t_point in cla.turning_points
         ]
-        return Frontier(frontier=frontier_points, mean=mean, covariance=covariance)
+        return Frontier(frontier=frontier_points, mean=mean, covariance=covariance, name=name)
 
     def interpolate(self, num=100):
         """
