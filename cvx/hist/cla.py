@@ -133,11 +133,7 @@ class CLA:
         raise ValueError("No fully invested solution exists")
 
     # ---------------------------------------------------------------
-    @staticmethod
-    def compute_bi(c, bi):
-        if np.shape(bi)[0] == 1 or c < 0:
-            return bi[0]
-        return bi[1]
+
 
     # ---------------------------------------------------------------
     @staticmethod
@@ -163,6 +159,12 @@ class CLA:
     # ---------------------------------------------------------------
     @staticmethod
     def compute_lambda(covarF_inv, covarFB, meanF, wB, i, bi):
+        def compute_bi(c, bi):
+            if np.shape(bi)[0] == 1 or c < 0:
+                return bi[0]
+            return bi[1]
+
+
         # 1) C
         onesF = np.ones(meanF.shape)
         c1 = np.dot(np.dot(onesF.T, covarF_inv), onesF)
@@ -173,7 +175,7 @@ class CLA:
         if c == 0:
             return None, None
         # 2) bi
-        bi = CLA.compute_bi(c, bi)
+        bi = compute_bi(c, bi)
         assert isinstance(bi, float)
 
         # 3) Lambda

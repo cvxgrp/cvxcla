@@ -13,7 +13,7 @@ def test_compute_lambda():
 
     # Test the compute_lambda method with different inputs
     index = 1
-    bi = 0.5
+    bi = np.array([0.5])
     expected_lambda = 0.62
     expected_gamma = 0.5
     actual_lambda, actual_gamma = schur.compute_lambda(index, bi)
@@ -22,7 +22,7 @@ def test_compute_lambda():
     assert np.isclose(actual_gamma, expected_gamma)
 
     index = 1
-    bi = [0.2, 0.3]
+    bi = np.array([0.2, 0.3])
     expected_lambda = 0.02
     expected_gamma = 0.2
     actual_lambda, actual_gamma = schur.compute_lambda(index, bi)

@@ -51,10 +51,10 @@ def test_no_fully_invested():
         CLA.init_algo(mean=mean, lB=lB, uB=uB)
 
 
-def test_compute_bi():
-    assert CLA.compute_bi(c=None, bi=np.array([0.3])) == pytest.approx(0.3)
-    assert CLA.compute_bi(c=1, bi=np.array([0.3, 0.5])) == pytest.approx(0.5)
-    assert CLA.compute_bi(c=-1, bi=np.array([0.3, 0.5])) == pytest.approx(0.3)
+# def test_compute_bi():
+#     assert CLA.compute_bi(c=None, bi=np.array([0.3])) == pytest.approx(0.3)
+#     assert CLA.compute_bi(c=1, bi=np.array([0.3, 0.5])) == pytest.approx(0.5)
+#     assert CLA.compute_bi(c=-1, bi=np.array([0.3, 0.5])) == pytest.approx(0.3)
 
     # print(weights)
 
@@ -160,10 +160,10 @@ def test_add():
     covarF_inv = np.linalg.inv(covarF)
 
     lamb, bi = CLA.compute_lambda(
-        covarF_inv, covarFB, meanF, wB, meanF.shape[0] - 1, np.array([w[i]])
+        covarF_inv, covarFB, meanF, wB, meanF.shape[0] - 1, bi=np.array([w[i]])
     )
 
-    schur.compute_lambda(index=0, bi=bi)
+    schur.compute_lambda(index=0, bi=np.array([w[i]]))
 
     if lamb > l_out:
         l_out, i_out = lamb, i

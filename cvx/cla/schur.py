@@ -40,6 +40,11 @@ class Schur:
         return self.weights[~self.free]
 
     def compute_lambda(self, index, bi):
+        def compute_bi(c, bi):
+            if np.shape(bi)[0] == 1 or c < 0:
+                return bi[0]
+            return bi[1]
+
         c1 = np.sum(np.sum(self.covariance_free_inv))
         c2 = np.dot(self.covariance_free_inv, self.mean_free)
         c3 = np.dot(np.sum(self.covariance_free_inv, axis=1), self.mean_free)
@@ -49,8 +54,7 @@ class Schur:
         if aux == 0:
             return -np.inf, None
 
-        if isinstance(bi, list):
-            bi = bi[1] if aux > 0 else bi[0]
+        bi = compute_bi(aux, bi)
 
         if self.weights_blocked is None:
             return float((c4[index] - c1 * bi) / aux), bi
