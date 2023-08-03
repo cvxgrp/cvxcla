@@ -156,7 +156,7 @@ class Schur:
 
     def compute_lambda(self, index, bi):
         def compute_bi(c, bi):
-            if np.shape(bi)[0] == 1 or c < 0:
+            if np.shape(bi)[0] == 1 or c <= 0:
                 return bi[0]
             return bi[1]
 
@@ -167,9 +167,6 @@ class Schur:
 
         aux = -c1 * c2[index] + c3 * c4[index]
 
-        if aux == 0:
-            return -np.inf, None
-
         bi = compute_bi(aux, bi)
 
         if self.weights_blocked.size == 0:
@@ -179,7 +176,7 @@ class Schur:
         l2 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)
         l3 = np.dot(l2, self.weights_blocked)
         l2 = np.sum(l3)
-        return float(((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux), bi
+        return ((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux, bi
 
     def _compute_weight(self, lamb):
         ones_f = np.ones(self.mean_free.shape)
