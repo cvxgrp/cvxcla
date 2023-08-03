@@ -21,8 +21,8 @@ noteworthy changes:
 
 Note that for this project we have not addressed the more fundamental bottlenecks
 of the original implementation.
-We use this code as a baseline to compute to frontiers for our testing in a forthcoming 
-more radical implementation of the same ideas.
+We use this code as a baseline to compute to frontiers for our tests in a 
+forthcoming more radical implementation of the same ideas.
 
 ## Poetry
 
