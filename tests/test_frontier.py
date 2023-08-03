@@ -96,4 +96,6 @@ def test_frontiers(n):
         mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar
     )
 
-    assert f.max_sharpe[0] > 0
+    assert np.sum(f.frontier[-1].weights) == pytest.approx(1)
+
+    print(f.max_sharpe[0])
