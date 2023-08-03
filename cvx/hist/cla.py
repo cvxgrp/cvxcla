@@ -6,6 +6,9 @@
 # Modifications by Thomas Schmelzer to make it work again
 import numpy as np
 
+from cvx.cla.schur import Schur
+
+
 # ---------------------------------------------------------------
 # ---------------------------------------------------------------
 
@@ -81,13 +84,7 @@ class CLA:
                     l_out, i_out = lamb, i
 
             if l_in < 0 and l_out < 0:
-                # 3) compute minimum variance solution
-                self.l.append(0)
-                covarF, covarFB, meanF, wB = CLA.get_matrices(
-                    f, covar=self.covar, mean=self.mean, w=self.w[-1]
-                )
-                covarF_inv = np.linalg.inv(covarF)
-                meanF = np.zeros(meanF.shape)
+                break
             else:
                 # 4) decide lambda
                 w = np.copy(self.w[-1])
@@ -99,21 +96,29 @@ class CLA:
                     self.l.append(l_out)
                     f.append(i_out)
 
-                covarF, covarFB, meanF, wB = CLA.get_matrices(
-                    f, covar=self.covar, mean=self.mean, w=w
+                schur = Schur(
+                    covariance=self.covar,
+                    mean=self.mean,
+                    free=np.array([x in f for x in range(self.mean.shape[0])]),
+                    weights=w,
                 )
-                covarF_inv = np.linalg.inv(covarF)
+                #covarF, covarFB, meanF, wB = CLA.get_matrices(
+                #    f, covar=self.covar, mean=self.mean, w=w
+                #)
+                #covarF_inv = np.linalg.inv(covarF)
+
             # 5) compute solution vector
-            wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=self.l[-1])
+            weights = schur.update_weights(lamb=self.l[-1])
 
-            for i in range(len(f)):
-                w[f[i]] = wF[i]
+            #wF, g = CLA.computeW(covarF_inv, covarFB, meanF, wB, lamb=self.l[-1])
 
-            self.w.append(np.copy(w))  # store solution
-            self.g.append(g)
+            #for i in range(len(f)):
+            #    w[f[i]] = wF[i]
+
+            self.w.append(np.copy(weights))  # store solution
+            #self.g.append(g)
             self.f.append(f[:])
-            if self.l[-1] == 0:
-                break
+
 
     # ---------------------------------------------------------------
     @staticmethod
