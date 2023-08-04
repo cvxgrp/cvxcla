@@ -35,13 +35,13 @@ noteworthy changes:
 * Use a boolean numpy array to indicate whether a weight is free or blocked.
 * Rewrote the computation of the first turning point.
 * Isolated the computation of lambdas and the update of weights to make them testable.
-* Use modern and immutable dataclass throughout.
+* Use modern and immutable dataclasses throughout.
 * Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
 Note that for this project we have not addressed the more fundamental bottlenecks
 of the original implementation.
 We use this code as a baseline to compute frontiers for our tests in a
-forthcoming more radical implementation of the same ideas.
+forthcoming more radical implementation of the algorithm.
 
 ## Poetry
 
