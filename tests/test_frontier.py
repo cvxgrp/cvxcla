@@ -6,25 +6,17 @@ from cvx.cla import Frontier
 
 np.random.seed(42)
 
-def test_frontier(resource_dir):
-    # 1) Path
-    path = resource_dir / "CLA_Data.csv"
-    # 2) Load data, set seed
-    data = np.genfromtxt(path, delimiter=",", skip_header=1)  # load as numpy array
-    mean = data[:1][0]
-    lB = data[1:2][0]
-    uB = data[2:3][0]
-    covar = np.array(data[3:])
-
+def test_frontier(input_data):
     f = Frontier.construct(
-        mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar
+        mean=input_data.mean, lower_bounds=input_data.lower_bounds,
+        upper_bounds=input_data.upper_bounds, covariance=input_data.covariance, name="test"
     )
 
-    np.testing.assert_equal(f.covariance, covar)
+    np.testing.assert_equal(f.covariance, input_data.covariance)
     assert len(f) == 11
     np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025)
 
-    np.testing.assert_almost_equal(f.mean, mean)
+    np.testing.assert_almost_equal(f.mean, input_data.mean)
     np.testing.assert_almost_equal(
         f.returns,
         np.array(
@@ -93,7 +85,7 @@ def test_frontiers(n):
     covar = cov @ cov.T
 
     f = Frontier.construct(
-        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar
+        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covar, name="test"
     )
 
     assert np.sum(f.frontier[-1].weights) == pytest.approx(1)

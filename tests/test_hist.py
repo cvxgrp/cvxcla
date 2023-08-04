@@ -10,30 +10,28 @@ from cvx.cla._cla import CLA
 def test_cla_hist():
     mean = np.array([0.1, 0.2])
 
-    lB = np.array([0.0, 0.0])
-    uB = np.array([0.6, 0.7])
-    covar = np.array([[2.0, 1.0], [1.0, 3.0]])
-    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+    lower_bounds = np.array([0.0, 0.0])
+    upper_bounds = np.array([0.6, 0.7])
+    covariance = np.array([[2.0, 1.0], [1.0, 3.0]])
+    cla = CLA(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance)
 
 
+def test_big(input_data, results):
+    print(input_data.mean)
+    cla = CLA(mean=input_data.mean, lower_bounds=input_data.lower_bounds,
+              upper_bounds=input_data.upper_bounds, covariance=input_data.covariance)
 
-# use pytest parameter
-# https://docs.pytest.org/en/latest/parametrize.html#parametrize-basics
+    observed = [tp.lamb for tp in cla.turning_points[1:]]
+    np.allclose(results.lamb, np.array(observed))
 
-def test_big(resource_dir):
+    observed = [tp.mean(input_data.mean) for tp in cla.turning_points[1:]]
+    np.allclose(results.mean, np.array(observed))
 
-    # 1) Path
-    path = resource_dir / "CLA_Data.csv"
-    # 2) Load data, set seed
-    data = np.genfromtxt(path, delimiter=",",
-                         skip_header=1)  # load as numpy array
-    mean = data[:1][0]
-    lB = data[1:2][0]
-    uB = data[2:3][0]
-    covar = np.array(data[3:])
-    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
-    for tp in cla.turning_points:
-        print(tp.lamb)
+    observed = [tp.variance(input_data.covariance) for tp in cla.turning_points[1:]]
+    np.allclose(results.variance, np.array(observed))
+
+    observed = [tp.weights for tp in cla.turning_points[1:]]
+    np.allclose(results.weights, np.array(observed))
 
 
 

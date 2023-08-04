@@ -8,6 +8,7 @@ from cvx.cla._first import init_algo
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 
 
+
 @dataclass(frozen=True)
 class CLA:
     mean: MATRIX
@@ -24,9 +25,6 @@ class CLA:
 
         while True:
             last = self.turning_points[-1]
-
-            if np.all(last.free):
-                break
 
             # 1) case a): Bound one free weight
             l_in = -np.inf
@@ -82,6 +80,7 @@ class CLA:
                 # 4) decide lambda
                 f = np.copy(last.free)
                 w = np.copy(last.weights)
+
                 if l_in > l_out:
                     lll = l_in
                     f[i_in] = False
@@ -98,28 +97,49 @@ class CLA:
                 free=f,
                 weights=w,
             )
-
             # 5) compute solution vector
             weights = schur.update_weights(lamb=lll)
-
             tp = TurningPoint(weights=weights, lamb=lll, free=f)
-            self.turning_points.append(tp)
+
+            # check the turning point
+            self.append(tp)
 
         # 6) compute minimum variance solution
-        f = np.full_like(self.mean, True, dtype=np.bool_)
+        last = self.turning_points[-1]
+        mean = np.copy(self.mean)
+        mean[last.free] = 0.0
+        f = last.free
+        w = last.weights
+
+        #x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
+        #constraints = [
+        #    cp.sum(x) == 1,
+        #    x >= self.lower_bounds,
+        #    x <= self.upper_bounds
+        #]
+        #cp.Problem(cp.Minimize(cp.quad_form(x, self.covariance)), constraints).solve()
 
         schur = Schur(
             covariance=self.covariance,
-            mean=self.mean,
+            mean=mean,
             free=f,
-            weights=np.zeros_like(self.mean)
+            weights=w
         )
 
         weights = schur.update_weights(lamb=0)
-        tp = TurningPoint(weights=weights, lamb=0, free=f)
+        tp = TurningPoint(weights=weights, lamb=0, free=last.free)
+
+        self.append(tp)
+
+    def append(self, tp: TurningPoint, tol=1e-10):
+        tol = 1e-10
+        assert np.all(
+            tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
+        assert np.all(
+            tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
+        assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
+
         self.turning_points.append(tp)
-
-
 class Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (
@@ -197,7 +217,7 @@ class Schur:
         w3 = np.dot(self.covariance_free_inv, self.mean_free)
         return -w1 + gamma * w2 + lamb * w3, gamma
 
-    def update_weights(self, lamb, logger=None):
+    def  update_weights(self, lamb, logger=None):
         # schur = self.__get_matrix(covariance, mean)
         logger = logger or logging.getLogger(__name__)
 
