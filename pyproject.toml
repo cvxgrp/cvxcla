@@ -28,10 +28,8 @@ jupyter-book = "0.15.1"
 pyyaml = "6.0.0"
 
 [tool.poetry.group.linting.dependencies]
-pylint = "*"
 ruff = "0.0.277"
 pre-commit = "*"
-black = "23.3.0"
 
 [build-system]
 requires = ["poetry-core"]
