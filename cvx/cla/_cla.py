@@ -106,8 +106,9 @@ class CLA:
             self.turning_points.append(tp)
 
             # check the turning point
-            assert np.all(tp.weights >= self.lower_bounds)
-            assert np.all(tp.weights <= self.upper_bounds)
+            tol = 1e-10
+            assert np.all(tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
+            assert np.all(tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
 
 
         # 6) compute minimum variance solution

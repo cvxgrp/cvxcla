@@ -32,8 +32,25 @@ def test_big(resource_dir):
     uB = data[2:3][0]
     covar = np.array(data[3:])
     cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
-    for tp in cla.turning_points:
-        print(tp.lamb)
+
+    # from the paper:
+    target = [
+        58.303,
+        4.174,
+        1.946,
+        0.165,
+        0.147,
+        0.056,
+        0.052,
+        0.037,
+        0.031,
+        0.000
+    ]
+
+
+    observed = [tp.lamb for tp in cla.turning_points[1:]]
+    np.allclose(np.array(target), np.array(observed))
+
 
 
 
