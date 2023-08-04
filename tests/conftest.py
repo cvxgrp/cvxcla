@@ -19,6 +19,13 @@ class InputData:
     lower_bounds: MATRIX
     upper_bounds: MATRIX
 
+@dataclass(frozen=True)
+class OutputData:
+    mean: MATRIX
+    weights: MATRIX
+    variance: MATRIX
+    lamb: MATRIX
+
 @pytest.fixture(scope="session", name="resource_dir")
 def resource_fixture():
     """resource fixture"""
@@ -40,4 +47,9 @@ def input_data(resource_dir):
 @pytest.fixture()
 def results(resource_dir):
     results = pd.read_csv(resource_dir / "results.csv", header=0, index_col=None)
-    return results
+    return OutputData(
+        mean=results["Return"].values,
+        weights=results.values[:, 3:],
+        variance=results["Risk"].values,
+        lamb=results["Lambda"].values
+    )

@@ -26,3 +26,9 @@ class TurningPoint:
     @property
     def blocked_indices(self):
         return np.where(~self.free)[0]
+
+    def mean(self, mean: MATRIX):
+        return float(mean.T @ self.weights)
+
+    def variance(self, covariance: MATRIX):
+        return float(self.weights.T @ covariance @ self.weights)

@@ -10,22 +10,28 @@ from cvx.cla._cla import CLA
 def test_cla_hist():
     mean = np.array([0.1, 0.2])
 
-    lB = np.array([0.0, 0.0])
-    uB = np.array([0.6, 0.7])
-    covar = np.array([[2.0, 1.0], [1.0, 3.0]])
-    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+    lower_bounds = np.array([0.0, 0.0])
+    upper_bounds = np.array([0.6, 0.7])
+    covariance = np.array([[2.0, 1.0], [1.0, 3.0]])
+    cla = CLA(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance)
 
 
 def test_big(input_data, results):
+    print(input_data.mean)
     cla = CLA(mean=input_data.mean, lower_bounds=input_data.lower_bounds,
               upper_bounds=input_data.upper_bounds, covariance=input_data.covariance)
 
-    # from the paper:
-    target = results["Lambda"].values
-
     observed = [tp.lamb for tp in cla.turning_points[1:]]
-    np.allclose(np.array(target), np.array(observed))
+    np.allclose(results.lamb, np.array(observed))
 
+    observed = [tp.mean(input_data.mean) for tp in cla.turning_points[1:]]
+    np.allclose(results.mean, np.array(observed))
+
+    observed = [tp.variance(input_data.covariance) for tp in cla.turning_points[1:]]
+    np.allclose(results.variance, np.array(observed))
+
+    observed = [tp.weights for tp in cla.turning_points[1:]]
+    np.allclose(results.weights, np.array(observed))
 
 
 
