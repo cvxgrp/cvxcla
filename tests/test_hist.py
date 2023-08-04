@@ -16,37 +16,12 @@ def test_cla_hist():
     cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
 
 
-
-# use pytest parameter
-# https://docs.pytest.org/en/latest/parametrize.html#parametrize-basics
-
-def test_big(resource_dir):
-
-    # 1) Path
-    path = resource_dir / "CLA_Data.csv"
-    # 2) Load data, set seed
-    data = np.genfromtxt(path, delimiter=",",
-                         skip_header=1)  # load as numpy array
-    mean = data[:1][0]
-    lB = data[1:2][0]
-    uB = data[2:3][0]
-    covar = np.array(data[3:])
-    cla = CLA(mean=mean, lower_bounds=lB, upper_bounds=uB, covariance=covar)
+def test_big(input_data, results):
+    cla = CLA(mean=input_data.mean, lower_bounds=input_data.lower_bounds,
+              upper_bounds=input_data.upper_bounds, covariance=input_data.covariance)
 
     # from the paper:
-    target = [
-        58.303,
-        4.174,
-        1.946,
-        0.165,
-        0.147,
-        0.056,
-        0.052,
-        0.037,
-        0.031,
-        0.000
-    ]
-
+    target = results["Lambda"].values
 
     observed = [tp.lamb for tp in cla.turning_points[1:]]
     np.allclose(np.array(target), np.array(observed))
