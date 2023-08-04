@@ -1,6 +1,11 @@
-import pytest
+from cvx.cla import Frontier
+from cvx.cla.plotting import plot_efficient_frontiers
 
-from cvx.cla.plotting import *
+def test_plot(input_data):
+    f = Frontier.construct(
+        mean=input_data.mean, lower_bounds=input_data.lower_bounds,
+        upper_bounds=input_data.upper_bounds, covariance=input_data.covariance, name="test"
+    )
 
-def test_plot():
-    assert False
+    fig = plot_efficient_frontiers([f])
+    assert fig
