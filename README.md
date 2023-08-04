@@ -12,16 +12,18 @@
 The critical line algorithm is a method to compute the efficient frontier of a
 portfolio optimization problem.
 
-The algorithm has been introduced by Markowitz in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
-Bailey and Lopez de Prado revisited this algorithm in their paper
+The algorithm has been introduced by Markowitz in
+[The Optimization of Quadratic Functions Subject to Linear Constraints](https://www.rand.org/pubs/research_memoranda/RM1438.html)
+and subsequently described in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
+Bailey and Lopez de Prado revisited (a special case of) this algorithm in their paper
 [An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
 There the authors publish a Python implementation of the algorithm.
 
 The algorithm is based on the observation that the efficient frontier is a piecewise
 linear function if expected return is plotted over expected variance.
 The critical line algorithm computes the turning points of the efficient frontier.
-The turning points are the points where the efficient frontier
-changes its slope. The turning points are computed by solving a sequence of quadratic
+The turning points are the points are the corners of the efficient frontier.
+The turning points are computed by solving a sequence of quadratic
 programs.
 
 ## About the code
