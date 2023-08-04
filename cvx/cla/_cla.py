@@ -103,13 +103,14 @@ class CLA:
             weights = schur.update_weights(lamb=lll)
 
             tp = TurningPoint(weights=weights, lamb=lll, free=f)
-            self.turning_points.append(tp)
+            #self.turning_points.append(tp)
 
             # check the turning point
-            tol = 1e-10
-            assert np.all(tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
-            assert np.all(tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
-
+            self.append(tp)
+            #tol = 1e-10
+            #assert np.all(tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
+            #assert np.all(tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
+            #assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
 
         # 6) compute minimum variance solution
         f = np.full_like(self.mean, True, dtype=np.bool_)
@@ -123,9 +124,16 @@ class CLA:
 
         weights = schur.update_weights(lamb=0)
         tp = TurningPoint(weights=weights, lamb=0, free=f)
+        self.append(tp)
+
+    def append(self, tp: TurningPoint, tol=1e-10):
+        tol = 1e-10
+        assert np.all(
+            tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
+        assert np.all(
+            tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
+        assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
         self.turning_points.append(tp)
-
-
 class Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (
