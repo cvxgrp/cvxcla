@@ -25,7 +25,4 @@ def plot_efficient_frontiers(frontiers: List[Frontier]) -> None:
     )
 
     # Create the figure object
-    fig = go.Figure(data=traces, layout=layout)
-
-    # Open the figure
-    fig.show()
+    return go.Figure(data=traces, layout=layout)
