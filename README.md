@@ -21,10 +21,7 @@ There the authors publish a Python implementation of the algorithm.
 
 The algorithm is based on the observation that the efficient frontier is a piecewise
 linear function if expected return is plotted over expected variance.
-The critical line algorithm computes the turning points of the efficient frontier.
-The turning points are the points are the corners of the efficient frontier.
-The turning points are computed by solving a sequence of quadratic
-programs.
+The critical line algorithm computes the turning points, e.g. the corners of the efficient frontier.
 
 ## About the code
 
@@ -34,7 +31,7 @@ noteworthy changes:
 
 * Use a boolean numpy array to indicate whether a weight is free or blocked.
 * Rewrote the computation of the first turning point.
-* Isolated the computation of lambdas and the update of weights to make them testable.
+* Isolated the computation of $\lambdas$ and the update of weights to make them testable.
 * Use modern and immutable dataclasses throughout.
 * Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
