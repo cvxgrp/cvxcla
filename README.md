@@ -21,7 +21,8 @@ There the authors publish a Python implementation of the algorithm.
 
 The algorithm is based on the observation that the efficient frontier is a piecewise
 linear function if expected return is plotted over expected variance.
-The critical line algorithm computes the turning points, e.g. the corners of the efficient frontier.
+The critical line algorithm computes the turning points, e.g. the corners
+of the efficient frontier.
 
 ## About the code
 
