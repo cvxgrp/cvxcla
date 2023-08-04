@@ -31,7 +31,7 @@ noteworthy changes:
 
 * Use a boolean numpy array to indicate whether a weight is free or blocked.
 * Rewrote the computation of the first turning point.
-* Isolated the computation of $\lambdas$ and the update of weights to make them testable.
+* Isolated the computation of $$\lambdas$$ and the update of weights to make them testable.
 * Use modern and immutable dataclasses throughout.
 * Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
