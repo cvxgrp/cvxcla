@@ -139,8 +139,6 @@ class CLA:
             tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
         assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
 
-        print(tp.weights)
-
         self.turning_points.append(tp)
 class Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
