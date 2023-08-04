@@ -8,6 +8,7 @@ from cvx.cla._first import init_algo
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 
 
+
 @dataclass(frozen=True)
 class CLA:
     mean: MATRIX
@@ -24,9 +25,6 @@ class CLA:
 
         while True:
             last = self.turning_points[-1]
-
-            if np.all(last.free):
-                break
 
             # 1) case a): Bound one free weight
             l_in = -np.inf
@@ -82,6 +80,7 @@ class CLA:
                 # 4) decide lambda
                 f = np.copy(last.free)
                 w = np.copy(last.weights)
+
                 if l_in > l_out:
                     lll = l_in
                     f[i_in] = False
@@ -98,7 +97,6 @@ class CLA:
                 free=f,
                 weights=w,
             )
-
             # 5) compute solution vector
             weights = schur.update_weights(lamb=lll)
             tp = TurningPoint(weights=weights, lamb=lll, free=f)
@@ -112,9 +110,14 @@ class CLA:
         mean[last.free] = 0.0
         f = last.free
         w = last.weights
-        #w[f] = 0.0
-        #f =
-        #f = np.full_like(self.mean, True, dtype=np.bool_)
+
+        #x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
+        #constraints = [
+        #    cp.sum(x) == 1,
+        #    x >= self.lower_bounds,
+        #    x <= self.upper_bounds
+        #]
+        #cp.Problem(cp.Minimize(cp.quad_form(x, self.covariance)), constraints).solve()
 
         schur = Schur(
             covariance=self.covariance,
@@ -124,7 +127,8 @@ class CLA:
         )
 
         weights = schur.update_weights(lamb=0)
-        tp = TurningPoint(weights=weights, lamb=0, free=f)
+        tp = TurningPoint(weights=weights, lamb=0, free=last.free)
+
         self.append(tp)
 
     def append(self, tp: TurningPoint, tol=1e-10):
@@ -215,7 +219,7 @@ class Schur:
         w3 = np.dot(self.covariance_free_inv, self.mean_free)
         return -w1 + gamma * w2 + lamb * w3, gamma
 
-    def update_weights(self, lamb, logger=None):
+    def  update_weights(self, lamb, logger=None):
         # schur = self.__get_matrix(covariance, mean)
         logger = logger or logging.getLogger(__name__)
 

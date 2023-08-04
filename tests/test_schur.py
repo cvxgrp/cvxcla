@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from cvx.cla._cla import Schur
 
@@ -45,3 +46,35 @@ def test_compute_weight():
 
     actual_weights = schur.update_weights(lamb)
     np.testing.assert_allclose(actual_weights, np.array([0.75, 0.25, 0.0]), rtol=1e-3)
+
+def test_special_minvar():
+    mean = np.array([0.1, 0.2])
+
+    lower_bounds = np.array([0.0, 0.0])
+    upper_bounds = np.array([0.6, 0.7])
+    covariance = np.array([[2.0, 1.0], [1.0, 3.0]])
+
+        # start with the vector [0.3, 0.7]. Try to free the second asset
+    schur = Schur(covariance=covariance, mean=mean, free=np.array([True, True]), weights=np.array([0.3, 0.7]))
+    lamb, bi = schur.compute_lambda(index=1, bi=np.array([0.7]))
+    assert lamb == pytest.approx(11.0)
+    assert bi==0.7
+    w = schur.update_weights(lamb=11)
+    assert np.allclose(w, np.array([0.3, 0.7]))
+
+
+    schur = Schur(covariance=covariance, mean=mean, free=np.array([True, True]), weights=np.array([0.3, 0.7]))
+
+    # try to block the first asset
+    lamb, bi = schur.compute_lambda(
+        index=0,
+        bi=np.array([lower_bounds[0], upper_bounds[0]]),
+    )
+
+    assert lamb == pytest.approx(2.0)
+    assert bi == pytest.approx(0.6)
+
+    schur = Schur(covariance=covariance, mean=mean, free=np.array([False, True]), weights=np.array([0.6, 0.7]))
+    w = schur.update_weights(lamb=2)
+
+    assert np.allclose(w, np.array([0.6, 0.4]))
