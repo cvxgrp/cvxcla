@@ -1,0 +1,22 @@
+:py:mod:`cla.plotting`
+======================
+
+.. py:module:: cla.plotting
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cla.plotting.plot_efficient_frontiers
+
+
+
+.. py:function:: plot_efficient_frontiers(frontiers: List[cvx.cla.Frontier]) -> None
+
+

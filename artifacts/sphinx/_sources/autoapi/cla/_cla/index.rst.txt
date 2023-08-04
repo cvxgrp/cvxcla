@@ -48,6 +48,9 @@ Classes
    .. py:method:: __post_init__(self)
 
 
+   .. py:method:: append(self, tp: cvx.cla.types.TurningPoint, tol=1e-10)
+
+
 
 .. py:class:: Schur(covariance, mean, free: cvx.cla.types.BOOLEAN_VECTOR, weights: cvx.cla.types.MATRIX)
 

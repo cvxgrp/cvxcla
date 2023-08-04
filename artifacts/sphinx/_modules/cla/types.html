@@ -98,7 +98,13 @@
 
     <span class="nd">@property</span>
 <div class="viewcode-block" id="TurningPoint.blocked_indices"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.blocked_indices">[docs]</a>    <span class="k">def</span> <span class="nf">blocked_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="TurningPoint.mean"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.mean">[docs]</a>    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TurningPoint.variance"><a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.variance">[docs]</a>    <span class="k">def</span> <span class="nf">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">covariance</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>

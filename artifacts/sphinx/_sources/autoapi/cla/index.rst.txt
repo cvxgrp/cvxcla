@@ -13,6 +13,7 @@ Submodules
    _cla/index.rst
    _first/index.rst
    frontier/index.rst
+   plotting/index.rst
    types/index.rst
 
 
@@ -48,7 +49,12 @@ Classes
 
       
 
-   .. py:method:: construct(mean, covariance, lower_bounds, upper_bounds)
+   .. py:attribute:: name
+      :annotation: :str = FRONTIER
+
+      
+
+   .. py:method:: construct(mean, covariance, lower_bounds, upper_bounds, name)
       :staticmethod:
 
       Constructs a frontier by computing a list of turning points.
