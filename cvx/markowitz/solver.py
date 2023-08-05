@@ -39,12 +39,9 @@ def initport(mu, lb, ub):
         ix += 1
     return (x)
 
-# --A05-- Read the raw data.
-#ret = np.genfromtxt("example.tsv", delimiter = "\t")
-#ret = np.delete(ret, 0, 1)
 
-np.random.seed(0)
-ret = np.random.randn(100, 10)
+#np.random.seed(0)
+#ret = np.random.randn(100, 10)
 
 def cla(mean, lower_bounds, upper_bounds, covariance):
     # --A06-- Set initial parameters.
@@ -53,8 +50,6 @@ def cla(mean, lower_bounds, upper_bounds, covariance):
     lb = lower_bounds.reshape([ns, 1])
     ub = upper_bounds.reshape([ns, 1])
 
-    #lb = 0.1 * np.ones([ns, 1])
-    #ub = 0.5 * np.ones([ns, 1])
     A = np.ones([1, ns])
     b = 1.0
     m = 1
