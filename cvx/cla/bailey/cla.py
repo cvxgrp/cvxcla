@@ -4,19 +4,14 @@ from typing import List
 import numpy as np
 import logging
 
-from cvx.cla._first import init_algo
+from cvx.cla.aux import CLAUX
+from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 
 
 
 @dataclass(frozen=True)
-class CLA:
-    mean: MATRIX
-    covariance: MATRIX
-    lower_bounds: MATRIX
-    upper_bounds: MATRIX
-    turning_points: List[TurningPoint] = field(default_factory=list)
-
+class CLA(CLAUX):
     def __post_init__(self):
         # Compute the turning points,free sets and weights
         first = init_algo(mean=self.mean, lower_bounds=self.lower_bounds, upper_bounds=self.upper_bounds)
@@ -111,14 +106,6 @@ class CLA:
         f = last.free
         w = last.weights
 
-        #x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
-        #constraints = [
-        #    cp.sum(x) == 1,
-        #    x >= self.lower_bounds,
-        #    x <= self.upper_bounds
-        #]
-        #cp.Problem(cp.Minimize(cp.quad_form(x, self.covariance)), constraints).solve()
-
         schur = Schur(
             covariance=self.covariance,
             mean=mean,
@@ -131,15 +118,6 @@ class CLA:
 
         self.append(tp)
 
-    def append(self, tp: TurningPoint, tol=1e-10):
-        tol = 1e-10
-        assert np.all(
-            tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
-        assert np.all(
-            tp.weights <= self.upper_bounds + tol), f"-{self.upper_bounds} + {tp.weights}"
-        assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
-
-        self.turning_points.append(tp)
 class Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (

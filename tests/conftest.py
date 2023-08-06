@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from cvx.cla.types import MATRIX
+from cvx.cla.types import MATRIX, TurningPoint
 
 
 @dataclass(frozen=True)
@@ -53,3 +53,13 @@ def results(resource_dir):
         variance=results["Risk"].values,
         lamb=results["Lambda"].values
     )
+
+@pytest.fixture()
+def example(resource_dir):
+    return pd.read_csv(resource_dir / "example.csv", header=0, index_col=0)
+
+@pytest.fixture()
+def example_solution(resource_dir):
+    return pd.read_csv(resource_dir / "example_solution.csv", header=0, index_col=None)
+    #for row in frame.iterrows():
+    #    yield TurningPoint(lamb=row["Lambda"], weights=row[1]["Weights"], mean=row[1]["Mean"], variance=row[1]["Variance"])

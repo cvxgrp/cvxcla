@@ -1,20 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 
-from cvx.cla.types import MATRIX, BOOLEAN_VECTOR
+from cvx.cla.types import MATRIX, TurningPoint
 
 
-@dataclass(frozen=True)
-class Next:
-    free: BOOLEAN_VECTOR
-    weights: MATRIX
-    lamb: float = np.inf
-    mean: float = -np.inf
-
-def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
+def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> TurningPoint:
     """The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
@@ -42,10 +33,10 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
 
     # Move weights from lower to upper bound
     # until sum of weights hits or exceeds 1
-    for index in np.argsort(mean)[::-1]:
-        weights[index] = upper_bounds[index]
+    for index in np.argsort(-mean):
+        weights[index] += np.min([upper_bounds[index] - lower_bounds[index],
+                            1.0 - np.sum(weights)])
         if np.sum(weights) >= 1:
-            weights[index] -= np.sum(weights) - 1
             free[index] = True
             break
 
@@ -54,4 +45,4 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Next:
         raise ValueError("Could not construct a fully invested portfolio")
 
     # Return first turning point, the point with the highest expected return.
-    return Next(free=free, weights=weights, mean=float(mean.T @ weights))
+    return TurningPoint(free=free, lamb=np.inf, weights=weights)

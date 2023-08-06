@@ -12,6 +12,7 @@ python = ">=3.9,<3.13"
 numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
+cvxpy = "*"
 
 [tool.poetry.dev-dependencies]
 loguru = "*"
@@ -21,6 +22,7 @@ pandas = "*"
 pytest = "7.2.0"
 pytest-cov = "4.0.0"
 mock = "*"
+cvxbson = "*"
 
 [tool.poetry.group.jupyter.dependencies]
 jupyterlab = "*"
