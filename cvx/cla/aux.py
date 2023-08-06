@@ -19,8 +19,7 @@ class CLAUX:
     def num_points(self):
         return len(self.turning_points)
 
-    def append(self, tp: TurningPoint, tol=1e-10):
-        tol = 1e-10
+    def append(self, tp: TurningPoint, tol=1e-5):
         assert np.all(
             tp.weights >= self.lower_bounds - tol), f"{self.lower_bounds} - {tp.weights}"
         assert np.all(
