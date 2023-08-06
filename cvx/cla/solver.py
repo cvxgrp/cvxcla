@@ -3,6 +3,7 @@ from enum import Enum
 from cvx.cla.bailey.cla import CLA as Bailey
 from cvx.cla.markowitz.cla import CLA as Markowitz
 
+
 class Solver(Enum):
     BAILEY = Bailey
     MARKOWITZ = Markowitz
