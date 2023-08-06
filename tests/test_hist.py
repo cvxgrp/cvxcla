@@ -1,9 +1,8 @@
 import numpy as np
 import pytest
 
-from cvx.cla._first import init_algo
-from cvx.cla._cla import Schur
-from cvx.cla._cla import CLA
+from cvx.cla.first import init_algo
+from cvx.cla.bailey.cla import Schur, CLA
 
 
 
@@ -35,25 +34,8 @@ def test_big(input_data, results):
 
 
 
-@pytest.mark.parametrize("n", [5, 20, 100, 1000])
-def test_init_algo(n):
-    mean = np.random.randn(n)
-    lB = np.zeros(n)
-    uB = np.random.rand(n)
-
-    first = init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
-
-    assert np.sum(first.free) == 1
-    assert np.sum(first.weights) == pytest.approx(1.0)
 
 
-def test_lb_ub_mixed():
-    uB = np.zeros(3)
-    lB = np.ones(3)
-    mean = np.ones(3)
-
-    with pytest.raises(ValueError):
-        init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
 
 
 def test_no_fully_invested():

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.optimize import minimize
 
-from ._cla import CLA
+from .bailey.cla import CLA
 from .types import MATRIX
 
 

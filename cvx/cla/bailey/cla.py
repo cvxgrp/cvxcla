@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 import logging
 
-from cvx.cla._first import init_algo
+from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 
 
