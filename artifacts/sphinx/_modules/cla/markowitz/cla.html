@@ -111,7 +111,6 @@
         <span class="n">logger</span> <span class="o">=</span> <span class="n">loguru</span>
 
         <span class="n">ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of assets </span><span class="si">{</span><span class="n">ns</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">ns</span><span class="p">))</span>
         <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">])</span>
@@ -122,9 +121,6 @@
 
         <span class="c1"># --A08-- Initialize the portfolio.</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">)</span>
-
-        <span class="c1">#x = initport(self.mean, self.lower_bounds, self.upper_bounds)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;First vector of weights </span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># --A10-- Set the P matrix.</span>
         <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -181,7 +177,6 @@
             <span class="n">r_alpha</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="n">ns</span><span class="p">)]</span>
 
             <span class="c1"># --A18-- IN security possibly going UP.</span>
-            <span class="c1">#i = np.where(IN &amp; (r_beta &lt; -self.tol))[0]</span>
             <span class="n">i</span> <span class="o">=</span> <span class="n">IN</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">r_beta</span> <span class="o">&lt;</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
             <span class="n">L</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">r_alpha</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="n">r_beta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
@@ -192,25 +187,20 @@
             <span class="c1"># --A20--UP security possibly going IN.</span>
             <span class="n">i</span> <span class="o">=</span> <span class="n">UP</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">delta</span> <span class="o">&lt;</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
             <span class="n">L</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;UP going IN: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
             <span class="c1"># --A21-- DN security possibly going IN.</span>
             <span class="n">i</span> <span class="o">=</span> <span class="n">DN</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">delta</span> <span class="o">&gt;</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">tol</span><span class="p">)</span>
             <span class="n">L</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DN going IN: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;L matrix: </span><span class="se">\n</span><span class="si">{</span><span class="n">L</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="c1"># --A22--If all elements of ratio are negative,</span>
             <span class="c1"># we have reached the end of the efficient frontier.</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">L</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">break</span>
 
             <span class="n">secchg</span><span class="p">,</span> <span class="n">dirchg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span> <span class="n">L</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Asset changing state: </span><span class="si">{</span><span class="n">secchg</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
             <span class="c1"># --A25-- Set the new value of lambda_E.</span>
             <span class="n">lam</span> <span class="o">=</span> <span class="n">L</span><span class="p">[</span><span class="n">secchg</span><span class="p">,</span> <span class="n">dirchg</span><span class="p">]</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lambda: </span><span class="si">{</span><span class="n">lam</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
             <span class="n">free</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">dirchg</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">dirchg</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
