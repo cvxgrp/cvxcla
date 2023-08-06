@@ -55,4 +55,16 @@ def test_init(n):
     np.testing.assert_almost_equal(tp_bailey.turning_points[0].weights,
                                    tp_markowitz.turning_points[0].weights)
 
-    #assert tp_bailey.num_points == tp_markowitz.num_points
+    assert tp_bailey.num_points == tp_markowitz.num_points
+
+
+@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize("n", [50,100])
+def test_init(solver, n):
+    mean = np.random.randn(n)
+
+
+    solver = solver.build(mean=mean,
+                          lower_bounds=np.zeros(n),
+                          upper_bounds=np.ones(n),
+                          covariance=np.eye(n))
