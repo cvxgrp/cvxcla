@@ -24,7 +24,7 @@ def test_frontier(input_data, solver):
     f.interpolate(num=10)
 
 @pytest.mark.parametrize("n", [2,2,2,3,3,3, 5, 5, 5, 5, 10, 20, 20, 20, 20, 20, 20])
-def test_frontiers(n):
+def test_frontiers(n, resource_dir):
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
     upper_bounds = np.ones(n)
@@ -59,7 +59,7 @@ def test_frontiers(n):
             "covariance": covar
         }
 
-        write_bson(file=f"resources/problem_{np.random.randint(low=0, high=10000)}.bson", data=data)
+        write_bson(file=resource_dir / f"problem_{np.random.randint(low=0, high=10000)}.bson", data=data)
 
 def test_xxx(resource_dir):
     data = read_bson(file=resource_dir / "problem_1077.bson")
