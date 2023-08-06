@@ -27,20 +27,6 @@ class FrontierPoint:
         # make sure the weights are non-negative
         #assert np.all(self.weights >= -1e-7)
 
-    # The final result will be a list of points on the efficient frontier.
-    # Each point is described by a vector of weights.
-    @staticmethod
-    def from_turning_point(turning_point):
-        """
-        Constructs a frontier point given a turning point
-        Args:
-            turning_point: The turning point
-
-        Returns: A frontier point
-
-        """
-        return FrontierPoint(weights=turning_point.weights)
-
     def expected_return(self, mean):
         """
         Computes the expected return for a frontier point
@@ -66,6 +52,13 @@ class FrontierPoint:
         return self.weights.T @ (covariance @ self.weights)
 
 
+def _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=1-10):
+    x = solver.build(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
+
+    #x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
+    for point in x.turning_points:
+        yield FrontierPoint(weights = point.weights)
+
 @dataclass(frozen=True)
 class Frontier:
     """
@@ -78,7 +71,7 @@ class Frontier:
     name: str = "FRONTIER"
 
     @staticmethod
-    def construct(mean, covariance, lower_bounds, upper_bounds, name):
+    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=1e-10):
         """
         Constructs a frontier by computing a list of turning points.
 
@@ -91,11 +84,13 @@ class Frontier:
         Returns:
             A frontier of frontier points each of them a turning point
         """
-        cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
+        frontier_points = list(_turning_points(solver=solver,
+                                               mean=mean,
+                                               covariance=covariance,
+                                               lower_bounds=lower_bounds,
+                                               upper_bounds=upper_bounds,
+                                               tol=tol))
 
-        frontier_points = [
-            FrontierPoint.from_turning_point(t_point) for t_point in cla.turning_points
-        ]
         return Frontier(frontier=frontier_points, mean=mean, covariance=covariance, name=name)
 
     def interpolate(self, num=100):

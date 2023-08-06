@@ -16,6 +16,7 @@ class CLA:
     lower_bounds: MATRIX
     upper_bounds: MATRIX
     turning_points: List[TurningPoint] = field(default_factory=list)
+    tol: float = 1e-5
 
     def __post_init__(self):
         # Compute the turning points,free sets and weights
