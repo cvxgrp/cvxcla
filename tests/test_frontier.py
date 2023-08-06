@@ -70,7 +70,7 @@ def test_xxx(resource_dir):
         upper_bounds=data["upper_bounds"], covariance=data["covariance"],
         name="Markowitz", tol=1e-6)
 
-    for point in f_markowitz.frontier[:8]:
+    for point in f_markowitz.frontier:
         print(point.expected_variance(data["covariance"]))
         print(point.weights)
 

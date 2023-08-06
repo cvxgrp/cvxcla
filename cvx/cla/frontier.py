@@ -71,7 +71,7 @@ class Frontier:
     name: str = "FRONTIER"
 
     @staticmethod
-    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=1e-10):
+    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-10)):
         """
         Constructs a frontier by computing a list of turning points.
 
@@ -80,6 +80,8 @@ class Frontier:
             covariance: a covariance matrix
             lower_bounds: lower bounds per asset
             upper_bounds: upper bounds per asset
+            name: the name of the frontier
+            tol: tolerance for the solver
 
         Returns:
             A frontier of frontier points each of them a turning point

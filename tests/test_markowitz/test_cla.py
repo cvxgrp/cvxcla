@@ -11,13 +11,13 @@ def test_solver(input_data, results):
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance, tol=1e-5)
 
-    observed = np.array([tp.lamb for tp in cla.turning_points[2:]])
+    observed = np.array([tp.lamb for tp in cla.turning_points[1:]])
     assert np.allclose(results.lamb, observed, atol=1e-2)
 
-    observed = np.array([tp.mean(input_data.mean) for tp in cla.turning_points[2:]])
+    observed = np.array([tp.mean(input_data.mean) for tp in cla.turning_points[1:]])
     assert np.allclose(results.mean, observed, atol=1e-2)
 
-    observed = np.array([tp.variance(input_data.covariance) for tp in cla.turning_points[2:]])
+    observed = np.array([tp.variance(input_data.covariance) for tp in cla.turning_points[1:]])
     assert np.allclose(results.variance, observed, atol=0.5)
 
 def test_example(example, example_solution):
