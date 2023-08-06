@@ -38,7 +38,6 @@ class CLA(CLAUX):
         logger = loguru
 
         ns = self.mean.shape[0]
-        logger.info(f"Number of assets {ns}")
 
         A = np.ones((1, ns))
         b = np.array([1.0])
@@ -49,9 +48,6 @@ class CLA(CLAUX):
 
         # --A08-- Initialize the portfolio.
         x = init_algo(self.mean, self.lower_bounds, self.upper_bounds)
-
-        #x = initport(self.mean, self.lower_bounds, self.upper_bounds)
-        logger.info(f"First vector of weights {x}")
 
         # --A10-- Set the P matrix.
         P = np.concatenate((C, A.T), axis=1)
@@ -108,7 +104,6 @@ class CLA(CLAUX):
             r_alpha = alpha[range(ns)]
 
             # --A18-- IN security possibly going UP.
-            #i = np.where(IN & (r_beta < -self.tol))[0]
             i = IN & (r_beta < -self.tol)
             L[i, 0] = (self.upper_bounds[i] - r_alpha[i]) / r_beta[i]
 
@@ -119,25 +114,20 @@ class CLA(CLAUX):
             # --A20--UP security possibly going IN.
             i = UP & (delta < -self.tol)
             L[i, 2] = -gamma[i] / delta[i]
-            logger.info(f"UP going IN: {i}")
 
             # --A21-- DN security possibly going IN.
             i = DN & (delta > +self.tol)
             L[i, 3] = -gamma[i] / delta[i]
-            logger.info(f"DN going IN: {i}")
 
-            logger.info(f"L matrix: \n{L}")
             # --A22--If all elements of ratio are negative,
             # we have reached the end of the efficient frontier.
             if np.max(L) < 0:
                 break
 
             secchg, dirchg = np.unravel_index(np.argmax(L, axis=None), L.shape)
-            logger.info(f"Asset changing state: {secchg}")
 
             # --A25-- Set the new value of lambda_E.
             lam = L[secchg, dirchg]
-            logger.info(f"Lambda: {lam}")
 
             free = np.copy(last.free)
             if dirchg == 0 or dirchg == 1:
