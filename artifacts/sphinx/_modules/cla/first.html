@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cla._first &mdash; cvxcla Documentation</title>
+  <title>cla.first &mdash; cvxcla Documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
@@ -61,7 +61,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../index.html">Module code</a> &raquo;</li>
-      <li>cla._first</li>
+      <li>cla.first</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -70,24 +70,15 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for cla._first</h1><div class="highlight"><pre>
+  <h1>Source code for cla.first</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
-
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">BOOLEAN_VECTOR</span>
+<span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">TurningPoint</span>
 
 
-<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<div class="viewcode-block" id="Next"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.Next">[docs]</a><span class="k">class</span> <span class="nc">Next</span><span class="p">:</span>
-<div class="viewcode-block" id="Next.free"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.Next.free">[docs]</a>    <span class="n">free</span><span class="p">:</span> <span class="n">BOOLEAN_VECTOR</span></div>
-<div class="viewcode-block" id="Next.weights"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.Next.weights">[docs]</a>    <span class="n">weights</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="Next.lamb"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.Next.lamb">[docs]</a>    <span class="n">lamb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span></div>
-<div class="viewcode-block" id="Next.mean"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.Next.mean">[docs]</a>    <span class="n">mean</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span></div></div>
-
-<div class="viewcode-block" id="init_algo"><a class="viewcode-back" href="../../autoapi/cla/_first/index.html#cla._first.init_algo">[docs]</a><span class="k">def</span> <span class="nf">init_algo</span><span class="p">(</span><span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Next</span><span class="p">:</span>
+<div class="viewcode-block" id="init_algo"><a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.init_algo">[docs]</a><span class="k">def</span> <span class="nf">init_algo</span><span class="p">(</span><span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurningPoint</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The key insight behind Markowitz’s CLA is to find first the</span>
 <span class="sd">    turning point associated with the highest expected return, and then</span>
 <span class="sd">    compute the sequence of turning points, each with a lower expected</span>
@@ -115,10 +106,10 @@
 
     <span class="c1"># Move weights from lower to upper bound</span>
     <span class="c1"># until sum of weights hits or exceeds 1</span>
-    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
-        <span class="n">weights</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">upper_bounds</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">mean</span><span class="p">):</span>
+        <span class="n">weights</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">upper_bounds</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">-</span> <span class="n">lower_bounds</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
+                            <span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)])</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">weights</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">-=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
             <span class="n">free</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">break</span>
 
@@ -127,7 +118,7 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not construct a fully invested portfolio&quot;</span><span class="p">)</span>
 
     <span class="c1"># Return first turning point, the point with the highest expected return.</span>
-    <span class="k">return</span> <span class="n">Next</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">weights</span><span class="p">))</span></div>
+    <span class="k">return</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">)</span></div>
 </pre></div>
 
            </div>

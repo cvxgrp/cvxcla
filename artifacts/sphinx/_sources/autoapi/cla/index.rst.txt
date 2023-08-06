@@ -4,16 +4,27 @@
 .. py:module:: cla
 
 
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   bailey/index.rst
+   markowitz/index.rst
+
+
 Submodules
 ----------
 .. toctree::
    :titlesonly:
    :maxdepth: 1
 
-   _cla/index.rst
-   _first/index.rst
+   aux/index.rst
+   first/index.rst
    frontier/index.rst
    plotting/index.rst
+   solver/index.rst
    types/index.rst
 
 
@@ -54,7 +65,7 @@ Classes
 
       
 
-   .. py:method:: construct(mean, covariance, lower_bounds, upper_bounds, name)
+   .. py:method:: build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-10))
       :staticmethod:
 
       Constructs a frontier by computing a list of turning points.
@@ -63,6 +74,8 @@ Classes
       :param covariance: a covariance matrix
       :param lower_bounds: lower bounds per asset
       :param upper_bounds: upper bounds per asset
+      :param name: the name of the frontier
+      :param tol: tolerance for the solver
 
       :returns: A frontier of frontier points each of them a turning point
 

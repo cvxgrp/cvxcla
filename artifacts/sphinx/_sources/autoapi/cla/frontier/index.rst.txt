@@ -22,6 +22,14 @@ Classes
 
 
 
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cla.frontier._turning_points
+
+
 
 .. py:class:: FrontierPoint
 
@@ -33,16 +41,6 @@ Classes
       
 
    .. py:method:: __post_init__(self)
-
-
-   .. py:method:: from_turning_point(turning_point)
-      :staticmethod:
-
-      Constructs a frontier point given a turning point
-      :param turning_point: The turning point
-
-      Returns: A frontier point
-
 
 
    .. py:method:: expected_return(self, mean)
@@ -62,6 +60,9 @@ Classes
 
       :returns: Computes $w^T Covariance w$
 
+
+
+.. py:function:: _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=1 - 10)
 
 
 .. py:class:: Frontier
@@ -88,7 +89,7 @@ Classes
 
       
 
-   .. py:method:: construct(mean, covariance, lower_bounds, upper_bounds, name)
+   .. py:method:: build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-10))
       :staticmethod:
 
       Constructs a frontier by computing a list of turning points.
@@ -97,6 +98,8 @@ Classes
       :param covariance: a covariance matrix
       :param lower_bounds: lower bounds per asset
       :param upper_bounds: upper bounds per asset
+      :param name: the name of the frontier
+      :param tol: tolerance for the solver
 
       :returns: A frontier of frontier points each of them a turning point
 

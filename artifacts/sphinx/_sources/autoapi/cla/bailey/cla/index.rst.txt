@@ -1,7 +1,7 @@
-:py:mod:`cla._cla`
-==================
+:py:mod:`cla.bailey.cla`
+========================
 
-.. py:module:: cla._cla
+.. py:module:: cla.bailey.cla
 
 
 Module Contents
@@ -12,43 +12,17 @@ Classes
 
 .. autoapisummary::
 
-   cla._cla.CLA
-   cla._cla.Schur
+   cla.bailey.cla.CLA
+   cla.bailey.cla.Schur
 
 
 
 
 .. py:class:: CLA
 
-   .. py:attribute:: mean
-      :annotation: :cvx.cla.types.MATRIX
-
-      
-
-   .. py:attribute:: covariance
-      :annotation: :cvx.cla.types.MATRIX
-
-      
-
-   .. py:attribute:: lower_bounds
-      :annotation: :cvx.cla.types.MATRIX
-
-      
-
-   .. py:attribute:: upper_bounds
-      :annotation: :cvx.cla.types.MATRIX
-
-      
-
-   .. py:attribute:: turning_points
-      :annotation: :List[cvx.cla.types.TurningPoint]
-
-      
+   Bases: :py:obj:`cvx.cla.aux.CLAUX`
 
    .. py:method:: __post_init__(self)
-
-
-   .. py:method:: append(self, tp: cvx.cla.types.TurningPoint, tol=1e-10)
 
 
 

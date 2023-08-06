@@ -1,0 +1,15 @@
+:py:mod:`cla.bailey`
+====================
+
+.. py:module:: cla.bailey
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   cla/index.rst
+
+

@@ -1,0 +1,38 @@
+:py:mod:`cla.markowitz.cla`
+===========================
+
+.. py:module:: cla.markowitz.cla
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.markowitz.cla.CLA
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cla.markowitz.cla.Mbar_matrix
+
+
+
+.. py:function:: Mbar_matrix(C, A, io: List[bool])
+
+
+.. py:class:: CLA
+
+   Bases: :py:obj:`cvx.cla.aux.CLAUX`
+
+   .. py:method:: __post_init__(self)
+
+
+

@@ -1,19 +1,11 @@
-:py:mod:`cla._first`
-====================
+:py:mod:`cla.first`
+===================
 
-.. py:module:: cla._first
+.. py:module:: cla.first
 
 
 Module Contents
 ---------------
-
-Classes
-~~~~~~~
-
-.. autoapisummary::
-
-   cla._first.Next
-
 
 
 Functions
@@ -21,34 +13,11 @@ Functions
 
 .. autoapisummary::
 
-   cla._first.init_algo
+   cla.first.init_algo
 
 
 
-.. py:class:: Next
-
-   .. py:attribute:: free
-      :annotation: :cvx.cla.types.BOOLEAN_VECTOR
-
-      
-
-   .. py:attribute:: weights
-      :annotation: :cvx.cla.types.MATRIX
-
-      
-
-   .. py:attribute:: lamb
-      :annotation: :float
-
-      
-
-   .. py:attribute:: mean
-      :annotation: :float
-
-      
-
-
-.. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> Next
+.. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> cvx.cla.types.TurningPoint
 
    The key insight behind Markowitz’s CLA is to find first the
    turning point associated with the highest expected return, and then
