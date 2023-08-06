@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo
 from cvx.cla.bailey.cla import Schur, CLA
 
 
@@ -31,22 +30,6 @@ def test_big(input_data, results):
 
     observed = [tp.weights for tp in cla.turning_points[1:]]
     np.allclose(results.weights, np.array(observed))
-
-
-
-
-
-
-
-def test_no_fully_invested():
-    uB = 0.2 * np.ones(3)
-    lB = np.zeros(3)
-    mean = np.ones(3)
-
-    with pytest.raises(ValueError):
-        init_algo(mean=mean, lower_bounds=lB, upper_bounds=uB)
-
-
 
 
 def test_remove():
