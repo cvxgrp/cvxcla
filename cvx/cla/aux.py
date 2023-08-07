@@ -28,12 +28,6 @@ class CLAUX:
                           upper_bounds=self.upper_bounds)
         return first
 
-    def first_turning_point(self):
-        first = init_algo(mean=self.mean,
-                          lower_bounds=self.lower_bounds,
-                          upper_bounds=self.upper_bounds)
-        return first
-
     @property
     def num_points(self):
         return len(self.turning_points)
