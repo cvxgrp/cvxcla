@@ -21,7 +21,7 @@ class CLA(CLAUX):
 
             # only try to bound a free asset if there are least two of them
             if np.sum(last.free) > 1:
-                schur = Schur(
+                schur = _Schur(
                     covariance=self.covariance,
                     mean=self.mean,
                     free=last.free,
@@ -48,7 +48,7 @@ class CLA(CLAUX):
                 fff = np.copy(last.free)
                 fff[i] = True
 
-                schur = Schur(
+                schur = _Schur(
                     covariance=self.covariance,
                     mean=self.mean,
                     free=fff,
@@ -81,7 +81,7 @@ class CLA(CLAUX):
             else:
                 break
 
-            schur = Schur(
+            schur = _Schur(
                 covariance=self.covariance,
                 mean=self.mean,
                 free=f,
@@ -101,7 +101,7 @@ class CLA(CLAUX):
         f = last.free
         w = last.weights
 
-        schur = Schur(
+        schur = _Schur(
             covariance=self.covariance,
             mean=mean,
             free=f,
@@ -113,7 +113,7 @@ class CLA(CLAUX):
 
         self.append(tp)
 
-class Schur:
+class _Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (
             covariance.shape[0]
@@ -191,15 +191,7 @@ class Schur:
         return -w1 + gamma * w2 + lamb * w3, gamma
 
     def  update_weights(self, lamb):
-        # schur = self.__get_matrix(covariance, mean)
-
         weights, _ = self._compute_weight(lamb)
-        self.logger.info(f"CURRENTLY: {self.weights}")
-        self.logger.info(f"UPDATE: {weights}")
-        self.logger.info(f"FREE: {self.free}")
-
         new_weights = np.copy(self.weights)
         new_weights[self.free] = weights
-        self.logger.info(f"NEW: {new_weights}")
-
         return new_weights
