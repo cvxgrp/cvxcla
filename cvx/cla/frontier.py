@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.optimize import minimize
 
-from .bailey.cla import CLA
 from .types import MATRIX
 
 
@@ -52,7 +51,7 @@ class FrontierPoint:
         return self.weights.T @ (covariance @ self.weights)
 
 
-def _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=1-10):
+def _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=None):
     x = solver.build(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
 
     #x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
@@ -71,7 +70,7 @@ class Frontier:
     name: str = "FRONTIER"
 
     @staticmethod
-    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-10)):
+    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-5)):
         """
         Constructs a frontier by computing a list of turning points.
 

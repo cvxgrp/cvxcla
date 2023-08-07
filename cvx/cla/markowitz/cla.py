@@ -1,17 +1,15 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-import cvxpy as cp
 
 from loguru import logger as loguru
 
 from cvx.cla.aux import CLAUX
-from cvx.cla.first import init_algo
 from cvx.cla.types import TurningPoint
 
 
-def Mbar_matrix(C, A, io: List[bool]):
+def _Mbar_matrix(C, A, io: List[bool]):
     m = A.shape[0]
 
     Cbar = np.copy(C)
@@ -47,15 +45,14 @@ class CLA(CLAUX):
         C = self.covariance
 
         # --A08-- Initialize the portfolio.
-        x = init_algo(self.mean, self.lower_bounds, self.upper_bounds)
+        first = self.first_turning_point()
+        self.append(first)
 
         # --A10-- Set the P matrix.
         P = np.concatenate((C, A.T), axis=1)
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
-
-        self.append(x)
         logger.info("First turning point added")
 
         # --A12 -- The main CLA loop , which steps
@@ -72,7 +69,7 @@ class CLA(CLAUX):
             OUT = np.logical_or(UP, DN)
             IN = ~OUT
 
-            Mbar = Mbar_matrix(C, A, OUT)
+            Mbar = _Mbar_matrix(C, A, OUT)
 
             up = np.zeros(ns)
             up[UP] = self.upper_bounds[UP]
@@ -141,12 +138,5 @@ class CLA(CLAUX):
             # --A28-- Save the data computed at this corner.
             self.append(TurningPoint(lamb=lam, weights=x, free=free))
 
-        x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
-        constraints = [
-           cp.sum(x) == 1,
-           x >= self.lower_bounds,
-           x <= self.upper_bounds
-        ]
-        cp.Problem(cp.Minimize(cp.quad_form(x, self.covariance)), constraints).solve()
-
-        self.append(TurningPoint(lamb=0, weights=x.value, free=last.free))
+        x = self.minimum_variance()
+        self.append(TurningPoint(lamb=0, weights=x, free=last.free))
