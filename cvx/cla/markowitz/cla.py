@@ -51,6 +51,7 @@ class CLA(CLAUX):
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
+
         self.logger.info("First turning point added")
 
         # --A12 -- The main CLA loop , which steps
