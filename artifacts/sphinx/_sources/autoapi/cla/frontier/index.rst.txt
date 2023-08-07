@@ -62,7 +62,7 @@ Functions
 
 
 
-.. py:function:: _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=1 - 10)
+.. py:function:: _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=None)
 
 
 .. py:class:: Frontier
@@ -89,7 +89,7 @@ Functions
 
       
 
-   .. py:method:: build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-10))
+   .. py:method:: build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-05))
       :staticmethod:
 
       Constructs a frontier by computing a list of turning points.

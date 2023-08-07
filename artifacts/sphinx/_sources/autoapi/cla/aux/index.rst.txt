@@ -49,11 +49,17 @@ Classes
 
       
 
+   .. py:method:: first_turning_point(self)
+
+
    .. py:method:: num_points(self)
       :property:
 
 
-   .. py:method:: append(self, tp: cvx.cla.types.TurningPoint, tol=1e-05)
+   .. py:method:: append(self, tp: cvx.cla.types.TurningPoint, tol=None)
+
+
+   .. py:method:: minimum_variance(self)
 
 
 

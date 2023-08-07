@@ -81,7 +81,6 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">minimize</span>
 
-<span class="kn">from</span> <span class="nn">.bailey.cla</span> <span class="kn">import</span> <span class="n">CLA</span>
 <span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">MATRIX</span>
 
 
@@ -125,7 +124,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">covariance</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="_turning_points"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier._turning_points">[docs]</a><span class="k">def</span> <span class="nf">_turning_points</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mi">1</span><span class="o">-</span><span class="mi">10</span><span class="p">):</span>
+<div class="viewcode-block" id="_turning_points"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier._turning_points">[docs]</a><span class="k">def</span> <span class="nf">_turning_points</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">solver</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span> <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span>
 
     <span class="c1">#x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)</span>
@@ -144,7 +143,7 @@
 <div class="viewcode-block" id="Frontier.name"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier.Frontier.name">[docs]</a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;FRONTIER&quot;</span></div>
 
     <span class="nd">@staticmethod</span>
-<div class="viewcode-block" id="Frontier.build"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier.Frontier.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="mf">1e-10</span><span class="p">)):</span>
+<div class="viewcode-block" id="Frontier.build"><a class="viewcode-back" href="../../autoapi/cla/frontier/index.html#cla.frontier.Frontier.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="n">solver</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="mf">1e-5</span><span class="p">)):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructs a frontier by computing a list of turning points.</span>
 

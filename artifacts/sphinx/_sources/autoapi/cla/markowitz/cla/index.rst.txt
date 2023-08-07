@@ -21,11 +21,11 @@ Functions
 
 .. autoapisummary::
 
-   cla.markowitz.cla.Mbar_matrix
+   cla.markowitz.cla._Mbar_matrix
 
 
 
-.. py:function:: Mbar_matrix(C, A, io: List[bool])
+.. py:function:: _Mbar_matrix(C, A, io: List[bool])
 
 
 .. py:class:: CLA
