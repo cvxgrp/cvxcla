@@ -71,3 +71,7 @@ def test_init(solver, n):
                           lower_bounds=np.zeros(n),
                           upper_bounds=np.ones(n),
                           covariance=np.eye(n))
+
+def test_logger():
+    from loguru import logger as loguru
+    print(type(loguru))

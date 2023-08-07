@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-import logging
 
 from cvx.cla.aux import CLAUX
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
@@ -191,17 +190,16 @@ class Schur:
         w3 = np.dot(self.covariance_free_inv, self.mean_free)
         return -w1 + gamma * w2 + lamb * w3, gamma
 
-    def  update_weights(self, lamb, logger=None):
+    def  update_weights(self, lamb):
         # schur = self.__get_matrix(covariance, mean)
-        logger = logger or logging.getLogger(__name__)
 
         weights, _ = self._compute_weight(lamb)
-        logger.info(f"CURRENTLY: {self.weights}")
-        logger.info(f"UPDATE: {weights}")
-        logger.info(f"FREE: {self.free}")
+        self.logger.info(f"CURRENTLY: {self.weights}")
+        self.logger.info(f"UPDATE: {weights}")
+        self.logger.info(f"FREE: {self.free}")
 
         new_weights = np.copy(self.weights)
         new_weights[self.free] = weights
-        logger.info(f"NEW: {new_weights}")
+        self.logger.info(f"NEW: {new_weights}")
 
         return new_weights

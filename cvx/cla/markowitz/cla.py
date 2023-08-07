@@ -3,8 +3,6 @@ from typing import List
 
 import numpy as np
 
-from loguru import logger as loguru
-
 from cvx.cla.aux import CLAUX
 from cvx.cla.types import TurningPoint
 
@@ -33,7 +31,7 @@ def _Mbar_matrix(C, A, io: List[bool]):
 @dataclass(frozen=True)
 class CLA(CLAUX):
     def __post_init__(self):
-        logger = loguru
+        self.logger.info("Initializing CLA")
 
         ns = self.mean.shape[0]
 
@@ -53,7 +51,7 @@ class CLA(CLAUX):
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
-        logger.info("First turning point added")
+        self.logger.info("First turning point added")
 
         # --A12 -- The main CLA loop , which steps
         # from corner portfolio to corner portfolio.
