@@ -1,11 +1,9 @@
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 
 import numpy as np
 import logging
 
 from cvx.cla.aux import CLAUX
-from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 
 
@@ -14,9 +12,7 @@ from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
 class CLA(CLAUX):
     def __post_init__(self):
         # Compute the turning points,free sets and weights
-        first = init_algo(mean=self.mean, lower_bounds=self.lower_bounds, upper_bounds=self.upper_bounds)
-        tp = TurningPoint(weights=first.weights, lamb=+np.inf, free=first.free)
-        self.turning_points.append(tp)
+        self.append(self.first_turning_point())
 
         while True:
             last = self.turning_points[-1]

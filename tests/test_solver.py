@@ -27,7 +27,10 @@ def test_example(example, example_solution, solver):
     lower_bounds = 0.1 * np.ones(ns)
     upper_bounds = 0.5 * np.ones(ns)
 
-    cla = solver.build(mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=example.cov().values)
+    cla = solver.build(mean=means.values,
+                       lower_bounds=lower_bounds,
+                       upper_bounds=upper_bounds,
+                       covariance=example.cov().values)
 
     for row, turning_point in enumerate(cla.turning_points):
         if row > 0:
