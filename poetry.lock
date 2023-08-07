@@ -936,13 +936,13 @@ files = [
 
 [[package]]
 name = "ipykernel"
-version = "6.25.0"
+version = "6.25.1"
 description = "IPython Kernel for Jupyter"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ipykernel-6.25.0-py3-none-any.whl", hash = "sha256:f0042e867ac3f6bca1679e6a88cbd6a58ed93a44f9d0866aecde6efe8de76659"},
-    {file = "ipykernel-6.25.0.tar.gz", hash = "sha256:e342ce84712861be4b248c4a73472be4702c1b0dd77448bfd6bcfb3af9d5ddf9"},
+    {file = "ipykernel-6.25.1-py3-none-any.whl", hash = "sha256:c8a2430b357073b37c76c21c52184db42f6b4b0e438e1eb7df3c4440d120497c"},
+    {file = "ipykernel-6.25.1.tar.gz", hash = "sha256:050391364c0977e768e354bdb60cbbfbee7cbb943b1af1618382021136ffd42f"},
 ]
 
 [package.dependencies]
@@ -1083,13 +1083,13 @@ files = [
 
 [[package]]
 name = "jsonschema"
-version = "4.18.6"
+version = "4.19.0"
 description = "An implementation of JSON Schema validation for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "jsonschema-4.18.6-py3-none-any.whl", hash = "sha256:dc274409c36175aad949c68e5ead0853aaffbe8e88c830ae66bb3c7a1728ad2d"},
-    {file = "jsonschema-4.18.6.tar.gz", hash = "sha256:ce71d2f8c7983ef75a756e568317bf54bc531dc3ad7e66a128eae0d51623d8a3"},
+    {file = "jsonschema-4.19.0-py3-none-any.whl", hash = "sha256:043dc26a3845ff09d20e4420d6012a9c91c9aa8999fa184e7efcfeccb41e32cb"},
+    {file = "jsonschema-4.19.0.tar.gz", hash = "sha256:6e1e7569ac13be8139b2dd2c21a55d350066ee3f80df06c608b398cdc6f30e8f"},
 ]
 
 [package.dependencies]
@@ -1602,6 +1602,34 @@ docs = ["sphinx"]
 test = ["pytest", "pytest-cov"]
 
 [[package]]
+name = "mosek"
+version = "10.0.46"
+description = "Python API for Mosek"
+optional = false
+python-versions = "*"
+files = [
+    {file = "Mosek-10.0.46-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:64c67fd828353ba17a974f6afb8789851b5457426c0aab364dfd2b64b7348b53"},
+    {file = "Mosek-10.0.46-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:71dea2fb6e1a4e7df75a74dc7a5c7abcf9635f263391b505494015dc86b656a1"},
+    {file = "Mosek-10.0.46-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:6d5fdd730ed712efb2edb956cd8f365f938d77561d6b6d1f2e70c1fc4d62853a"},
+    {file = "Mosek-10.0.46-cp310-cp310-manylinux2014_x86_64.whl", hash = "sha256:4fb126628781af2293c1961b1cc4d0e67154c39c90d8a9634a907124cc0da2c4"},
+    {file = "Mosek-10.0.46-cp310-cp310-win_amd64.whl", hash = "sha256:3f5406c994919b1d5d9b4bfc757adc48248d751cf839b8fe66afe6a07e66c3a3"},
+    {file = "Mosek-10.0.46-cp37-cp37m-macosx_10_15_x86_64.whl", hash = "sha256:ad8e75209ac4d0c87e0e866b7e581259a8f3e4b17a4e92cd48107172760188c4"},
+    {file = "Mosek-10.0.46-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:47c20ce18ef0e15d84756c4eea84f4c03e294d207401cb27046765f713cb48ae"},
+    {file = "Mosek-10.0.46-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:4593814484cb336907926f7f8705d7a5a3b24c1929446d91623b81f089270ab6"},
+    {file = "Mosek-10.0.46-cp37-cp37m-win_amd64.whl", hash = "sha256:ee9de1efc67f8be8ebbe23baadf058bc6afe33490b42e60b6c28dc7fae042570"},
+    {file = "Mosek-10.0.46-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:cf8c1aac6ea0de68957141844851db54421892313e8f2759f60b48bc151f2a0d"},
+    {file = "Mosek-10.0.46-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:e4ce6b61b4b838090fefc6bc25952102e0bd00a543b83e35a91464345af89bde"},
+    {file = "Mosek-10.0.46-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:a3ac0923165d814ba4cafcad2fb6753a2be9ec2db39cb595e7b05b18dc52855c"},
+    {file = "Mosek-10.0.46-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:4d9d657c0886394350043bcbe8ae239b038023c25f6219a9144af9492a3b8614"},
+    {file = "Mosek-10.0.46-cp38-cp38-win_amd64.whl", hash = "sha256:5879734a728485a2cb50b61099fcd7bf96c8b80953cf9ae4404aa25db884f81d"},
+    {file = "Mosek-10.0.46-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:a79e7689f454bafca0322002579d5801f51c08486656535ffecc1acf9faa3e0d"},
+    {file = "Mosek-10.0.46-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:e11e26145517a9de3ecc56f8fc28ec0b505a348009906209c82546758f0aab23"},
+    {file = "Mosek-10.0.46-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:094ee305ce7d7c7536a7b73e78a2cd81a1fc17aa266a39b5369e927d3a6d99db"},
+    {file = "Mosek-10.0.46-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:27a33ac3092d79079bf1ca49985fd4ad5bae5cdf42aa0b3c88e3cbe099602486"},
+    {file = "Mosek-10.0.46-cp39-cp39-win_amd64.whl", hash = "sha256:68529aec46df699fb0da1510c62e1c484da3416fb86084e2e7be4540da460e80"},
+]
+
+[[package]]
 name = "myst-nb"
 version = "0.17.2"
 description = "A Jupyter Notebook Sphinx reader built on top of the MyST markdown parser."
@@ -1867,13 +1895,13 @@ scipy = ">=0.13.2"
 
 [[package]]
 name = "overrides"
-version = "7.3.1"
+version = "7.4.0"
 description = "A decorator to automatically detect mismatch when overriding a method."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "overrides-7.3.1-py3-none-any.whl", hash = "sha256:6187d8710a935d09b0bcef8238301d6ee2569d2ac1ae0ec39a8c7924e27f58ca"},
-    {file = "overrides-7.3.1.tar.gz", hash = "sha256:8b97c6c1e1681b78cbc9424b138d880f0803c2254c5ebaabdde57bb6c62093f2"},
+    {file = "overrides-7.4.0-py3-none-any.whl", hash = "sha256:3ad24583f86d6d7a49049695efe9933e67ba62f0c7625d53c59fa832ce4b8b7d"},
+    {file = "overrides-7.4.0.tar.gz", hash = "sha256:9502a3cca51f4fac40b5feca985b6703a5c1f6ad815588a7ca9e285b9dca6757"},
 ]
 
 [[package]]
@@ -2257,13 +2285,13 @@ test = ["codecov", "pytest", "pytest-cov", "pytest-regressions"]
 
 [[package]]
 name = "pygments"
-version = "2.15.1"
+version = "2.16.1"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "Pygments-2.15.1-py3-none-any.whl", hash = "sha256:db2db3deb4b4179f399a09054b023b6a586b76499d36965813c71aa8ed7b5fd1"},
-    {file = "Pygments-2.15.1.tar.gz", hash = "sha256:8ace4d3c1dd481894b2005f560ead0f9f19ee64fe983366be1a21e171d12775c"},
+    {file = "Pygments-2.16.1-py3-none-any.whl", hash = "sha256:13fc09fa63bc8d8671a6d247e1eb303c4b343eaee81d861f3404db2935653692"},
+    {file = "Pygments-2.16.1.tar.gz", hash = "sha256:1daff0494820c69bc8941e407aa20f577374ee88364ee10a98fdbe0aece96e29"},
 ]
 
 [package.extras]
@@ -3602,4 +3630,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "86baf44ca6dada664fba9a4ef4fb20d05fc2ebfdf061c007aaa8431ac67b7336"
+content-hash = "1790daf2ecfb350ba5a90d43947d5463c72c28e376319ea58507c3b5130db6d6"

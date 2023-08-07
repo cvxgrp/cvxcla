@@ -17,6 +17,7 @@ cvxpy = "*"
 [tool.poetry.dev-dependencies]
 loguru = "*"
 pandas = "*"
+mosek = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "7.2.0"
