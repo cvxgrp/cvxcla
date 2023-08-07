@@ -59,10 +59,13 @@ class CLA(CLAUX):
         while lam > 0:
             last = self.turning_points[-1]
 
+            blocked = ~last.free
+            assert not np.all(blocked), "Not all variables can be blocked"
+
             # --A13-- Create the UP, DN, and IN
             # sets from the current state vector.
-            UP = ~last.free & np.isclose(last.weights, self.upper_bounds)
-            DN = ~last.free & np.isclose(last.weights, self.lower_bounds)
+            UP = blocked & np.isclose(last.weights, self.upper_bounds)
+            DN = blocked & np.isclose(last.weights, self.lower_bounds)
 
             # a variable is out if it UP or DN
             OUT = np.logical_or(UP, DN)
@@ -87,8 +90,8 @@ class CLA(CLAUX):
             rhsa = np.concatenate([up + dn, bot], axis=0)
 
             # --A16-- Compute alpha, beta, gamma, and delta.
-            alpha = np.linalg.lstsq(Mbar, rhsa)[0]
-            beta = np.linalg.lstsq(Mbar, rhsb)[0]
+            alpha = np.linalg.solve(Mbar, rhsa)
+            beta = np.linalg.solve(Mbar, rhsb)
 
             gamma = P @ alpha
             delta = P @ beta - self.mean
