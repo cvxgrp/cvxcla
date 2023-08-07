@@ -30,10 +30,6 @@ jupyterlab = "*"
 jupyter-book = "0.15.1"
 pyyaml = "6.0.0"
 
-[tool.poetry.group.linting.dependencies]
-ruff = "0.0.277"
-pre-commit = "*"
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -41,7 +37,7 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 select = ["E", "F", "I"]
 line-length = 120
-target-version = "py38"
+target-version = "py310"
 exclude = [
     "*__init__.py",
     ".venv"

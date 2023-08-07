@@ -11,21 +11,16 @@ def _Mbar_matrix(C, A, io: List[bool]):
     m = A.shape[0]
 
     Cbar = np.copy(C)
-
-    #if io is not None:
     Cbar[io, :] = 0
     Cbar[io, io] = 1
 
     Abar = np.copy(A)
-
-    #if io is not None:
     Abar[:, io] = 0
 
     toprow = np.concatenate([Cbar, Abar.T], axis=1)
     bottomrow = np.concatenate([Abar, np.zeros((m,m))], axis=1)
 
     return np.concatenate([toprow, bottomrow], axis=0)
-
 
 
 @dataclass(frozen=True)
