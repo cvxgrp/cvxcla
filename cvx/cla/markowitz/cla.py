@@ -3,8 +3,6 @@ from typing import List
 
 import numpy as np
 
-from loguru import logger as loguru
-
 from cvx.cla.aux import CLAUX
 from cvx.cla.types import TurningPoint
 
@@ -13,14 +11,10 @@ def _Mbar_matrix(C, A, io: List[bool]):
     m = A.shape[0]
 
     Cbar = np.copy(C)
-
-    #if io is not None:
     Cbar[io, :] = 0
     Cbar[io, io] = 1
 
     Abar = np.copy(A)
-
-    #if io is not None:
     Abar[:, io] = 0
 
     toprow = np.concatenate([Cbar, Abar.T], axis=1)
@@ -29,11 +23,10 @@ def _Mbar_matrix(C, A, io: List[bool]):
     return np.concatenate([toprow, bottomrow], axis=0)
 
 
-
 @dataclass(frozen=True)
 class CLA(CLAUX):
     def __post_init__(self):
-        logger = loguru
+        self.logger.info("Initializing CLA")
 
         ns = self.mean.shape[0]
 
@@ -53,17 +46,21 @@ class CLA(CLAUX):
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
-        logger.info("First turning point added")
+
+        self.logger.info("First turning point added")
 
         # --A12 -- The main CLA loop , which steps
         # from corner portfolio to corner portfolio.
         while lam > 0:
             last = self.turning_points[-1]
 
+            blocked = ~last.free
+            assert not np.all(blocked), "Not all variables can be blocked"
+
             # --A13-- Create the UP, DN, and IN
             # sets from the current state vector.
-            UP = ~last.free & np.isclose(last.weights, self.upper_bounds)
-            DN = ~last.free & np.isclose(last.weights, self.lower_bounds)
+            UP = blocked & np.isclose(last.weights, self.upper_bounds)
+            DN = blocked & np.isclose(last.weights, self.lower_bounds)
 
             # a variable is out if it UP or DN
             OUT = np.logical_or(UP, DN)
@@ -88,8 +85,8 @@ class CLA(CLAUX):
             rhsa = np.concatenate([up + dn, bot], axis=0)
 
             # --A16-- Compute alpha, beta, gamma, and delta.
-            alpha = np.linalg.lstsq(Mbar, rhsa)[0]
-            beta = np.linalg.lstsq(Mbar, rhsb)[0]
+            alpha = np.linalg.solve(Mbar, rhsa)
+            beta = np.linalg.solve(Mbar, rhsb)
 
             gamma = P @ alpha
             delta = P @ beta - self.mean

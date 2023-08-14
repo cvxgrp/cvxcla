@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from logging import Logger
 from typing import List
 
 import numpy as np
@@ -6,7 +7,7 @@ import cvxpy as cp
 
 from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX, TurningPoint
-
+from loguru import logger as loguru
 
 @dataclass(frozen=True)
 class CLAUX:
@@ -16,6 +17,10 @@ class CLAUX:
     upper_bounds: MATRIX
     turning_points: List[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
+    logger: Logger = loguru
+
+    def __post_init__(self):
+        self.logger.info("Initializing CLA (from CLAUX)")
 
     def first_turning_point(self):
         first = init_algo(mean=self.mean,

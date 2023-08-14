@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-import logging
 
 from cvx.cla.aux import CLAUX
 from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
@@ -22,7 +21,7 @@ class CLA(CLAUX):
 
             # only try to bound a free asset if there are least two of them
             if np.sum(last.free) > 1:
-                schur = Schur(
+                schur = _Schur(
                     covariance=self.covariance,
                     mean=self.mean,
                     free=last.free,
@@ -49,7 +48,7 @@ class CLA(CLAUX):
                 fff = np.copy(last.free)
                 fff[i] = True
 
-                schur = Schur(
+                schur = _Schur(
                     covariance=self.covariance,
                     mean=self.mean,
                     free=fff,
@@ -82,7 +81,7 @@ class CLA(CLAUX):
             else:
                 break
 
-            schur = Schur(
+            schur = _Schur(
                 covariance=self.covariance,
                 mean=self.mean,
                 free=f,
@@ -102,7 +101,7 @@ class CLA(CLAUX):
         f = last.free
         w = last.weights
 
-        schur = Schur(
+        schur = _Schur(
             covariance=self.covariance,
             mean=mean,
             free=f,
@@ -114,7 +113,7 @@ class CLA(CLAUX):
 
         self.append(tp)
 
-class Schur:
+class _Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
         assert (
             covariance.shape[0]
@@ -191,17 +190,8 @@ class Schur:
         w3 = np.dot(self.covariance_free_inv, self.mean_free)
         return -w1 + gamma * w2 + lamb * w3, gamma
 
-    def  update_weights(self, lamb, logger=None):
-        # schur = self.__get_matrix(covariance, mean)
-        logger = logger or logging.getLogger(__name__)
-
+    def  update_weights(self, lamb):
         weights, _ = self._compute_weight(lamb)
-        logger.info(f"CURRENTLY: {self.weights}")
-        logger.info(f"UPDATE: {weights}")
-        logger.info(f"FREE: {self.free}")
-
         new_weights = np.copy(self.weights)
         new_weights[self.free] = weights
-        logger.info(f"NEW: {new_weights}")
-
         return new_weights
