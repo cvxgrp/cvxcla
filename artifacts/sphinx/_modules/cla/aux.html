@@ -72,6 +72,7 @@
              
   <h1>Source code for cla.aux</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -79,7 +80,7 @@
 
 <span class="kn">from</span> <span class="nn">cvx.cla.first</span> <span class="kn">import</span> <span class="n">init_algo</span>
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">TurningPoint</span>
-
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span> <span class="k">as</span> <span class="n">loguru</span>
 
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <div class="viewcode-block" id="CLAUX"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX">[docs]</a><span class="k">class</span> <span class="nc">CLAUX</span><span class="p">:</span>
@@ -89,6 +90,10 @@
 <div class="viewcode-block" id="CLAUX.upper_bounds"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.upper_bounds">[docs]</a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 <div class="viewcode-block" id="CLAUX.turning_points"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.turning_points">[docs]</a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
 <div class="viewcode-block" id="CLAUX.tol"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.tol">[docs]</a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span></div>
+<div class="viewcode-block" id="CLAUX.logger"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.logger">[docs]</a>    <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span> <span class="o">=</span> <span class="n">loguru</span></div>
+
+<div class="viewcode-block" id="CLAUX.__post_init__"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initializing CLA (from CLAUX)&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="CLAUX.first_turning_point"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.first_turning_point">[docs]</a>    <span class="k">def</span> <span class="nf">first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span><span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>

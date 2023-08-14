@@ -76,8 +76,6 @@
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span> <span class="k">as</span> <span class="n">loguru</span>
-
 <span class="kn">from</span> <span class="nn">cvx.cla.aux</span> <span class="kn">import</span> <span class="n">CLAUX</span>
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">TurningPoint</span>
 
@@ -86,14 +84,10 @@
     <span class="n">m</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="n">Cbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
-
-    <span class="c1">#if io is not None:</span>
     <span class="n">Cbar</span><span class="p">[</span><span class="n">io</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">Cbar</span><span class="p">[</span><span class="n">io</span><span class="p">,</span> <span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
 
     <span class="n">Abar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
-
-    <span class="c1">#if io is not None:</span>
     <span class="n">Abar</span><span class="p">[:,</span> <span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="n">toprow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">Cbar</span><span class="p">,</span> <span class="n">Abar</span><span class="o">.</span><span class="n">T</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -102,11 +96,10 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">toprow</span><span class="p">,</span> <span class="n">bottomrow</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
 
 
-
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <div class="viewcode-block" id="CLA"><a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.CLA">[docs]</a><span class="k">class</span> <span class="nc">CLA</span><span class="p">(</span><span class="n">CLAUX</span><span class="p">):</span>
 <div class="viewcode-block" id="CLA.__post_init__"><a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.CLA.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">logger</span> <span class="o">=</span> <span class="n">loguru</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initializing CLA&quot;</span><span class="p">)</span>
 
         <span class="n">ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
@@ -126,17 +119,21 @@
 
         <span class="c1"># --A11 -- Initialize storage for quantities # to be computed in the main loop.</span>
         <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;First turning point added&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;First turning point added&quot;</span><span class="p">)</span>
 
         <span class="c1"># --A12 -- The main CLA loop , which steps</span>
         <span class="c1"># from corner portfolio to corner portfolio.</span>
         <span class="k">while</span> <span class="n">lam</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
+            <span class="n">blocked</span> <span class="o">=</span> <span class="o">~</span><span class="n">last</span><span class="o">.</span><span class="n">free</span>
+            <span class="k">assert</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">blocked</span><span class="p">),</span> <span class="s2">&quot;Not all variables can be blocked&quot;</span>
+
             <span class="c1"># --A13-- Create the UP, DN, and IN</span>
             <span class="c1"># sets from the current state vector.</span>
-            <span class="n">UP</span> <span class="o">=</span> <span class="o">~</span><span class="n">last</span><span class="o">.</span><span class="n">free</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">)</span>
-            <span class="n">DN</span> <span class="o">=</span> <span class="o">~</span><span class="n">last</span><span class="o">.</span><span class="n">free</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">)</span>
+            <span class="n">UP</span> <span class="o">=</span> <span class="n">blocked</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">)</span>
+            <span class="n">DN</span> <span class="o">=</span> <span class="n">blocked</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">)</span>
 
             <span class="c1"># a variable is out if it UP or DN</span>
             <span class="n">OUT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">UP</span><span class="p">,</span> <span class="n">DN</span><span class="p">)</span>
@@ -161,8 +158,8 @@
             <span class="n">rhsa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">up</span> <span class="o">+</span> <span class="n">dn</span><span class="p">,</span> <span class="n">bot</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
             <span class="c1"># --A16-- Compute alpha, beta, gamma, and delta.</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsa</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsb</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsa</span><span class="p">)</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsb</span><span class="p">)</span>
 
             <span class="n">gamma</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">alpha</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">beta</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>

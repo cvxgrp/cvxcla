@@ -1,0 +1,27 @@
+:py:mod:`cla.schiele.cla`
+=========================
+
+.. py:module:: cla.schiele.cla
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.schiele.cla.CLA
+
+
+
+
+.. py:class:: CLA
+
+   Bases: :py:obj:`cvx.cla.aux.CLAUX`
+
+   .. py:method:: __post_init__(self)
+
+
+
