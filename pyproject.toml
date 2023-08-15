@@ -27,8 +27,8 @@ cvxbson = "*"
 
 [tool.poetry.group.jupyter.dependencies]
 jupyterlab = "*"
-jupyter-book = "0.15.1"
-pyyaml = "6.0.0"
+jupyter-book = "*"
+#pyyaml = "6.0.0"
 
 [build-system]
 requires = ["poetry-core"]
