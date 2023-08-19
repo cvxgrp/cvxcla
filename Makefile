@@ -3,18 +3,10 @@
 SHELL=/bin/bash
 
 UNAME=$(shell uname -s)
-KERNEL=$(shell poetry version | cut -d' ' -f1)
 
 .PHONY: install
 install:  ## Install a virtual environment
 	@poetry install -vv
-
-.PHONY: kernel
-kernel: install ## Create a kernel for jupyter lab
-	@echo ${KERNEL}
-	@poetry run pip install ipykernel
-	@poetry run python -m ipykernel install --user --name=${KERNEL}
-
 
 .PHONY: fmt
 fmt:  ## Run autoformatting and linting
@@ -28,7 +20,7 @@ test: install ## Run tests
 
 .PHONY: clean
 clean:  ## Clean up caches and build artifacts
-        @git clean -X -d -f
+	@git clean -X -d -f
 
 .PHONY: coverage
 coverage: ## test and coverage
@@ -42,14 +34,12 @@ coverage: ## test and coverage
 		xdg-open htmlcov/index.html 2> /dev/null; \
 	fi
 
-
 .PHONY: help
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m"
 	@grep -E '^[a-z.A-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' | sort
 
-
 .PHONY: jupyter
-jupyter: kernel ## Run jupyter lab
+jupyter: install ## Run jupyter lab
 	@poetry run pip install jupyterlab
 	@poetry run jupyter lab
