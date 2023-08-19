@@ -24,8 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: cvxgrp/.github/actions/jupyter@main
-        with:
-          kernel: "cvxcla"
 
   book:
     runs-on: "ubuntu-latest"
