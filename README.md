@@ -1,4 +1,4 @@
-# [cvxcla](https://www.cvxgrp.org/cvxcla/)
+# [cvxcla](https://www.cvxgrp.org/cvxcla/book)
 
 [![PyPI version](https://badge.fury.io/py/cvxcla.svg)](https://badge.fury.io/py/cvxcla)
 [![Apache 2.0 License](https://img.shields.io/badge/License-APACHEv2-brightgreen.svg)](https://github.com/cvxgrp/cvxcla/blob/master/LICENSE)
