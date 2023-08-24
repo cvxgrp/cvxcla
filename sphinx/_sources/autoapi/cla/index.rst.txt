@@ -12,6 +12,7 @@ Subpackages
 
    bailey/index.rst
    markowitz/index.rst
+   niedermayer/index.rst
    schiele/index.rst
 
 

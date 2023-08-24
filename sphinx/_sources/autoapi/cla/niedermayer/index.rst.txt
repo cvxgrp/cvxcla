@@ -1,0 +1,15 @@
+:py:mod:`cla.niedermayer`
+=========================
+
+.. py:module:: cla.niedermayer
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   aux/index.rst
+
+

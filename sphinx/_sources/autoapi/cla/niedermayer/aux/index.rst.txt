@@ -1,0 +1,19 @@
+:py:mod:`cla.niedermayer.aux`
+=============================
+
+.. py:module:: cla.niedermayer.aux
+
+
+Module Contents
+---------------
+
+.. py:data:: k
+   :annotation: = 3
+
+   
+
+.. py:data:: A
+   
+
+   
+
