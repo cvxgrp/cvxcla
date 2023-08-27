@@ -31,5 +31,3 @@ def example(resource_dir):
 @pytest.fixture()
 def example_solution(resource_dir):
     return pd.read_csv(resource_dir / "example_solution.csv", header=0, index_col=None)
-    #for row in frame.iterrows():
-    #    yield TurningPoint(lamb=row["Lambda"], weights=row[1]["Weights"], mean=row[1]["Mean"], variance=row[1]["Variance"])
