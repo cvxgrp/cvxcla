@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from cvx.cla.aux import CLAUX
+from cvx.cla.claux import CLAUX
 
 
 @dataclass(frozen=True)

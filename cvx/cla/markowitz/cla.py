@@ -3,7 +3,7 @@ from typing import List
 
 import numpy as np
 
-from cvx.cla.aux import CLAUX
+from cvx.cla.claux import CLAUX
 from cvx.cla.types import TurningPoint
 
 
