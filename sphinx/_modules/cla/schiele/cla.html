@@ -77,19 +77,18 @@
 
 
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
 <div class="viewcode-block" id="CLA"><a class="viewcode-back" href="../../../autoapi/cla/schiele/cla/index.html#cla.schiele.cla.CLA">[docs]</a><span class="k">class</span> <span class="nc">CLA</span><span class="p">(</span><span class="n">CLAUX</span><span class="p">):</span>
 <div class="viewcode-block" id="CLA.__post_init__"><a class="viewcode-back" href="../../../autoapi/cla/schiele/cla/index.html#cla.schiele.cla.CLA.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initializing CLA&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
 
         <span class="c1"># compute a first turning point</span>
-        <span class="n">tp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_turning_point</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">first_turning_point</span><span class="p">()</span>
 
         <span class="c1"># implement the algorithm here...</span>
 
         <span class="c1"># compute the value of the minimum variance portfolio</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimum_variance</span><span class="p">()</span></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minimum_variance</span><span class="p">()</span></div></div>
 </pre></div>
 
            </div>

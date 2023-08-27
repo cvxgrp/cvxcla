@@ -82,7 +82,13 @@
 <div class="viewcode-block" id="Solver.MARKOWITZ"><a class="viewcode-back" href="../../autoapi/cla/solver/index.html#cla.solver.Solver.MARKOWITZ">[docs]</a>    <span class="n">MARKOWITZ</span> <span class="o">=</span> <span class="n">Markowitz</span></div>
 
 <div class="viewcode-block" id="Solver.build"><a class="viewcode-back" href="../../autoapi/cla/solver/index.html#cla.solver.Solver.build">[docs]</a>    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">,</span> <span class="n">covariance</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="mf">1e-5</span><span class="p">)):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span> <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">(</span>
+            <span class="n">mean</span><span class="p">,</span>
+            <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span>
+            <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span>
+            <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span>
+            <span class="n">tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
 </pre></div>
 
            </div>
