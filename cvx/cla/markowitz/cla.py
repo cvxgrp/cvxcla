@@ -18,7 +18,7 @@ def _Mbar_matrix(C, A, io: List[bool]):
     Abar[:, io] = 0
 
     toprow = np.concatenate([Cbar, Abar.T], axis=1)
-    bottomrow = np.concatenate([Abar, np.zeros((m,m))], axis=1)
+    bottomrow = np.concatenate([Abar, np.zeros((m, m))], axis=1)
 
     return np.concatenate([toprow, bottomrow], axis=0)
 
@@ -92,7 +92,7 @@ class CLA(CLAUX):
             delta = P @ beta - self.mean
 
             # -A17-- Prepare the ratio matrix.
-            L = -np.inf*np.ones([ns, 4])
+            L = -np.inf * np.ones([ns, 4])
 
             r_beta = beta[range(ns)]
             r_alpha = alpha[range(ns)]
@@ -102,7 +102,7 @@ class CLA(CLAUX):
             L[i, 0] = (self.upper_bounds[i] - r_alpha[i]) / r_beta[i]
 
             # --A19-- IN security possibly going DN.
-            i = IN & (r_beta > + self.tol)
+            i = IN & (r_beta > +self.tol)
             L[i, 1] = (self.lower_bounds[i] - r_alpha[i]) / r_beta[i]
 
             # --A20--UP security possibly going IN.

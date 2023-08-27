@@ -3,8 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from cvx.cla.aux import CLAUX
-from cvx.cla.types import MATRIX, BOOLEAN_VECTOR, TurningPoint
-
+from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint
 
 
 @dataclass(frozen=True)
@@ -42,7 +41,6 @@ class CLA(CLAUX):
 
             # 2) case b): Free one bounded weight
             l_out = -np.inf
-
 
             for i in last.blocked_indices:
                 fff = np.copy(last.free)
@@ -101,17 +99,13 @@ class CLA(CLAUX):
         f = last.free
         w = last.weights
 
-        schur = _Schur(
-            covariance=self.covariance,
-            mean=mean,
-            free=f,
-            weights=w
-        )
+        schur = _Schur(covariance=self.covariance, mean=mean, free=f, weights=w)
 
         weights = schur.update_weights(lamb=0)
         tp = TurningPoint(weights=weights, lamb=0, free=last.free)
 
         self.append(tp)
+
 
 class _Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
@@ -190,7 +184,7 @@ class _Schur:
         w3 = np.dot(self.covariance_free_inv, self.mean_free)
         return -w1 + gamma * w2 + lamb * w3, gamma
 
-    def  update_weights(self, lamb):
+    def update_weights(self, lamb):
         weights, _ = self._compute_weight(lamb)
         new_weights = np.copy(self.weights)
         new_weights[self.free] = weights

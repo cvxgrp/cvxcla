@@ -1,7 +1,10 @@
 from typing import List
 
-from cvx.cla import Frontier
 import plotly.graph_objects as go
+
+from cvx.cla import Frontier
+
+
 def plot_efficient_frontiers(frontiers: List[Frontier]) -> None:
     # Create an empty list to store the traces
     traces = []
@@ -19,9 +22,9 @@ def plot_efficient_frontiers(frontiers: List[Frontier]) -> None:
 
     # Create the layout object
     layout = go.Layout(
-        title='Efficient Frontier(s)',
-        xaxis=dict(title='Expected Return'),
-        yaxis=dict(title='Expected Variance'),
+        title="Efficient Frontier(s)",
+        xaxis=dict(title="Expected Return"),
+        yaxis=dict(title="Expected Variance"),
     )
 
     # Create the figure object

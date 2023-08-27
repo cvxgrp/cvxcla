@@ -34,8 +34,9 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Turni
     # Move weights from lower to upper bound
     # until sum of weights hits or exceeds 1
     for index in np.argsort(-mean):
-        weights[index] += np.min([upper_bounds[index] - lower_bounds[index],
-                            1.0 - np.sum(weights)])
+        weights[index] += np.min(
+            [upper_bounds[index] - lower_bounds[index], 1.0 - np.sum(weights)]
+        )
         if np.sum(weights) >= 1:
             free[index] = True
             break

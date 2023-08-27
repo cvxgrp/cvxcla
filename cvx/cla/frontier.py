@@ -24,7 +24,7 @@ class FrontierPoint:
         assert np.isclose(np.sum(self.weights), 1.0)
 
         # make sure the weights are non-negative
-        #assert np.all(self.weights >= -1e-7)
+        # assert np.all(self.weights >= -1e-7)
 
     def expected_return(self, mean):
         """
@@ -52,11 +52,18 @@ class FrontierPoint:
 
 
 def _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=None):
-    x = solver.build(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
+    x = solver.build(
+        mean=mean,
+        lower_bounds=lower_bounds,
+        upper_bounds=upper_bounds,
+        covariance=covariance,
+        tol=tol,
+    )
 
-    #x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
+    # x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
     for point in x.turning_points:
-        yield FrontierPoint(weights = point.weights)
+        yield FrontierPoint(weights=point.weights)
+
 
 @dataclass(frozen=True)
 class Frontier:
@@ -70,7 +77,9 @@ class Frontier:
     name: str = "FRONTIER"
 
     @staticmethod
-    def build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-5)):
+    def build(
+        solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-5)
+    ):
         """
         Constructs a frontier by computing a list of turning points.
 
@@ -85,14 +94,20 @@ class Frontier:
         Returns:
             A frontier of frontier points each of them a turning point
         """
-        frontier_points = list(_turning_points(solver=solver,
-                                               mean=mean,
-                                               covariance=covariance,
-                                               lower_bounds=lower_bounds,
-                                               upper_bounds=upper_bounds,
-                                               tol=tol))
+        frontier_points = list(
+            _turning_points(
+                solver=solver,
+                mean=mean,
+                covariance=covariance,
+                lower_bounds=lower_bounds,
+                upper_bounds=upper_bounds,
+                tol=tol,
+            )
+        )
 
-        return Frontier(frontier=frontier_points, mean=mean, covariance=covariance, name=name)
+        return Frontier(
+            frontier=frontier_points, mean=mean, covariance=covariance, name=name
+        )
 
     def interpolate(self, num=100):
         """
@@ -123,7 +138,6 @@ class Frontier:
 
     def __len__(self):
         return len(self.frontier)
-
 
     @property
     def weights(self):
@@ -185,7 +199,6 @@ class Frontier:
         # np.min only there for security...
         right = np.min([sr_position_max + 1, len(self) - 1])
         left = np.max([0, sr_position_max - 1])
-
 
         # Look to the left and look to the right
 

@@ -9,4 +9,10 @@ class Solver(Enum):
     MARKOWITZ = Markowitz
 
     def build(self, mean, lower_bounds, upper_bounds, covariance, tol=float(1e-5)):
-        return self.value(mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
+        return self.value(
+            mean,
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+            covariance=covariance,
+            tol=tol,
+        )
