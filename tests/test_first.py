@@ -17,6 +17,7 @@ def test_init_algo(n):
     assert np.sum(first.weights) == pytest.approx(1.0)
     assert isinstance(first, TurningPoint)
 
+
 def test_small():
     mean = np.array([1.0, 2.0, 3.0])
     lower_bound = np.array([0.0, 0.0, 0.0])
@@ -27,6 +28,7 @@ def test_small():
     assert tp.lamb == np.inf
     assert np.allclose(tp.free, [True, False, False])
 
+
 @pytest.mark.parametrize("n", [5, 20, 100, 1000, 10000, 100000])
 def test_sorting(n):
     mean = np.random.randn(n)
@@ -36,6 +38,7 @@ def test_sorting(n):
 
     np.testing.assert_array_equal(order1, order2)
     np.testing.assert_array_equal(np.sort(mean)[::-1], mean[order2])
+
 
 def test_no_free_asset():
     mean = np.array([1.0, 2.0, 3.0])
@@ -61,6 +64,7 @@ def test_lb_ub_mixed():
 
     with pytest.raises(ValueError):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
+
 
 def test_no_fully_invested():
     upper_bounds = 0.2 * np.ones(3)

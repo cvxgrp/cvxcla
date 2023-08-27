@@ -4,8 +4,12 @@ from cvx.cla.bailey.cla import CLA
 
 
 def test_big(input_data, results):
-    cla = CLA(mean=input_data.mean, lower_bounds=input_data.lower_bounds,
-              upper_bounds=input_data.upper_bounds, covariance=input_data.covariance)
+    cla = CLA(
+        mean=input_data.mean,
+        lower_bounds=input_data.lower_bounds,
+        upper_bounds=input_data.upper_bounds,
+        covariance=input_data.covariance,
+    )
 
     observed = [tp.lamb for tp in cla.turning_points[1:]]
     np.allclose(results.lamb, np.array(observed))

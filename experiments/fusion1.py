@@ -1,14 +1,11 @@
 from mosek.fusion import *
 
-if __name__ == '__main__':
-    A = [[3.0, 1.0, 2.0, 0.0],
-         [2.0, 1.0, 3.0, 1.0],
-         [0.0, 2.0, 0.0, 3.0]]
+if __name__ == "__main__":
+    A = [[3.0, 1.0, 2.0, 0.0], [2.0, 1.0, 3.0, 1.0], [0.0, 2.0, 0.0, 3.0]]
     c = [3.0, 1.0, 5.0, 1.0]
 
     # Create a model with the name 'lo1'
     with Model("lo1") as M:
-
         # Create variable 'x' of length 4
         x = M.variable("x", 4, Domain.greaterThan(0.0))
 
@@ -26,4 +23,4 @@ if __name__ == '__main__':
 
         # Get the solution values
         sol = x.level()
-        print('\n'.join(["x[%d] = %f" % (i, sol[i]) for i in range(4)]))
+        print("\n".join(["x[%d] = %f" % (i, sol[i]) for i in range(4)]))

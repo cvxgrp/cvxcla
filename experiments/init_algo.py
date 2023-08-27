@@ -1,5 +1,5 @@
-from loguru import logger
 import numpy as np
+from loguru import logger
 
 from cvx.cla.first import init_algo
 
@@ -10,5 +10,7 @@ if __name__ == "__main__":
 
     logger.info("Hello")
 
-    tp = init_algo(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
+    tp = init_algo(
+        mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound
+    )
     print(np.where(tp.free)[0])
