@@ -1,7 +1,7 @@
-:py:mod:`cla.aux`
-=================
+:py:mod:`cla.claux`
+===================
 
-.. py:module:: cla.aux
+.. py:module:: cla.claux
 
 
 Module Contents
@@ -12,7 +12,7 @@ Classes
 
 .. autoapisummary::
 
-   cla.aux.CLAUX
+   cla.claux.CLAUX
 
 
 

@@ -19,7 +19,7 @@ Classes
 
 .. py:class:: CLA
 
-   Bases: :py:obj:`cvx.cla.aux.CLAUX`
+   Bases: :py:obj:`cvx.cla.claux.CLAUX`
 
    .. py:method:: __post_init__(self)
 

@@ -22,7 +22,7 @@ Submodules
    :titlesonly:
    :maxdepth: 1
 
-   aux/index.rst
+   claux/index.rst
    first/index.rst
    frontier/index.rst
    plotting/index.rst

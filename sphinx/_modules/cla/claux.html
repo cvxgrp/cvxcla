@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>cla.aux &mdash; cvxcla Documentation</title>
+  <title>cla.claux &mdash; cvxcla Documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
@@ -61,7 +61,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../index.html">Module code</a> &raquo;</li>
-      <li>cla.aux</li>
+      <li>cla.claux</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -70,7 +70,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>Source code for cla.aux</h1><div class="highlight"><pre>
+  <h1>Source code for cla.claux</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
@@ -84,19 +84,19 @@
 
 
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<div class="viewcode-block" id="CLAUX"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX">[docs]</a><span class="k">class</span> <span class="nc">CLAUX</span><span class="p">:</span>
-<div class="viewcode-block" id="CLAUX.mean"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.mean">[docs]</a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="CLAUX.covariance"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.covariance">[docs]</a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="CLAUX.lower_bounds"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.lower_bounds">[docs]</a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="CLAUX.upper_bounds"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.upper_bounds">[docs]</a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
-<div class="viewcode-block" id="CLAUX.turning_points"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.turning_points">[docs]</a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
-<div class="viewcode-block" id="CLAUX.tol"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.tol">[docs]</a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span></div>
-<div class="viewcode-block" id="CLAUX.logger"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.logger">[docs]</a>    <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span> <span class="o">=</span> <span class="n">loguru</span></div>
+<div class="viewcode-block" id="CLAUX"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX">[docs]</a><span class="k">class</span> <span class="nc">CLAUX</span><span class="p">:</span>
+<div class="viewcode-block" id="CLAUX.mean"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.mean">[docs]</a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.covariance"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.covariance">[docs]</a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.lower_bounds"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.lower_bounds">[docs]</a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.upper_bounds"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.upper_bounds">[docs]</a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.turning_points"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.turning_points">[docs]</a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
+<div class="viewcode-block" id="CLAUX.tol"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.tol">[docs]</a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span></div>
+<div class="viewcode-block" id="CLAUX.logger"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.logger">[docs]</a>    <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span> <span class="o">=</span> <span class="n">loguru</span></div>
 
-<div class="viewcode-block" id="CLAUX.__post_init__"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX.__post_init__"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.__post_init__">[docs]</a>    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initializing CLA (from CLAUX)&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="CLAUX.first_turning_point"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.first_turning_point">[docs]</a>    <span class="k">def</span> <span class="nf">first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX.first_turning_point"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.first_turning_point">[docs]</a>    <span class="k">def</span> <span class="nf">first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
             <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
             <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
@@ -105,10 +105,10 @@
         <span class="k">return</span> <span class="n">first</span></div>
 
     <span class="nd">@property</span>
-<div class="viewcode-block" id="CLAUX.num_points"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.num_points">[docs]</a>    <span class="k">def</span> <span class="nf">num_points</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX.num_points"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.num_points">[docs]</a>    <span class="k">def</span> <span class="nf">num_points</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="CLAUX.append"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX.append"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.append">[docs]</a>    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
 
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
@@ -121,7 +121,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="CLAUX.minimum_variance"><a class="viewcode-back" href="../../autoapi/cla/aux/index.html#cla.aux.CLAUX.minimum_variance">[docs]</a>    <span class="k">def</span> <span class="nf">minimum_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX.minimum_variance"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.minimum_variance">[docs]</a>    <span class="k">def</span> <span class="nf">minimum_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;weights&quot;</span><span class="p">)</span>
 
         <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">]</span>
