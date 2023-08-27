@@ -1,7 +1,7 @@
-:py:mod:`cla.niedermayer.aux`
+:py:mod:`cla.niedermayer.cla`
 =============================
 
-.. py:module:: cla.niedermayer.aux
+.. py:module:: cla.niedermayer.cla
 
 
 Module Contents
