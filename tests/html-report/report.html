@@ -253,9 +253,9 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
 }
 </script>
     <h1>report.html</h1>
-    <p>Report generated on 31-Aug-2023 at 05:47:03 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.2.0</p>
+    <p>Report generated on 31-Aug-2023 at 05:58:11 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.2.0</p>
     <h2>Summary</h2>
-    <p>63 tests ran in 15.47 seconds. </p>
+    <p>63 tests ran in 15.89 seconds. </p>
     <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">63 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">0 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
     <h2>Results</h2>
     <table id="results-table">
@@ -270,46 +270,189 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_markowitz/test_cla.py::test_example</td>
-          <td class="col-duration">0.03</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:48.663 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:48.663 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
           <td class="col-name">tests/test_markowitz/test_cla.py::test_solver</td>
           <td class="col-duration">0.02</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:48.688 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:48.688 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:57:56.425 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:57:56.426 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[2]</td>
+          <td class="col-name">tests/test_markowitz/test_cla.py::test_example</td>
+          <td class="col-duration">0.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:57:56.464 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:57:56.464 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_plotting.py::test_plot</td>
+          <td class="col-duration">0.19</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:57:56.489 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:57:56.490 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_aux.py::test_first_turning_point</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:57:56.681 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_aux.py::test_minimum_variance</td>
           <td class="col-duration">0.01</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:48.716 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:48.716 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:57:56.685 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_solver[50-Solver.MARKOWITZ]</td>
-          <td class="col-duration">0.05</td>
+          <td class="col-name">tests/test_aux.py::test_claux</td>
+          <td class="col-duration">0.00</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:48.732 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:48.732 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:57:56.703 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_aux.py::test_append</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:57:56.707 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_aux.py::test_raise</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:57:56.710 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_solver[100-Solver.BAILEY]</td>
+          <td class="col-duration">9.29</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[2]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:06.016 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:06.017 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_solver[100-Solver.MARKOWITZ]</td>
+          <td class="col-duration">0.12</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:06.036 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:06.037 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[50]</td>
+          <td class="col-duration">1.42</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:07.526 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:07.527 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[20]</td>
+          <td class="col-duration">0.18</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:07.734 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:07.735 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_example[Solver.BAILEY]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[5]</td>
+          <td class="col-duration">0.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:07.798 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:07.799 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_solver[50-Solver.BAILEY]</td>
+          <td class="col-duration">1.25</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[3]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.078 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.079 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_solver.py::test_init_dimension[10]</td>
+          <td class="col-duration">0.06</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.136 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.137 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
@@ -319,71 +462,9 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:48.789 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:48.790 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.162 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.163 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[50]</td>
-          <td class="col-duration">1.28</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:50.047 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:50.048 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[5]</td>
-          <td class="col-duration">0.02</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:50.115 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:50.116 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_solver[50-Solver.BAILEY]</td>
-          <td class="col-duration">1.27</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_solver[100-Solver.MARKOWITZ]</td>
-          <td class="col-duration">0.12</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:51.408 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:51.409 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[20]</td>
-          <td class="col-duration">0.17</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:46:51.687 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:46:51.688 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_solver[100-Solver.BAILEY]</td>
-          <td class="col-duration">9.09</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
@@ -392,18 +473,9 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:00.823 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:00.823 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.196 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.197 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_example[Solver.BAILEY]</td>
-          <td class="col-duration">0.01</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
@@ -416,84 +488,23 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[10]</td>
-          <td class="col-duration">0.06</td>
+          <td class="col-name">tests/test_solver.py::test_init_solver[50-Solver.MARKOWITZ]</td>
+          <td class="col-duration">0.05</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:00.945 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:00.946 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.263 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.263 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_solver.py::test_init_dimension[3]</td>
-          <td class="col-duration">0.01</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:00.972 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:00.973 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_bailey/test_cla.py::test_big</td>
-          <td class="col-duration">0.04</td>
+          <td class="col-name">tests/test_bailey/test_schur.py::test_compute_lambda</td>
+          <td class="col-duration">0.00</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
             <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_aux.py::test_append</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:47:01.032 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_aux.py::test_raise</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.036 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_aux.py::test_claux</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:47:01.039 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_aux.py::test_first_turning_point</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:47:01.042 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_aux.py::test_minimum_variance</td>
-          <td class="col-duration">0.01</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> -----------------------------Captured stderr setup------------------------------ <br/>2023-08-31 05:47:01.046 | INFO     | cvx.cla.claux:__post_init__:24 - Initializing CLA (from CLAUX)
-<br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
@@ -515,208 +526,13 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_bailey/test_schur.py::test_compute_lambda</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_plotting.py::test_plot</td>
-          <td class="col-duration">0.19</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.075 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.075 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[100000]</td>
-          <td class="col-duration">0.01</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[20]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_no_free_asset</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[100000]</td>
-          <td class="col-duration">0.03</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[10000]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_lb_ub_mixed</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_no_fully_invested</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[5]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[100]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_order</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[1000]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[1000]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[20]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[100]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_small</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_init_algo[10000]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_first.py::test_sorting[5]</td>
-          <td class="col-duration">0.00</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
           <td class="col-name">tests/test_frontier.py::test_frontiers[22]</td>
           <td class="col-duration">0.02</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.367 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.368 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[30]</td>
-          <td class="col-duration">0.02</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.393 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.394 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[202]</td>
-          <td class="col-duration">0.18</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.556 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.557 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.335 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.336 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
@@ -726,41 +542,127 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.607 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.608 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.369 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.370 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
           <td class="col-name">tests/test_frontier.py::test_frontiers[203]</td>
-          <td class="col-duration">0.21</td>
+          <td class="col-duration">0.18</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.808 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.808 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.547 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.548 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontier[Solver.MARKOWITZ]</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[10]</td>
+          <td class="col-duration">0.06</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.622 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.623 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[200]</td>
+          <td class="col-duration">0.19</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.801 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.801 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[51]</td>
           <td class="col-duration">0.03</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.855 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.855 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.859 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.859 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[31]</td>
+          <td class="col-duration">0.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.896 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.896 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[30]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.927 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.928 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[21]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:09.951 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:09.952 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontier[Solver.BAILEY]</td>
+          <td class="col-duration">0.05</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[201]</td>
+          <td class="col-duration">0.19</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.183 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.184 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
           <td class="col-name">tests/test_frontier.py::test_frontiers[53]</td>
-          <td class="col-duration">0.03</td>
+          <td class="col-duration">0.04</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.902 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.902 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.240 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.240 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontier[Solver.MARKOWITZ]</td>
+          <td class="col-duration">0.04</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.272 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.273 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
@@ -904,127 +806,41 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
  1.80953822e-01 9.11621750e-02 1.52502768e-02 2.98862751e-02
  6.41088743e-02 1.04602059e-01 5.02633738e-23 9.05955040e-02
  4.75161166e-02 8.84742847e-23 1.60846334e-22 8.33456709e-02]
-<br/> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:01.930 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:01.931 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.314 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.314 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[200]</td>
-          <td class="col-duration">0.15</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[202]</td>
+          <td class="col-duration">0.19</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.088 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.088 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[21]</td>
-          <td class="col-duration">0.02</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.135 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.135 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[205]</td>
-          <td class="col-duration">0.18</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.296 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.296 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[201]</td>
-          <td class="col-duration">0.23</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.522 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.523 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[31]</td>
-          <td class="col-duration">0.02</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.579 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.580 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.515 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.516 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
           <td class="col-name">tests/test_frontier.py::test_frontiers[204]</td>
-          <td class="col-duration">0.20</td>
+          <td class="col-duration">0.21</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.760 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.761 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.735 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.736 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
           <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[51]</td>
-          <td class="col-duration">0.03</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[205]</td>
+          <td class="col-duration">0.13</td>
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.814 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.814 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[20]</td>
-          <td class="col-duration">0.02</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.845 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.845 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[10]</td>
-          <td class="col-duration">0.06</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.900 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.901 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontier[Solver.BAILEY]</td>
-          <td class="col-duration">0.05</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="empty log">No log output captured.</div></td></tr></tbody>
-      <tbody class="passed results-table-row">
-        <tr>
-          <td class="col-result">Passed</td>
-          <td class="col-name">tests/test_frontier.py::test_frontiers[50]</td>
-          <td class="col-duration">0.03</td>
-          <td class="col-links"></td></tr>
-        <tr>
-          <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:02.999 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:02.999 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.883 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.884 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
 <br/></div></td></tr></tbody>
       <tbody class="passed results-table-row">
         <tr>
@@ -1034,6 +850,190 @@ function filterTable(elem) { // eslint-disable-line no-unused-vars
           <td class="col-links"></td></tr>
         <tr>
           <td class="extra" colspan="4">
-            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:47:03.033 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
-2023-08-31 05:47:03.033 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
-<br/></div></td></tr></tbody></table></body></html>
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.930 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.930 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[20]</td>
+          <td class="col-duration">0.02</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.957 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.957 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_frontier.py::test_frontiers[50]</td>
+          <td class="col-duration">0.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log"> ------------------------------Captured stderr call------------------------------ <br/>2023-08-31 05:58:10.989 | INFO     | cvx.cla.markowitz.cla:__post_init__:26 - Initializing CLA
+2023-08-31 05:58:10.990 | INFO     | cvx.cla.markowitz.cla:__post_init__:47 - First turning point added
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_bailey/test_cla.py::test_big</td>
+          <td class="col-duration">0.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_order</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[100]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[100]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[10000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[100000]</td>
+          <td class="col-duration">0.04</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[5]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_no_free_asset</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[10000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_no_fully_invested</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[20]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_lb_ub_mixed</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[100000]</td>
+          <td class="col-duration">0.01</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[5]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_sorting[1000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_small</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_first.py::test_init_algo[1000]</td>
+          <td class="col-duration">0.00</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="empty log">No log output captured.</div></td></tr></tbody></table></body></html>

@@ -1,0 +1,63 @@
+:py:mod:`cla.niedermayer.cla`
+=============================
+
+.. py:module:: cla.niedermayer.cla
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.niedermayer.cla.CLA
+   cla.niedermayer.cla._Schur
+
+
+
+
+.. py:class:: CLA
+
+   Bases: :py:obj:`cvx.cla.claux.CLAUX`
+
+   .. py:method:: __post_init__(self)
+
+
+
+.. py:class:: _Schur(covariance, mean, free: cvx.cla.types.BOOLEAN_VECTOR, weights: cvx.cla.types.MATRIX)
+
+   .. py:method:: covariance_free(self)
+      :property:
+
+
+   .. py:method:: covariance_free_blocked(self)
+      :property:
+
+
+   .. py:method:: covariance_free_inv(self)
+      :property:
+
+
+   .. py:method:: mean_free(self)
+      :property:
+
+
+   .. py:method:: weights_blocked(self)
+      :property:
+
+
+   .. py:method:: update_weights(self, lamb)
+
+
+   .. py:method:: free_asset_to_bound(self)
+
+
+   .. py:method:: bound_asset_to_free(self, a)
+
+
+   .. py:method:: mean_free_extended(self, i)
+
+
+

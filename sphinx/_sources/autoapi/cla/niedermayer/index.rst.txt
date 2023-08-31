@@ -10,6 +10,7 @@ Submodules
    :titlesonly:
    :maxdepth: 1
 
+   cla/index.rst
    linalg/index.rst
 
 
