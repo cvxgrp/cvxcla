@@ -17,10 +17,7 @@ def _Mbar_matrix(C, A, io: List[bool]):
     Abar = np.copy(A)
     Abar[:, io] = 0
 
-    toprow = np.concatenate([Cbar, Abar.T], axis=1)
-    bottomrow = np.concatenate([Abar, np.zeros((m, m))], axis=1)
-
-    return np.concatenate([toprow, bottomrow], axis=0)
+    return np.block([[Cbar, Abar.T], [Abar, np.zeros((m, m))]])
 
 
 @dataclass(frozen=True)
