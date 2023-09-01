@@ -1,6 +1,20 @@
+#    Copyright 2023 Stanford University Convex Optimization Group
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 from dataclasses import dataclass
 
 import numpy as np
+from loguru import logger
 
 from cvx.cla.claux import CLAUX
 from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint
@@ -61,11 +75,16 @@ class CLA(CLAUX):
                     bi=np.array([last.weights[i]]),
                 )
 
-                if self.turning_points[-1].lamb > lamb > l_out:
+                if last.lamb > lamb > l_out:
                     l_out, i_out = lamb, i
 
-            if l_in > 0 or l_out > 0:
+            l_current = np.max([l_in, l_out])
+
+            if l_current > 0:
                 # 4) decide lambda
+                logger.info(f"l_in: {l_in}")
+                logger.info(f"l_out: {l_out}")
+                logger.info(f"l_current: {l_current}")
                 f = np.copy(last.free)
                 w = np.copy(last.weights)
 
@@ -91,6 +110,11 @@ class CLA(CLAUX):
 
             # check the turning point
             self.append(tp)
+
+            logger.info(f"weights: {tp.weights}")
+            logger.info(f"free: {tp.free_indices}")
+
+            assert False
 
         # 6) compute minimum variance solution
         last = self.turning_points[-1]

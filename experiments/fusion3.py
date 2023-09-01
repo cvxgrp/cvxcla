@@ -112,4 +112,4 @@ if __name__ == "__main__":
     )
     print("%-12s  %-12s  %-12s" % ("alpha", "return", "risk (std. dev.)"))
     for i in frontier:
-        print("%-12.4f  %-12.4e  %-12.4e" % (i[0], i[1], np.sqrt(i[2])))
+        print("{:<12.4f}  {:<12.4e}  {:<12.4e}".format(i[0], i[1], np.sqrt(i[2])))

@@ -4,7 +4,9 @@ import pytest
 from cvx.cla.solver import Solver
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize(
+    "solver", [Solver.BAILEY, Solver.MARKOWITZ, Solver.NIEDERMAYER]
+)
 def test_solver(input_data, solver):
     x = solver.build(
         mean=input_data.mean,
@@ -19,7 +21,9 @@ def test_solver(input_data, solver):
         assert a
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize(
+    "solver", [Solver.BAILEY, Solver.MARKOWITZ, Solver.NIEDERMAYER]
+)
 def test_example(example, example_solution, solver):
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)
@@ -79,7 +83,9 @@ def test_init_dimension(n):
     assert tp_bailey.num_points == tp_markowitz.num_points
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize(
+    "solver", [Solver.BAILEY, Solver.MARKOWITZ, Solver.NIEDERMAYER]
+)
 @pytest.mark.parametrize("n", [50, 100])
 def test_init_solver(solver, n):
     mean = np.random.randn(n)
