@@ -20,7 +20,7 @@ pandas = "*"
 mosek = "*"
 
 [tool.poetry.group.test.dependencies]
-pytest = "7.4.0"
+pytest = "7.4.1"
 pytest-cov = "4.1.0"
 mock = "*"
 cvxbson = "*"
