@@ -72,7 +72,7 @@ class CLA(CLAUX):
             UP = blocked & np.isclose(last.weights, self.upper_bounds)
             DN = blocked & np.isclose(last.weights, self.lower_bounds)
 
-            # a variable is out if it UP or DN
+            # a variable is out if it is UP or DN
             OUT = np.logical_or(UP, DN)
             IN = ~OUT
 

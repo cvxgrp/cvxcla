@@ -114,8 +114,6 @@ class CLA(CLAUX):
             logger.info(f"weights: {tp.weights}")
             logger.info(f"free: {tp.free_indices}")
 
-            assert False
-
         # 6) compute minimum variance solution
         last = self.turning_points[-1]
         x = self.minimum_variance()
@@ -135,6 +133,7 @@ class _Schur:
         self.mean = mean
         self.free = free
         self.weights = weights
+        self.__free_inv = np.linalg.inv(self.covariance_free)
 
     @property
     def covariance_free(self):
@@ -146,7 +145,7 @@ class _Schur:
 
     @property
     def covariance_free_inv(self):
-        return np.linalg.inv(self.covariance_free)
+        return self.__free_inv
 
     @property
     def mean_free(self):
@@ -162,12 +161,14 @@ class _Schur:
                 return bi[0]
             return bi[1]
 
-        c1 = np.sum(np.sum(self.covariance_free_inv))
-        c2 = np.dot(self.covariance_free_inv, self.mean_free)
-        c3 = np.dot(np.sum(self.covariance_free_inv, axis=1), self.mean_free)
         c4 = np.sum(self.covariance_free_inv, axis=0)
+        c1 = np.sum(c4)
+        c2 = self.covariance_free_inv @ self.mean_free
+        # c3 = np.sum(c2)
+        # c3 = np.sum(self.covariance_free_inv, axis=1) @ self.mean_free
+        # c4 = np.sum(self.covariance_free_inv, axis=0)
 
-        aux = -c1 * c2[index] + c3 * c4[index]
+        aux = -np.sum(c4) * c2[index] + np.sum(c2) * c4[index]
 
         bi = compute_bi(aux, bi)
 
@@ -175,14 +176,13 @@ class _Schur:
             return float((c4[index] - c1 * bi) / aux), bi
 
         l1 = np.sum(self.weights_blocked)
-        l2 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)
-        l3 = np.dot(l2, self.weights_blocked)
+        l2 = self.covariance_free_inv @ self.covariance_free_blocked
+        l3 = l2 @ self.weights_blocked
         l2 = np.sum(l3)
         return ((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux, bi
 
     def _compute_weight(self, lamb):
-        ones_f = np.ones(self.mean_free.shape)
-        g1 = np.dot(np.sum(self.covariance_free_inv, axis=0), self.mean_free)
+        g1 = np.sum(self.covariance_free_inv @ self.mean_free, axis=0)
         g2 = np.sum(np.sum(self.covariance_free_inv))
 
         if self.weights_blocked.size == 0:
@@ -190,13 +190,13 @@ class _Schur:
             w1 = 0
         else:
             g3 = np.sum(self.weights_blocked)
-            g4 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)
-            w1 = np.dot(g4, self.weights_blocked)
+            g4 = self.covariance_free_inv @ self.covariance_free_blocked
+            w1 = g4 @ self.weights_blocked
             g4 = np.sum(w1)
             gamma = -lamb * g1 / g2 + (1 - g3 + g4) / g2
 
-        w2 = np.dot(self.covariance_free_inv, ones_f)
-        w3 = np.dot(self.covariance_free_inv, self.mean_free)
+        w2 = np.sum(self.covariance_free_inv, axis=1)
+        w3 = self.covariance_free_inv @ self.mean_free
         return -w1 + gamma * w2 + lamb * w3, gamma
 
     def update_weights(self, lamb):
