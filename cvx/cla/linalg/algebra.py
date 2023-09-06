@@ -18,8 +18,11 @@ def bilinear(mat, left=None, right=None):
     n, m = mat.shape
     assert n == m, "Matrix must be square"
 
-    left = left or np.ones(n)
-    right = right or np.ones(n)
+    if left is None:
+        left = np.ones(n)
+
+    if right is None:
+        right = np.ones(n)
 
     return left.T @ (mat @ right)
 
