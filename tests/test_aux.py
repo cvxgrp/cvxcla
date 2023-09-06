@@ -8,13 +8,15 @@ from cvx.cla.types import TurningPoint
 
 
 @dataclass(frozen=True)
-class TestCla(CLAUX):
-    pass
+class Cla(CLAUX):
+    def __post_init__(self):
+        # CLAUX.__post_init__(self)
+        pass
 
 
 @pytest.fixture()
 def cla(input_data):
-    cla = TestCla(
+    cla = Cla(
         covariance=input_data.covariance,
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,
@@ -84,7 +86,7 @@ def test_minimum_variance(cla):
 
 
 def test_raise():
-    cla = TestCla(
+    cla = Cla(
         covariance=np.eye(2),
         upper_bounds=np.ones(2),
         lower_bounds=np.zeros(2),

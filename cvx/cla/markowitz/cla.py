@@ -52,7 +52,8 @@ class CLA(CLAUX):
         self.append(first)
 
         # --A10-- Set the P matrix.
-        P = np.concatenate((C, A.T), axis=1)
+        P = np.block([C, A.T])  # , axis=1)
+        np.block([[C, A.T], [A, np.zeros((m, m))]])
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
