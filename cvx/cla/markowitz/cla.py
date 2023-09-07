@@ -53,7 +53,7 @@ class CLA(CLAUX):
 
         # --A10-- Set the P matrix.
         P = np.block([C, A.T])  # , axis=1)
-        np.block([[C, A.T], [A, np.zeros((m, m))]])
+        M = np.block([[C, A.T], [A, np.zeros((m, m))]])
 
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
@@ -92,9 +92,21 @@ class CLA(CLAUX):
             top = np.copy(self.mean)
             top[OUT] = 0
 
+            _IN = np.concatenate([IN, np.ones(m, dtype=np.bool_)])
+
             rhsb = np.concatenate([top, np.zeros(m)])
             rhsa = np.concatenate([up + dn, bot], axis=0)
 
+            MM = M[_IN, :][:, _IN]
+
+            print(_IN)
+            print(MM)
+            print(Mbar)
+            # assert False
+            # alpha = rhsa
+            # beta = rhsb
+
+            # alpha[_IN] = np.linalg.solve(MM, rhsa[_IN])
             # --A16-- Compute alpha, beta, gamma, and delta.
             alpha = np.linalg.solve(Mbar, rhsa)
             beta = np.linalg.solve(Mbar, rhsb)
