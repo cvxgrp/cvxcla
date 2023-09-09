@@ -18,14 +18,25 @@ def bilinear(mat, left=None, right=None):
     n, m = mat.shape
     assert n == m, "Matrix must be square"
 
-    left = left or np.ones(n)
-    right = right or np.ones(n)
+    if left is None:
+        left = np.ones(n)
+
+    if right is None:
+        right = np.ones(n)
 
     return left.T @ (mat @ right)
 
 
-if __name__ == "__main__":
-    A = np.random.randn(3, 3)
-    Cov = A.T @ A
+def sssolve(A, b, IN):
+    OUT = ~IN
+    n = A.shape[0]
 
-    print(bilinear(Cov))
+    x = np.zeros(n)
+    x[OUT] = b[OUT]
+
+    bbb = b[IN] - A[IN, :][:, OUT] @ x[OUT]
+    x[IN] = np.linalg.solve(A[IN, :][:, IN], bbb)
+
+    np.isclose(A @ x - b, 0.0)
+
+    return x
