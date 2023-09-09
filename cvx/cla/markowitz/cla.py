@@ -12,25 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 
 from cvx.cla.claux import CLAUX
+from cvx.cla.linalg.algebra import sssolve
 from cvx.cla.types import TurningPoint
-
-
-def _Mbar_matrix(C, A, io: List[bool]):
-    m = A.shape[0]
-
-    Cbar = np.copy(C)
-    Cbar[io, :] = 0
-    Cbar[io, io] = 1
-
-    Abar = np.copy(A)
-    Abar[:, io] = 0
-
-    return np.block([[Cbar, Abar.T], [Abar, np.zeros((m, m))]])
 
 
 @dataclass(frozen=True)
@@ -77,17 +64,11 @@ class CLA(CLAUX):
             OUT = np.logical_or(UP, DN)
             IN = ~OUT
 
-            Mbar = _Mbar_matrix(C, A, OUT)
-
             up = np.zeros(ns)
             up[UP] = self.upper_bounds[UP]
 
             dn = np.zeros(ns)
             dn[DN] = self.lower_bounds[DN]
-
-            # --A15-- Create the right-hand sides for alpha and beta.
-            k = up + dn
-            bot = b - A @ k
 
             top = np.copy(self.mean)
             top[OUT] = 0
@@ -95,21 +76,10 @@ class CLA(CLAUX):
             _IN = np.concatenate([IN, np.ones(m, dtype=np.bool_)])
 
             rhsb = np.concatenate([top, np.zeros(m)])
-            rhsa = np.concatenate([up + dn, bot], axis=0)
+            rhsa = np.concatenate([up + dn, b], axis=0)
 
-            MM = M[_IN, :][:, _IN]
-
-            print(_IN)
-            print(MM)
-            print(Mbar)
-            # assert False
-            # alpha = rhsa
-            # beta = rhsb
-
-            # alpha[_IN] = np.linalg.solve(MM, rhsa[_IN])
-            # --A16-- Compute alpha, beta, gamma, and delta.
-            alpha = np.linalg.solve(Mbar, rhsa)
-            beta = np.linalg.solve(Mbar, rhsb)
+            alpha = sssolve(M, rhsa, _IN)
+            beta = sssolve(M, rhsb, _IN)
 
             gamma = P @ alpha
             delta = P @ beta - self.mean
