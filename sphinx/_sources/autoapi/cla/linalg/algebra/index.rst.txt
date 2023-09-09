@@ -1,0 +1,26 @@
+:py:mod:`cla.linalg.algebra`
+============================
+
+.. py:module:: cla.linalg.algebra
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   cla.linalg.algebra.bilinear
+   cla.linalg.algebra.sssolve
+
+
+
+.. py:function:: bilinear(mat, left=None, right=None)
+
+
+.. py:function:: sssolve(A, b, IN)
+
+

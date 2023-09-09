@@ -16,17 +16,6 @@ Classes
 
 
 
-Functions
-~~~~~~~~~
-
-.. autoapisummary::
-
-   cla.markowitz.cla._Mbar_matrix
-
-
-
-.. py:function:: _Mbar_matrix(C, A, io: List[bool])
-
 
 .. py:class:: CLA
 

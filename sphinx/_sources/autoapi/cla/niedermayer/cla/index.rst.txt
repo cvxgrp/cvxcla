@@ -48,13 +48,13 @@ Classes
       :property:
 
 
+   .. py:method:: compute_lambda(self, index, bi)
+
+
+   .. py:method:: _compute_weight(self, lamb)
+
+
    .. py:method:: update_weights(self, lamb)
-
-
-   .. py:method:: free_asset_to_bound(self)
-
-
-   .. py:method:: bound_asset_to_free(self, a)
 
 
    .. py:method:: mean_free_extended(self, i)

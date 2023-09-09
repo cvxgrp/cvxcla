@@ -71,26 +71,26 @@
            <div itemprop="articleBody">
              
   <h1>Source code for cla.markowitz.cla</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span></span><span class="c1">#    Copyright 2023 Stanford University Convex Optimization Group</span>
+<span class="c1">#</span>
+<span class="c1">#    Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1">#    you may not use this file except in compliance with the License.</span>
+<span class="c1">#    You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#        http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1">#    Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1">#    distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1">#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1">#    See the License for the specific language governing permissions and</span>
+<span class="c1">#    limitations under the License.</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.claux</span> <span class="kn">import</span> <span class="n">CLAUX</span>
+<span class="kn">from</span> <span class="nn">cvx.cla.linalg.algebra</span> <span class="kn">import</span> <span class="n">sssolve</span>
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">TurningPoint</span>
-
-
-<div class="viewcode-block" id="_Mbar_matrix"><a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla._Mbar_matrix">[docs]</a><span class="k">def</span> <span class="nf">_Mbar_matrix</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">io</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">bool</span><span class="p">]):</span>
-    <span class="n">m</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
-    <span class="n">Cbar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
-    <span class="n">Cbar</span><span class="p">[</span><span class="n">io</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">Cbar</span><span class="p">[</span><span class="n">io</span><span class="p">,</span> <span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-
-    <span class="n">Abar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
-    <span class="n">Abar</span><span class="p">[:,</span> <span class="n">io</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">Cbar</span><span class="p">,</span> <span class="n">Abar</span><span class="o">.</span><span class="n">T</span><span class="p">],</span> <span class="p">[</span><span class="n">Abar</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">m</span><span class="p">))]])</span></div>
 
 
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -112,7 +112,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">first</span><span class="p">)</span>
 
         <span class="c1"># --A10-- Set the P matrix.</span>
-        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">])</span>  <span class="c1"># , axis=1)</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">],</span> <span class="p">[</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">m</span><span class="p">))]])</span>
 
         <span class="c1"># --A11 -- Initialize storage for quantities # to be computed in the main loop.</span>
         <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
@@ -132,11 +133,9 @@
             <span class="n">UP</span> <span class="o">=</span> <span class="n">blocked</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">)</span>
             <span class="n">DN</span> <span class="o">=</span> <span class="n">blocked</span> <span class="o">&amp;</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">)</span>
 
-            <span class="c1"># a variable is out if it UP or DN</span>
+            <span class="c1"># a variable is out if it is UP or DN</span>
             <span class="n">OUT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">UP</span><span class="p">,</span> <span class="n">DN</span><span class="p">)</span>
             <span class="n">IN</span> <span class="o">=</span> <span class="o">~</span><span class="n">OUT</span>
-
-            <span class="n">Mbar</span> <span class="o">=</span> <span class="n">_Mbar_matrix</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">OUT</span><span class="p">)</span>
 
             <span class="n">up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ns</span><span class="p">)</span>
             <span class="n">up</span><span class="p">[</span><span class="n">UP</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="n">UP</span><span class="p">]</span>
@@ -144,19 +143,16 @@
             <span class="n">dn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ns</span><span class="p">)</span>
             <span class="n">dn</span><span class="p">[</span><span class="n">DN</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="n">DN</span><span class="p">]</span>
 
-            <span class="c1"># --A15-- Create the right-hand sides for alpha and beta.</span>
-            <span class="n">k</span> <span class="o">=</span> <span class="n">up</span> <span class="o">+</span> <span class="n">dn</span>
-            <span class="n">bot</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">A</span> <span class="o">@</span> <span class="n">k</span>
-
             <span class="n">top</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
             <span class="n">top</span><span class="p">[</span><span class="n">OUT</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
-            <span class="n">rhsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">top</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">)])</span>
-            <span class="n">rhsa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">up</span> <span class="o">+</span> <span class="n">dn</span><span class="p">,</span> <span class="n">bot</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">_IN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">IN</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)])</span>
 
-            <span class="c1"># --A16-- Compute alpha, beta, gamma, and delta.</span>
-            <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsa</span><span class="p">)</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">Mbar</span><span class="p">,</span> <span class="n">rhsb</span><span class="p">)</span>
+            <span class="n">rhsb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">top</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">)])</span>
+            <span class="n">rhsa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">up</span> <span class="o">+</span> <span class="n">dn</span><span class="p">,</span> <span class="n">b</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">sssolve</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">rhsa</span><span class="p">,</span> <span class="n">_IN</span><span class="p">)</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="n">sssolve</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">rhsb</span><span class="p">,</span> <span class="n">_IN</span><span class="p">)</span>
 
             <span class="n">gamma</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">alpha</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">beta</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>

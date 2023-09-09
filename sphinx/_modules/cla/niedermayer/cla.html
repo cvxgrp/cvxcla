@@ -71,9 +71,23 @@
            <div itemprop="articleBody">
              
   <h1>Source code for cla.niedermayer.cla</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span></span><span class="c1">#    Copyright 2023 Stanford University Convex Optimization Group</span>
+<span class="c1">#</span>
+<span class="c1">#    Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1">#    you may not use this file except in compliance with the License.</span>
+<span class="c1">#    You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#        http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1">#    Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1">#    distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1">#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1">#    See the License for the specific language governing permissions and</span>
+<span class="c1">#    limitations under the License.</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.claux</span> <span class="kn">import</span> <span class="n">CLAUX</span>
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">BOOLEAN_VECTOR</span><span class="p">,</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">TurningPoint</span>
@@ -100,26 +114,17 @@
                     <span class="n">weights</span><span class="o">=</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span>
                 <span class="p">)</span>
 
-                <span class="c1">#for i in last.free_indices:</span>
-                <span class="c1">#    # count the number of entries that are True below the ith entry in fff</span>
-                <span class="c1">#    j = np.sum(last.free[:i])</span>
-                <span class="c1">#</span>
-                <span class="c1">#    lamb, bi = schur.compute_lambda(</span>
-                <span class="c1">#        index=j,</span>
-                <span class="c1">#        bi=np.array([self.lower_bounds[i], self.upper_bounds[i]]),</span>
-                <span class="c1">#    )</span>
-                <span class="c1">#</span>
-                <span class="c1">#    if lamb &gt; l_in:</span>
-                <span class="c1">#        l_in, i_in, bi_in = lamb, i, bi</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">last</span><span class="o">.</span><span class="n">free_indices</span><span class="p">:</span>
+                    <span class="c1"># count the number of entries that are True below the ith entry in fff</span>
+                    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">[:</span><span class="n">i</span><span class="p">])</span>
 
-                <span class="n">llll</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">free_asset_to_bound</span><span class="p">()</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">llll</span><span class="p">)</span>
-                <span class="n">i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">llll</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">llll</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">l_in</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">i_in</span><span class="p">)</span>
-                <span class="c1">#assert False</span>
+                    <span class="n">lamb</span><span class="p">,</span> <span class="n">bi</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">compute_lambda</span><span class="p">(</span>
+                        <span class="n">index</span><span class="o">=</span><span class="n">j</span><span class="p">,</span>
+                        <span class="n">bi</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="n">i</span><span class="p">]]),</span>
+                    <span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">lamb</span> <span class="o">&gt;</span> <span class="n">l_in</span><span class="p">:</span>
+                        <span class="n">l_in</span><span class="p">,</span> <span class="n">i_in</span><span class="p">,</span> <span class="n">bi_in</span> <span class="o">=</span> <span class="n">lamb</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">bi</span>
 
             <span class="c1"># 2) case b): Free one bounded weight</span>
             <span class="n">l_out</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
@@ -132,74 +137,78 @@
             <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">last</span><span class="o">.</span><span class="n">blocked_indices</span><span class="p">:</span>
-                <span class="c1">#fff = np.copy(last.free)</span>
-                <span class="c1">#fff[i] = True</span>
+                <span class="n">lamb</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">mean_free_extended</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-                <span class="c1">#schur = _Schur(</span>
+                <span class="c1"># fff = np.copy(last.free)</span>
+                <span class="c1"># fff[i] = True</span>
+
+                <span class="c1"># schur = _Schur(</span>
                 <span class="c1">#    covariance=self.covariance,</span>
                 <span class="c1">#    mean=self.mean,</span>
-                <span class="c1">#    free=last.free,</span>
+                <span class="c1">#    free=fff,</span>
                 <span class="c1">#    weights=last.weights,</span>
-                <span class="c1">#)</span>
+                <span class="c1"># )</span>
 
                 <span class="c1"># count the number of entries that are True below the ith entry in fff</span>
-                <span class="c1">#j = np.sum(fff[:i])</span>
+                <span class="c1"># j = np.sum(fff[:i])</span>
 
-                <span class="c1">#lamb, bi = schur.compute_lambda(</span>
+                <span class="c1"># lamb, bi = schur.compute_lambda(</span>
                 <span class="c1">#    index=j,</span>
                 <span class="c1">#    bi=np.array([last.weights[i]]),</span>
-                <span class="c1">#)</span>
+                <span class="c1"># )</span>
 
-                <span class="c1">#if self.turning_points[-1].lamb &gt; lamb &gt; l_out:</span>
-                <span class="c1">#    l_out, i_out = lamb, i</span>
+                <span class="k">if</span> <span class="n">last</span><span class="o">.</span><span class="n">lamb</span> <span class="o">&gt;</span> <span class="n">lamb</span> <span class="o">&gt;</span> <span class="n">l_out</span><span class="p">:</span>
+                    <span class="n">l_out</span><span class="p">,</span> <span class="n">i_out</span> <span class="o">=</span> <span class="n">lamb</span><span class="p">,</span> <span class="n">i</span>
 
-                <span class="n">lamb</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">mean_free_extended</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">lamb</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;l_in: </span><span class="si">{</span><span class="n">l_in</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;l_out: </span><span class="si">{</span><span class="n">l_out</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">l_in</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">l_out</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">l_current</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">l_in</span><span class="p">,</span> <span class="n">l_out</span><span class="p">])</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;l_current: </span><span class="si">{</span><span class="n">l_current</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">l_current</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="c1"># 4) decide lambda</span>
                 <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">)</span>
                 <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">last</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">l_in</span> <span class="o">&gt;</span> <span class="n">l_out</span><span class="p">:</span>
-                    <span class="n">lll</span> <span class="o">=</span> <span class="n">l_in</span>
                     <span class="n">f</span><span class="p">[</span><span class="n">i_in</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                     <span class="n">w</span><span class="p">[</span><span class="n">i_in</span><span class="p">]</span> <span class="o">=</span> <span class="n">bi_in</span>  <span class="c1"># set value at the correct boundary</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">lll</span> <span class="o">=</span> <span class="n">l_out</span>
+                    <span class="c1"># lll = l_out</span>
                     <span class="n">f</span><span class="p">[</span><span class="n">i_out</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">break</span>
 
-            <span class="k">assert</span> <span class="kc">False</span>
-
-            <span class="c1"># 4) compute new weights</span>
             <span class="n">schur</span> <span class="o">=</span> <span class="n">_Schur</span><span class="p">(</span>
                 <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
                 <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
                 <span class="n">free</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
                 <span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="c1"># 5) compute solution vector</span>
-            <span class="n">weights</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">update_weights</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="n">lll</span><span class="p">)</span>
-            <span class="n">tp</span> <span class="o">=</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">lll</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
 
+            <span class="n">A</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">covariance_free_inv</span>
+
+            <span class="n">gamma</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span> <span class="o">@</span> <span class="n">schur</span><span class="o">.</span><span class="n">mean_free</span><span class="p">)</span> <span class="o">*</span> <span class="n">l_current</span>
+            <span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)))</span>
+
+            <span class="n">w</span><span class="p">[</span><span class="n">schur</span><span class="o">.</span><span class="n">free</span><span class="p">]</span> <span class="o">=</span> <span class="n">l_current</span> <span class="o">*</span> <span class="n">A</span> <span class="o">@</span> <span class="n">schur</span><span class="o">.</span><span class="n">mean_free</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># 5) compute solution vector</span>
+            <span class="c1"># weights = schur.update_weights(lamb=lll)</span>
+            <span class="n">tp</span> <span class="o">=</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">l_current</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">f</span><span class="p">)</span>
+
+            <span class="c1"># logger.info(f&quot;tp: {tp}&quot;)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;weights: </span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;free: </span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">free_indices</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="c1"># check the turning point</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="kc">False</span>
 
         <span class="c1"># 6) compute minimum variance solution</span>
         <span class="n">last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
-        <span class="n">mean</span><span class="p">[</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">last</span><span class="o">.</span><span class="n">free</span>
-        <span class="n">w</span> <span class="o">=</span> <span class="n">last</span><span class="o">.</span><span class="n">weights</span>
-
-        <span class="n">schur</span> <span class="o">=</span> <span class="n">_Schur</span><span class="p">(</span><span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">f</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">)</span>
-
-        <span class="n">weights</span> <span class="o">=</span> <span class="n">schur</span><span class="o">.</span><span class="n">update_weights</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">tp</span> <span class="o">=</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span></div></div>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimum_variance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TurningPoint</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">))</span></div></div>
 
 
 <div class="viewcode-block" id="_Schur"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur">[docs]</a><span class="k">class</span> <span class="nc">_Schur</span><span class="p">:</span>
@@ -236,48 +245,48 @@
 <div class="viewcode-block" id="_Schur.weights_blocked"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.weights_blocked">[docs]</a>    <span class="k">def</span> <span class="nf">weights_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">]</span></div>
 
-    <span class="c1"># def compute_lambda(self, index, bi):</span>
-    <span class="c1">#     def compute_bi(c, bi):</span>
-    <span class="c1">#         if np.shape(bi)[0] == 1 or c &lt;= 0:</span>
-    <span class="c1">#             return bi[0]</span>
-    <span class="c1">#         return bi[1]</span>
-    <span class="c1">#</span>
-    <span class="c1">#     c1 = np.sum(np.sum(self.covariance_free_inv))</span>
-    <span class="c1">#     c2 = np.dot(self.covariance_free_inv, self.mean_free)</span>
-    <span class="c1">#     c3 = np.dot(np.sum(self.covariance_free_inv, axis=1), self.mean_free)</span>
-    <span class="c1">#     c4 = np.sum(self.covariance_free_inv, axis=0)</span>
-    <span class="c1">#</span>
-    <span class="c1">#     aux = -c1 * c2[index] + c3 * c4[index]</span>
-    <span class="c1">#</span>
-    <span class="c1">#     bi = compute_bi(aux, bi)</span>
-    <span class="c1">#</span>
-    <span class="c1">#     if self.weights_blocked.size == 0:</span>
-    <span class="c1">#         return float((c4[index] - c1 * bi) / aux), bi</span>
-    <span class="c1">#</span>
-    <span class="c1">#     l1 = np.sum(self.weights_blocked)</span>
-    <span class="c1">#     l2 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)</span>
-    <span class="c1">#     l3 = np.dot(l2, self.weights_blocked)</span>
-    <span class="c1">#     l2 = np.sum(l3)</span>
-    <span class="c1">#     return ((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux, bi</span>
+<div class="viewcode-block" id="_Schur.compute_lambda"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.compute_lambda">[docs]</a>    <span class="k">def</span> <span class="nf">compute_lambda</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">bi</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">compute_bi</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">bi</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">bi</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">bi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">bi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
-    <span class="c1"># def _compute_weight(self, lamb):</span>
-    <span class="c1">#     ones_f = np.ones(self.mean_free.shape)</span>
-    <span class="c1">#     g1 = np.dot(np.sum(self.covariance_free_inv, axis=0), self.mean_free)</span>
-    <span class="c1">#     g2 = np.sum(np.sum(self.covariance_free_inv))</span>
-    <span class="c1">#</span>
-    <span class="c1">#     if self.weights_blocked.size == 0:</span>
-    <span class="c1">#         gamma = -lamb * g1 / g2 + 1 / g2</span>
-    <span class="c1">#         w1 = 0</span>
-    <span class="c1">#     else:</span>
-    <span class="c1">#         g3 = np.sum(self.weights_blocked)</span>
-    <span class="c1">#         g4 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)</span>
-    <span class="c1">#         w1 = np.dot(g4, self.weights_blocked)</span>
-    <span class="c1">#         g4 = np.sum(w1)</span>
-    <span class="c1">#         gamma = -lamb * g1 / g2 + (1 - g3 + g4) / g2</span>
-    <span class="c1">#</span>
-    <span class="c1">#     w2 = np.dot(self.covariance_free_inv, ones_f)</span>
-    <span class="c1">#     w3 = np.dot(self.covariance_free_inv, self.mean_free)</span>
-    <span class="c1">#     return -w1 + gamma * w2 + lamb * w3, gamma</span>
+        <span class="n">c1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">))</span>
+        <span class="n">c2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span><span class="p">)</span>
+        <span class="n">c3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span><span class="p">)</span>
+        <span class="n">c4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">aux</span> <span class="o">=</span> <span class="o">-</span><span class="n">c1</span> <span class="o">*</span> <span class="n">c2</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">+</span> <span class="n">c3</span> <span class="o">*</span> <span class="n">c4</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+        <span class="n">bi</span> <span class="o">=</span> <span class="n">compute_bi</span><span class="p">(</span><span class="n">aux</span><span class="p">,</span> <span class="n">bi</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">((</span><span class="n">c4</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">-</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">bi</span><span class="p">)</span> <span class="o">/</span> <span class="n">aux</span><span class="p">),</span> <span class="n">bi</span>
+
+        <span class="n">l1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="p">)</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_blocked</span><span class="p">)</span>
+        <span class="n">l3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">l2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="p">)</span>
+        <span class="n">l2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">l3</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">l1</span> <span class="o">+</span> <span class="n">l2</span><span class="p">)</span> <span class="o">*</span> <span class="n">c4</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">-</span> <span class="n">c1</span> <span class="o">*</span> <span class="p">(</span><span class="n">bi</span> <span class="o">+</span> <span class="n">l3</span><span class="p">[</span><span class="n">index</span><span class="p">]))</span> <span class="o">/</span> <span class="n">aux</span><span class="p">,</span> <span class="n">bi</span></div>
+
+<div class="viewcode-block" id="_Schur._compute_weight"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur._compute_weight">[docs]</a>    <span class="k">def</span> <span class="nf">_compute_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lamb</span><span class="p">):</span>
+        <span class="n">ones_f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">g1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span><span class="p">)</span>
+        <span class="n">g2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">gamma</span> <span class="o">=</span> <span class="o">-</span><span class="n">lamb</span> <span class="o">*</span> <span class="n">g1</span> <span class="o">/</span> <span class="n">g2</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">g2</span>
+            <span class="n">w1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">g3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="p">)</span>
+            <span class="n">g4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_blocked</span><span class="p">)</span>
+            <span class="n">w1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">g4</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights_blocked</span><span class="p">)</span>
+            <span class="n">g4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w1</span><span class="p">)</span>
+            <span class="n">gamma</span> <span class="o">=</span> <span class="o">-</span><span class="n">lamb</span> <span class="o">*</span> <span class="n">g1</span> <span class="o">/</span> <span class="n">g2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">g3</span> <span class="o">+</span> <span class="n">g4</span><span class="p">)</span> <span class="o">/</span> <span class="n">g2</span>
+
+        <span class="n">w2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="n">ones_f</span><span class="p">)</span>
+        <span class="n">w3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">w1</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">w2</span> <span class="o">+</span> <span class="n">lamb</span> <span class="o">*</span> <span class="n">w3</span><span class="p">,</span> <span class="n">gamma</span></div>
 
 <div class="viewcode-block" id="_Schur.update_weights"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.update_weights">[docs]</a>    <span class="k">def</span> <span class="nf">update_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lamb</span><span class="p">):</span>
         <span class="n">weights</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_weight</span><span class="p">(</span><span class="n">lamb</span><span class="p">)</span>
@@ -285,50 +294,442 @@
         <span class="n">new_weights</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">]</span> <span class="o">=</span> <span class="n">weights</span>
         <span class="k">return</span> <span class="n">new_weights</span></div>
 
-<div class="viewcode-block" id="_Schur.free_asset_to_bound"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.free_asset_to_bound">[docs]</a>    <span class="k">def</span> <span class="nf">free_asset_to_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span>
-        <span class="n">xxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">xxx</span><span class="p">)</span>
-
-        <span class="n">m</span> <span class="o">=</span> <span class="n">A</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span>
-
-        <span class="n">C</span> <span class="o">=</span> <span class="o">-</span><span class="n">s</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">xxx</span>
-        <span class="n">lamb</span> <span class="o">=</span> <span class="o">-</span><span class="n">xxx</span> <span class="o">/</span> <span class="n">C</span>
-        <span class="k">return</span> <span class="n">lamb</span></div>
-
-<div class="viewcode-block" id="_Schur.bound_asset_to_free"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.bound_asset_to_free">[docs]</a>    <span class="k">def</span> <span class="nf">bound_asset_to_free</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
-        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance_free_inv</span>
-        <span class="n">xxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">xxx</span><span class="p">)</span>
-
-        <span class="n">m</span> <span class="o">=</span> <span class="n">A</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_free</span>
-
-        <span class="n">D</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">xxx</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">-</span> <span class="n">a</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">s</span>
-        <span class="c1">#C = -s * m + np.sum(m) * xxx</span>
-        <span class="c1">#lamb = -xxx / C</span>
-        <span class="c1">#return lamb</span>
-        <span class="k">return</span> <span class="n">D</span></div>
-
 <div class="viewcode-block" id="_Schur.mean_free_extended"><a class="viewcode-back" href="../../../autoapi/cla/niedermayer/cla/index.html#cla.niedermayer.cla._Schur.mean_free_extended">[docs]</a>    <span class="k">def</span> <span class="nf">mean_free_extended</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
-        <span class="c1">#self.mean_free</span>
-        <span class="n">fff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">free</span>
-        <span class="n">fff</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">free</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)</span>
+        <span class="n">free</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
-        <span class="n">mean_fff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">fff</span><span class="p">]</span>
-        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">[</span><span class="n">fff</span><span class="p">][:,</span> <span class="n">fff</span><span class="p">]</span>
-        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">mean_free</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">[</span><span class="n">free</span><span class="p">]</span>
+        <span class="n">cov_free</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">[</span><span class="n">free</span><span class="p">][:,</span> <span class="n">free</span><span class="p">]</span>
+        <span class="n">cov_free_inv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">cov_free</span><span class="p">)</span>
 
-        <span class="n">xxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">xxx</span><span class="p">)</span>
+        <span class="n">xxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cov_free_inv</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
+        <span class="n">m</span> <span class="o">=</span> <span class="n">cov_free_inv</span> <span class="o">@</span> <span class="n">mean_free</span>
 
-        <span class="n">m</span> <span class="o">=</span> <span class="n">A</span> <span class="o">@</span> <span class="n">mean_fff</span>
-
-        <span class="n">C</span> <span class="o">=</span> <span class="o">-</span><span class="n">s</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">xxx</span>
-        <span class="n">lamb</span> <span class="o">=</span> <span class="o">-</span><span class="n">xxx</span> <span class="o">/</span> <span class="n">C</span>
-        <span class="n">ll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)</span>
-        <span class="n">ll</span><span class="p">[</span><span class="n">fff</span><span class="p">]</span> <span class="o">=</span> <span class="n">lamb</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">xxx</span><span class="p">)</span> <span class="o">*</span> <span class="n">m</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">xxx</span>
+        <span class="n">lamb</span> <span class="o">=</span> <span class="n">xxx</span> <span class="o">/</span> <span class="n">C</span>
+        <span class="n">ll</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
+        <span class="n">ll</span><span class="p">[</span><span class="n">free</span><span class="p">]</span> <span class="o">=</span> <span class="n">lamb</span>
         <span class="k">return</span> <span class="n">ll</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div></div>
+
+
+<span class="c1">#</span>
+<span class="c1"># from dataclasses import dataclass</span>
+<span class="c1">#</span>
+<span class="c1"># import numpy as np</span>
+<span class="c1"># from loguru import logger</span>
+<span class="c1"># from cvx.cla.claux import CLAUX</span>
+<span class="c1"># from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># @dataclass(frozen=True)</span>
+<span class="c1"># class CLA(CLAUX):</span>
+<span class="c1">#     def __post_init__(self):</span>
+<span class="c1">#         # Compute the turning points,free sets and weights</span>
+<span class="c1">#         self.append(self.first_turning_point())</span>
+<span class="c1">#</span>
+<span class="c1">#         while True:</span>
+<span class="c1">#             last = self.turning_points[-1]</span>
+<span class="c1">#</span>
+<span class="c1">#             # 1) case a): Bound one free weight</span>
+<span class="c1">#             l_in = -np.inf</span>
+<span class="c1">#</span>
+<span class="c1">#             # only try to bound a free asset if there are least two of them</span>
+<span class="c1">#             if np.sum(last.free) &gt; 1:</span>
+<span class="c1">#                 schur = _Schur(</span>
+<span class="c1">#                     covariance=self.covariance,</span>
+<span class="c1">#                     mean=self.mean,</span>
+<span class="c1">#                     free=last.free,</span>
+<span class="c1">#                     weights=last.weights,</span>
+<span class="c1">#                 )</span>
+<span class="c1">#</span>
+<span class="c1">#                 for i in last.free_indices:</span>
+<span class="c1">#                     # count the number of entries that are True below the ith entry in fff</span>
+<span class="c1">#                     j = np.sum(last.free[:i])</span>
+<span class="c1">#</span>
+<span class="c1">#                     lamb, bi = schur.compute_lambda(</span>
+<span class="c1">#                         index=j,</span>
+<span class="c1">#                         bi=np.array([self.lower_bounds[i], self.upper_bounds[i]]),</span>
+<span class="c1">#                     )</span>
+<span class="c1">#</span>
+<span class="c1">#                     if lamb &gt; l_in:</span>
+<span class="c1">#                         l_in, i_in, bi_in = lamb, i, bi</span>
+<span class="c1">#</span>
+<span class="c1">#             # 2) case b): Free one bounded weight</span>
+<span class="c1">#             l_out = -np.inf</span>
+<span class="c1">#</span>
+<span class="c1">#             for i in last.blocked_indices:</span>
+<span class="c1">#                 fff = np.copy(last.free)</span>
+<span class="c1">#                 fff[i] = True</span>
+<span class="c1">#</span>
+<span class="c1">#                 schur = _Schur(</span>
+<span class="c1">#                     covariance=self.covariance,</span>
+<span class="c1">#                     mean=self.mean,</span>
+<span class="c1">#                     free=fff,</span>
+<span class="c1">#                     weights=last.weights,</span>
+<span class="c1">#                 )</span>
+<span class="c1">#</span>
+<span class="c1">#                 # count the number of entries that are True below the ith entry in fff</span>
+<span class="c1">#                 j = np.sum(fff[:i])</span>
+<span class="c1">#</span>
+<span class="c1">#                 lamb, bi = schur.compute_lambda(</span>
+<span class="c1">#                     index=j,</span>
+<span class="c1">#                     bi=np.array([last.weights[i]]),</span>
+<span class="c1">#                 )</span>
+<span class="c1">#</span>
+<span class="c1">#                 if last.lamb &gt; lamb &gt; l_out:</span>
+<span class="c1">#                     l_out, i_out = lamb, i</span>
+<span class="c1">#</span>
+<span class="c1">#             l_current = np.max([l_in, l_out])</span>
+<span class="c1">#</span>
+<span class="c1">#             if l_current &gt; 0:</span>
+<span class="c1">#                 # 4) decide lambda</span>
+<span class="c1">#                 logger.info(f&quot;l_in: {l_in}&quot;)</span>
+<span class="c1">#                 logger.info(f&quot;l_out: {l_out}&quot;)</span>
+<span class="c1">#                 logger.info(f&quot;l_current: {l_current}&quot;)</span>
+<span class="c1">#                 f = np.copy(last.free)</span>
+<span class="c1">#                 w = np.copy(last.weights)</span>
+<span class="c1">#</span>
+<span class="c1">#                 if l_in &gt; l_out:</span>
+<span class="c1">#                     lll = l_in</span>
+<span class="c1">#                     f[i_in] = False</span>
+<span class="c1">#                     w[i_in] = bi_in  # set value at the correct boundary</span>
+<span class="c1">#                 else:</span>
+<span class="c1">#                     lll = l_out</span>
+<span class="c1">#                     f[i_out] = True</span>
+<span class="c1">#             else:</span>
+<span class="c1">#                 break</span>
+<span class="c1">#</span>
+<span class="c1">#             schur = _Schur(</span>
+<span class="c1">#                 covariance=self.covariance,</span>
+<span class="c1">#                 mean=self.mean,</span>
+<span class="c1">#                 free=f,</span>
+<span class="c1">#                 weights=w,</span>
+<span class="c1">#             )</span>
+<span class="c1">#             # 5) compute solution vector</span>
+<span class="c1">#             weights = schur.update_weights(lamb=lll)</span>
+<span class="c1">#             tp = TurningPoint(weights=weights, lamb=lll, free=f)</span>
+<span class="c1">#</span>
+<span class="c1">#             # check the turning point</span>
+<span class="c1">#             self.append(tp)</span>
+<span class="c1">#</span>
+<span class="c1">#         # 6) compute minimum variance solution</span>
+<span class="c1">#         last = self.turning_points[-1]</span>
+<span class="c1">#         x = self.minimum_variance()</span>
+<span class="c1">#         self.append(TurningPoint(lamb=0, weights=x, free=last.free))</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># class _Schur:</span>
+<span class="c1">#     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):</span>
+<span class="c1">#         assert (</span>
+<span class="c1">#             covariance.shape[0]</span>
+<span class="c1">#             == covariance.shape[1]</span>
+<span class="c1">#             == mean.shape[0]</span>
+<span class="c1">#             == free.shape[0]</span>
+<span class="c1">#             == weights.shape[0]</span>
+<span class="c1">#         )</span>
+<span class="c1">#         self.covariance = covariance</span>
+<span class="c1">#         self.mean = mean</span>
+<span class="c1">#         self.free = free</span>
+<span class="c1">#         self.weights = weights</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free(self):</span>
+<span class="c1">#         return self.covariance[self.free][:, self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free_blocked(self):</span>
+<span class="c1">#         return self.covariance[self.free][:, ~self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free_inv(self):</span>
+<span class="c1">#         return np.linalg.inv(self.covariance_free)</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def mean_free(self):</span>
+<span class="c1">#         return self.mean[self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def weights_blocked(self):</span>
+<span class="c1">#         return self.weights[~self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     def compute_lambda(self, index, bi):</span>
+<span class="c1">#         def compute_bi(c, bi):</span>
+<span class="c1">#             if np.shape(bi)[0] == 1 or c &lt;= 0:</span>
+<span class="c1">#                 return bi[0]</span>
+<span class="c1">#             return bi[1]</span>
+<span class="c1">#</span>
+<span class="c1">#         c1 = np.sum(np.sum(self.covariance_free_inv))</span>
+<span class="c1">#         c2 = np.dot(self.covariance_free_inv, self.mean_free)</span>
+<span class="c1">#         c3 = np.dot(np.sum(self.covariance_free_inv, axis=1), self.mean_free)</span>
+<span class="c1">#         c4 = np.sum(self.covariance_free_inv, axis=0)</span>
+<span class="c1">#</span>
+<span class="c1">#         aux = -c1 * c2[index] + c3 * c4[index]</span>
+<span class="c1">#</span>
+<span class="c1">#         bi = compute_bi(aux, bi)</span>
+<span class="c1">#</span>
+<span class="c1">#         if self.weights_blocked.size == 0:</span>
+<span class="c1">#             return float((c4[index] - c1 * bi) / aux), bi</span>
+<span class="c1">#</span>
+<span class="c1">#         l1 = np.sum(self.weights_blocked)</span>
+<span class="c1">#         l2 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)</span>
+<span class="c1">#         l3 = np.dot(l2, self.weights_blocked)</span>
+<span class="c1">#         l2 = np.sum(l3)</span>
+<span class="c1">#         return ((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux, bi</span>
+<span class="c1">#</span>
+<span class="c1">#     def _compute_weight(self, lamb):</span>
+<span class="c1">#         ones_f = np.ones(self.mean_free.shape)</span>
+<span class="c1">#         g1 = np.dot(np.sum(self.covariance_free_inv, axis=0), self.mean_free)</span>
+<span class="c1">#         g2 = np.sum(np.sum(self.covariance_free_inv))</span>
+<span class="c1">#</span>
+<span class="c1">#         if self.weights_blocked.size == 0:</span>
+<span class="c1">#             gamma = -lamb * g1 / g2 + 1 / g2</span>
+<span class="c1">#             w1 = 0</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             g3 = np.sum(self.weights_blocked)</span>
+<span class="c1">#             g4 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)</span>
+<span class="c1">#             w1 = np.dot(g4, self.weights_blocked)</span>
+<span class="c1">#             g4 = np.sum(w1)</span>
+<span class="c1">#             gamma = -lamb * g1 / g2 + (1 - g3 + g4) / g2</span>
+<span class="c1">#</span>
+<span class="c1">#         w2 = np.dot(self.covariance_free_inv, ones_f)</span>
+<span class="c1">#         w3 = np.dot(self.covariance_free_inv, self.mean_free)</span>
+<span class="c1">#         return -w1 + gamma * w2 + lamb * w3, gamma</span>
+<span class="c1">#</span>
+<span class="c1">#     def update_weights(self, lamb):</span>
+<span class="c1">#         weights, _ = self._compute_weight(lamb)</span>
+<span class="c1">#         new_weights = np.copy(self.weights)</span>
+<span class="c1">#         new_weights[self.free] = weights</span>
+<span class="c1">#         return new_weights</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># from dataclasses import dataclass</span>
+<span class="c1">#</span>
+<span class="c1"># from loguru import logger</span>
+<span class="c1"># import numpy as np</span>
+<span class="c1">#</span>
+<span class="c1"># from cvx.cla.claux import CLAUX</span>
+<span class="c1"># from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># @dataclass(frozen=True)</span>
+<span class="c1"># class CLA(CLAUX):</span>
+<span class="c1">#     def __post_init__(self):</span>
+<span class="c1">#         # Compute the turning points,free sets and weights</span>
+<span class="c1">#         self.append(self.first_turning_point())</span>
+<span class="c1">#</span>
+<span class="c1">#         while True:</span>
+<span class="c1">#             last = self.turning_points[-1]</span>
+<span class="c1">#</span>
+<span class="c1">#             # 1) case a): Bound one free weight</span>
+<span class="c1">#             l_in = -np.inf</span>
+<span class="c1">#</span>
+<span class="c1">#             # only try to bound a free asset if there are least two of them</span>
+<span class="c1">#             if np.sum(last.free) &gt; 1:</span>
+<span class="c1">#                 schur = _Schur(</span>
+<span class="c1">#                     covariance=self.covariance,</span>
+<span class="c1">#                     mean=self.mean,</span>
+<span class="c1">#                     free=last.free,</span>
+<span class="c1">#                     weights=last.weights,</span>
+<span class="c1">#                 )</span>
+<span class="c1">#</span>
+<span class="c1">#                 #for i in last.free_indices:</span>
+<span class="c1">#                 #    # count the number of entries that are True below the ith entry in fff</span>
+<span class="c1">#                 #    j = np.sum(last.free[:i])</span>
+<span class="c1">#                 #</span>
+<span class="c1">#                 #    lamb, bi = schur.compute_lambda(</span>
+<span class="c1">#                 #        index=j,</span>
+<span class="c1">#                 #        bi=np.array([self.lower_bounds[i], self.upper_bounds[i]]),</span>
+<span class="c1">#                 #    )</span>
+<span class="c1">#                 #</span>
+<span class="c1">#                 #    if lamb &gt; l_in:</span>
+<span class="c1">#                 #        l_in, i_in, bi_in = lamb, i, bi</span>
+<span class="c1">#                 #print(np.where(last.free))</span>
+<span class="c1">#                 llll = schur.free_asset_to_bound()</span>
+<span class="c1">#                 #print(llll)</span>
+<span class="c1">#                 lamb = np.max(llll)</span>
+<span class="c1">#                 if lamb &gt; l_in:</span>
+<span class="c1">#                     f = np.where(last.free)[0]</span>
+<span class="c1">#                     i = np.argmax(llll)</span>
+<span class="c1">#                     i_in = f[i]</span>
+<span class="c1">#                     l_in = lamb</span>
+<span class="c1">#                     bi_in = np.array([self.lower_bounds[i_in], self.upper_bounds[i_in]])</span>
+<span class="c1">#                 #print(llll[i])</span>
+<span class="c1">#                 #print(i)</span>
+<span class="c1">#                 #print(l_in)</span>
+<span class="c1">#                 #i_in = f[i]</span>
+<span class="c1">#                 #print(i_in)</span>
+<span class="c1">#                 #assert False</span>
+<span class="c1">#</span>
+<span class="c1">#             # 2) case b): Free one bounded weight</span>
+<span class="c1">#             l_out = -np.inf</span>
+<span class="c1">#</span>
+<span class="c1">#             schur = _Schur(</span>
+<span class="c1">#                 covariance=self.covariance,</span>
+<span class="c1">#                 mean=self.mean,</span>
+<span class="c1">#                 free=last.free,</span>
+<span class="c1">#                 weights=last.weights,</span>
+<span class="c1">#             )</span>
+<span class="c1">#</span>
+<span class="c1">#             for i in last.blocked_indices:</span>
+<span class="c1">#                 #fff = np.copy(last.free)</span>
+<span class="c1">#                 #fff[i] = True</span>
+<span class="c1">#</span>
+<span class="c1">#                 #schur = _Schur(</span>
+<span class="c1">#                 #    covariance=self.covariance,</span>
+<span class="c1">#                 #    mean=self.mean,</span>
+<span class="c1">#                 #    free=last.free,</span>
+<span class="c1">#                 #    weights=last.weights,</span>
+<span class="c1">#                 #)</span>
+<span class="c1">#</span>
+<span class="c1">#                 # count the number of entries that are True below the ith entry in fff</span>
+<span class="c1">#                 #j = np.sum(fff[:i])</span>
+<span class="c1">#</span>
+<span class="c1">#                 #lamb, bi = schur.compute_lambda(</span>
+<span class="c1">#                 #    index=j,</span>
+<span class="c1">#                 #    bi=np.array([last.weights[i]]),</span>
+<span class="c1">#                 #)</span>
+<span class="c1">#</span>
+<span class="c1">#                 #if self.turning_points[-1].lamb &gt; lamb &gt; l_out:</span>
+<span class="c1">#                 #    l_out, i_out = lamb, i</span>
+<span class="c1">#</span>
+<span class="c1">#                 lamb = schur.mean_free_extended(i)</span>
+<span class="c1">#</span>
+<span class="c1">#                 if last.lamb &gt; lamb &gt; l_out:</span>
+<span class="c1">#                     l_out, i_out = lamb, i</span>
+<span class="c1">#</span>
+<span class="c1">#             logger.info(f&quot;l_in: {l_in}&quot;)</span>
+<span class="c1">#             logger.info(f&quot;l_out: {l_out}&quot;)</span>
+<span class="c1">#</span>
+<span class="c1">#             l_current = max([l_in, l_out])</span>
+<span class="c1">#             logger.info(f&quot;l_current: {l_current}&quot;)</span>
+<span class="c1">#             #assert False</span>
+<span class="c1">#</span>
+<span class="c1">#             if l_current &gt; 0:</span>
+<span class="c1">#                 # 4) decide lambda</span>
+<span class="c1">#                 f = np.copy(last.free)</span>
+<span class="c1">#                 w = np.copy(last.weights)</span>
+<span class="c1">#</span>
+<span class="c1">#                 if l_in &gt; l_out:</span>
+<span class="c1">#                     #lll = l_in</span>
+<span class="c1">#                     f[i_in] = False</span>
+<span class="c1">#                     w[i_in] = bi_in  # set value at the correct boundary</span>
+<span class="c1">#                     #f[i] = False</span>
+<span class="c1">#                     #pass</span>
+<span class="c1">#                 else:</span>
+<span class="c1">#                     #lll = l_out</span>
+<span class="c1">#                     f[i_out] = True</span>
+<span class="c1">#             else:</span>
+<span class="c1">#                 break</span>
+<span class="c1">#</span>
+<span class="c1">#             #assert False</span>
+<span class="c1">#</span>
+<span class="c1">#             # 4) compute new weights</span>
+<span class="c1">#             schur = _Schur(</span>
+<span class="c1">#                 covariance=self.covariance,</span>
+<span class="c1">#                 mean=self.mean,</span>
+<span class="c1">#                 free=f,</span>
+<span class="c1">#                 weights=w,</span>
+<span class="c1">#             )</span>
+<span class="c1">#             # 5) compute solution vector</span>
+<span class="c1">#</span>
+<span class="c1">#             weights = schur.update_weights(lamb=l_current)</span>
+<span class="c1">#             tp = TurningPoint(weights=weights, lamb=l_current, free=f)</span>
+<span class="c1">#</span>
+<span class="c1">#             # check the turning point</span>
+<span class="c1">#             self.append(tp)</span>
+<span class="c1">#</span>
+<span class="c1">#         # 6) compute minimum variance solution</span>
+<span class="c1">#         last = self.turning_points[-1]</span>
+<span class="c1">#         x = self.minimum_variance()</span>
+<span class="c1">#         self.append(TurningPoint(lamb=0, weights=x, free=last.free))</span>
+<span class="c1">#</span>
+
+<span class="c1"># class _Schur:</span>
+<span class="c1">#     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):</span>
+<span class="c1">#         assert (</span>
+<span class="c1">#             covariance.shape[0]</span>
+<span class="c1">#             == covariance.shape[1]</span>
+<span class="c1">#             == mean.shape[0]</span>
+<span class="c1">#             == free.shape[0]</span>
+<span class="c1">#             == weights.shape[0]</span>
+<span class="c1">#         )</span>
+<span class="c1">#         self.covariance = covariance</span>
+<span class="c1">#         self.mean = mean</span>
+<span class="c1">#         self.free = free</span>
+<span class="c1">#         self.weights = weights</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free(self):</span>
+<span class="c1">#         return self.covariance[self.free][:, self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free_inv(self):</span>
+<span class="c1">#         return np.linalg.inv(self.covariance_free)</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def mean_free(self):</span>
+<span class="c1">#         return self.mean[self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     def free_asset_to_bound(self):</span>
+<span class="c1">#         inv_sigma_F = self.covariance_free_inv</span>
+<span class="c1">#         xxx = np.sum(inv_sigma_F, axis=1)</span>
+<span class="c1">#         m = inv_sigma_F @ self.mean_free</span>
+<span class="c1">#</span>
+<span class="c1">#         return -xxx / (-np.sum(xxx) * m + np.sum(m) * xxx)</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1">#     def mean_free_extended(self, i):</span>
+<span class="c1">#         free = np.copy(self.free)</span>
+<span class="c1">#         free[i] = True</span>
+<span class="c1">#</span>
+<span class="c1">#         mean_free = self.mean[free]</span>
+<span class="c1">#         cov_free = self.covariance[free][:, free]</span>
+<span class="c1">#         cov_free_inv = np.linalg.inv(cov_free)</span>
+<span class="c1">#</span>
+<span class="c1">#         xxx = np.sum(cov_free_inv, axis=1)</span>
+<span class="c1">#         s = np.sum(xxx)</span>
+<span class="c1">#</span>
+<span class="c1">#         m = cov_free_inv @ mean_free</span>
+<span class="c1">#</span>
+<span class="c1">#         C = -s * m + np.sum(m) * xxx</span>
+<span class="c1">#         lamb = xxx / C</span>
+<span class="c1">#         ll = np.zeros_like(self.mean)</span>
+<span class="c1">#         ll[free] = lamb</span>
+<span class="c1">#         return ll[i]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def weights_blocked(self):</span>
+<span class="c1">#         return self.weights[~self.free]</span>
+<span class="c1">#</span>
+<span class="c1">#     @property</span>
+<span class="c1">#     def covariance_free_blocked(self):</span>
+<span class="c1">#         return self.covariance[self.free][:, ~self.free]</span>
+<span class="c1">#     def _compute_weight(self, lamb):</span>
+<span class="c1">#         ones_f = np.ones(self.mean_free.shape)</span>
+<span class="c1">#         g1 = np.dot(np.sum(self.covariance_free_inv, axis=0), self.mean_free)</span>
+<span class="c1">#         g2 = np.sum(np.sum(self.covariance_free_inv))</span>
+<span class="c1">#</span>
+<span class="c1">#         if self.weights_blocked.size == 0:</span>
+<span class="c1">#             gamma = -lamb * g1 / g2 + 1 / g2</span>
+<span class="c1">#             w1 = 0</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             g3 = np.sum(self.weights_blocked)</span>
+<span class="c1">#             g4 = np.dot(self.covariance_free_inv, self.covariance_free_blocked)</span>
+<span class="c1">#             w1 = np.dot(g4, self.weights_blocked)</span>
+<span class="c1">#             g4 = np.sum(w1)</span>
+<span class="c1">#             gamma = -lamb * g1 / g2 + (1 - g3 + g4) / g2</span>
+<span class="c1">#</span>
+<span class="c1">#         w2 = np.dot(self.covariance_free_inv, ones_f)</span>
+<span class="c1">#         w3 = np.dot(self.covariance_free_inv, self.mean_free)</span>
+<span class="c1">#         return -w1 + gamma * w2 + lamb * w3, gamma</span>
+<span class="c1">#</span>
+<span class="c1">#     def update_weights(self, lamb):</span>
+<span class="c1">#         weights, _ = self._compute_weight(lamb)</span>
+<span class="c1">#         new_weights = np.copy(self.weights)</span>
+<span class="c1">#         new_weights[self.free] = weights</span>
+<span class="c1">#         return new_weights</span>
 </pre></div>
 
            </div>

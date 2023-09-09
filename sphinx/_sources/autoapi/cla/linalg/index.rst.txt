@@ -1,0 +1,15 @@
+:py:mod:`cla.linalg`
+====================
+
+.. py:module:: cla.linalg
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   algebra/index.rst
+
+
