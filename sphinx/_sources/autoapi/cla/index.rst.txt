@@ -13,8 +13,6 @@ Subpackages
    bailey/index.rst
    linalg/index.rst
    markowitz/index.rst
-   niedermayer/index.rst
-   schiele/index.rst
 
 
 Submodules

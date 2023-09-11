@@ -54,9 +54,6 @@ Classes
 
       
 
-   .. py:method:: __post_init__(self)
-
-
    .. py:method:: first_turning_point(self)
 
 

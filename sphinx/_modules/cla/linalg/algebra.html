@@ -100,19 +100,142 @@
     <span class="k">return</span> <span class="n">left</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="p">(</span><span class="n">mat</span> <span class="o">@</span> <span class="n">right</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="sssolve"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.sssolve">[docs]</a><span class="k">def</span> <span class="nf">sssolve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">IN</span><span class="p">):</span>
+<div class="viewcode-block" id="replace_submatrix"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.replace_submatrix">[docs]</a><span class="k">def</span> <span class="nf">replace_submatrix</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">mat_replace</span><span class="p">):</span>
+    <span class="c1"># if rows is a numpy array</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">rows</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rows</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">columns</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">columns</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">rows</span><span class="p">):</span>
+        <span class="n">mat</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">columns</span><span class="p">]</span> <span class="o">=</span> <span class="n">mat_replace</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">mat</span></div>
+
+
+<div class="viewcode-block" id="get_submatrix"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.get_submatrix">[docs]</a><span class="k">def</span> <span class="nf">get_submatrix</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">rows</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rows</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">rows</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">columns</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">columns</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">A</span><span class="p">[</span><span class="n">rows</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">columns</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ssssolve"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.ssssolve">[docs]</a><span class="k">def</span> <span class="nf">ssssolve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">IN</span><span class="p">):</span>
     <span class="n">OUT</span> <span class="o">=</span> <span class="o">~</span><span class="n">IN</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
 
-    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
-    <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">OUT</span><span class="p">]</span>
+    <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">bbb</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">OUT</span><span class="p">]</span> <span class="o">@</span> <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
 
-    <span class="n">bbb</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">IN</span><span class="p">]</span> <span class="o">-</span> <span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">OUT</span><span class="p">]</span> <span class="o">@</span> <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">]</span>
-    <span class="n">x</span><span class="p">[</span><span class="n">IN</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">IN</span><span class="p">],</span> <span class="n">bbb</span><span class="p">)</span>
+    <span class="c1"># lu, piv = scl.lu_factor(A[IN, :][:, IN])</span>
+    <span class="c1"># lu, piv = lu_factor(A)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+        <span class="c1"># x[IN, i] = scl.lu_solve((lu, piv), bbb[:, i])</span>
 
-    <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">A</span> <span class="o">@</span> <span class="n">x</span> <span class="o">-</span> <span class="n">b</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">IN</span><span class="p">],</span> <span class="n">bbb</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span>
 
-    <span class="k">return</span> <span class="n">x</span></div>
+    <span class="k">return</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Solver"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver">[docs]</a><span class="k">class</span> <span class="nc">Solver</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">IN</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">C</span><span class="p">,</span> <span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">],</span> <span class="p">[</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">m</span><span class="p">))]])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">IN</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span> <span class="o">=</span> <span class="n">replace_submatrix</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">),</span>
+            <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span>
+            <span class="n">mat_replace</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span>
+                <span class="n">get_submatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Solver.active"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.active">[docs]</a>    <span class="k">def</span> <span class="nf">active</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span></div>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Solver.sub_M"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.sub_M">[docs]</a>    <span class="k">def</span> <span class="nf">sub_M</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_submatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Solver.inv"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.inv">[docs]</a>    <span class="k">def</span> <span class="nf">inv</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_submatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">)</span></div>
+        <span class="c1"># return self.__inv[, :][:, self.__IN]</span>
+
+<div class="viewcode-block" id="Solver.solve"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.solve">[docs]</a>    <span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m</span><span class="p">))</span>
+        <span class="n">x</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span> <span class="o">@</span> <span class="n">b</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">return</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Solver.free"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.free">[docs]</a>    <span class="k">def</span> <span class="nf">free</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;free the variable at index new&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">[</span><span class="n">new</span><span class="p">]:</span>
+            <span class="s2">&quot;Variable is already free&quot;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span>
+
+        <span class="k">def</span> <span class="nf">enhance</span><span class="p">(</span><span class="n">A_inv</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">A_inv</span> <span class="o">@</span> <span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">alpha</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">a</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([[</span><span class="n">A_inv</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">c</span> <span class="o">@</span> <span class="n">c</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="o">-</span><span class="n">beta</span> <span class="o">*</span> <span class="n">c</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="n">beta</span> <span class="o">*</span> <span class="n">c</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">beta</span><span class="p">]])</span>
+
+        <span class="n">a2</span> <span class="o">=</span> <span class="n">enhance</span><span class="p">(</span>
+            <span class="n">A_inv</span><span class="o">=</span><span class="n">get_submatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">),</span>
+            <span class="n">a</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">active</span><span class="p">,</span> <span class="n">new</span><span class="p">],</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">new</span><span class="p">][</span><span class="n">new</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">[</span><span class="n">new</span><span class="p">,</span> <span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="n">a2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="n">a2</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">[</span><span class="n">new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">]</span> <span class="o">=</span> <span class="n">a2</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span> <span class="o">=</span> <span class="n">replace_submatrix</span><span class="p">(</span>
+            <span class="n">mat</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">mat_replace</span><span class="o">=</span><span class="n">a2</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span></div>
+
+<div class="viewcode-block" id="Solver.block"><a class="viewcode-back" href="../../../autoapi/cla/linalg/algebra/index.html#cla.linalg.algebra.Solver.block">[docs]</a>    <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;block the variable at index new&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">[</span><span class="n">new</span><span class="p">]:</span>
+            <span class="s2">&quot;Variable is already blocked&quot;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span>
+
+        <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">beta</span><span class="p">):</span>
+            <span class="c1"># see Lemma 2 in the Niedermayer paper</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="k">return</span> <span class="n">B</span> <span class="o">-</span> <span class="p">(</span><span class="n">b</span> <span class="o">@</span> <span class="n">b</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span>
+        <span class="c1"># B = get_submatrix(self.__inv, rows=self.__IN, columns=self.__IN)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">new</span><span class="p">]</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">[</span><span class="n">new</span><span class="p">,</span> <span class="n">new</span><span class="p">]</span>
+
+        <span class="n">invA</span> <span class="o">=</span> <span class="n">remove</span><span class="p">(</span><span class="n">B</span><span class="o">=</span><span class="n">B</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="n">beta</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__inv</span> <span class="o">=</span> <span class="n">replace_submatrix</span><span class="p">(</span>
+            <span class="n">mat</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__inv</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__IN</span><span class="p">,</span> <span class="n">mat_replace</span><span class="o">=</span><span class="n">invA</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv</span></div></div>
 </pre></div>
 
            </div>

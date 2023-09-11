@@ -52,8 +52,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../bailey/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.bailey</span></code></a></li>
 <li class="toctree-l4 current"><a class="reference internal" href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.linalg</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../markowitz/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.markowitz</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../niedermayer/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.niedermayer</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../schiele/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.schiele</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../index.html#submodules">Submodules</a></li>
@@ -95,6 +93,20 @@
 <span id="cla-linalg-algebra"></span><h1><a class="reference internal" href="#module-cla.linalg.algebra" title="cla.linalg.algebra"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.linalg.algebra</span></code></a><a class="headerlink" href="#module-cla.linalg.algebra" title="Permalink to this heading"></a></h1>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.linalg.algebra.Solver" title="cla.linalg.algebra.Solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Solver</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="functions">
 <h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
@@ -106,7 +118,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#cla.linalg.algebra.bilinear" title="cla.linalg.algebra.bilinear"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bilinear</span></code></a>(mat, left=None, right=None)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#cla.linalg.algebra.sssolve" title="cla.linalg.algebra.sssolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sssolve</span></code></a>(A, b, IN)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#cla.linalg.algebra.replace_submatrix" title="cla.linalg.algebra.replace_submatrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">replace_submatrix</span></code></a>(mat, rows, columns, mat_replace)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.linalg.algebra.get_submatrix" title="cla.linalg.algebra.get_submatrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_submatrix</span></code></a>(A, rows, columns)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cla.linalg.algebra.ssssolve" title="cla.linalg.algebra.ssssolve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ssssolve</span></code></a>(A, b, IN)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -117,9 +135,56 @@
 <dd></dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="cla.linalg.algebra.sssolve">
-<span class="sig-prename descclassname"><span class="pre">cla.linalg.algebra.</span></span><span class="sig-name descname"><span class="pre">sssolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IN</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#sssolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.sssolve" title="Permalink to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.linalg.algebra.replace_submatrix">
+<span class="sig-prename descclassname"><span class="pre">cla.linalg.algebra.</span></span><span class="sig-name descname"><span class="pre">replace_submatrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mat_replace</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#replace_submatrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.replace_submatrix" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cla.linalg.algebra.get_submatrix">
+<span class="sig-prename descclassname"><span class="pre">cla.linalg.algebra.</span></span><span class="sig-name descname"><span class="pre">get_submatrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#get_submatrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.get_submatrix" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cla.linalg.algebra.ssssolve">
+<span class="sig-prename descclassname"><span class="pre">cla.linalg.algebra.</span></span><span class="sig-name descname"><span class="pre">ssssolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IN</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#ssssolve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.ssssolve" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.linalg.algebra.</span></span><span class="sig-name descname"><span class="pre">Solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">C</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">IN</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver" title="Permalink to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.active">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">active</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.active"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.active" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.sub_M">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sub_M</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.sub_M"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.sub_M" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.inv">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">inv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.inv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.inv" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.solve" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.free">
+<span class="sig-name descname"><span class="pre">free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.free" title="Permalink to this definition"></a></dt>
+<dd><p>free the variable at index new</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.linalg.algebra.Solver.block">
+<span class="sig-name descname"><span class="pre">block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/cla/linalg/algebra.html#Solver.block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.linalg.algebra.Solver.block" title="Permalink to this definition"></a></dt>
+<dd><p>block the variable at index new</p>
+</dd></dl>
+
+</dd></dl>
 
 </section>
 </section>

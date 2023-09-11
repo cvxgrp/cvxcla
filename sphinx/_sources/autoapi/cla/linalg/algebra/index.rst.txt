@@ -7,6 +7,14 @@
 Module Contents
 ---------------
 
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.linalg.algebra.Solver
+
+
 
 Functions
 ~~~~~~~~~
@@ -14,13 +22,49 @@ Functions
 .. autoapisummary::
 
    cla.linalg.algebra.bilinear
-   cla.linalg.algebra.sssolve
+   cla.linalg.algebra.replace_submatrix
+   cla.linalg.algebra.get_submatrix
+   cla.linalg.algebra.ssssolve
 
 
 
 .. py:function:: bilinear(mat, left=None, right=None)
 
 
-.. py:function:: sssolve(A, b, IN)
+.. py:function:: replace_submatrix(mat, rows, columns, mat_replace)
+
+
+.. py:function:: get_submatrix(A, rows, columns)
+
+
+.. py:function:: ssssolve(A, b, IN)
+
+
+.. py:class:: Solver(C, A, IN)
+
+   .. py:method:: active(self)
+      :property:
+
+
+   .. py:method:: sub_M(self)
+      :property:
+
+
+   .. py:method:: inv(self)
+      :property:
+
+
+   .. py:method:: solve(self, b)
+
+
+   .. py:method:: free(self, new)
+
+      free the variable at index new
+
+
+   .. py:method:: block(self, new)
+
+      block the variable at index new
+
 
 

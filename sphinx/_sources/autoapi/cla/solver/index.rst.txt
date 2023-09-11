@@ -35,11 +35,6 @@ Classes
 
       
 
-   .. py:attribute:: NIEDERMAYER
-      
-
-      
-
    .. py:method:: build(self, mean, lower_bounds, upper_bounds, covariance, tol=float(1e-05))
 
 
