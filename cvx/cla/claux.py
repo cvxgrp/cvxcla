@@ -33,8 +33,8 @@ class CLAUX:
     tol: float = 1e-5
     logger: Logger = loguru
 
-    def __post_init__(self):
-        self.logger.info("Initializing CLA (from CLAUX)")
+    # def __post_init__(self):
+    #    self.logger.info("Initializing CLA (from CLAUX)")
 
     def first_turning_point(self):
         first = init_algo(
@@ -65,7 +65,9 @@ class CLAUX:
         x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
 
         constraints = [cp.sum(x) == 1, x >= self.lower_bounds, x <= self.upper_bounds]
-        cp.Problem(cp.Minimize(cp.quad_form(x, self.covariance)), constraints).solve()
+        chol = np.linalg.cholesky(self.covariance)
+
+        cp.Problem(cp.Minimize(cp.norm(chol.T @ x)), constraints).solve()
 
         return x.value
 

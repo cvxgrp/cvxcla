@@ -24,4 +24,4 @@ def test_plot(input_data):
 
     fig = plot_efficient_frontiers([f_markowitz, f_bailey])
     assert fig
-    fig.show()
+    # fig.show()

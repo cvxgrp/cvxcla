@@ -80,13 +80,15 @@ def test_init_dimension(n):
 
 
 @pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
-@pytest.mark.parametrize("n", [50, 100])
+@pytest.mark.parametrize("n", [50, 100, 200])
 def test_init_solver(solver, n):
     mean = np.random.randn(n)
+    A = np.random.randn(n, n)
+    sigma = 0.1
 
     solver.build(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
-        covariance=np.eye(n),
+        covariance=A @ A.T + sigma * np.eye(n),
     )

@@ -15,13 +15,11 @@ from enum import Enum
 
 from cvx.cla.bailey.cla import CLA as Bailey
 from cvx.cla.markowitz.cla import CLA as Markowitz
-from cvx.cla.niedermayer.cla import CLA as Niedermayer
 
 
 class Solver(Enum):
     BAILEY = Bailey
     MARKOWITZ = Markowitz
-    NIEDERMAYER = Niedermayer
 
     def build(self, mean, lower_bounds, upper_bounds, covariance, tol=float(1e-5)):
         return self.value(

@@ -3,12 +3,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvx.bson.file import read_bson, write_bson
 from cvx.cla import Frontier
-from cvx.cla.plotting import plot_efficient_frontiers
 from cvx.cla.solver import Solver
 
-np.random.seed(42)
+np.random.seed(40)
 
 
 @pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
@@ -64,47 +62,7 @@ def test_frontiers(n, resource_dir):
     assert np.sum(f_bailey.frontier[-1].weights) == pytest.approx(1)
     assert np.sum(f_markowitz.frontier[-1].weights) == pytest.approx(1)
 
-    if np.abs(f_markowitz.max_sharpe[0] - f_bailey.max_sharpe[0]) > 0.3:
-        fig = plot_efficient_frontiers([f_markowitz, f_bailey])
-        assert fig
-        fig.show()
-        data = {
-            "mean": mean,
-            "lower_bounds": lower_bounds,
-            "upper_bounds": upper_bounds,
-            "covariance": covar,
-        }
-
-        write_bson(
-            file=resource_dir / f"problem_{np.random.randint(low=0, high=10000)}.bson",
-            data=data,
-        )
-
-
-def test_xxx(resource_dir):
-    data = read_bson(file=resource_dir / "problem_1077.bson")
-
-    f_markowitz = Frontier.build(
-        solver=Solver.MARKOWITZ,
-        mean=data["mean"],
-        lower_bounds=data["lower_bounds"],
-        upper_bounds=data["upper_bounds"],
-        covariance=data["covariance"],
-        name="Markowitz",
-        tol=1e-6,
-    )
-
-    for point in f_markowitz.frontier:
-        print(point.expected_variance(data["covariance"]))
-        print(point.weights)
-
-    # f_bailey = Frontier.build(
-    #    solver=Solver.BAILEY,
-    #    mean=data["mean"], lower_bounds=data["lower_bounds"],
-    #    upper_bounds=data["upper_bounds"], covariance=data["covariance"],
-    #    name="Bailey", tol=1e-10)
-
-    # print("***************************")
-    # for point in f_bailey.frontier[:3]:
-    #    print(point.expected_variance(data["covariance"]))
-    #    print(point.weights)
+    assert len(f_bailey.frontier) == len(f_markowitz.frontier)
+    print(f_bailey.max_sharpe[0], f_markowitz.max_sharpe[0])
+    for pt_bailey, pt_markowitz in zip(f_bailey.frontier, f_markowitz.frontier):
+        assert np.allclose(pt_bailey.weights, pt_markowitz.weights, atol=1e-5)
