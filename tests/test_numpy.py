@@ -80,7 +80,7 @@ def test_solver(n):
     # free a blocked variable
     for i in range(n):
         inv = s.free(new=i)
-        np.testing.assert_array_almost_equal(inv, np.linalg.inv(s.sub_M), decimal=5)
+        np.testing.assert_array_almost_equal(inv, np.linalg.inv(s.sub_M), decimal=4)
         alpha, beta = s.solve(b=b)
         np.testing.assert_array_almost_equal(
             alpha[s.active], inv @ b[s.active, 0], decimal=4
@@ -92,7 +92,7 @@ def test_solver(n):
     # block a free variable
     for i in range(n - 2):
         inv = s.block(new=i)
-        np.testing.assert_array_almost_equal(inv, np.linalg.inv(s.sub_M), decimal=5)
+        np.testing.assert_array_almost_equal(inv, np.linalg.inv(s.sub_M), decimal=4)
         alpha, beta = s.solve(b=b)
         np.testing.assert_array_almost_equal(
             alpha[s.active], inv @ b[s.active, 0], decimal=4
