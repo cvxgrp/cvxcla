@@ -13,6 +13,7 @@ numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
 cvxpy = "*"
+#clarabel = "*"
 
 [tool.poetry.dev-dependencies]
 loguru = "*"

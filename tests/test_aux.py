@@ -82,6 +82,7 @@ def test_minimum_variance(cla):
                 0.292012,
             ]
         ),
+        decimal=5,
     )
 
 

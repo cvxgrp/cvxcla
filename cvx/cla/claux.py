@@ -67,7 +67,7 @@ class CLAUX:
         constraints = [cp.sum(x) == 1, x >= self.lower_bounds, x <= self.upper_bounds]
         chol = np.linalg.cholesky(self.covariance)
 
-        cp.Problem(cp.Minimize(cp.norm(chol.T @ x)), constraints).solve()
+        cp.Problem(cp.Minimize(cp.norm(chol.T @ x)), constraints).solve(cp.ECOS)
 
         return x.value
 
