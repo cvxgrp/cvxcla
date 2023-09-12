@@ -22,6 +22,8 @@ def cla(input_data):
         lower_bounds=input_data.lower_bounds,
         upper_bounds=input_data.upper_bounds,
         tol=1e-5,
+        A=np.ones((1, len(input_data.mean))),
+        b=np.ones(1),
     )
     return cla
 
@@ -64,28 +66,6 @@ def test_first_turning_point(cla):
     )
 
 
-def test_minimum_variance(cla):
-    x = cla.minimum_variance()
-    np.testing.assert_almost_equal(
-        x,
-        np.array(
-            [
-                0.03696437,
-                0.02689873,
-                0.09494574,
-                0.12577895,
-                0.07674705,
-                0.21935674,
-                0.02998442,
-                0.03596264,
-                0.0613494,
-                0.292012,
-            ]
-        ),
-        decimal=5,
-    )
-
-
 def test_raise():
     cla = Cla(
         covariance=np.eye(2),
@@ -93,6 +73,8 @@ def test_raise():
         lower_bounds=np.zeros(2),
         mean=np.ones(2),
         tol=1e-5,
+        A=np.ones((1, 2)),
+        b=np.ones(1),
     )
 
     with pytest.raises(AssertionError):

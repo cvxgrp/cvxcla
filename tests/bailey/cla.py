@@ -116,8 +116,17 @@ class CLA(CLAUX):
 
         # 6) compute minimum variance solution
         last = self.turning_points[-1]
-        x = self.minimum_variance()
-        self.append(TurningPoint(lamb=0, weights=x, free=last.free))
+
+        schur = _Schur(
+            covariance=self.covariance,
+            mean=self.mean,
+            free=last.free,
+            weights=last.weights,
+        )
+        w = schur.update_weights(lamb=0)
+        # assert np.allclose(x, w, atol=1e-4)
+
+        self.append(TurningPoint(lamb=0, weights=w, free=last.free))
 
 
 class _Schur:

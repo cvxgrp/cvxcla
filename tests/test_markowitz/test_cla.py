@@ -12,6 +12,8 @@ def test_solver(input_data, results):
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance,
         tol=1e-5,
+        A=np.array([np.ones_like(input_data.mean)]),
+        b=np.ones(1),
     )
 
     observed = np.array([tp.lamb for tp in cla.turning_points[1:]])
@@ -52,6 +54,8 @@ def test_example(example, example_solution):
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
         covariance=example.cov().values,
+        A=np.ones((1, len(means))),
+        b=np.ones(1),
     )
 
     for row, turning_point in enumerate(cla.turning_points):

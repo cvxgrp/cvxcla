@@ -15,11 +15,11 @@ from dataclasses import dataclass, field
 from logging import Logger
 from typing import List
 
-import cvxpy as cp
 import numpy as np
 from loguru import logger as loguru
 
 from cvx.cla.first import init_algo
+from cvx.cla.frontier import Frontier, FrontierPoint
 from cvx.cla.types import MATRIX, TurningPoint
 
 
@@ -29,12 +29,11 @@ class CLAUX:
     covariance: MATRIX
     lower_bounds: MATRIX
     upper_bounds: MATRIX
+    A: MATRIX
+    b: MATRIX
     turning_points: List[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: Logger = loguru
-
-    # def __post_init__(self):
-    #    self.logger.info("Initializing CLA (from CLAUX)")
 
     def first_turning_point(self):
         first = init_algo(
@@ -61,14 +60,12 @@ class CLAUX:
 
         self.turning_points.append(tp)
 
-    def minimum_variance(self):
-        x = cp.Variable(shape=(self.mean.shape[0]), name="weights")
-
-        constraints = [cp.sum(x) == 1, x >= self.lower_bounds, x <= self.upper_bounds]
-        chol = np.linalg.cholesky(self.covariance)
-
-        cp.Problem(cp.Minimize(cp.norm(chol.T @ x)), constraints).solve(cp.ECOS)
-
-        return x.value
-
-        # self.append(TurningPoint(lamb=0, weights=x.value, free=last.free))
+    def frontier(self, name="test"):
+        return Frontier(
+            covariance=self.covariance,
+            mean=self.mean,
+            frontier=[
+                FrontierPoint(weights=point.weights) for point in self.turning_points
+            ],
+            name=name,
+        )

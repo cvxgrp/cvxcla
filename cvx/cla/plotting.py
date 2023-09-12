@@ -15,7 +15,7 @@ from typing import List
 
 import plotly.graph_objects as go
 
-from cvx.cla import Frontier
+from cvx.cla.frontier import Frontier
 
 
 def plot_efficient_frontiers(frontiers: List[Frontier]) -> None:

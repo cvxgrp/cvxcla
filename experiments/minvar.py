@@ -3,7 +3,19 @@ import cvxpy as cp
 
 from loguru import logger
 
-from cvx.cla.linalg.algebra import bilinear
+
+def bilinear(mat, left=None, right=None):
+    n, m = mat.shape
+    assert n == m, "Matrix must be square"
+
+    if left is None:
+        left = np.ones(n)
+
+    if right is None:
+        right = np.ones(n)
+
+    return left.T @ (mat @ right)
+
 
 if __name__ == "__main__":
     n = 3

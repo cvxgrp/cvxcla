@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cvx.cla.bailey.cla import _Schur
+from tests.bailey.cla import _Schur
 
 
 def test_compute_lambda():

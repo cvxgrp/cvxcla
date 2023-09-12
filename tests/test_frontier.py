@@ -3,22 +3,22 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvx.cla import Frontier
-from cvx.cla.solver import Solver
+from cvx.cla.markowitz.cla import CLA as MARKOWITZ
+from tests.bailey.cla import CLA as BAILEY
 
 np.random.seed(40)
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_frontier(input_data, solver):
-    f = Frontier.build(
-        solver=solver,
+    f = solver(
+        covariance=input_data.covariance,
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,
         upper_bounds=input_data.upper_bounds,
-        covariance=input_data.covariance,
-        name="test",
-    )
+        A=np.ones((1, len(input_data.mean))),
+        b=np.ones(1),
+    ).frontier()
 
     np.testing.assert_equal(f.covariance, input_data.covariance)
     np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025)
@@ -39,25 +39,45 @@ def test_frontiers(n, resource_dir):
 
     covar = cov @ cov.T
 
-    f_bailey = Frontier.build(
-        solver=Solver.BAILEY,
-        mean=np.copy(mean),
-        lower_bounds=np.copy(lower_bounds),
-        upper_bounds=np.copy(upper_bounds),
-        covariance=np.copy(covar),
-        name="Bailey",
+    f_bailey = BAILEY(
+        covariance=covar,
+        mean=mean,
+        lower_bounds=lower_bounds,
+        upper_bounds=upper_bounds,
+        A=np.ones((1, n)),
+        b=np.ones(1),
         tol=1e-5,
-    )
+    ).frontier("Bailey")
 
-    f_markowitz = Frontier.build(
-        solver=Solver.MARKOWITZ,
+    # f_bailey = Frontier(
+    #    solver=solver,
+    #    name="Bailey",
+    #    A=np.ones((1, n)),
+    #    b=np.ones(1),
+    # )
+    # f_bailey = Frontier.build(
+    #    solver=Solver.BAILEY,
+    #    mean=np.copy(mean),
+    #    lower_bounds=np.copy(lower_bounds),
+    #    upper_bounds=np.copy(upper_bounds),
+    #    covariance=np.copy(covar),
+    #    name="Bailey",
+    #    A=np.ones((1, n)),
+    #    b=np.ones(1),
+    # )
+
+    f_markowitz = MARKOWITZ(
+        # f_markowitz = Frontier.build(
+        # solver=Solver.MARKOWITZ,
         mean=np.copy(mean),
         lower_bounds=np.copy(lower_bounds),
         upper_bounds=np.copy(upper_bounds),
         covariance=np.copy(covar),
-        name="Markowitz",
+        # name="Markowitz",
         tol=1e-5,
-    )
+        A=np.ones((1, n)),
+        b=np.ones(1),
+    ).frontier("Markowitz")
 
     assert np.sum(f_bailey.frontier[-1].weights) == pytest.approx(1)
     assert np.sum(f_markowitz.frontier[-1].weights) == pytest.approx(1)
