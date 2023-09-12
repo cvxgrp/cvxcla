@@ -50,8 +50,6 @@ class CLA(CLAUX):
         # --A11 -- Initialize storage for quantities # to be computed in the main loop.
         lam = np.inf
 
-        self.logger.info("First turning point added")
-
         while lam > 0:
             last = self.turning_points[-1]
 
@@ -131,6 +129,4 @@ class CLA(CLAUX):
             # --A28-- Save the data computed at this corner.
             self.append(TurningPoint(lamb=lam, weights=x, free=free))
 
-        self.logger.info("CLA finished. Compute MinVariance portfolio")
         self.append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
-        self.logger.info("MinVariance portfolio added")
