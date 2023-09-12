@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from cvx.cla.claux import CLAUX
-from cvx.cla.linalg.algebra import Solver, ssssolve
+from cvx.cla.linalg.algebra import solve
 from cvx.cla.types import TurningPoint
 
 
@@ -50,10 +50,6 @@ class CLA(CLAUX):
         # --A12 -- The main CLA loop , which steps
         # from corner portfolio to corner portfolio.
         last = self.turning_points[-1]
-        IN = last.free
-        Solver(C, A, IN)
-
-        # assert False
 
         while lam > 0:
             last = self.turning_points[-1]
@@ -85,19 +81,7 @@ class CLA(CLAUX):
             bbb[:, 0] = np.concatenate([up + dn, b], axis=0)
             bbb[:, 1] = np.concatenate([top, np.zeros(m)])
 
-            # sss.update(_IN)
-            #
-            # alpha, beta = sss.solve(bbb)
-
-            # rhsb = np.concatenate([top, np.zeros(m)])
-            # rhsa = np.concatenate([up + dn, b], axis=0)
-
-            # alpha = sssolve(M, rhsa, _IN)
-            # beta = sssolve(M, rhsb, _IN)
-
-            alpha, beta = ssssolve(M, bbb, _IN)
-            # alpha = y[:,0]
-            # beta = y[:,1]
+            alpha, beta = solve(M, bbb, _IN)
 
             gamma = P @ alpha
             delta = P @ beta - self.mean

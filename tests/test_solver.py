@@ -79,8 +79,8 @@ def test_init_dimension(n):
     assert tp_bailey.num_points == tp_markowitz.num_points
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
-@pytest.mark.parametrize("n", [50, 100, 200])
+@pytest.mark.parametrize("solver", [Solver.MARKOWITZ])
+@pytest.mark.parametrize("n", [2, 4, 8, 16, 32, 64, 128, 256, 512])
 def test_init_solver(solver, n):
     mean = np.random.randn(n)
     A = np.random.randn(n, n)
