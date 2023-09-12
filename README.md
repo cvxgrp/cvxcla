@@ -15,18 +15,25 @@ portfolio optimization problem.
 The algorithm has been introduced by Markowitz in
 [The Optimization of Quadratic Functions Subject to Linear Constraints](https://www.rand.org/pubs/research_memoranda/RM1438.html)
 and subsequently described in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
-Bailey and Lopez de Prado revisited (a special case of) this algorithm in their paper
-[An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
-There the authors publish a Python implementation of the algorithm.
 
 The algorithm is based on the observation that the efficient frontier is a piecewise
 linear function if expected return is plotted over expected variance.
 The critical line algorithm computes the turning points, e.g. the corners
 of the efficient frontier.
 
-## About the code
+## Literature
 
-The code in this repository is an adoption of the paper by Bailey and Lopez de Prado.
+We are using the following sources
+
+### Niedermayer and Niedermayer
+
+They suggested a method to avoid the expensive inversion of the covariance matrix.
+[Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
+
+### Bailey and Lopez de Prado
+
+We have initially started with their code published in
+[An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
 We have updated their original code and covered it in tests. We have made a few
 noteworthy changes:
 
@@ -36,10 +43,14 @@ noteworthy changes:
 * Use modern and immutable dataclasses throughout.
 * Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
-Note that for this project we have not addressed the more fundamental bottlenecks
-of the original implementation.
-We use this code as a baseline to compute frontiers for our tests in a
-forthcoming more radical implementation of the algorithm.
+The code is not part of the published package though.
+It is only used for testing purposes. We recommend it for educational purposes only.
+
+### Markowitz et al
+
+In [Avoiding the Downside: A Practical Review of the Critical
+Line Algorithm for Mean-Semivariance Portfolio Optimizatio](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf)
+Markowitz...
 
 ## Poetry
 
