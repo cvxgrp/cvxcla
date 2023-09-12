@@ -62,6 +62,8 @@ const thebe_selector_input = "pre"
 const thebe_selector_output = ".output, .cell_output"
 </script>
     <script async="async" src="../_static/sphinx-thebe.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'docs/index';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -351,9 +353,14 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critical-line-algorithm">Critical line algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#about-the-code">About the code</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature">Literature</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#niedermayer-and-niedermayer">Niedermayer and Niedermayer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bailey-and-lopez-de-prado">Bailey and Lopez de Prado</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#markowitz-et-al">Markowitz et al</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#poetry">Poetry</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kernel">Kernel</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jupyter">Jupyter</a></li>
 </ul>
             </nav>
         </div>
@@ -369,39 +376,63 @@ document.write(`
 <h1>cvxcla<a class="headerlink" href="#cvxcla" title="Permalink to this heading">#</a></h1>
 <p><a class="reference external" href="https://badge.fury.io/py/cvxcla"><img alt="PyPI version" src="https://badge.fury.io/py/cvxcla.svg" /></a>
 <a class="reference external" href="https://github.com/cvxgrp/cvxcla/blob/master/LICENSE"><img alt="Apache 2.0 License" src="https://img.shields.io/badge/License-APACHEv2-brightgreen.svg" /></a>
-<a class="reference external" href="https://pypi.python.org/pypi/cvxcla/"><img alt="PyPI download month" src="https://img.shields.io/pypi/dm/cvxcla.svg" /></a>
+<a class="reference external" href="https://pepy.tech/project/cvxcla"><img alt="Downloads" src="https://static.pepy.tech/personalized-badge/cvxcla?period=month&amp;units=international_system&amp;left_color=black&amp;right_color=orange&amp;left_text=PyPI%20downloads%20per%20month" /></a>
 <a class="reference external" href="https://coveralls.io/github/cvxgrp/cvxcla?branch=main"><img alt="Coverage Status" src="https://coveralls.io/repos/github/cvxgrp/cvxcla/badge.png?branch=main" /></a></p>
 <section id="critical-line-algorithm">
 <h2>Critical line algorithm<a class="headerlink" href="#critical-line-algorithm" title="Permalink to this heading">#</a></h2>
 <p>The critical line algorithm is a method to compute the efficient frontier of a
 portfolio optimization problem.</p>
-<p>The algorithm has been introduced by Markowitz in his book <a class="reference external" href="https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085">Portfolio Selection</a>.
-Bailey and Lopez de Prado revisited this algorithm in their paper
-<a class="reference external" href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616">An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization</a>.
-There the authors publish a Python implementation of the algorithm.</p>
+<p>The algorithm has been introduced by Markowitz in
+<a class="reference external" href="https://www.rand.org/pubs/research_memoranda/RM1438.html">The Optimization of Quadratic Functions Subject to Linear Constraints</a>
+and subsequently described in his book <a class="reference external" href="https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085">Portfolio Selection</a>.</p>
 <p>The algorithm is based on the observation that the efficient frontier is a piecewise
 linear function if expected return is plotted over expected variance.
-The critical line algorithm computes the turning points of the efficient frontier.
-The turning points are the points where the efficient frontier
-changes its slope. The turning points are computed by solving a sequence of quadratic
-programs.</p>
+The critical line algorithm computes the turning points, e.g. the corners
+of the efficient frontier.</p>
 </section>
-<section id="about-the-code">
-<h2>About the code<a class="headerlink" href="#about-the-code" title="Permalink to this heading">#</a></h2>
-<p>The code in this repository is an adoption of the paper by Bailey and Lopez de Prado.
+<section id="literature">
+<h2>Literature<a class="headerlink" href="#literature" title="Permalink to this heading">#</a></h2>
+<p>We are using the following sources</p>
+<section id="niedermayer-and-niedermayer">
+<h3>Niedermayer and Niedermayer<a class="headerlink" href="#niedermayer-and-niedermayer" title="Permalink to this heading">#</a></h3>
+<p>They suggested a method to avoid the expensive inversion of the covariance matrix.
+<a class="reference external" href="https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm">Applying Markowitz’s critical line algorithm</a>
+It turns that implementing their method in Python is not significantly faster
+than the inversion of the covariance matrix relying on LAPACK via <code class="docutils literal notranslate"><span class="pre">numpy.linalg.inv</span></code>.</p>
+</section>
+<section id="bailey-and-lopez-de-prado">
+<h3>Bailey and Lopez de Prado<a class="headerlink" href="#bailey-and-lopez-de-prado" title="Permalink to this heading">#</a></h3>
+<p>We have initially started with their code published in
+<a class="reference external" href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616">An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization</a>.
 We have updated their original code and covered it in tests. We have made a few
 noteworthy changes:</p>
 <ul class="simple">
 <li><p>Use a boolean numpy array to indicate whether a weight is free or blocked.</p></li>
 <li><p>Rewrote the computation of the first turning point.</p></li>
-<li><p>Isolated the computation of lambdas and the update of weights to make them testable.</p></li>
-<li><p>Use modern and immutable dataclass throughout.</p></li>
+<li><p>Isolated the computation of <span class="math notranslate nohighlight">\(\lambda\)</span> and the update of weights to make them testable.</p></li>
+<li><p>Use modern and immutable dataclasses throughout.</p></li>
 <li><p>Use GitHub Actions to run tests, create documentation and deploy to PyPI.</p></li>
 </ul>
-<p>Note that for this project we have not addressed the more fundamental bottlenecks
-of the original implementation.
-We use this code as a baseline to compute frontiers for our tests in a
-forthcoming more radical implementation of the same ideas.</p>
+<p>The code is not part of the published package though.
+It is only used for testing purposes. We recommend it for educational purposes only.</p>
+</section>
+<section id="markowitz-et-al">
+<h3>Markowitz et al<a class="headerlink" href="#markowitz-et-al" title="Permalink to this heading">#</a></h3>
+<p>In <a class="reference external" href="https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf">Avoiding the Downside: A Practical Review of the Critical
+Line Algorithm for Mean-Semivariance Portfolio Optimizatio</a>
+Markowitz and a team of researchers from Hudson Bay Capital Management and Constantia
+Capital provide a step-by-step tutorial on how to implement the critical line
+algorithm.</p>
+<p>We address a problem they oversaw: After finding the first starting point
+all variables might be blocked. We need to enforce that one variable is labeled
+as free even it sits on a boundary.</p>
+<p>Rather than using their involved construction of the sparse matrix to estimate
+the weights we bisect the weights into a free and a blocked part.
+We then use a linear solver to compute the weights only for the free part.</p>
+<p>We alter some of their Python code. Our experiments to combine it with Niedermayer’s
+ideas to accelerate the computation of the matrix inverses did not justify
+the additional complexity.</p>
+</section>
 </section>
 <section id="poetry">
 <h2>Poetry<a class="headerlink" href="#poetry" title="Permalink to this heading">#</a></h2>
@@ -413,15 +444,14 @@ Once you have installed poetry you can perform</p>
 <p>to replicate the virtual environment we have defined in <span class="xref myst">pyproject.toml</span>
 and locked in <span class="xref myst">poetry.lock</span>.</p>
 </section>
-<section id="kernel">
-<h2>Kernel<a class="headerlink" href="#kernel" title="Permalink to this heading">#</a></h2>
-<p>We install <a class="reference external" href="https://jupyter.org">JupyterLab</a> within your new virtual environment.
-Executing</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>kernel
+<section id="jupyter">
+<h2>Jupyter<a class="headerlink" href="#jupyter" title="Permalink to this heading">#</a></h2>
+<p>We install <a class="reference external" href="https://jupyter.org">JupyterLab</a> on fly within the aforementioned
+virtual environment. Executing</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>jupyter
 </pre></div>
 </div>
-<p>constructs a dedicated <a class="reference external" href="https://docs.jupyter.org/en/latest/projects/kernels.html">Kernel</a>
-for the project.</p>
+<p>will install and start the jupyter lab.</p>
 </section>
 <div class="toctree-wrapper compound">
 </div>
@@ -486,9 +516,14 @@ for the project.</p>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critical-line-algorithm">Critical line algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#about-the-code">About the code</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature">Literature</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#niedermayer-and-niedermayer">Niedermayer and Niedermayer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bailey-and-lopez-de-prado">Bailey and Lopez de Prado</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#markowitz-et-al">Markowitz et al</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#poetry">Poetry</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#kernel">Kernel</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#jupyter">Jupyter</a></li>
 </ul>
   </nav></div>
 
