@@ -10,8 +10,6 @@ Subpackages
    :titlesonly:
    :maxdepth: 3
 
-   bailey/index.rst
-   linalg/index.rst
    markowitz/index.rst
 
 
@@ -25,114 +23,6 @@ Submodules
    first/index.rst
    frontier/index.rst
    plotting/index.rst
-   solver/index.rst
    types/index.rst
-
-
-Package Contents
-----------------
-
-Classes
-~~~~~~~
-
-.. autoapisummary::
-
-   cla.Frontier
-
-
-
-
-.. py:class:: Frontier
-
-   A frontier is a list of frontier points. Some of them might be turning points.
-
-   .. py:attribute:: frontier
-      :annotation: :list[FrontierPoint]
-
-      
-
-   .. py:attribute:: mean
-      :annotation: :cla.types.MATRIX
-
-      
-
-   .. py:attribute:: covariance
-      :annotation: :cla.types.MATRIX
-
-      
-
-   .. py:attribute:: name
-      :annotation: :str = FRONTIER
-
-      
-
-   .. py:method:: build(solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-05))
-      :staticmethod:
-
-      Constructs a frontier by computing a list of turning points.
-
-      :param mean: a vector of expected returns per asset
-      :param covariance: a covariance matrix
-      :param lower_bounds: lower bounds per asset
-      :param upper_bounds: upper bounds per asset
-      :param name: the name of the frontier
-      :param tol: tolerance for the solver
-
-      :returns: A frontier of frontier points each of them a turning point
-
-
-   .. py:method:: interpolate(self, num=100)
-
-      Interpolate the frontier with num-1 points between adjacent frontier points
-      :param num: The number of new points in between each pair
-
-      :returns: A frontier with many new points
-
-
-   .. py:method:: __iter__(self)
-
-      Iterator for all frontier points
-
-
-   .. py:method:: __len__(self)
-
-
-   .. py:method:: weights(self)
-      :property:
-
-      Matrix of weights. One row per point
-
-
-   .. py:method:: returns(self)
-      :property:
-
-      Vector of expected returns.
-
-
-   .. py:method:: variance(self)
-      :property:
-
-      Vector of expected variances.
-
-
-   .. py:method:: sharpe_ratio(self)
-      :property:
-
-      Vector of expected Sharpe ratios.
-
-
-   .. py:method:: volatility(self)
-      :property:
-
-      Vector of expected volatilities.
-
-
-   .. py:method:: max_sharpe(self)
-      :property:
-
-      Maximal Sharpe ratio on the frontier
-
-      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
-
 
 

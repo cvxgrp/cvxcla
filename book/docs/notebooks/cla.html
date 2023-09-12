@@ -365,6 +365,19 @@ document.write(`
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
+<span class="ne">ImportError</span><span class="g g-Whitespace">                               </span>Traceback (most recent call last)
+<span class="n">Cell</span> <span class="n">In</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">line</span> <span class="mi">3</span>
+<span class="g g-Whitespace">      </span><span class="mi">1</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="g g-Whitespace">      </span><span class="mi">2</span> <span class="kn">from</span> <span class="nn">cvx.cla.plotting</span> <span class="kn">import</span> <span class="n">plot_efficient_frontiers</span>
+<span class="ne">----&gt; </span><span class="mi">3</span> <span class="kn">from</span> <span class="nn">cvx.cla</span> <span class="kn">import</span> <span class="n">Frontier</span>
+<span class="g g-Whitespace">      </span><span class="mi">4</span> <span class="kn">from</span> <span class="nn">cvx.cla.solver</span> <span class="kn">import</span> <span class="n">Solver</span>
+
+<span class="ne">ImportError</span>: cannot import name &#39;Frontier&#39; from &#39;cvx.cla&#39; (/home/runner/work/cvxcla/cvxcla/cvx/cla/__init__.py)
+</pre></div>
+</div>
+</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -380,141 +393,6 @@ document.write(`
 </pre></div>
 </div>
 </div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.817</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -inf</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.819</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 11.830216074349426</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.822</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 11.830216074349426</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.824</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [4.4408921e-16 0.0000000e+00 0.0000000e+00 0.0000000e+00 0.0000000e+00</span>
-<span class=" -Color -Color-Bold"> 0.0000000e+00 1.0000000e+00 0.0000000e+00 0.0000000e+00 0.0000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.827</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 6]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.830</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -15.382354022978543</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.833</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 7.565489500379293</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.834</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 7.565489500379293</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.836</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [ 1.56718993e-01  0.00000000e+00  0.00000000e+00  0.00000000e+00</span>
-<span class=" -Color -Color-Bold">  0.00000000e+00  0.00000000e+00  8.43281007e-01 -4.44089210e-16</span>
-<span class=" -Color -Color-Bold">  0.00000000e+00  0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.837</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.842</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -4.862846998905104</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.846</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 2.552978142928717</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.847</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 2.552978142928717</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.851</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [0.15221653 0.         0.         0.         0.         0.</span>
-<span class=" -Color -Color-Bold"> 0.5031747  0.34460877 0.         0.        ]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.853</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 5 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.856</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.06393900040947055</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.857</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 2.073911597806827</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.858</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 2.073911597806827</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.859</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [1.24350979e-01 0.00000000e+00 0.00000000e+00 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 1.11022302e-16 5.66093590e-02 4.24652189e-01 3.94387473e-01</span>
-<span class=" -Color -Color-Bold"> 0.00000000e+00 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.860</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 4 5 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.864</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.2775461948256089</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.865</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 1.1360343960629224</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.866</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 1.1360343960629224</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.868</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [9.78565120e-02 5.55111512e-17 0.00000000e+00 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 8.65005370e-02 1.69508700e-01 2.55279977e-01 3.90854274e-01</span>
-<span class=" -Color -Color-Bold"> 0.00000000e+00 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.869</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 4 5 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.872</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.4937496138403097</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.877</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.6379942310506895</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.878</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.6379942310506895</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.883</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [6.79528726e-02 4.42232159e-02 0.00000000e+00 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 1.21151641e-01 2.03137867e-01 1.80583832e-01 3.82950572e-01</span>
-<span class=" -Color -Color-Bold"> 2.77555756e-17 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.884</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 4 5 6 7 8]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.888</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: 0.06538604143947169</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.889</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.06082072821613706</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.891</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.06538604143947169</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.893</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [0.0355068  0.07237309 0.         0.         0.21406892 0.27366487</span>
-<span class=" -Color -Color-Bold"> 0.         0.32942593 0.07496039 0.        ]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.894</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 4 5 7 8]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.897</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -1.0559996836836494</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.898</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.061299938387677895</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.899</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.061299938387677895</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.901</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [3.53774168e-02 7.29025524e-02 1.38777878e-17 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 2.14237880e-01 2.73520221e-01 0.00000000e+00 3.28957505e-01</span>
-<span class=" -Color -Color-Bold"> 7.50044250e-02 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.902</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 2 4 5 7 8]</span>
-</pre></div>
-</div>
-</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -527,160 +405,6 @@ document.write(`
 <span class="n">covariance</span> <span class="o">=</span> <span class="n">factor</span> <span class="o">@</span> <span class="n">factor</span><span class="o">.</span><span class="n">T</span>
 
 <span class="n">f2</span> <span class="o">=</span> <span class="n">Frontier</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">Solver</span><span class="o">.</span><span class="n">BAILEY</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span> <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Test2&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.939</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -inf</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.942</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 5.8832176528018305</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.944</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 5.8832176528018305</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.947</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> -1.11022302e-16  1.00000000e+00  0.00000000e+00  0.00000000e+00</span>
-<span class=" -Color -Color-Bold">  0.00000000e+00  0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.949</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [4 5]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.953</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -10.173010707048691</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.955</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 2.886049128630396</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.958</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 2.886049128630396</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.961</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [1.38777878e-17 0.00000000e+00 0.00000000e+00 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 1.86667034e-01 8.13332966e-01 0.00000000e+00 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 0.00000000e+00 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.963</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 4 5]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.968</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -5.051992413734667</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.971</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 2.415362114968449</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.973</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 2.415362114968449</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.976</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [ 2.14732168e-02  0.00000000e+00  0.00000000e+00 -2.77555756e-17</span>
-<span class=" -Color -Color-Bold">  2.13420482e-01  7.65106302e-01  0.00000000e+00  0.00000000e+00</span>
-<span class=" -Color -Color-Bold">  0.00000000e+00  0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.979</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 3 4 5]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.982</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -4.196142117489388</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.986</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.9587038892409679</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.987</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.9587038892409679</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.989</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [3.29343298e-02 0.00000000e+00 0.00000000e+00 1.24096710e-01</span>
-<span class=" -Color -Color-Bold"> 2.46432223e-01 5.96536737e-01 6.93889390e-18 0.00000000e+00</span>
-<span class=" -Color -Color-Bold"> 0.00000000e+00 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.993</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 3 4 5 6]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.998</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.06315524784857506</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:34.999</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.8088323341788031</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.000</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.8088323341788031</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.006</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [ 2.81039975e-02  0.00000000e+00  0.00000000e+00  1.33689295e-01</span>
-<span class=" -Color -Color-Bold">  2.50430160e-01  5.75787164e-01  1.19893827e-02 -6.93889390e-18</span>
-<span class=" -Color -Color-Bold">  0.00000000e+00  0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.007</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 3 4 5 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.012</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: 0.30305237164672677</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.014</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.6885402867867011</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.015</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.6885402867867011</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.016</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [2.14198905e-02 1.11022302e-16 0.00000000e+00 1.32467809e-01</span>
-<span class=" -Color -Color-Bold"> 2.52598026e-01 5.47991781e-01 2.71814027e-02 1.83410906e-02</span>
-<span class=" -Color -Color-Bold"> 0.00000000e+00 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.018</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 3 4 5 6 7]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.024</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.8688909328959667</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.025</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.6833242548641119</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.026</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.6833242548641119</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.028</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [2.16537388e-02 1.40675581e-03 0.00000000e+00 1.32215095e-01</span>
-<span class=" -Color -Color-Bold"> 2.52127276e-01 5.46156488e-01 2.73086366e-02 1.91320090e-02</span>
-<span class=" -Color -Color-Bold"> 6.93889390e-18 0.00000000e+00]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.029</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 3 4 5 6 7 8]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.039</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: -0.8075549466145684</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.040</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: 0.17696478587288947</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.041</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.17696478587288947</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.043</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [5.46453599e-02 1.29482862e-01 0.00000000e+00 1.14838953e-01</span>
-<span class=" -Color -Color-Bold"> 2.06315918e-01 3.60660903e-01 2.19150873e-02 8.99895559e-02</span>
-<span class=" -Color -Color-Bold"> 2.21513616e-02 9.99200722e-16]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.045</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 3 4 5 6 7 8 9]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.047</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">85</span> - <span class=" -Color -Color-Bold">l_in: 0.1527637117135963</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.048</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">86</span> - <span class=" -Color -Color-Bold">l_out: -0.2864165133490421</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.050</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">87</span> - <span class=" -Color -Color-Bold">l_current: 0.1527637117135963</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.053</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">114</span> - <span class=" -Color -Color-Bold">weights: [0.07135585 0.1447807  0.         0.08990241 0.20133789 0.32947855</span>
-<span class=" -Color -Color-Bold"> 0.         0.11046717 0.02754028 0.02513715]</span>
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span><span class=" -Color -Color-Green">2023-09-11 19:28:35.054</span> | <span class=" -Color -Color-Bold">INFO    </span> | <span class=" -Color -Color-Cyan">cvx.cla.bailey.cla</span>:<span class=" -Color -Color-Cyan">__post_init__</span>:<span class=" -Color -Color-Cyan">115</span> - <span class=" -Color -Color-Bold">free: [0 1 3 4 5 7 8 9]</span>
 </pre></div>
 </div>
 </div>
@@ -712,9 +436,9 @@ document.write(`
         });
         }
         </script>
-        </div><div class="output text_html"><div>                            <div id="8bb74c70-d2ff-41bb-bc5b-90ddd5d4a058" class="plotly-graph-div" style="height:525px; width:100%;"></div>            <script type="text/javascript">                require(["plotly"], function(Plotly) {                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("8bb74c70-d2ff-41bb-bc5b-90ddd5d4a058")) {                    Plotly.newPlot(                        "8bb74c70-d2ff-41bb-bc5b-90ddd5d4a058",                        [{"name":"Test1","x":[7.912952151373848,7.912952151373866,4.908472695084445,1.8770490430598836,1.4330972176166201,0.642149417215259,0.35555076389590934,0.15238993798579184,0.1522919116694844,0.14792631567799083],"y":[1.9633917133025194,1.9633917133025225,1.8084873482762696,1.5088941925844177,1.4129438133189092,1.1665384837862987,1.0049860437979694,0.7161510652580229,0.715377291266289,0.6441604745910181],"type":"scatter"},{"name":"Test2","x":[4.265346546937491,4.265346546937489,2.105509650257562,1.8267332209852765,0.6746612519281102,0.6037584577048114,0.532392531228851,0.5260621056971221,0.13215090822776124,0.11716514613663341,0.09049378388108087],"y":[1.245948691732956,1.2459486917329559,0.999652513214006,0.9470671889555092,0.6056180389922708,0.5655041260303525,0.5178433597810378,0.5132288914136937,0.05534650675388052,0.009897714184178029,-0.16469514470595598],"type":"scatter"}],                        {"title":{"text":"Efficient Frontier(s)"},"xaxis":{"title":{"text":"Expected Return"}},"yaxis":{"title":{"text":"Expected Variance"}},"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}}},                        {"responsive": true}                    ).then(function(){
+        </div><div class="output text_html"><div>                            <div id="73b77b05-b8c6-44c0-ad48-4775bc8aa38a" class="plotly-graph-div" style="height:525px; width:100%;"></div>            <script type="text/javascript">                require(["plotly"], function(Plotly) {                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("73b77b05-b8c6-44c0-ad48-4775bc8aa38a")) {                    Plotly.newPlot(                        "73b77b05-b8c6-44c0-ad48-4775bc8aa38a",                        [{"name":"Test1","x":[10.350070013962917,10.350070013963276,2.0463437786896184,2.041397688844521,1.5053076759410422,1.1209810395823,0.8179825278271924,0.5587755141116586,0.4967443685678203,0.4763278350838076,0.4536526768235078,0.41560427117818693,0.39870842545152246,0.39758597153581904],"y":[1.3039266605925688,1.3039266605925788,1.2399874914737539,1.2388628205714625,1.0943884825164416,0.9511421159658453,0.7919208314104372,0.5628280230138306,0.46978275954025217,0.4309081108186621,0.3781996332662454,0.22585344367182522,0.07721524204606996,0.051944128598441885],"type":"scatter"},{"name":"Test2","x":[8.975972725918387,8.975972725918387,6.957972008994114,3.315348193429791,3.105705448275072,1.8201892482226767,1.5461556489499266,0.5946248187474933,0.26955772169192577,0.2645077104628327],"y":[1.0861412282941145,1.0861412282941145,1.0620703301582137,0.9852166571817614,0.9784263326797201,0.9162181685233356,0.8874873419311939,0.693286300164522,0.3998650358112235,0.34413629317897076],"type":"scatter"}],                        {"title":{"text":"Efficient Frontier(s)"},"xaxis":{"title":{"text":"Expected Return"}},"yaxis":{"title":{"text":"Expected Variance"}},"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}}},                        {"responsive": true}                    ).then(function(){
                             
-var gd = document.getElementById('8bb74c70-d2ff-41bb-bc5b-90ddd5d4a058');
+var gd = document.getElementById('73b77b05-b8c6-44c0-ad48-4775bc8aa38a');
 var x = new MutationObserver(function (mutations, observer) {{
         var display = window.getComputedStyle(gd).display;
         if (!display || display === 'none') {{

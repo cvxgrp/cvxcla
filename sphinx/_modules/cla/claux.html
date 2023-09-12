@@ -88,11 +88,11 @@
 <span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
-<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">loguru</span> <span class="kn">import</span> <span class="n">logger</span> <span class="k">as</span> <span class="n">loguru</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.first</span> <span class="kn">import</span> <span class="n">init_algo</span>
+<span class="kn">from</span> <span class="nn">cvx.cla.frontier</span> <span class="kn">import</span> <span class="n">Frontier</span><span class="p">,</span> <span class="n">FrontierPoint</span>
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">TurningPoint</span>
 
 
@@ -102,12 +102,11 @@
 <div class="viewcode-block" id="CLAUX.covariance"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.covariance">[docs]</a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 <div class="viewcode-block" id="CLAUX.lower_bounds"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.lower_bounds">[docs]</a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 <div class="viewcode-block" id="CLAUX.upper_bounds"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.upper_bounds">[docs]</a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.A"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.A">[docs]</a>    <span class="n">A</span><span class="p">:</span> <span class="n">MATRIX</span></div>
+<div class="viewcode-block" id="CLAUX.b"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.b">[docs]</a>    <span class="n">b</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 <div class="viewcode-block" id="CLAUX.turning_points"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.turning_points">[docs]</a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></div>
 <div class="viewcode-block" id="CLAUX.tol"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.tol">[docs]</a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span></div>
 <div class="viewcode-block" id="CLAUX.logger"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.logger">[docs]</a>    <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span> <span class="o">=</span> <span class="n">loguru</span></div>
-
-    <span class="c1"># def __post_init__(self):</span>
-    <span class="c1">#    self.logger.info(&quot;Initializing CLA (from CLAUX)&quot;)</span>
 
 <div class="viewcode-block" id="CLAUX.first_turning_point"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.first_turning_point">[docs]</a>    <span class="k">def</span> <span class="nf">first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
@@ -134,17 +133,15 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="CLAUX.minimum_variance"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.minimum_variance">[docs]</a>    <span class="k">def</span> <span class="nf">minimum_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;weights&quot;</span><span class="p">)</span>
-
-        <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">]</span>
-        <span class="n">chol</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">)</span>
-
-        <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">chol</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">x</span><span class="p">)),</span> <span class="n">constraints</span><span class="p">)</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">ECOS</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">value</span></div></div>
-
-        <span class="c1"># self.append(TurningPoint(lamb=0, weights=x.value, free=last.free))</span>
+<div class="viewcode-block" id="CLAUX.frontier"><a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.frontier">[docs]</a>    <span class="k">def</span> <span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
+            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
+            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">FrontierPoint</span><span class="p">(</span><span class="n">weights</span><span class="o">=</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span>
+            <span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
 </pre></div>
 
            </div>
