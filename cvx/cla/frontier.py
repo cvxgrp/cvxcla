@@ -64,12 +64,16 @@ class FrontierPoint:
         return self.weights.T @ (covariance @ self.weights)
 
 
-def _turning_points(solver, mean, covariance, lower_bounds, upper_bounds, tol=None):
+def _turning_points(
+    solver, mean, covariance, lower_bounds, upper_bounds, A, b, tol=None
+):
     x = solver.build(
         mean=mean,
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
         covariance=covariance,
+        A=A,
+        b=b,
         tol=tol,
     )
 
@@ -91,7 +95,15 @@ class Frontier:
 
     @staticmethod
     def build(
-        solver, mean, covariance, lower_bounds, upper_bounds, name, tol=float(1e-5)
+        solver,
+        mean,
+        covariance,
+        lower_bounds,
+        upper_bounds,
+        name,
+        A,
+        b,
+        tol=float(1e-5),
     ):
         """
         Constructs a frontier by computing a list of turning points.
@@ -114,6 +126,8 @@ class Frontier:
                 covariance=covariance,
                 lower_bounds=lower_bounds,
                 upper_bounds=upper_bounds,
+                A=A,
+                b=b,
                 tol=tol,
             )
         )

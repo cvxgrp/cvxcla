@@ -12,6 +12,8 @@ def test_solver(input_data, solver):
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance,
         tol=1e-5,
+        A=np.ones((1, len(input_data.mean))),
+        b=np.ones(1),
     )
 
     assert x
@@ -39,6 +41,8 @@ def test_example(example, example_solution, solver):
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
         covariance=example.cov().values,
+        A=np.ones((1, len(means))),
+        b=np.ones(1),
     )
 
     for row, turning_point in enumerate(cla.turning_points):
@@ -62,6 +66,8 @@ def test_init_dimension(n):
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
         covariance=np.eye(n),
+        A=np.ones((1, n)),
+        b=np.ones(1),
     )
 
     solver = Solver.MARKOWITZ
@@ -70,6 +76,8 @@ def test_init_dimension(n):
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
         covariance=np.eye(n),
+        A=np.ones((1, n)),
+        b=np.ones(1),
     )
 
     np.testing.assert_almost_equal(
@@ -91,4 +99,6 @@ def test_init_solver(solver, n):
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
         covariance=A @ A.T + sigma * np.eye(n),
+        A=np.ones((1, len(mean))),
+        b=np.ones(1),
     )

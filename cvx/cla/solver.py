@@ -21,11 +21,15 @@ class Solver(Enum):
     BAILEY = Bailey
     MARKOWITZ = Markowitz
 
-    def build(self, mean, lower_bounds, upper_bounds, covariance, tol=float(1e-5)):
+    def build(
+        self, mean, lower_bounds, upper_bounds, covariance, A, b, tol=float(1e-5)
+    ):
         return self.value(
             mean,
             lower_bounds=lower_bounds,
             upper_bounds=upper_bounds,
             covariance=covariance,
             tol=tol,
+            A=A,
+            b=b,
         )

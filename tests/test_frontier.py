@@ -18,6 +18,8 @@ def test_frontier(input_data, solver):
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance,
         name="test",
+        A=np.ones((1, len(input_data.mean))),
+        b=np.ones(1),
     )
 
     np.testing.assert_equal(f.covariance, input_data.covariance)
@@ -47,6 +49,8 @@ def test_frontiers(n, resource_dir):
         covariance=np.copy(covar),
         name="Bailey",
         tol=1e-5,
+        A=np.ones((1, n)),
+        b=np.ones(1),
     )
 
     f_markowitz = Frontier.build(
@@ -57,6 +61,8 @@ def test_frontiers(n, resource_dir):
         covariance=np.copy(covar),
         name="Markowitz",
         tol=1e-5,
+        A=np.ones((1, n)),
+        b=np.ones(1),
     )
 
     assert np.sum(f_bailey.frontier[-1].weights) == pytest.approx(1)
