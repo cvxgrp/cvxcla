@@ -28,7 +28,10 @@ We are using the following sources
 ### Niedermayer and Niedermayer
 
 They suggested a method to avoid the expensive inversion of the covariance matrix.
-[Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
+[Applying Markowitz's critical line algorithm](<https://www.researchgate.net/publ>
+ication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
+It turns that implementing their method in Python is not significantly faster
+than the inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
 
 ### Bailey and Lopez de Prado
 
@@ -50,7 +53,20 @@ It is only used for testing purposes. We recommend it for educational purposes o
 
 In [Avoiding the Downside: A Practical Review of the Critical
 Line Algorithm for Mean-Semivariance Portfolio Optimizatio](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf)
-Markowitz...
+Markowitz and a team of researchers from Hudson Bay Capital Management and Constantia
+Capital provide a step-by-step tutorial on how to implement the critical line algorithm.
+
+We address a problem they oversaw: After finding the first starting point
+all variables might be blocked. We need to enforce that one variable is labeled
+as free even it sits on a boundary.
+
+Rather than using their involved construction of the sparse matrix to estimate
+the weights we bisect the weights into a free and a blocked part.
+We then use a linear solver to compute the weights only for the free part.
+
+We alter some of their Python code. Our experiments to combine it with Niedermayer's
+ideas to accelerate the computation of the matrix inverses did not justify
+the additional complexity.
 
 ## Poetry
 
