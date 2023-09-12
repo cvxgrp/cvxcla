@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from cvx.cla.bailey.cla import CLA as BAILEY
 from cvx.cla.markowitz.cla import CLA as MARKOWITZ
+from tests.bailey.cla import CLA as BAILEY
 
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])

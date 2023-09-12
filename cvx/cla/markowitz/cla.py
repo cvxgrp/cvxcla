@@ -16,8 +16,19 @@ from dataclasses import dataclass
 import numpy as np
 
 from cvx.cla.claux import CLAUX
-from cvx.cla.linalg.algebra import solve
 from cvx.cla.types import TurningPoint
+
+
+def solve(A, b, IN):
+    OUT = ~IN
+    n = A.shape[1]
+    x = np.zeros((n, 2))
+
+    x[OUT, :] = b[OUT, :]
+    bbb = b[IN, :] - A[IN, :][:, OUT] @ x[OUT, :]
+
+    x[IN, :] = np.linalg.inv(A[IN, :][:, IN]) @ bbb
+    return x[:, 0], x[:, 1]
 
 
 @dataclass(frozen=True)

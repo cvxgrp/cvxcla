@@ -1,8 +1,8 @@
 import numpy as np
 
-from cvx.cla.bailey.cla import CLA as BAILEY
 from cvx.cla.markowitz.cla import CLA as MARKOWITZ
 from cvx.cla.plotting import plot_efficient_frontiers
+from tests.bailey.cla import CLA as BAILEY
 
 
 def test_plot(input_data):

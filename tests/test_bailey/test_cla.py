@@ -1,6 +1,6 @@
 import numpy as np
 
-from cvx.cla.bailey.cla import CLA
+from tests.bailey.cla import CLA
 
 
 def test_big(input_data, results):
