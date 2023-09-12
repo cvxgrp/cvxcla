@@ -64,24 +64,6 @@ class FrontierPoint:
         return self.weights.T @ (covariance @ self.weights)
 
 
-def _turning_points(
-    solver, mean, covariance, lower_bounds, upper_bounds, A, b, tol=None
-):
-    x = solver.build(
-        mean=mean,
-        lower_bounds=lower_bounds,
-        upper_bounds=upper_bounds,
-        covariance=covariance,
-        A=A,
-        b=b,
-        tol=tol,
-    )
-
-    # x = solver(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, covariance=covariance, tol=tol)
-    for point in x.turning_points:
-        yield FrontierPoint(weights=point.weights)
-
-
 @dataclass(frozen=True)
 class Frontier:
     """
@@ -92,49 +74,6 @@ class Frontier:
     mean: MATRIX
     covariance: MATRIX
     name: str = "FRONTIER"
-
-    @staticmethod
-    def build(
-        solver,
-        mean,
-        covariance,
-        lower_bounds,
-        upper_bounds,
-        name,
-        A,
-        b,
-        tol=float(1e-5),
-    ):
-        """
-        Constructs a frontier by computing a list of turning points.
-
-        Args:
-            mean: a vector of expected returns per asset
-            covariance: a covariance matrix
-            lower_bounds: lower bounds per asset
-            upper_bounds: upper bounds per asset
-            name: the name of the frontier
-            tol: tolerance for the solver
-
-        Returns:
-            A frontier of frontier points each of them a turning point
-        """
-        frontier_points = list(
-            _turning_points(
-                solver=solver,
-                mean=mean,
-                covariance=covariance,
-                lower_bounds=lower_bounds,
-                upper_bounds=upper_bounds,
-                A=A,
-                b=b,
-                tol=tol,
-            )
-        )
-
-        return Frontier(
-            frontier=frontier_points, mean=mean, covariance=covariance, name=name
-        )
 
     def interpolate(self, num=100):
         """

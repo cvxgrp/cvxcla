@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
 
-from cvx.cla.solver import Solver
+from cvx.cla.bailey.cla import CLA as BAILEY
+from cvx.cla.markowitz.cla import CLA as MARKOWITZ
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_solver(input_data, solver):
-    x = solver.build(
+    x = solver(
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,
         upper_bounds=input_data.upper_bounds,
@@ -21,7 +22,7 @@ def test_solver(input_data, solver):
         assert a
 
 
-@pytest.mark.parametrize("solver", [Solver.BAILEY, Solver.MARKOWITZ])
+@pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_example(example, example_solution, solver):
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)
@@ -36,7 +37,7 @@ def test_example(example, example_solution, solver):
     lower_bounds = 0.1 * np.ones(ns)
     upper_bounds = 0.5 * np.ones(ns)
 
-    cla = solver.build(
+    cla = solver(
         mean=means.values,
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
@@ -60,8 +61,8 @@ def test_example(example, example_solution, solver):
 def test_init_dimension(n):
     mean = np.random.randn(n)
 
-    solver = Solver.BAILEY
-    tp_bailey = solver.build(
+    # solver = Solver.BAILEY
+    tp_bailey = BAILEY(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
@@ -70,8 +71,8 @@ def test_init_dimension(n):
         b=np.ones(1),
     )
 
-    solver = Solver.MARKOWITZ
-    tp_markowitz = solver.build(
+    # solver = Solver.MARKOWITZ
+    tp_markowitz = MARKOWITZ(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
@@ -87,14 +88,14 @@ def test_init_dimension(n):
     assert tp_bailey.num_points == tp_markowitz.num_points
 
 
-@pytest.mark.parametrize("solver", [Solver.MARKOWITZ])
+@pytest.mark.parametrize("solver", [MARKOWITZ])
 @pytest.mark.parametrize("n", [2, 4, 8, 16, 32, 64, 128, 256, 512])
 def test_init_solver(solver, n):
     mean = np.random.randn(n)
     A = np.random.randn(n, n)
     sigma = 0.1
 
-    solver.build(
+    MARKOWITZ(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),

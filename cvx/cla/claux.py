@@ -18,7 +18,9 @@ from typing import List
 import numpy as np
 from loguru import logger as loguru
 
+from cvx.cla import Frontier
 from cvx.cla.first import init_algo
+from cvx.cla.frontier import FrontierPoint
 from cvx.cla.types import MATRIX, TurningPoint
 
 
@@ -61,3 +63,19 @@ class CLAUX:
         assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
 
         self.turning_points.append(tp)
+
+    # def frontier(self):
+    #    for tp in self.turning_points:
+    #        yield tp.weights
+    # for point in x.turning_points:
+    #    yield FrontierPoint(weights=point.weights)
+
+    def frontier(self, name="test"):
+        return Frontier(
+            covariance=self.covariance,
+            mean=self.mean,
+            frontier=[
+                FrontierPoint(weights=point.weights) for point in self.turning_points
+            ],
+            name=name,
+        )

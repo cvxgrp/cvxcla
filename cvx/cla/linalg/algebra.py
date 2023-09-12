@@ -14,19 +14,6 @@
 import numpy as np
 
 
-def bilinear(mat, left=None, right=None):
-    n, m = mat.shape
-    assert n == m, "Matrix must be square"
-
-    if left is None:
-        left = np.ones(n)
-
-    if right is None:
-        right = np.ones(n)
-
-    return left.T @ (mat @ right)
-
-
 def solve(A, b, IN):
     OUT = ~IN
     n = A.shape[1]
