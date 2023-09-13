@@ -28,10 +28,9 @@ We are using the following sources
 ### Niedermayer and Niedermayer
 
 They suggested a method to avoid the expensive inversion of the covariance matrix.
-[Applying Markowitz's critical line algorithm](<https://www.researchgate.net/publ>
-ication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
-It turns that implementing their method in Python is not significantly faster
-than the inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
+[Applying Markowitz's critical line algorithm](<https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
+It turns out that implementing their method in Python is not significantly faster
+than the explicit inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
 
 ### Bailey and Lopez de Prado
 
@@ -44,7 +43,6 @@ noteworthy changes:
 * Rewrote the computation of the first turning point.
 * Isolated the computation of $\lambda$ and the update of weights to make them testable.
 * Use modern and immutable dataclasses throughout.
-* Use GitHub Actions to run tests, create documentation and deploy to PyPI.
 
 The code is not part of the published package though.
 It is only used for testing purposes. We recommend it for educational purposes only.
@@ -58,14 +56,14 @@ Capital provide a step-by-step tutorial on how to implement the critical line al
 
 We address a problem they oversaw: After finding the first starting point
 all variables might be blocked. We need to enforce that one variable is labeled
-as free even it sits on a boundary.
+as free even it sits on a boundary otherwise the matrix needed is singular.
 
-Rather than using their involved construction of the sparse matrix to estimate
-the weights we bisect the weights into a free and a blocked part.
+Rather than using their involved construction of the sparse matrix 
+to estimate the weights we bisect the weights into a free and a blocked part.
 We then use a linear solver to compute the weights only for the free part.
 
 We alter some of their Python code. Our experiments to combine it with Niedermayer's
-ideas to accelerate the computation of the matrix inverses did not justify
+ideas to accelerate the computation of the matrix inverses did not yet justify
 the additional complexity.
 
 ## Poetry
