@@ -28,7 +28,7 @@ We are using the following sources
 ### Niedermayer and Niedermayer
 
 They suggested a method to avoid the expensive inversion of the covariance matrix.
-[Applying Markowitz's critical line algorithm](<https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
+[Applying Markowitz's critical line algorithm](<<https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm>)
 It turns out that implementing their method in Python is not significantly faster
 than the explicit inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
 
@@ -58,7 +58,7 @@ We address a problem they oversaw: After finding the first starting point
 all variables might be blocked. We need to enforce that one variable is labeled
 as free even it sits on a boundary otherwise the matrix needed is singular.
 
-Rather than using their involved construction of the sparse matrix 
+Rather than using their involved construction of the sparse matrix
 to estimate the weights we bisect the weights into a free and a blocked part.
 We then use a linear solver to compute the weights only for the free part.
 
