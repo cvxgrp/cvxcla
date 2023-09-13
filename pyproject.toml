@@ -12,14 +12,13 @@ python = ">=3.9,<3.13"
 numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
-# we need cvxpy to compute the first point...?
-# cvxpy = "*"
-# clarabel = "*"
 
 [tool.poetry.dev-dependencies]
 loguru = "*"
 pandas = "*"
 mosek = "*"
+cvxpy = "*"
+clarabel = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "7.4.2"
