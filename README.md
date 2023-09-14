@@ -28,7 +28,7 @@ We are using the following sources
 ### Niedermayer and Niedermayer
 
 They suggested a method to avoid the expensive inversion of the covariance matrix.
-[Applying Markowitz's critical line algorithm](<<https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm>)
+[Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
 It turns out that implementing their method in Python is not significantly faster
 than the explicit inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
 
