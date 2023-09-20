@@ -9,7 +9,7 @@ packages = [{include = "cvx"}]
 homepage = "https://www.cvxgrp.org/cvxcla"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<3.12"
 numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
