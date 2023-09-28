@@ -2,7 +2,7 @@
 name = "cvxcla"
 version = "0.0.0"
 description = "Critical line algorithm for the efficient frontier"
-authors = ["Philipp Schiele", "Thomas Schmelzer"]
+authors = ["Thomas Schmelzer", "Philipp Schiele"]
 readme = "README.md"
 repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
