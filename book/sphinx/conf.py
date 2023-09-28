@@ -11,9 +11,8 @@ source_suffix = {
 extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
-    "autoapi.extension",
     "sphinx.ext.napoleon",
-    "recommonmark",
+    "autoapi.extension"
 ]
 
 
