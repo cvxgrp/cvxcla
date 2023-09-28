@@ -32,44 +32,43 @@ Attributes
 
 
 .. py:data:: MATRIX
-   :annotation: :typing_extensions.TypeAlias
+   :type: typing_extensions.TypeAlias
 
    
 
 .. py:data:: BOOLEAN_VECTOR
-   :annotation: :typing_extensions.TypeAlias
+   :type: typing_extensions.TypeAlias
 
    
 
 .. py:class:: TurningPoint
 
+
+   .. py:property:: free_indices
+
+
+   .. py:property:: blocked_indices
+
+
    .. py:attribute:: weights
-      :annotation: :MATRIX
+      :type: MATRIX
 
       
 
    .. py:attribute:: lamb
-      :annotation: :float
+      :type: float
 
       
 
    .. py:attribute:: free
-      :annotation: :BOOLEAN_VECTOR
+      :type: BOOLEAN_VECTOR
 
       
 
-   .. py:method:: free_indices(self)
-      :property:
+   .. py:method:: mean(mean: MATRIX)
 
 
-   .. py:method:: blocked_indices(self)
-      :property:
-
-
-   .. py:method:: mean(self, mean: MATRIX)
-
-
-   .. py:method:: variance(self, covariance: MATRIX)
+   .. py:method:: variance(covariance: MATRIX)
 
 
 

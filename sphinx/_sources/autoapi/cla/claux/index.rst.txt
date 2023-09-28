@@ -19,62 +19,63 @@ Classes
 
 .. py:class:: CLAUX
 
+
+   .. py:property:: num_points
+
+
    .. py:attribute:: mean
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: covariance
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: lower_bounds
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: upper_bounds
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: A
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: b
-      :annotation: :cvx.cla.types.MATRIX
+      :type: cvx.cla.types.MATRIX
 
       
 
    .. py:attribute:: turning_points
-      :annotation: :List[cvx.cla.types.TurningPoint]
+      :type: List[cvx.cla.types.TurningPoint]
 
       
 
    .. py:attribute:: tol
-      :annotation: :float = 1e-05
+      :type: float
+      :value: 1e-05
 
       
 
    .. py:attribute:: logger
-      :annotation: :logging.Logger
+      :type: logging.Logger
 
       
 
-   .. py:method:: first_turning_point(self)
+   .. py:method:: first_turning_point()
 
 
-   .. py:method:: num_points(self)
-      :property:
+   .. py:method:: append(tp: cvx.cla.types.TurningPoint, tol=None)
 
 
-   .. py:method:: append(self, tp: cvx.cla.types.TurningPoint, tol=None)
-
-
-   .. py:method:: frontier(self, name='test')
+   .. py:method:: frontier(name='test')
 
 
 

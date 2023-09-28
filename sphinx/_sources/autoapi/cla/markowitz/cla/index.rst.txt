@@ -30,9 +30,10 @@ Functions
 
 .. py:class:: CLA
 
+
    Bases: :py:obj:`cvx.cla.claux.CLAUX`
 
-   .. py:method:: __post_init__(self)
+   .. py:method:: __post_init__()
 
 
 

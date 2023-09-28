@@ -25,17 +25,18 @@ Classes
 
 .. py:class:: FrontierPoint
 
+
    A frontier point is a vector of weights.
 
    .. py:attribute:: weights
-      :annotation: :cla.types.MATRIX
+      :type: cla.types.MATRIX
 
       
 
-   .. py:method:: __post_init__(self)
+   .. py:method:: __post_init__()
 
 
-   .. py:method:: expected_return(self, mean)
+   .. py:method:: expected_return(mean)
 
       Computes the expected return for a frontier point
 
@@ -44,7 +45,7 @@ Classes
       :returns: Computes the sum of the weighted expected returns
 
 
-   .. py:method:: expected_variance(self, covariance)
+   .. py:method:: expected_variance(covariance)
 
       Computes the expected variance for a frontier point
 
@@ -56,29 +57,57 @@ Classes
 
 .. py:class:: Frontier
 
+
    A frontier is a list of frontier points. Some of them might be turning points.
 
+   .. py:property:: weights
+
+      Matrix of weights. One row per point
+
+   .. py:property:: returns
+
+      Vector of expected returns.
+
+   .. py:property:: variance
+
+      Vector of expected variances.
+
+   .. py:property:: sharpe_ratio
+
+      Vector of expected Sharpe ratios.
+
+   .. py:property:: volatility
+
+      Vector of expected volatilities.
+
+   .. py:property:: max_sharpe
+
+      Maximal Sharpe ratio on the frontier
+
+      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
+
    .. py:attribute:: frontier
-      :annotation: :list[FrontierPoint]
+      :type: list[FrontierPoint]
 
       
 
    .. py:attribute:: mean
-      :annotation: :cla.types.MATRIX
+      :type: cla.types.MATRIX
 
       
 
    .. py:attribute:: covariance
-      :annotation: :cla.types.MATRIX
+      :type: cla.types.MATRIX
 
       
 
    .. py:attribute:: name
-      :annotation: :str = FRONTIER
+      :type: str
+      :value: 'FRONTIER'
 
       
 
-   .. py:method:: interpolate(self, num=100)
+   .. py:method:: interpolate(num=100)
 
       Interpolate the frontier with num-1 points between adjacent frontier points
       :param num: The number of new points in between each pair
@@ -86,50 +115,12 @@ Classes
       :returns: A frontier with many new points
 
 
-   .. py:method:: __iter__(self)
+   .. py:method:: __iter__()
 
       Iterator for all frontier points
 
 
-   .. py:method:: __len__(self)
-
-
-   .. py:method:: weights(self)
-      :property:
-
-      Matrix of weights. One row per point
-
-
-   .. py:method:: returns(self)
-      :property:
-
-      Vector of expected returns.
-
-
-   .. py:method:: variance(self)
-      :property:
-
-      Vector of expected variances.
-
-
-   .. py:method:: sharpe_ratio(self)
-      :property:
-
-      Vector of expected Sharpe ratios.
-
-
-   .. py:method:: volatility(self)
-      :property:
-
-      Vector of expected volatilities.
-
-
-   .. py:method:: max_sharpe(self)
-      :property:
-
-      Maximal Sharpe ratio on the frontier
-
-      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
+   .. py:method:: __len__()
 
 
 

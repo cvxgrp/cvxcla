@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>cla.first &mdash; cvxcla Documentation</title>
@@ -14,11 +14,11 @@
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-        <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
-        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -31,12 +31,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> cvxcla
-            <img src="../../../_static/logo.jpeg" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            cvxcla
+              <img src="../../../_static/logo.jpeg" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -76,10 +80,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../../index.html">API Reference</a> &raquo;</li>
-          <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a> &raquo;</li>
-      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></li>
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a></li>
+      <li class="breadcrumb-item active"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/autoapi/cla/first/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -90,25 +94,21 @@
            <div itemprop="articleBody">
              
   <section id="module-cla.first">
-<span id="cla-first"></span><h1><a class="reference internal" href="#module-cla.first" title="cla.first"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a><a class="headerlink" href="#module-cla.first" title="Permalink to this heading"></a></h1>
+<span id="cla-first"></span><h1><a class="reference internal" href="#module-cla.first" title="cla.first"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a><a class="headerlink" href="#module-cla.first" title="Link to this heading"></a></h1>
 <section id="module-contents">
-<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
 <section id="functions">
-<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this heading"></a></h3>
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cla.first.init_algo" title="cla.first.init_algo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo</span></code></a>(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) → cvx.cla.types.TurningPoint</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.first.init_algo" title="cla.first.init_algo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_algo</span></code></a>(→ cvx.cla.types.TurningPoint)</p></td>
 <td><p>The key insight behind Markowitz’s CLA is to find first the</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py function">
 <dt class="sig sig-object py" id="cla.first.init_algo">
-<span class="sig-prename descclassname"><span class="pre">cla.first.</span></span><span class="sig-name descname"><span class="pre">init_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">cvx.cla.types.TurningPoint</span></span></span><a class="reference internal" href="../../../_modules/cla/first.html#init_algo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.first.init_algo" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">cla.first.</span></span><span class="sig-name descname"><span class="pre">init_algo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">cvx.cla.types.MATRIX</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">cvx.cla.types.TurningPoint</span></span></span><a class="reference internal" href="../../../_modules/cla/first.html#init_algo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.first.init_algo" title="Link to this definition"></a></dt>
 <dd><p>The key insight behind Markowitz’s CLA is to find first the
 turning point associated with the highest expected return, and then
 compute the sequence of turning points, each with a lower expected

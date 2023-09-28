@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>cla.frontier &mdash; cvxcla Documentation</title>
@@ -14,11 +14,11 @@
     <script src="../../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
-        <script src="../../../_static/jquery.js"></script>
-        <script src="../../../_static/underscore.js"></script>
-        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
@@ -31,12 +31,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../../index.html" class="icon icon-home"> cvxcla
-            <img src="../../../_static/logo.jpeg" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            cvxcla
+              <img src="../../../_static/logo.jpeg" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -76,10 +80,10 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../../index.html">API Reference</a> &raquo;</li>
-          <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a> &raquo;</li>
-      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></li>
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla</span></code></a></li>
+      <li class="breadcrumb-item active"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></li>
       <li class="wy-breadcrumbs-aside">
             <a href="../../../_sources/autoapi/cla/frontier/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -90,17 +94,13 @@
            <div itemprop="articleBody">
              
   <section id="module-cla.frontier">
-<span id="cla-frontier"></span><h1><a class="reference internal" href="#module-cla.frontier" title="cla.frontier"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></a><a class="headerlink" href="#module-cla.frontier" title="Permalink to this heading"></a></h1>
+<span id="cla-frontier"></span><h1><a class="reference internal" href="#module-cla.frontier" title="cla.frontier"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></a><a class="headerlink" href="#module-cla.frontier" title="Link to this heading"></a></h1>
 <p>The Critical Line algorithm computes a set of points on the efficient frontier.</p>
 <section id="module-contents">
-<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this heading"></a></h2>
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
 <section id="classes">
-<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading"></a></h3>
+<h3>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cla.frontier.FrontierPoint" title="cla.frontier.FrontierPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FrontierPoint</span></code></a></p></td>
 <td><p>A frontier point is a vector of weights.</p></td>
@@ -112,27 +112,27 @@
 </table>
 <dl class="py class">
 <dt class="sig sig-object py" id="cla.frontier.FrontierPoint">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.frontier.</span></span><span class="sig-name descname"><span class="pre">FrontierPoint</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.frontier.</span></span><span class="sig-name descname"><span class="pre">FrontierPoint</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint" title="Link to this definition"></a></dt>
 <dd><p>A frontier point is a vector of weights.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.frontier.FrontierPoint.weights">
-<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="w"> </span><span class="pre">:cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.weights" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.weights" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.FrontierPoint.__post_init__">
-<span class="sig-name descname"><span class="pre">__post_init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.__post_init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.__post_init__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__post_init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.__post_init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.__post_init__" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.FrontierPoint.expected_return">
-<span class="sig-name descname"><span class="pre">expected_return</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.expected_return"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.expected_return" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">expected_return</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.expected_return"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.expected_return" title="Link to this definition"></a></dt>
 <dd><p>Computes the expected return for a frontier point</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>mean</strong> – the vector of expected returns per asset</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Computes the sum of the weighted expected returns</p>
 </dd>
 </dl>
@@ -140,13 +140,13 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.FrontierPoint.expected_variance">
-<span class="sig-name descname"><span class="pre">expected_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">covariance</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.expected_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.expected_variance" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">expected_variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">covariance</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#FrontierPoint.expected_variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.FrontierPoint.expected_variance" title="Link to this definition"></a></dt>
 <dd><p>Computes the expected variance for a frontier point</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>covariance</strong> – the covariance matrix</p>
 </dd>
-<dt class="field-even">Returns</dt>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Computes $w^T Covariance w$</p>
 </dd>
 </dl>
@@ -156,35 +156,76 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cla.frontier.Frontier">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.frontier.</span></span><span class="sig-name descname"><span class="pre">Frontier</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.frontier.</span></span><span class="sig-name descname"><span class="pre">Frontier</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier" title="Link to this definition"></a></dt>
 <dd><p>A frontier is a list of frontier points. Some of them might be turning points.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.weights">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">weights</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.weights" title="Link to this definition"></a></dt>
+<dd><p>Matrix of weights. One row per point</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.returns">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">returns</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.returns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.returns" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected returns.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.variance">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variance</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.variance" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected variances.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.sharpe_ratio">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sharpe_ratio</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.sharpe_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.sharpe_ratio" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected Sharpe ratios.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.volatility">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">volatility</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.volatility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.volatility" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected volatilities.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.frontier.Frontier.max_sharpe">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_sharpe</span></span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.max_sharpe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.max_sharpe" title="Link to this definition"></a></dt>
+<dd><p>Maximal Sharpe ratio on the frontier</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple of maximal Sharpe ratio and the weights to achieve it</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.frontier">
-<span class="sig-name descname"><span class="pre">frontier</span></span><em class="property"><span class="w"> </span><span class="pre">:list[FrontierPoint]</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.frontier" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">frontier</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cla.frontier.FrontierPoint" title="cla.frontier.FrontierPoint"><span class="pre">FrontierPoint</span></a><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.frontier" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.mean">
-<span class="sig-name descname"><span class="pre">mean</span></span><em class="property"><span class="w"> </span><span class="pre">:cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.mean" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">mean</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.mean" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.covariance">
-<span class="sig-name descname"><span class="pre">covariance</span></span><em class="property"><span class="w"> </span><span class="pre">:cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.covariance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.covariance" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">covariance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">cla.types.MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.covariance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.covariance" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="pre">:str</span> <span class="pre">=</span> <span class="pre">FRONTIER</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.name" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'FRONTIER'</span></em><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.name" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.interpolate">
-<span class="sig-name descname"><span class="pre">interpolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.interpolate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.interpolate" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">interpolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.interpolate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.interpolate" title="Link to this definition"></a></dt>
 <dd><p>Interpolate the frontier with num-1 points between adjacent frontier points
 :param num: The number of new points in between each pair</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A frontier with many new points</p>
 </dd>
 </dl>
@@ -192,55 +233,14 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.__iter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.__iter__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.__iter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.__iter__" title="Link to this definition"></a></dt>
 <dd><p>Iterator for all frontier points</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.frontier.Frontier.__len__">
-<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.__len__" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.__len__" title="Link to this definition"></a></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.weights">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.weights" title="Permalink to this definition"></a></dt>
-<dd><p>Matrix of weights. One row per point</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.returns">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">returns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.returns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.returns" title="Permalink to this definition"></a></dt>
-<dd><p>Vector of expected returns.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.variance">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.variance" title="Permalink to this definition"></a></dt>
-<dd><p>Vector of expected variances.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.sharpe_ratio">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sharpe_ratio</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.sharpe_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.sharpe_ratio" title="Permalink to this definition"></a></dt>
-<dd><p>Vector of expected Sharpe ratios.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.volatility">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">volatility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.volatility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.volatility" title="Permalink to this definition"></a></dt>
-<dd><p>Vector of expected volatilities.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="cla.frontier.Frontier.max_sharpe">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_sharpe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/frontier.html#Frontier.max_sharpe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.frontier.Frontier.max_sharpe" title="Permalink to this definition"></a></dt>
-<dd><p>Maximal Sharpe ratio on the frontier</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Tuple of maximal Sharpe ratio and the weights to achieve it</p>
-</dd>
-</dl>
-</dd></dl>
 
 </dd></dl>
 
