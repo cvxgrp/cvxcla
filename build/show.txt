@@ -2,5 +2,5 @@ numpy 1.26.0 Fundamental package for array computing in Python
 plotly 5.17.0 An open-source, interactive data visualization library for Python
 ├── packaging *
 └── tenacity >=6.2.0
-scipy 1.11.2 Fundamental algorithms for scientific computing in Python
+scipy 1.11.3 Fundamental algorithms for scientific computing in Python
 └── numpy >=1.21.6,<1.28.0
