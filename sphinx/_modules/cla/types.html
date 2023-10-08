@@ -113,23 +113,31 @@
 <div class="viewcode-block" id="TurningPoint">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint">[docs]</a>
 <span class="k">class</span> <span class="nc">TurningPoint</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A turning point is a vector of weights, a lambda value, and a boolean vector</span>
+<span class="sd">    indicating which assets are free. All assets that are not free are blocked.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
 <div class="viewcode-block" id="TurningPoint.weights">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.weights">[docs]</a>
     <span class="n">weights</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 
-<div class="viewcode-block" id="TurningPoint.lamb">
-<a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.lamb">[docs]</a>
-    <span class="n">lamb</span><span class="p">:</span> <span class="nb">float</span></div>
-
 <div class="viewcode-block" id="TurningPoint.free">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.free">[docs]</a>
     <span class="n">free</span><span class="p">:</span> <span class="n">BOOLEAN_VECTOR</span></div>
+
+<div class="viewcode-block" id="TurningPoint.lamb">
+<a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.lamb">[docs]</a>
+    <span class="n">lamb</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span></div>
 
 
     <span class="nd">@property</span>
 <div class="viewcode-block" id="TurningPoint.free_indices">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.free_indices">[docs]</a>
     <span class="k">def</span> <span class="nf">free_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the indices of the free assets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
@@ -137,18 +145,27 @@
 <div class="viewcode-block" id="TurningPoint.blocked_indices">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.blocked_indices">[docs]</a>
     <span class="k">def</span> <span class="nf">blocked_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the indices of the blocked assets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">free</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="TurningPoint.mean">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.mean">[docs]</a>
     <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the expected return for a turning point</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TurningPoint.variance">
 <a class="viewcode-back" href="../../autoapi/cla/types/index.html#cla.types.TurningPoint.variance">[docs]</a>
     <span class="k">def</span> <span class="nf">variance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Computes the expected variance for a turning point</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">covariance</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span></div>
 </div>
 

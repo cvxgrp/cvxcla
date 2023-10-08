@@ -44,19 +44,19 @@ Attributes
 .. py:class:: TurningPoint
 
 
+   A turning point is a vector of weights, a lambda value, and a boolean vector
+   indicating which assets are free. All assets that are not free are blocked.
+
    .. py:property:: free_indices
 
+      Returns the indices of the free assets
 
    .. py:property:: blocked_indices
 
+      Returns the indices of the blocked assets
 
    .. py:attribute:: weights
       :type: MATRIX
-
-      
-
-   .. py:attribute:: lamb
-      :type: float
 
       
 
@@ -65,10 +65,19 @@ Attributes
 
       
 
+   .. py:attribute:: lamb
+      :type: float
+
+      
+
    .. py:method:: mean(mean: MATRIX)
+
+      Computes the expected return for a turning point
 
 
    .. py:method:: variance(covariance: MATRIX)
+
+      Computes the expected variance for a turning point
 
 
 

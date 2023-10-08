@@ -102,7 +102,7 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.TurningPoint" title="cla.types.TurningPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TurningPoint</span></code></a></p></td>
-<td><p></p></td>
+<td><p>A turning point is a vector of weights, a lambda value, and a boolean vector</p></td>
 </tr>
 </tbody>
 </table>
@@ -132,15 +132,19 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="cla.types.TurningPoint">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">TurningPoint</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint" title="Link to this definition"></a></dt>
-<dd><dl class="py property">
+<dd><p>A turning point is a vector of weights, a lambda value, and a boolean vector
+indicating which assets are free. All assets that are not free are blocked.</p>
+<dl class="py property">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.free_indices">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">free_indices</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free_indices" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Returns the indices of the free assets</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.blocked_indices">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">blocked_indices</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.blocked_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.blocked_indices" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Returns the indices of the blocked assets</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.weights">
@@ -148,24 +152,26 @@
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.TurningPoint.lamb">
-<span class="sig-name descname"><span class="pre">lamb</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.lamb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.lamb" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.free">
+<span class="sig-name descname"><span class="pre">free</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">BOOLEAN_VECTOR</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.TurningPoint.free">
-<span class="sig-name descname"><span class="pre">free</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">BOOLEAN_VECTOR</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="cla.types.TurningPoint.lamb">
+<span class="sig-name descname"><span class="pre">lamb</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.lamb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.lamb" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.mean">
 <span class="sig-name descname"><span class="pre">mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.mean" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Computes the expected return for a turning point</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.variance">
 <span class="sig-name descname"><span class="pre">variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">covariance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.variance" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Computes the expected variance for a turning point</p>
+</dd></dl>
 
 </dd></dl>
 
