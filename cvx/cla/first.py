@@ -13,16 +13,18 @@
 #    limitations under the License.
 from __future__ import annotations
 
+import cvxpy as cp
 import numpy as np
 
 from cvx.cla.types import MATRIX, TurningPoint
 
 
+#
 def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> TurningPoint:
     """The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
-    return than the previous.That first turning point consists in the
+    return than the previous. That first turning point consists in the
     smallest subset of assets with highest return such that the sum of
     their upper boundaries equals or exceeds one.
 
@@ -54,9 +56,92 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Turni
             free[index] = True
             break
 
+    # free = _free(weights, lower_bounds, upper_bounds)
+
     if not np.any(free):
-        # We have not reached the sum of weights of 1...
+        #    # We have not reached the sum of weights of 1...
         raise ValueError("Could not construct a fully invested portfolio")
 
     # Return first turning point, the point with the highest expected return.
-    return TurningPoint(free=free, lamb=np.inf, weights=weights)
+    return TurningPoint(free=free, weights=weights)
+
+
+def init_algo_lp(
+    mean: MATRIX,
+    lower_bounds: MATRIX,
+    upper_bounds: MATRIX,
+    A_eq: MATRIX | None = None,
+    b_eq: MATRIX | None = None,
+    # A_ub: MATRIX | None = None,
+    # b_ub: MATRIX | None = None,
+) -> TurningPoint:
+    if A_eq is None:
+        A_eq = np.atleast_2d(np.ones_like(mean))
+
+    if b_eq is None:
+        b_eq = np.array([1.0])
+
+    # if A_ub is None:
+    #    A_ub = np.atleast_2d(np.zeros_like(mean))
+
+    # if b_ub is None:
+    #    b_ub = np.array([0.0])
+
+    w = cp.Variable(mean.shape[0], "weights")
+
+    objective = cp.Maximize(mean.T @ w)
+    constraints = [
+        A_eq @ w == b_eq,
+        # A_ub @ w <= b_ub,
+        lower_bounds <= w,
+        w <= upper_bounds,
+        cp.sum(w) == 1.0,
+    ]
+
+    problem = cp.Problem(objective, constraints)
+    problem.solve()
+    # check status of problem is optimal
+    if problem.status != cp.OPTIMAL:
+        raise ValueError("Could not construct a fully invested portfolio")
+
+    # assert problem.status == cp.OPTIMAL
+    # print(problem.status)
+    # print(status)
+
+    w = w.value
+
+    # compute the distance from the closest bound
+    # distance = np.min(
+    #    np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0
+    # )
+
+    # which element has the largest distance to any bound?
+    # Even if all assets are at their bounds,
+    # we get a (somewhat random) free asset.
+    # index = np.argmax(distance)
+
+    # free = np.full_like(mean, False, dtype=np.bool_)
+    # free[index] = True
+
+    free = _free(w, lower_bounds, upper_bounds)
+
+    return TurningPoint(free=free, weights=w)
+
+
+def _free(w, lower_bounds, upper_bounds):
+    distance = np.min(
+        np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0
+    )
+
+    index = np.argmax(distance)
+
+    free = np.full_like(w, False, dtype=np.bool_)
+    free[index] = True
+    return free
+
+
+if __name__ == "__main__":
+    w = np.array([0.0, 0.0, 0.0])
+    lower_bounds = np.array([0.0, 0.0, 0.0])
+    upper_bounds = np.array([1.0, 1.0, 1.0])
+    print(_free(w, lower_bounds, upper_bounds))

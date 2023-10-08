@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo
+from cvx.cla.first import init_algo_lp
 from cvx.cla.markowitz.cla import CLA
 
 
@@ -43,7 +43,7 @@ def test_example(example, example_solution):
     upper_bounds = 0.5 * np.ones(ns)
 
     # covariance = example.cov().values
-    tp = init_algo(
+    tp = init_algo_lp(
         mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds
     )
     assert np.allclose(tp.weights, np.array([0.1, 0.5, 0.4]), atol=1e-9)

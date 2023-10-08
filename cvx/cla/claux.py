@@ -19,14 +19,14 @@ import numpy as np
 from loguru import logger as loguru
 
 from cvx.cla.first import init_algo
-from cvx.cla.frontier import Frontier, FrontierPoint
-from cvx.cla.types import MATRIX, TurningPoint
+from cvx.cla.types import MATRIX, Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
 class CLAUX:
     mean: MATRIX
     covariance: MATRIX
+    # frontier: Frontier
     lower_bounds: MATRIX
     upper_bounds: MATRIX
     A: MATRIX
@@ -34,6 +34,9 @@ class CLAUX:
     turning_points: List[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: Logger = loguru
+
+    def __len__(self):
+        return len(self.turning_points)
 
     def first_turning_point(self):
         first = init_algo(
@@ -43,9 +46,9 @@ class CLAUX:
         )
         return first
 
-    @property
-    def num_points(self):
-        return len(self.turning_points)
+    # @property
+    # def num_points(self):
+    #    return len(self.turning_points)
 
     def append(self, tp: TurningPoint, tol=None):
         tol = tol or self.tol
@@ -60,12 +63,10 @@ class CLAUX:
 
         self.turning_points.append(tp)
 
-    def frontier(self, name="test"):
+    @property
+    def frontier(self):
         return Frontier(
             covariance=self.covariance,
             mean=self.mean,
-            frontier=[
-                FrontierPoint(weights=point.weights) for point in self.turning_points
-            ],
-            name=name,
+            frontier=[FrontierPoint(point.weights) for point in self.turning_points],
         )

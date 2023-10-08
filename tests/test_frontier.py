@@ -6,7 +6,7 @@ import pytest
 from cvx.cla.markowitz.cla import CLA as MARKOWITZ
 from tests.bailey.cla import CLA as BAILEY
 
-np.random.seed(40)
+# np.random.seed(40)
 
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
@@ -18,7 +18,7 @@ def test_frontier(input_data, solver):
         upper_bounds=input_data.upper_bounds,
         A=np.ones((1, len(input_data.mean))),
         b=np.ones(1),
-    ).frontier()
+    ).frontier
 
     np.testing.assert_equal(f.covariance, input_data.covariance)
     np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025)
@@ -47,7 +47,7 @@ def test_frontiers(n, resource_dir):
         A=np.ones((1, n)),
         b=np.ones(1),
         tol=1e-5,
-    ).frontier("Bailey")
+    ).frontier
 
     # f_bailey = Frontier(
     #    solver=solver,
@@ -77,7 +77,7 @@ def test_frontiers(n, resource_dir):
         tol=1e-5,
         A=np.ones((1, n)),
         b=np.ones(1),
-    ).frontier("Markowitz")
+    ).frontier
 
     assert np.sum(f_bailey.frontier[-1].weights) == pytest.approx(1)
     assert np.sum(f_markowitz.frontier[-1].weights) == pytest.approx(1)

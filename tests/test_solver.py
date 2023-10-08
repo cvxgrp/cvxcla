@@ -85,7 +85,7 @@ def test_init_dimension(n):
         tp_bailey.turning_points[0].weights, tp_markowitz.turning_points[0].weights
     )
 
-    assert tp_bailey.num_points == tp_markowitz.num_points
+    assert len(tp_bailey) == len(tp_markowitz)
 
 
 @pytest.mark.parametrize("solver", [MARKOWITZ, BAILEY])
