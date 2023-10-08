@@ -221,7 +221,7 @@ class Frontier:
 
         return sharpe_ratio_right, w_right
 
-    def plot(self, name):
+    def plot(self, name=""):
         trace = go.Scatter(
             x=self.variance,
             y=self.returns,
