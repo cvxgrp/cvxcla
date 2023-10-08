@@ -36,8 +36,8 @@ def plot_efficient_frontiers(frontiers: List[Frontier]) -> None:
     # Create the layout object
     layout = go.Layout(
         title="Efficient Frontier(s)",
-        xaxis=dict(title="Expected Return"),
-        yaxis=dict(title="Expected Variance"),
+        xaxis=dict(title="Expected Variance"),
+        yaxis=dict(title="Expected Return"),
     )
 
     # Create the figure object
