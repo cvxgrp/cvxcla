@@ -17,7 +17,9 @@ Classes
 
 .. autoapisummary::
 
+   cla.types.FrontierPoint
    cla.types.TurningPoint
+   cla.types.Frontier
 
 
 
@@ -41,11 +43,39 @@ Attributes
 
    
 
+.. py:class:: FrontierPoint
+
+
+   .. py:attribute:: weights
+      :type: MATRIX
+
+      
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: mean(mean: MATRIX)
+
+      Computes the expected return for a turning point
+
+
+   .. py:method:: variance(covariance: MATRIX)
+
+      Computes the expected variance for a turning point
+
+
+
 .. py:class:: TurningPoint
 
 
+   Bases: :py:obj:`FrontierPoint`
+
    A turning point is a vector of weights, a lambda value, and a boolean vector
    indicating which assets are free. All assets that are not free are blocked.
+
+   .. py:property:: frontier_point
+
+      Returns the frontier point
 
    .. py:property:: free_indices
 
@@ -54,11 +84,6 @@ Attributes
    .. py:property:: blocked_indices
 
       Returns the indices of the blocked assets
-
-   .. py:attribute:: weights
-      :type: MATRIX
-
-      
 
    .. py:attribute:: free
       :type: BOOLEAN_VECTOR
@@ -70,14 +95,70 @@ Attributes
 
       
 
-   .. py:method:: mean(mean: MATRIX)
 
-      Computes the expected return for a turning point
+.. py:class:: Frontier
 
 
-   .. py:method:: variance(covariance: MATRIX)
+   A frontier is a list of frontier points. Some of them might be turning points.
 
-      Computes the expected variance for a turning point
+   .. py:property:: weights
+
+      Matrix of weights. One row per point
+
+   .. py:property:: returns
+
+      Vector of expected returns.
+
+   .. py:property:: variance
+
+      Vector of expected variances.
+
+   .. py:property:: sharpe_ratio
+
+      Vector of expected Sharpe ratios.
+
+   .. py:property:: volatility
+
+      Vector of expected volatilities.
+
+   .. py:property:: max_sharpe
+
+      Maximal Sharpe ratio on the frontier
+
+      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
+
+   .. py:attribute:: mean
+      :type: MATRIX
+
+      
+
+   .. py:attribute:: covariance
+      :type: MATRIX
+
+      
+
+   .. py:attribute:: frontier
+      :type: list[FrontierPoint]
+
+      
+
+   .. py:method:: interpolate(num=100)
+
+      Interpolate the frontier with num-1 points between adjacent frontier points
+      :param num: The number of new points in between each pair
+
+      :returns: A frontier with many new points
+
+
+   .. py:method:: __iter__()
+
+      Iterator for all frontier points
+
+
+   .. py:method:: __len__()
+
+
+   .. py:method:: plot(name='')
 
 
 

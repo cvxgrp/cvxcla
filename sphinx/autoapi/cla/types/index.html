@@ -22,7 +22,7 @@
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="prev" title="cla.plotting" href="../plotting/index.html" /> 
+    <link rel="prev" title="cla.first" href="../first/index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,8 +55,6 @@
 <li class="toctree-l3 current"><a class="reference internal" href="../index.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="../claux/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.claux</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../first/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.first</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../frontier/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.frontier</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../plotting/index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.plotting</span></code></a></li>
 <li class="toctree-l4 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">cla.types</span></code></a></li>
 </ul>
 </li>
@@ -101,8 +99,14 @@
 <h3>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h3>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.TurningPoint" title="cla.types.TurningPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TurningPoint</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.FrontierPoint" title="cla.types.FrontierPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FrontierPoint</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#cla.types.TurningPoint" title="cla.types.TurningPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TurningPoint</span></code></a></p></td>
 <td><p>A turning point is a vector of weights, a lambda value, and a boolean vector</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#cla.types.Frontier" title="cla.types.Frontier"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Frontier</span></code></a></p></td>
+<td><p>A frontier is a list of frontier points. Some of them might be turning points.</p></td>
 </tr>
 </tbody>
 </table>
@@ -130,10 +134,44 @@
 <dd></dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="cla.types.FrontierPoint">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">FrontierPoint</span></span><a class="reference internal" href="../../../_modules/cla/types.html#FrontierPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.FrontierPoint" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="cla.types.FrontierPoint.weights">
+<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#FrontierPoint.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.FrontierPoint.weights" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.FrontierPoint.__post_init__">
+<span class="sig-name descname"><span class="pre">__post_init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#FrontierPoint.__post_init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.FrontierPoint.__post_init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.FrontierPoint.mean">
+<span class="sig-name descname"><span class="pre">mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#FrontierPoint.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.FrontierPoint.mean" title="Link to this definition"></a></dt>
+<dd><p>Computes the expected return for a turning point</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.FrontierPoint.variance">
+<span class="sig-name descname"><span class="pre">variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">covariance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#FrontierPoint.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.FrontierPoint.variance" title="Link to this definition"></a></dt>
+<dd><p>Computes the expected variance for a turning point</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="cla.types.TurningPoint">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">TurningPoint</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint" title="Link to this definition"></a></dt>
-<dd><p>A turning point is a vector of weights, a lambda value, and a boolean vector
+<dd><p>Bases: <a class="reference internal" href="#cla.types.FrontierPoint" title="cla.types.FrontierPoint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FrontierPoint</span></code></a></p>
+<p>A turning point is a vector of weights, a lambda value, and a boolean vector
 indicating which assets are free. All assets that are not free are blocked.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.TurningPoint.frontier_point">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">frontier_point</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.frontier_point"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.frontier_point" title="Link to this definition"></a></dt>
+<dd><p>Returns the frontier point</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.free_indices">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">free_indices</span></span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free_indices" title="Link to this definition"></a></dt>
@@ -147,11 +185,6 @@ indicating which assets are free. All assets that are not free are blocked.</p>
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="cla.types.TurningPoint.weights">
-<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.weights" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="cla.types.TurningPoint.free">
 <span class="sig-name descname"><span class="pre">free</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">BOOLEAN_VECTOR</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.free" title="Link to this definition"></a></dt>
 <dd></dd></dl>
@@ -161,17 +194,95 @@ indicating which assets are free. All assets that are not free are blocked.</p>
 <span class="sig-name descname"><span class="pre">lamb</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.lamb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.lamb" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cla.types.Frontier">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cla.types.</span></span><span class="sig-name descname"><span class="pre">Frontier</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier" title="Link to this definition"></a></dt>
+<dd><p>A frontier is a list of frontier points. Some of them might be turning points.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.weights">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">weights</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.weights"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.weights" title="Link to this definition"></a></dt>
+<dd><p>Matrix of weights. One row per point</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.returns">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">returns</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.returns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.returns" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected returns.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.variance">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variance</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.variance" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected variances.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.sharpe_ratio">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sharpe_ratio</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.sharpe_ratio"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.sharpe_ratio" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected Sharpe ratios.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.volatility">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">volatility</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.volatility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.volatility" title="Link to this definition"></a></dt>
+<dd><p>Vector of expected volatilities.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cla.types.Frontier.max_sharpe">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">max_sharpe</span></span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.max_sharpe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.max_sharpe" title="Link to this definition"></a></dt>
+<dd><p>Maximal Sharpe ratio on the frontier</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple of maximal Sharpe ratio and the weights to achieve it</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cla.types.Frontier.mean">
+<span class="sig-name descname"><span class="pre">mean</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.mean" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cla.types.Frontier.covariance">
+<span class="sig-name descname"><span class="pre">covariance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">MATRIX</span></em><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.covariance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.covariance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cla.types.Frontier.frontier">
+<span class="sig-name descname"><span class="pre">frontier</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#cla.types.FrontierPoint" title="cla.types.FrontierPoint"><span class="pre">FrontierPoint</span></a><span class="p"><span class="pre">]</span></span></em><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.frontier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.frontier" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
-<dt class="sig sig-object py" id="cla.types.TurningPoint.mean">
-<span class="sig-name descname"><span class="pre">mean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mean</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.mean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.mean" title="Link to this definition"></a></dt>
-<dd><p>Computes the expected return for a turning point</p>
+<dt class="sig sig-object py" id="cla.types.Frontier.interpolate">
+<span class="sig-name descname"><span class="pre">interpolate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.interpolate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.interpolate" title="Link to this definition"></a></dt>
+<dd><p>Interpolate the frontier with num-1 points between adjacent frontier points
+:param num: The number of new points in between each pair</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A frontier with many new points</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="cla.types.TurningPoint.variance">
-<span class="sig-name descname"><span class="pre">variance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">covariance</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MATRIX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#TurningPoint.variance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.TurningPoint.variance" title="Link to this definition"></a></dt>
-<dd><p>Computes the expected variance for a turning point</p>
+<dt class="sig sig-object py" id="cla.types.Frontier.__iter__">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.__iter__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.__iter__" title="Link to this definition"></a></dt>
+<dd><p>Iterator for all frontier points</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.Frontier.__len__">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.__len__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.__len__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cla.types.Frontier.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/cla/types.html#Frontier.plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cla.types.Frontier.plot" title="Link to this definition"></a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -183,7 +294,7 @@ indicating which assets are free. All assets that are not free are blocked.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../plotting/index.html" class="btn btn-neutral float-left" title="cla.plotting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../first/index.html" class="btn btn-neutral float-left" title="cla.first" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

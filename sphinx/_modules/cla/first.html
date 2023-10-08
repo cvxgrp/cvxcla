@@ -90,18 +90,20 @@
 <span class="c1">#    limitations under the License.</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">TurningPoint</span>
 
 
+<span class="c1">#</span>
 <div class="viewcode-block" id="init_algo">
 <a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.init_algo">[docs]</a>
 <span class="k">def</span> <span class="nf">init_algo</span><span class="p">(</span><span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurningPoint</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The key insight behind Markowitz’s CLA is to find first the</span>
 <span class="sd">    turning point associated with the highest expected return, and then</span>
 <span class="sd">    compute the sequence of turning points, each with a lower expected</span>
-<span class="sd">    return than the previous.That first turning point consists in the</span>
+<span class="sd">    return than the previous. That first turning point consists in the</span>
 <span class="sd">    smallest subset of assets with highest return such that the sum of</span>
 <span class="sd">    their upper boundaries equals or exceeds one.</span>
 
@@ -133,13 +135,107 @@
             <span class="n">free</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">break</span>
 
+    <span class="c1"># free = _free(weights, lower_bounds, upper_bounds)</span>
+
     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">free</span><span class="p">):</span>
-        <span class="c1"># We have not reached the sum of weights of 1...</span>
+        <span class="c1">#    # We have not reached the sum of weights of 1...</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not construct a fully invested portfolio&quot;</span><span class="p">)</span>
 
     <span class="c1"># Return first turning point, the point with the highest expected return.</span>
-    <span class="k">return</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">lamb</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weights</span><span class="p">)</span></div>
 
+
+
+<div class="viewcode-block" id="init_algo_lp">
+<a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.init_algo_lp">[docs]</a>
+<span class="k">def</span> <span class="nf">init_algo_lp</span><span class="p">(</span>
+    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
+    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
+    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span><span class="p">,</span>
+    <span class="n">A_eq</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">b_eq</span><span class="p">:</span> <span class="n">MATRIX</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">solver</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">ECOS</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+    <span class="c1"># A_ub: MATRIX | None = None,</span>
+    <span class="c1"># b_ub: MATRIX | None = None,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurningPoint</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">A_eq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">A_eq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">mean</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">b_eq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">b_eq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">])</span>
+
+    <span class="c1"># if A_ub is None:</span>
+    <span class="c1">#    A_ub = np.atleast_2d(np.zeros_like(mean))</span>
+
+    <span class="c1"># if b_ub is None:</span>
+    <span class="c1">#    b_ub = np.array([0.0])</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;weights&quot;</span><span class="p">)</span>
+
+    <span class="n">objective</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Maximize</span><span class="p">(</span><span class="n">mean</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">w</span><span class="p">)</span>
+    <span class="n">constraints</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">A_eq</span> <span class="o">@</span> <span class="n">w</span> <span class="o">==</span> <span class="n">b_eq</span><span class="p">,</span>
+        <span class="c1"># A_ub @ w &lt;= b_ub,</span>
+        <span class="n">lower_bounds</span> <span class="o">&lt;=</span> <span class="n">w</span><span class="p">,</span>
+        <span class="n">w</span> <span class="o">&lt;=</span> <span class="n">upper_bounds</span><span class="p">,</span>
+        <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="o">==</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="n">problem</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">objective</span><span class="p">,</span> <span class="n">constraints</span><span class="p">)</span>
+    <span class="n">problem</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c1"># check status of problem is optimal</span>
+    <span class="k">if</span> <span class="n">problem</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">cp</span><span class="o">.</span><span class="n">OPTIMAL</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Could not construct a fully invested portfolio&quot;</span><span class="p">)</span>
+
+    <span class="c1"># assert problem.status == cp.OPTIMAL</span>
+    <span class="c1"># print(problem.status)</span>
+    <span class="c1"># print(status)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="c1"># compute the distance from the closest bound</span>
+    <span class="c1"># distance = np.min(</span>
+    <span class="c1">#    np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0</span>
+    <span class="c1"># )</span>
+
+    <span class="c1"># which element has the largest distance to any bound?</span>
+    <span class="c1"># Even if all assets are at their bounds,</span>
+    <span class="c1"># we get a (somewhat random) free asset.</span>
+    <span class="c1"># index = np.argmax(distance)</span>
+
+    <span class="c1"># free = np.full_like(mean, False, dtype=np.bool_)</span>
+    <span class="c1"># free[index] = True</span>
+
+    <span class="n">free</span> <span class="o">=</span> <span class="n">_free</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">TurningPoint</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">w</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_free">
+<a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first._free">[docs]</a>
+<span class="k">def</span> <span class="nf">_free</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">):</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w</span> <span class="o">-</span> <span class="n">lower_bounds</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">upper_bounds</span> <span class="o">-</span> <span class="n">w</span><span class="p">)]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+
+    <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span>
+
+    <span class="n">free</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+    <span class="n">free</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="n">free</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<div class="viewcode-block" id="w">
+<a class="viewcode-back" href="../../autoapi/cla/first/index.html#cla.first.w">[docs]</a>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span></div>
+
+    <span class="n">lower_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+    <span class="n">upper_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">_free</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">lower_bounds</span><span class="p">,</span> <span class="n">upper_bounds</span><span class="p">))</span>
 </pre></div>
 
            </div>
