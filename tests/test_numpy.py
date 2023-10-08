@@ -4,6 +4,7 @@ np.random.seed(42)
 
 
 def test_last_diagonal():
+    """test last diagonal element"""
     a = np.zeros((3, 3))
     a[2, 2] = 1.0
 
@@ -14,6 +15,7 @@ def test_last_diagonal():
 
 
 def test_last_column():
+    """test last column of a numpy array"""
     a = np.zeros((3, 3))
     a[:, 2] = 1.0
 
