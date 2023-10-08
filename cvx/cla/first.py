@@ -72,6 +72,8 @@ def init_algo_lp(
     upper_bounds: MATRIX,
     A_eq: MATRIX | None = None,
     b_eq: MATRIX | None = None,
+    solver=cp.ECOS,
+    **kwargs
     # A_ub: MATRIX | None = None,
     # b_ub: MATRIX | None = None,
 ) -> TurningPoint:
@@ -99,7 +101,7 @@ def init_algo_lp(
     ]
 
     problem = cp.Problem(objective, constraints)
-    problem.solve()
+    problem.solve(solver=solver, **kwargs)
     # check status of problem is optimal
     if problem.status != cp.OPTIMAL:
         raise ValueError("Could not construct a fully invested portfolio")
