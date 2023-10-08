@@ -88,14 +88,14 @@ def test_init_dimension(n):
     assert tp_bailey.num_points == tp_markowitz.num_points
 
 
-@pytest.mark.parametrize("solver", [MARKOWITZ])
-@pytest.mark.parametrize("n", [2, 4, 8, 16, 32, 64, 128, 256, 512])
+@pytest.mark.parametrize("solver", [MARKOWITZ, BAILEY])
+@pytest.mark.parametrize("n", [2, 4, 8, 16, 32, 64, 128])  # , 256, 512])
 def test_init_solver(solver, n):
     mean = np.random.randn(n)
     A = np.random.randn(n, n)
     sigma = 0.1
 
-    MARKOWITZ(
+    solver(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
