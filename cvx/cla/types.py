@@ -28,20 +28,37 @@ BOOLEAN_VECTOR: TypeAlias = NDArray[np.bool_]
 
 @dataclass(frozen=True)
 class TurningPoint:
+    """
+    A turning point is a vector of weights, a lambda value, and a boolean vector
+    indicating which assets are free. All assets that are not free are blocked.
+    """
+
     weights: MATRIX
-    lamb: float
     free: BOOLEAN_VECTOR
+    lamb: float = np.inf
 
     @property
     def free_indices(self):
+        """
+        Returns the indices of the free assets
+        """
         return np.where(self.free)[0]
 
     @property
     def blocked_indices(self):
+        """
+        Returns the indices of the blocked assets
+        """
         return np.where(~self.free)[0]
 
     def mean(self, mean: MATRIX):
+        """
+        Computes the expected return for a turning point
+        """
         return float(mean.T @ self.weights)
 
     def variance(self, covariance: MATRIX):
+        """
+        Computes the expected variance for a turning point
+        """
         return float(self.weights.T @ covariance @ self.weights)
