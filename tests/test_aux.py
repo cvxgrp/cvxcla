@@ -60,16 +60,15 @@ def test_append(cla):
     # all variables are free
     assert np.all(cla.turning_points[-1].free)
 
+    fig = cla.frontier.plot()
+    assert fig is not None
+
 
 def test_first_turning_point(cla):
     tp = cla.first_turning_point()
     np.testing.assert_almost_equal(
         tp.weights, np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     )
-
-
-def test_plot(cla):
-    cla.frontier.plot(name="test_plot")
 
 
 def test_raise():

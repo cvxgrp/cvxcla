@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
-import plotly.graph_objects as go
+import plotly.express as px
 from numpy.typing import NDArray
 from scipy.optimize import minimize
 from typing_extensions import TypeAlias
@@ -221,18 +221,11 @@ class Frontier:
 
         return sharpe_ratio_right, w_right
 
-    def plot(self, name=""):
-        trace = go.Scatter(
+    def plot(self):
+        fig = px.line(
             x=self.variance,
             y=self.returns,
-            name=name,
+            markers=True,
+            labels={"x": "Expected variance", "y": "Expected Return"},
         )
-
-        layout = go.Layout(
-            title="Efficient Frontier(s)",
-            xaxis=dict(title="Expected Variance"),
-            yaxis=dict(title="Expected Return"),
-        )
-
-        fig = go.Figure(data=[trace], layout=layout)
         return fig
