@@ -280,23 +280,6 @@ docs = ["sphinx"]
 test = ["pytest", "pytest-cov"]
 
 [[package]]
-name = "mosek"
-version = "10.1.13"
-description = "Python API for Mosek"
-optional = false
-python-versions = "<3.12,>=3.7"
-files = [
-    {file = "Mosek-10.1.13-cp37-abi3-macosx_10_15_x86_64.whl", hash = "sha256:864215540ed1b2127448382d0360ee76726acc156d9d272908758de4b7b3c925"},
-    {file = "Mosek-10.1.13-cp37-abi3-manylinux2014_x86_64.whl", hash = "sha256:fba3f731a4d931250425c4e4070fa965e3ce12ca6e4a647d03dc9c421f596ae8"},
-    {file = "Mosek-10.1.13-cp37-abi3-manylinux_2_29_aarch64.whl", hash = "sha256:49416d6dbf88b8a9eb4120049e08ba77e6149c2c071c26e4963e7f3a66dd5372"},
-    {file = "Mosek-10.1.13-cp37-abi3-win_amd64.whl", hash = "sha256:4ccef54997f9f92dbed5f8365d9594305431259efb29380250c3e571adc72502"},
-    {file = "Mosek-10.1.13-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:3ca5af36e6173aec25debccb69cf1f538beff3dab18e94069655266214acb2ce"},
-]
-
-[package.dependencies]
-numpy = "*"
-
-[[package]]
 name = "numpy"
 version = "1.26.0"
 description = "Fundamental package for array computing in Python"
@@ -818,4 +801,4 @@ dev = ["black (>=19.3b0)", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "bcdb44d2e3bf307ddf88572bbc587096a6f69ad61444ca438dcd20f74da537b7"
+content-hash = "b4d1c4a55b002cd0e19a336cc23e38ca472c0a15efa789b5b820b84304e134b2"
