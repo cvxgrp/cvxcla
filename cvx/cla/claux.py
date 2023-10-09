@@ -11,12 +11,11 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import logging
 from dataclasses import dataclass, field
-from logging import Logger
 from typing import List
 
 import numpy as np
-from loguru import logger as loguru
 
 from cvx.cla.first import init_algo
 from cvx.cla.types import MATRIX, Frontier, FrontierPoint, TurningPoint
@@ -33,7 +32,7 @@ class CLAUX:
     b: MATRIX
     turning_points: List[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
-    logger: Logger = loguru
+    logger: logging.Logger = logging.getLogger(__name__)
 
     def __len__(self):
         return len(self.turning_points)
@@ -45,10 +44,6 @@ class CLAUX:
             upper_bounds=self.upper_bounds,
         )
         return first
-
-    # @property
-    # def num_points(self):
-    #    return len(self.turning_points)
 
     def append(self, tp: TurningPoint, tol=None):
         tol = tol or self.tol

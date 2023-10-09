@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pytest
+from loguru import logger
 
 from cvx.cla.claux import CLAUX
 from cvx.cla.types import TurningPoint
@@ -22,6 +23,7 @@ def cla(input_data):
         tol=1e-5,
         A=np.ones((1, len(input_data.mean))),
         b=np.ones(1),
+        logger=logger,
     )
 
 
