@@ -158,7 +158,7 @@ Attributes
    .. py:method:: __len__()
 
 
-   .. py:method:: plot()
+   .. py:method:: plot(name='')
 
 
 
