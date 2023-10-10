@@ -18,7 +18,6 @@ plotly = "*"
 loguru = "*"
 pandas = "*"
 cvxpy = "*"
-#clarabel = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
