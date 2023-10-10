@@ -110,7 +110,6 @@
 <a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.covariance">[docs]</a>
     <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span></div>
 
-    <span class="c1"># frontier: Frontier</span>
 <div class="viewcode-block" id="CLAUX.lower_bounds">
 <a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.lower_bounds">[docs]</a>
     <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span></div>
@@ -143,12 +142,15 @@
 <div class="viewcode-block" id="CLAUX.__len__">
 <a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.__len__">[docs]</a>
     <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the number of turning points</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="CLAUX.first_turning_point">
-<a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.first_turning_point">[docs]</a>
-    <span class="k">def</span> <span class="nf">first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX._first_turning_point">
+<a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX._first_turning_point">[docs]</a>
+    <span class="k">def</span> <span class="nf">_first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
             <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
             <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
@@ -157,9 +159,9 @@
         <span class="k">return</span> <span class="n">first</span></div>
 
 
-<div class="viewcode-block" id="CLAUX.append">
-<a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.append">[docs]</a>
-    <span class="k">def</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="CLAUX._append">
+<a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX._append">[docs]</a>
+    <span class="k">def</span> <span class="nf">_append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
 
         <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span>
@@ -177,6 +179,9 @@
 <div class="viewcode-block" id="CLAUX.frontier">
 <a class="viewcode-back" href="../../autoapi/cla/claux/index.html#cla.claux.CLAUX.frontier">[docs]</a>
     <span class="k">def</span> <span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the frontier</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
             <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
             <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>

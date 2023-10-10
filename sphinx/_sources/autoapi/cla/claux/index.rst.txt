@@ -22,6 +22,7 @@ Classes
 
    .. py:property:: frontier
 
+      Returns the frontier
 
    .. py:attribute:: mean
       :type: cvx.cla.types.MATRIX
@@ -71,11 +72,13 @@ Classes
 
    .. py:method:: __len__()
 
+      Returns the number of turning points
 
-   .. py:method:: first_turning_point()
+
+   .. py:method:: _first_turning_point()
 
 
-   .. py:method:: append(tp: cvx.cla.types.TurningPoint, tol=None)
+   .. py:method:: _append(tp: cvx.cla.types.TurningPoint, tol=None)
 
 
 

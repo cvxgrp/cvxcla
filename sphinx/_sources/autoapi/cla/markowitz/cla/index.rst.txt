@@ -16,17 +16,6 @@ Classes
 
 
 
-Functions
-~~~~~~~~~
-
-.. autoapisummary::
-
-   cla.markowitz.cla.solve
-
-
-
-.. py:function:: solve(A, b, IN)
-
 
 .. py:class:: CLA
 
@@ -34,6 +23,10 @@ Functions
    Bases: :py:obj:`cvx.cla.claux.CLAUX`
 
    .. py:method:: __post_init__()
+
+
+   .. py:method:: _solve(A, b, IN)
+      :staticmethod:
 
 
 

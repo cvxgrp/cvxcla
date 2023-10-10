@@ -157,8 +157,12 @@ Attributes
 
    .. py:method:: __len__()
 
+      Number of frontier points
+
 
    .. py:method:: plot()
+
+      Plot the frontier
 
 
 

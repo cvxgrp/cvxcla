@@ -96,21 +96,6 @@
 <span class="kn">from</span> <span class="nn">cvx.cla.types</span> <span class="kn">import</span> <span class="n">TurningPoint</span>
 
 
-<div class="viewcode-block" id="solve">
-<a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.solve">[docs]</a>
-<span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">IN</span><span class="p">):</span>
-    <span class="n">OUT</span> <span class="o">=</span> <span class="o">~</span><span class="n">IN</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-
-    <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
-    <span class="n">bbb</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">OUT</span><span class="p">]</span> <span class="o">@</span> <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
-
-    <span class="n">x</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">IN</span><span class="p">])</span> <span class="o">@</span> <span class="n">bbb</span>
-    <span class="k">return</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span></div>
-
-
-
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <div class="viewcode-block" id="CLA">
 <a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.CLA">[docs]</a>
@@ -118,14 +103,12 @@
 <div class="viewcode-block" id="CLA.__post_init__">
 <a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.CLA.__post_init__">[docs]</a>
     <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Initializing CLA&quot;</span><span class="p">)</span>
-
         <span class="n">ns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="c1"># --A08-- Initialize the portfolio.</span>
-        <span class="n">first</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_turning_point</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">first</span><span class="p">)</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_turning_point</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_append</span><span class="p">(</span><span class="n">first</span><span class="p">)</span>
 
         <span class="c1"># --A10-- Set the P matrix.</span>
         <span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">])</span>
@@ -164,7 +147,7 @@
                 <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="n">up</span> <span class="o">+</span> <span class="n">dn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">block</span><span class="p">([</span><span class="n">top</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">)])]</span>
             <span class="p">)</span><span class="o">.</span><span class="n">T</span>
 
-            <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">_IN</span><span class="p">)</span>
+            <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">CLA</span><span class="o">.</span><span class="n">_solve</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">bbb</span><span class="p">,</span> <span class="n">_IN</span><span class="p">)</span>
 
             <span class="n">gamma</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">alpha</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">P</span> <span class="o">@</span> <span class="n">beta</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>
@@ -211,9 +194,24 @@
             <span class="n">x</span> <span class="o">=</span> <span class="n">r_alpha</span> <span class="o">+</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">r_beta</span>
 
             <span class="c1"># --A28-- Save the data computed at this corner.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TurningPoint</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_append</span><span class="p">(</span><span class="n">TurningPoint</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">free</span><span class="p">))</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TurningPoint</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">r_alpha</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">))</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_append</span><span class="p">(</span><span class="n">TurningPoint</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">r_alpha</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="n">last</span><span class="o">.</span><span class="n">free</span><span class="p">))</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="CLA._solve">
+<a class="viewcode-back" href="../../../autoapi/cla/markowitz/cla/index.html#cla.markowitz.cla.CLA._solve">[docs]</a>
+    <span class="k">def</span> <span class="nf">_solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">IN</span><span class="p">):</span>
+        <span class="n">OUT</span> <span class="o">=</span> <span class="o">~</span><span class="n">IN</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+
+        <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">bbb</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">OUT</span><span class="p">]</span> <span class="o">@</span> <span class="n">x</span><span class="p">[</span><span class="n">OUT</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="n">x</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">IN</span><span class="p">,</span> <span class="p">:][:,</span> <span class="n">IN</span><span class="p">])</span> <span class="o">@</span> <span class="n">bbb</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span></div>
 </div>
 
 </pre></div>
