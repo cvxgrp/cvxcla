@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # sum w == 1
     # and w >= 0
 
-    # We can solve this problem using Lagrange multipliers
+    # We can _solve this problem using Lagrange multipliers
 
     # -gamma*(sum w - 1)
     # w - s^2 = 0

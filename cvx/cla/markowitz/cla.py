@@ -19,29 +19,15 @@ from cvx.cla.claux import CLAUX
 from cvx.cla.types import TurningPoint
 
 
-def solve(A, b, IN):
-    OUT = ~IN
-    n = A.shape[1]
-    x = np.zeros((n, 2))
-
-    x[OUT, :] = b[OUT, :]
-    bbb = b[IN, :] - A[IN, :][:, OUT] @ x[OUT, :]
-
-    x[IN, :] = np.linalg.inv(A[IN, :][:, IN]) @ bbb
-    return x[:, 0], x[:, 1]
-
-
 @dataclass(frozen=True)
 class CLA(CLAUX):
     def __post_init__(self):
-        self.logger.info("Initializing CLA")
-
         ns = self.mean.shape[0]
         m = self.A.shape[0]
 
         # --A08-- Initialize the portfolio.
-        first = self.first_turning_point()
-        self.append(first)
+        first = self._first_turning_point()
+        self._append(first)
 
         # --A10-- Set the P matrix.
         P = np.block([self.covariance, self.A.T])
@@ -80,7 +66,7 @@ class CLA(CLAUX):
                 [np.block([up + dn, self.b]), np.block([top, np.zeros(m)])]
             ).T
 
-            alpha, beta = solve(M, bbb, _IN)
+            alpha, beta = CLA._solve(M, bbb, _IN)
 
             gamma = P @ alpha
             delta = P @ beta - self.mean
@@ -127,6 +113,18 @@ class CLA(CLAUX):
             x = r_alpha + lam * r_beta
 
             # --A28-- Save the data computed at this corner.
-            self.append(TurningPoint(lamb=lam, weights=x, free=free))
+            self._append(TurningPoint(lamb=lam, weights=x, free=free))
 
-        self.append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
+        self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
+
+    @staticmethod
+    def _solve(A, b, IN):
+        OUT = ~IN
+        n = A.shape[1]
+        x = np.zeros((n, 2))
+
+        x[OUT, :] = b[OUT, :]
+        bbb = b[IN, :] - A[IN, :][:, OUT] @ x[OUT, :]
+
+        x[IN, :] = np.linalg.inv(A[IN, :][:, IN]) @ bbb
+        return x[:, 0], x[:, 1]

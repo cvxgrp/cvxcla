@@ -61,7 +61,7 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
         for a in alphas:
             alpha.setValue(a)
 
-            M.solve()
+            M._solve()
 
             frontier.append((a, np.dot(mu, x.level()), s.level()[0]))
 

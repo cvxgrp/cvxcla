@@ -21,7 +21,7 @@ if __name__ == "__main__":
         )
 
         # Solve the problem
-        M.solve()
+        M._solve()
 
         # Get the solution values
         sol = x.level()

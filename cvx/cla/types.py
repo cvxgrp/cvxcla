@@ -119,6 +119,9 @@ class Frontier:
         yield from self.frontier
 
     def __len__(self):
+        """
+        Number of frontier points
+        """
         return len(self.frontier)
 
     @property
@@ -222,6 +225,9 @@ class Frontier:
         return sharpe_ratio_right, w_right
 
     def plot(self):
+        """
+        Plot the frontier
+        """
         fig = px.line(
             x=self.variance,
             y=self.returns,

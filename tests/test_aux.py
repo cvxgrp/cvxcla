@@ -53,7 +53,7 @@ def test_append(cla):
 
     assert tp.lamb == 2.0
 
-    cla.append(tp)
+    cla._append(tp)
 
     # assert cla.num_points == 1
     assert len(cla) == 1
@@ -67,7 +67,7 @@ def test_append(cla):
 
 
 def test_first_turning_point(cla):
-    tp = cla.first_turning_point()
+    tp = cla._first_turning_point()
     np.testing.assert_almost_equal(
         tp.weights, np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     )
@@ -90,7 +90,7 @@ def test_raise():
             free=np.full_like(cla.mean, fill_value=True, dtype=np.bool_),
             lamb=2.0,
         )
-        cla.append(tp)
+        cla._append(tp)
 
     with pytest.raises(AssertionError):
         tp = TurningPoint(
@@ -98,7 +98,7 @@ def test_raise():
             free=np.full_like(cla.mean, fill_value=True, dtype=np.bool_),
             lamb=2.0,
         )
-        cla.append(tp)
+        cla._append(tp)
 
     with pytest.raises(AssertionError):
         tp = TurningPoint(
@@ -106,4 +106,4 @@ def test_raise():
             free=np.full_like(cla.mean, fill_value=True, dtype=np.bool_),
             lamb=2.0,
         )
-        cla.append(tp)
+        cla._append(tp)

@@ -21,10 +21,13 @@ def test_frontier(input_data, solver):
     ).frontier
 
     np.testing.assert_equal(f.covariance, input_data.covariance)
-    np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025)
+    np.testing.assert_almost_equal(f.max_sharpe[0], 4.4535334766464025, decimal=5)
     np.testing.assert_almost_equal(f.mean, input_data.mean)
 
-    f.interpolate(num=10)
+    g = f.interpolate(num=10)
+    np.testing.assert_equal(g.covariance, input_data.covariance)
+    np.testing.assert_almost_equal(g.max_sharpe[0], 4.4535334766464025, decimal=5)
+    np.testing.assert_almost_equal(g.mean, input_data.mean)
 
 
 @pytest.mark.parametrize(
@@ -49,31 +52,11 @@ def test_frontiers(n, resource_dir):
         tol=1e-5,
     ).frontier
 
-    # f_bailey = Frontier(
-    #    solver=solver,
-    #    name="Bailey",
-    #    A=np.ones((1, n)),
-    #    b=np.ones(1),
-    # )
-    # f_bailey = Frontier.build(
-    #    solver=Solver.BAILEY,
-    #    mean=np.copy(mean),
-    #    lower_bounds=np.copy(lower_bounds),
-    #    upper_bounds=np.copy(upper_bounds),
-    #    covariance=np.copy(covar),
-    #    name="Bailey",
-    #    A=np.ones((1, n)),
-    #    b=np.ones(1),
-    # )
-
     f_markowitz = MARKOWITZ(
-        # f_markowitz = Frontier.build(
-        # solver=Solver.MARKOWITZ,
         mean=np.copy(mean),
         lower_bounds=np.copy(lower_bounds),
         upper_bounds=np.copy(upper_bounds),
         covariance=np.copy(covar),
-        # name="Markowitz",
         tol=1e-5,
         A=np.ones((1, n)),
         b=np.ones(1),

@@ -19,7 +19,7 @@ if __name__ == "__main__":
         M.objective("obj", ObjectiveSense.Maximize, Expr.dot(c, x))
 
         # Solve the problem
-        M.solve()
+        M._solve()
 
         # Get the solution values
         sol = x.level()

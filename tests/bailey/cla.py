@@ -24,7 +24,7 @@ from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint
 class CLA(CLAUX):
     def __post_init__(self):
         # Compute the turning points,free sets and weights
-        self.append(self.first_turning_point())
+        self._append(self._first_turning_point())
 
         while True:
             last = self.turning_points[-1]
@@ -109,7 +109,7 @@ class CLA(CLAUX):
             tp = TurningPoint(weights=weights, lamb=lll, free=f)
 
             # check the turning point
-            self.append(tp)
+            self._append(tp)
 
             logger.info(f"weights: {tp.weights}")
             logger.info(f"free: {tp.free_indices}")
@@ -126,7 +126,7 @@ class CLA(CLAUX):
         w = schur.update_weights(lamb=0)
         # assert np.allclose(x, w, atol=1e-4)
 
-        self.append(TurningPoint(lamb=0, weights=w, free=last.free))
+        self._append(TurningPoint(lamb=0, weights=w, free=last.free))
 
 
 class _Schur:

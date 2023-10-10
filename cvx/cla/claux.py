@@ -25,7 +25,6 @@ from cvx.cla.types import MATRIX, Frontier, FrontierPoint, TurningPoint
 class CLAUX:
     mean: MATRIX
     covariance: MATRIX
-    # frontier: Frontier
     lower_bounds: MATRIX
     upper_bounds: MATRIX
     A: MATRIX
@@ -35,9 +34,12 @@ class CLAUX:
     logger: logging.Logger = logging.getLogger(__name__)
 
     def __len__(self):
+        """
+        Returns the number of turning points
+        """
         return len(self.turning_points)
 
-    def first_turning_point(self):
+    def _first_turning_point(self):
         first = init_algo(
             mean=self.mean,
             lower_bounds=self.lower_bounds,
@@ -45,7 +47,7 @@ class CLAUX:
         )
         return first
 
-    def append(self, tp: TurningPoint, tol=None):
+    def _append(self, tp: TurningPoint, tol=None):
         tol = tol or self.tol
 
         assert np.all(
@@ -60,6 +62,9 @@ class CLAUX:
 
     @property
     def frontier(self):
+        """
+        Returns the frontier
+        """
         return Frontier(
             covariance=self.covariance,
             mean=self.mean,
