@@ -72,7 +72,7 @@ def init_algo_lp(
     upper_bounds: MATRIX,
     A_eq: MATRIX | None = None,
     b_eq: MATRIX | None = None,
-    solver=cp.ECOS,
+    solver=cp.CLARABEL,
     **kwargs
     # A_ub: MATRIX | None = None,
     # b_ub: MATRIX | None = None,
@@ -140,10 +140,3 @@ def _free(w, lower_bounds, upper_bounds):
     free = np.full_like(w, False, dtype=np.bool_)
     free[index] = True
     return free
-
-
-if __name__ == "__main__":
-    w = np.array([0.0, 0.0, 0.0])
-    lower_bounds = np.array([0.0, 0.0, 0.0])
-    upper_bounds = np.array([1.0, 1.0, 1.0])
-    print(_free(w, lower_bounds, upper_bounds))

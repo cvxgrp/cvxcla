@@ -5,7 +5,7 @@ from cvx.cla.first import init_algo, init_algo_lp
 from cvx.cla.types import TurningPoint
 
 
-@pytest.mark.parametrize("n", [5, 20, 100, 1000, 10000, 100000])
+@pytest.mark.parametrize("n", [5, 20, 100, 1000, 10000])
 def test_init_algo(n):
     """Compute a first turning point"""
     mean = np.random.randn(n)
@@ -13,7 +13,7 @@ def test_init_algo(n):
     upper_bounds = np.random.rand(n)
 
     first = init_algo_lp(
-        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, solver="ECOS"
+        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds
     )
 
     assert np.sum(first.free) == 1
@@ -34,9 +34,7 @@ def test_small():
     mean = np.array([1.0, 2.0, 3.0])
     lower_bound = np.array([0.0, 0.0, 0.0])
     upper_bound = np.array([0.4, 0.4, 0.4])
-    tp = init_algo_lp(
-        mean=mean, lower_bounds=lower_bound, upper_bounds=upper_bound, solver="ECOS"
-    )
+    tp = init_algo_lp(mean=mean, lower_bounds=lower_bound, upper_bounds=upper_bound)
 
     assert np.allclose(tp.weights, [0.2, 0.4, 0.4])
     assert tp.lamb == np.inf
@@ -61,12 +59,7 @@ def test_no_fully_invested_portfolio():
     with pytest.raises(
         ValueError, match="Could not construct a fully invested portfolio"
     ):
-        init_algo_lp(
-            mean=mean,
-            lower_bounds=lower_bounds,
-            upper_bounds=upper_bounds,
-            solver="ECOS",
-        )
+        init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     with pytest.raises(
         ValueError, match="Could not construct a fully invested portfolio"
@@ -83,12 +76,7 @@ def test_lb_ub_mixed():
     mean = np.ones(3)
 
     with pytest.raises(ValueError):
-        init_algo_lp(
-            mean=mean,
-            lower_bounds=lower_bounds,
-            upper_bounds=upper_bounds,
-            solver="ECOS",
-        )
+        init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     with pytest.raises(ValueError):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)

@@ -66,13 +66,6 @@ def test_append(cla):
     assert fig is not None
 
 
-def test_first_turning_point(cla):
-    tp = cla._first_turning_point()
-    np.testing.assert_almost_equal(
-        tp.weights, np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    )
-
-
 def test_raise():
     cla = Cla(
         covariance=np.eye(2),

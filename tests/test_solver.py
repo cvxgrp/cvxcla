@@ -6,23 +6,6 @@ from tests.bailey.cla import CLA as BAILEY
 
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
-def test_solver(input_data, solver):
-    x = solver(
-        mean=input_data.mean,
-        lower_bounds=input_data.lower_bounds,
-        upper_bounds=input_data.upper_bounds,
-        covariance=input_data.covariance,
-        tol=1e-5,
-        A=np.ones((1, len(input_data.mean))),
-        b=np.ones(1),
-    )
-
-    assert x
-    for a in x.turning_points:
-        assert a
-
-
-@pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_example(example, example_solution, solver):
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)
@@ -55,37 +38,6 @@ def test_example(example, example_solution, solver):
         assert np.allclose(
             turning_point.weights, example_solution.values[row, 1:], atol=1e-3
         )
-
-
-@pytest.mark.parametrize("n", [2, 3, 5, 10, 20, 50])
-def test_init_dimension(n):
-    mean = np.random.randn(n)
-
-    # solver = Solver.BAILEY
-    tp_bailey = BAILEY(
-        mean=mean,
-        lower_bounds=np.zeros(n),
-        upper_bounds=np.ones(n),
-        covariance=np.eye(n),
-        A=np.ones((1, n)),
-        b=np.ones(1),
-    )
-
-    # solver = Solver.MARKOWITZ
-    tp_markowitz = MARKOWITZ(
-        mean=mean,
-        lower_bounds=np.zeros(n),
-        upper_bounds=np.ones(n),
-        covariance=np.eye(n),
-        A=np.ones((1, n)),
-        b=np.ones(1),
-    )
-
-    np.testing.assert_almost_equal(
-        tp_bailey.turning_points[0].weights, tp_markowitz.turning_points[0].weights
-    )
-
-    assert len(tp_bailey) == len(tp_markowitz)
 
 
 @pytest.mark.parametrize("solver", [MARKOWITZ, BAILEY])

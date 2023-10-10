@@ -60,13 +60,6 @@ class TurningPoint(FrontierPoint):
     lamb: float = np.inf
 
     @property
-    def frontier_point(self):
-        """
-        Returns the frontier point
-        """
-        return FrontierPoint(weights=self.weights)
-
-    @property
     def free_indices(self):
         """
         Returns the indices of the free assets

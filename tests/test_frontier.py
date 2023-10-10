@@ -11,6 +11,9 @@ from tests.bailey.cla import CLA as BAILEY
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_frontier(input_data, solver):
+    """
+    Test the frontier both for Bailey and Markowitz
+    """
     f = solver(
         covariance=input_data.covariance,
         mean=input_data.mean,
@@ -34,6 +37,9 @@ def test_frontier(input_data, solver):
     "n", [2, 2, 2, 3, 3, 3, 5, 5, 5, 5, 10, 20, 20, 20, 20, 20, 20]
 )
 def test_frontiers(n, resource_dir):
+    """
+    Compare the frontiers of BAILEY and MARKOWITZ for a variety of dimensions.
+    """
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
     upper_bounds = np.ones(n)
