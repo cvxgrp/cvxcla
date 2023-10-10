@@ -73,10 +73,6 @@ Attributes
    A turning point is a vector of weights, a lambda value, and a boolean vector
    indicating which assets are free. All assets that are not free are blocked.
 
-   .. py:property:: frontier_point
-
-      Returns the frontier point
-
    .. py:property:: free_indices
 
       Returns the indices of the free assets
