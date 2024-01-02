@@ -9,7 +9,7 @@ packages = [{include = "cvx"}]
 homepage = "https://www.cvxgrp.org/cvxcla"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9"
 numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
@@ -22,7 +22,8 @@ cvxpy = "*"
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 pytest-cov = "*"
-cvxbson = "*"
+cvxbson = ">=0.0.7"
+pre-commit = "*"
 
 [build-system]
 requires = ["poetry-core"]

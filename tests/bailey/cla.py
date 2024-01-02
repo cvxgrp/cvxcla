@@ -14,7 +14,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-from loguru import logger
 
 from cvx.cla.claux import CLAUX
 from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint
@@ -82,9 +81,9 @@ class CLA(CLAUX):
 
             if l_current > 0:
                 # 4) decide lambda
-                logger.info(f"l_in: {l_in}")
-                logger.info(f"l_out: {l_out}")
-                logger.info(f"l_current: {l_current}")
+                # logger.info(f"l_in: {l_in}")
+                # logger.info(f"l_out: {l_out}")
+                # logger.info(f"l_current: {l_current}")
                 f = np.copy(last.free)
                 w = np.copy(last.weights)
 
@@ -111,8 +110,8 @@ class CLA(CLAUX):
             # check the turning point
             self._append(tp)
 
-            logger.info(f"weights: {tp.weights}")
-            logger.info(f"free: {tp.free_indices}")
+            # logger.info(f"weights: {tp.weights}")
+            # logger.info(f"free: {tp.free_indices}")
 
         # 6) compute minimum variance solution
         last = self.turning_points[-1]
