@@ -1,0 +1,84 @@
+:py:mod:`cla.claux`
+===================
+
+.. py:module:: cla.claux
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   cla.claux.CLAUX
+
+
+
+
+.. py:class:: CLAUX
+
+
+   .. py:property:: frontier
+
+      Returns the frontier
+
+   .. py:attribute:: mean
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: covariance
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: lower_bounds
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: upper_bounds
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: A
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: b
+      :type: cvx.cla.types.MATRIX
+
+      
+
+   .. py:attribute:: turning_points
+      :type: List[cvx.cla.types.TurningPoint]
+
+      
+
+   .. py:attribute:: tol
+      :type: float
+      :value: 1e-05
+
+      
+
+   .. py:attribute:: logger
+      :type: logging.Logger
+
+      
+
+   .. py:method:: __len__()
+
+      Returns the number of turning points
+
+
+   .. py:method:: _first_turning_point()
+
+
+   .. py:method:: _append(tp: cvx.cla.types.TurningPoint, tol=None)
+
+
+
