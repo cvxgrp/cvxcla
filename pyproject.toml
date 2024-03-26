@@ -6,7 +6,6 @@ authors = ["Thomas Schmelzer", "Philipp Schiele"]
 readme = "README.md"
 repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
-homepage = "https://www.cvxgrp.org/cvxcla"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
