@@ -1,15 +1,15 @@
-:py:mod:`cla.markowitz`
-=======================
+cla.markowitz
+=============
 
 .. py:module:: cla.markowitz
 
 
 Submodules
 ----------
+
 .. toctree::
-   :titlesonly:
    :maxdepth: 1
 
-   cla/index.rst
+   /autoapi/cla/markowitz/cla/index
 
 

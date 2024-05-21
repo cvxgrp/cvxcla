@@ -1,5 +1,5 @@
-:py:mod:`cla.types`
-===================
+cla.types
+=========
 
 .. py:module:: cla.types
 
@@ -9,11 +9,17 @@
 
 
 
-Module Contents
----------------
+Attributes
+----------
+
+.. autoapisummary::
+
+   cla.types.MATRIX
+   cla.types.BOOLEAN_VECTOR
+
 
 Classes
-~~~~~~~
+-------
 
 .. autoapisummary::
 
@@ -22,34 +28,20 @@ Classes
    cla.types.Frontier
 
 
-
-
-Attributes
-~~~~~~~~~~
-
-.. autoapisummary::
-
-   cla.types.MATRIX
-   cla.types.BOOLEAN_VECTOR
-
+Module Contents
+---------------
 
 .. py:data:: MATRIX
-   :type: typing_extensions.TypeAlias
-
-   
+   :type:  typing_extensions.TypeAlias
 
 .. py:data:: BOOLEAN_VECTOR
-   :type: typing_extensions.TypeAlias
-
-   
+   :type:  typing_extensions.TypeAlias
 
 .. py:class:: FrontierPoint
 
-
    .. py:attribute:: weights
-      :type: MATRIX
+      :type:  MATRIX
 
-      
 
    .. py:method:: __post_init__()
 
@@ -57,6 +49,7 @@ Attributes
    .. py:method:: mean(mean: MATRIX)
 
       Computes the expected return for a turning point
+
 
 
    .. py:method:: variance(covariance: MATRIX)
@@ -67,76 +60,45 @@ Attributes
 
 .. py:class:: TurningPoint
 
-
    Bases: :py:obj:`FrontierPoint`
+
 
    A turning point is a vector of weights, a lambda value, and a boolean vector
    indicating which assets are free. All assets that are not free are blocked.
 
-   .. py:property:: free_indices
-
-      Returns the indices of the free assets
-
-   .. py:property:: blocked_indices
-
-      Returns the indices of the blocked assets
 
    .. py:attribute:: free
-      :type: BOOLEAN_VECTOR
+      :type:  BOOLEAN_VECTOR
 
-      
 
    .. py:attribute:: lamb
-      :type: float
+      :type:  float
 
-      
+
+   .. py:property:: free_indices
+      Returns the indices of the free assets
+
+
+   .. py:property:: blocked_indices
+      Returns the indices of the blocked assets
 
 
 .. py:class:: Frontier
 
-
    A frontier is a list of frontier points. Some of them might be turning points.
 
-   .. py:property:: weights
-
-      Matrix of weights. One row per point
-
-   .. py:property:: returns
-
-      Vector of expected returns.
-
-   .. py:property:: variance
-
-      Vector of expected variances.
-
-   .. py:property:: sharpe_ratio
-
-      Vector of expected Sharpe ratios.
-
-   .. py:property:: volatility
-
-      Vector of expected volatilities.
-
-   .. py:property:: max_sharpe
-
-      Maximal Sharpe ratio on the frontier
-
-      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
 
    .. py:attribute:: mean
-      :type: MATRIX
+      :type:  MATRIX
 
-      
 
    .. py:attribute:: covariance
-      :type: MATRIX
+      :type:  MATRIX
 
-      
 
    .. py:attribute:: frontier
-      :type: list[FrontierPoint]
+      :type:  list[FrontierPoint]
 
-      
 
    .. py:method:: interpolate(num=100)
 
@@ -146,14 +108,43 @@ Attributes
       :returns: A frontier with many new points
 
 
+
    .. py:method:: __iter__()
 
       Iterator for all frontier points
 
 
+
    .. py:method:: __len__()
 
       Number of frontier points
+
+
+
+   .. py:property:: weights
+      Matrix of weights. One row per point
+
+
+   .. py:property:: returns
+      Vector of expected returns.
+
+
+   .. py:property:: variance
+      Vector of expected variances.
+
+
+   .. py:property:: sharpe_ratio
+      Vector of expected Sharpe ratios.
+
+
+   .. py:property:: volatility
+      Vector of expected volatilities.
+
+
+   .. py:property:: max_sharpe
+      Maximal Sharpe ratio on the frontier
+
+      :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
 
 
    .. py:method:: plot()

@@ -1,26 +1,24 @@
-:py:mod:`cla.markowitz.cla`
-===========================
+cla.markowitz.cla
+=================
 
 .. py:module:: cla.markowitz.cla
 
 
-Module Contents
----------------
-
 Classes
-~~~~~~~
+-------
 
 .. autoapisummary::
 
    cla.markowitz.cla.CLA
 
 
-
+Module Contents
+---------------
 
 .. py:class:: CLA
 
-
    Bases: :py:obj:`cvx.cla.claux.CLAUX`
+
 
    .. py:method:: __post_init__()
 

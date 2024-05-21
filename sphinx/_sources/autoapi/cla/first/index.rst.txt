@@ -1,15 +1,11 @@
-:py:mod:`cla.first`
-===================
+cla.first
+=========
 
 .. py:module:: cla.first
 
 
-Module Contents
----------------
-
-
 Functions
-~~~~~~~~~
+---------
 
 .. autoapisummary::
 
@@ -18,6 +14,8 @@ Functions
    cla.first._free
 
 
+Module Contents
+---------------
 
 .. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> cvx.cla.types.TurningPoint
 
@@ -41,7 +39,5 @@ Functions
 
 .. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX, A_eq: cvx.cla.types.MATRIX | None = None, b_eq: cvx.cla.types.MATRIX | None = None, solver=cp.CLARABEL, **kwargs) -> cvx.cla.types.TurningPoint
 
-
 .. py:function:: _free(w, lower_bounds, upper_bounds)
-
 

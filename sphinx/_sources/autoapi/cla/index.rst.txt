@@ -1,26 +1,26 @@
-:py:mod:`cla`
-=============
+cla
+===
 
 .. py:module:: cla
 
 
 Subpackages
 -----------
-.. toctree::
-   :titlesonly:
-   :maxdepth: 3
 
-   markowitz/index.rst
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/cla/markowitz/index
 
 
 Submodules
 ----------
+
 .. toctree::
-   :titlesonly:
    :maxdepth: 1
 
-   claux/index.rst
-   first/index.rst
-   types/index.rst
+   /autoapi/cla/claux/index
+   /autoapi/cla/first/index
+   /autoapi/cla/types/index
 
 
