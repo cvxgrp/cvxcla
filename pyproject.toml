@@ -16,7 +16,7 @@ plotly = "*"
 [tool.poetry.dev-dependencies]
 loguru = "*"
 pandas = "*"
-cvxpy = "*"
+cvxpy-base = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
