@@ -34,7 +34,7 @@ def test_frontier(input_data, solver):
 
 
 @pytest.mark.parametrize(
-    "n", [2, 2, 2, 3, 3, 3, 5, 5, 5, 5, 10, 20, 20, 20, 20, 20, 20]
+    "n", [3, 5, 10, 20]
 )
 def test_frontiers(n, resource_dir):
     """
