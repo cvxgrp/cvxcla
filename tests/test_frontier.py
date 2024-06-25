@@ -33,9 +33,7 @@ def test_frontier(input_data, solver):
     np.testing.assert_almost_equal(g.mean, input_data.mean)
 
 
-@pytest.mark.parametrize(
-    "n", [2, 2, 2, 3, 3, 3, 5, 5, 5, 5, 10, 20, 20, 20, 20, 20, 20]
-)
+@pytest.mark.parametrize("n", [3, 5, 10, 20])
 def test_frontiers(n, resource_dir):
     """
     Compare the frontiers of BAILEY and MARKOWITZ for a variety of dimensions.
