@@ -147,7 +147,7 @@ Module Contents
       :returns: Tuple of maximal Sharpe ratio and the weights to achieve it
 
 
-   .. py:method:: plot()
+   .. py:method:: plot(volatility=False, markers=True)
 
       Plot the frontier
 
