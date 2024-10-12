@@ -95,7 +95,7 @@ class Frontier:
         """
 
         def _interpolate():
-            for w_left, w_right in zip(self.weights[0:-1], self.weights[1:]):
+            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:]):
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
                         yield FrontierPoint(
@@ -217,14 +217,22 @@ class Frontier:
 
         return sharpe_ratio_right, w_right
 
-    def plot(self):
+    def plot(self, volatility=False, markers=True):
         """
         Plot the frontier
         """
-        fig = px.line(
-            x=self.variance,
-            y=self.returns,
-            markers=True,
-            labels={"x": "Expected variance", "y": "Expected Return"},
-        )
+        if not volatility:
+            fig = px.line(
+                x=self.variance,
+                y=self.returns,
+                markers=markers,
+                labels={"x": "Expected variance", "y": "Expected Return"},
+            )
+        else:
+            fig = px.line(
+                x=self.volatility,
+                y=self.returns,
+                markers=markers,
+                labels={"x": "Expected volatility", "y": "Expected Return"},
+            )
         return fig
