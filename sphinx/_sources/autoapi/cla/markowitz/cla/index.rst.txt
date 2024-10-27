@@ -17,7 +17,7 @@ Module Contents
 
 .. py:class:: CLA
 
-   Bases: :py:obj:`cvx.cla.claux.CLAUX`
+   Bases: :py:obj:`cla.claux.CLAUX`
 
 
    .. py:method:: __post_init__()

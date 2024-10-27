@@ -76,10 +76,12 @@ Module Contents
 
 
    .. py:property:: free_indices
+
       Returns the indices of the free assets
 
 
    .. py:property:: blocked_indices
+
       Returns the indices of the blocked assets
 
 
@@ -122,26 +124,32 @@ Module Contents
 
 
    .. py:property:: weights
+
       Matrix of weights. One row per point
 
 
    .. py:property:: returns
+
       Vector of expected returns.
 
 
    .. py:property:: variance
+
       Vector of expected variances.
 
 
    .. py:property:: sharpe_ratio
+
       Vector of expected Sharpe ratios.
 
 
    .. py:property:: volatility
+
       Vector of expected volatilities.
 
 
    .. py:property:: max_sharpe
+
       Maximal Sharpe ratio on the frontier
 
       :returns: Tuple of maximal Sharpe ratio and the weights to achieve it

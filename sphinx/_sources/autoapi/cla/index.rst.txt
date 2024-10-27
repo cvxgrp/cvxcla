@@ -4,15 +4,6 @@ cla
 .. py:module:: cla
 
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 1
-
-   /autoapi/cla/markowitz/index
-
-
 Submodules
 ----------
 
@@ -21,6 +12,31 @@ Submodules
 
    /autoapi/cla/claux/index
    /autoapi/cla/first/index
+   /autoapi/cla/markowitz/index
    /autoapi/cla/types/index
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cla.CLA
+
+
+Package Contents
+----------------
+
+.. py:class:: CLA
+
+   Bases: :py:obj:`cla.claux.CLAUX`
+
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: _solve(A, b, IN)
+      :staticmethod:
+
 
 

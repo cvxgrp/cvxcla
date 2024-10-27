@@ -17,7 +17,7 @@ Functions
 Module Contents
 ---------------
 
-.. py:function:: init_algo(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX) -> cvx.cla.types.TurningPoint
+.. py:function:: init_algo(mean: cla.types.MATRIX, lower_bounds: cla.types.MATRIX, upper_bounds: cla.types.MATRIX) -> cla.types.TurningPoint
 
    The key insight behind Markowitz’s CLA is to find first the
    turning point associated with the highest expected return, and then
@@ -37,7 +37,7 @@ Module Contents
    and the resulting vector of weights the first turning point.
 
 
-.. py:function:: init_algo_lp(mean: cvx.cla.types.MATRIX, lower_bounds: cvx.cla.types.MATRIX, upper_bounds: cvx.cla.types.MATRIX, A_eq: cvx.cla.types.MATRIX | None = None, b_eq: cvx.cla.types.MATRIX | None = None, solver=cp.CLARABEL, **kwargs) -> cvx.cla.types.TurningPoint
+.. py:function:: init_algo_lp(mean: cla.types.MATRIX, lower_bounds: cla.types.MATRIX, upper_bounds: cla.types.MATRIX, A_eq: cla.types.MATRIX | None = None, b_eq: cla.types.MATRIX | None = None, solver=cp.CLARABEL, **kwargs) -> cla.types.TurningPoint
 
 .. py:function:: _free(w, lower_bounds, upper_bounds)
 

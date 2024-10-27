@@ -18,31 +18,31 @@ Module Contents
 .. py:class:: CLAUX
 
    .. py:attribute:: mean
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: covariance
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: lower_bounds
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: upper_bounds
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: A
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: b
-      :type:  cvx.cla.types.MATRIX
+      :type:  cla.types.MATRIX
 
 
    .. py:attribute:: turning_points
-      :type:  List[cvx.cla.types.TurningPoint]
+      :type:  List[cla.types.TurningPoint]
 
 
    .. py:attribute:: tol
@@ -64,10 +64,11 @@ Module Contents
    .. py:method:: _first_turning_point()
 
 
-   .. py:method:: _append(tp: cvx.cla.types.TurningPoint, tol=None)
+   .. py:method:: _append(tp: cla.types.TurningPoint, tol=None)
 
 
    .. py:property:: frontier
+
       Returns the frontier
 
 
