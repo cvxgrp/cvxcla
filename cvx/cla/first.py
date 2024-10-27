@@ -16,7 +16,7 @@ from __future__ import annotations
 import cvxpy as cp
 import numpy as np
 
-from cvx.cla.types import MATRIX, TurningPoint
+from .types import MATRIX, TurningPoint
 
 
 #
