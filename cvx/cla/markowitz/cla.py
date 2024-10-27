@@ -15,8 +15,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from cvx.cla.claux import CLAUX
-from cvx.cla.types import TurningPoint
+from ..claux import CLAUX
+from ..types import TurningPoint
 
 
 @dataclass(frozen=True)
