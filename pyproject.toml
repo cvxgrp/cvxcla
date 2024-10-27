@@ -12,6 +12,7 @@ python = ">=3.9,<3.12"
 numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
+typing_extensions = "*"
 
 [tool.poetry.dev-dependencies]
 loguru = "*"
