@@ -17,8 +17,8 @@ from typing import List
 
 import numpy as np
 
-from cvx.cla.first import init_algo
-from cvx.cla.types import MATRIX, Frontier, FrontierPoint, TurningPoint
+from .first import init_algo
+from .types import MATRIX, Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
