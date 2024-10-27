@@ -13,12 +13,13 @@ numpy = "*"
 scipy = ">=1.10.0"
 plotly = "*"
 typing_extensions = "*"
+cvxpy = "*"
 
 [tool.poetry.dev-dependencies]
 loguru = "*"
 pandas = "*"
-cvxpy-base = "*"
-clarabel = "*"
+#cvxpy-base = "*"
+#clarabel = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
