@@ -40,3 +40,6 @@ exclude = [
     ".venv",
     "experiments"
 ]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["clarabel"]
