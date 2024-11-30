@@ -1,45 +1,53 @@
-[tool.poetry]
+[project]
 name = "cvxcla"
 version = "0.0.0"
 description = "Critical line algorithm for the efficient frontier"
-authors = ["Thomas Schmelzer", "Philipp Schiele"]
 readme = "README.md"
 repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-numpy = "*"
-scipy = ">=1.10.0"
-plotly = "*"
-typing_extensions = "*"
-cvxpy-base = "*"
-clarabel = "*"
 
-[tool.poetry.dev-dependencies]
-loguru = "*"
-pandas = "*"
-#cvxpy-base = "*"
-#clarabel = "*"
 
-[tool.poetry.group.test.dependencies]
-pytest = "*"
-pytest-cov = "*"
-cvxbson = "*"
+requires-python = ">=3.10"
+dependencies = [
+    "cvxpy-base>=1.6.0",
+    "numpy>=2.1.3",
+    "scipy>=1.14.1",
+    "clarabel",
+    "typing_extensions",
+    "plotly",
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+
+]
+# add Philipp
+authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"}]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=6.0.0",
+    "pytest>=8.3.3",
+    "pre-commit>=4.0.1",
+    "clarabel>=0.9.0",
+    "loguru",
+    "pandas",
+    "cvxbson"
+]
 
 [tool.ruff]
 select = ["E", "F", "I"]
 line-length = 120
 target-version = "py310"
 exclude = [
-    "*__init__.py",
-    ".venv",
-    "experiments"
+    "*__init__.py"
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cvx"]
+
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["clarabel"]
