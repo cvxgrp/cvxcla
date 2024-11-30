@@ -9,7 +9,7 @@ def f(lamb):
     gamma = numer / denom
 
     w = lamb * np.linalg.inv(Sigma) @ mu + gamma * np.sum(np.linalg.inv(Sigma), axis=1)
-    logger.info(f"********************************************************")
+    logger.info("********************************************************")
     logger.info(f"Lambda: {lamb}")
     logger.info(f"Gamma: {gamma}")
     logger.info(f"Weights: {w}")

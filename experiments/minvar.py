@@ -1,6 +1,5 @@
-import numpy as np
 import cvxpy as cp
-
+import numpy as np
 from loguru import logger
 
 

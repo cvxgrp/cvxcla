@@ -1,4 +1,4 @@
-from mosek.fusion import *
+from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 from cvx.bson import read_bson
 
