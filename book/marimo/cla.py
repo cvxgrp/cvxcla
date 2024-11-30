@@ -6,21 +6,14 @@ app = marimo.App()
 
 @app.cell
 def __(mo):
-    mo.md(
-        r"""
-        # Critical Line Algorithm
-        """
-    )
+    mo.md(r"""# Critical Line Algorithm""")
     return
 
 
 @app.cell
 def __(mo):
     mo.md(
-        r"""
-        We compute an efficient frontier using the critical line algorithm (cla)
-
-        """
+        r"""We compute an efficient frontier using the critical line algorithm (cla)"""
     )
     return
 
