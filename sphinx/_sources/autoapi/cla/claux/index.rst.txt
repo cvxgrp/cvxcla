@@ -43,6 +43,8 @@ Module Contents
 
    .. py:attribute:: turning_points
       :type:  List[cla.types.TurningPoint]
+      :value: []
+
 
 
    .. py:attribute:: tol

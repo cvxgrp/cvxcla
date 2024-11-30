@@ -100,6 +100,8 @@ Module Contents
 
    .. py:attribute:: frontier
       :type:  list[FrontierPoint]
+      :value: []
+
 
 
    .. py:method:: interpolate(num=100)
