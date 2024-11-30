@@ -1,4 +1,4 @@
-from mosek.fusion import *
+from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 if __name__ == "__main__":
     A = [[3.0, 1.0, 2.0, 0.0], [2.0, 1.0, 3.0, 1.0], [0.0, 2.0, 0.0, 3.0]]

@@ -10,7 +10,7 @@
 
 
 import numpy as np
-from mosek.fusion import *
+from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 """
 Purpose:
