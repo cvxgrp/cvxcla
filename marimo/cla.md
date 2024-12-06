@@ -1,6 +1,6 @@
 ---
 title: Cla
-marimo-version: 0.9.27
+marimo-version: 0.9.31
 ---
 
 # Critical Line Algorithm
