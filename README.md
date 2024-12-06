@@ -88,3 +88,8 @@ make marimo
 ```
 
 will install and start marimo.
+
+## previous work
+
+In the [repo](https://github.com/phschiele/PyCLA) by Philipp Schiele.
+
