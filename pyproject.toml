@@ -3,7 +3,6 @@ name = "cvxcla"
 version = "0.0.0"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
-repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +16,10 @@ dependencies = [
 
 # add Philipp
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"}]
+
+[project.urls]
+repository = "https://github.com/cvxgrp/cvxcla"
+
 
 [dependency-groups]
 dev = [
