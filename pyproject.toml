@@ -5,9 +5,6 @@ description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 repository = "https://github.com/cvxgrp/cvxcla"
 packages = [{include = "cvx"}]
-
-
-
 requires-python = ">=3.10"
 dependencies = [
     "cvxpy-base>=1.6.0",
@@ -15,10 +12,9 @@ dependencies = [
     "scipy>=1.14.1",
     "clarabel",
     "typing_extensions",
-    "plotly",
-
-
+    "plotly"
 ]
+
 # add Philipp
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"}]
 
@@ -47,7 +43,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cvx"]
-
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["clarabel"]
