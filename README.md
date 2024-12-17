@@ -68,10 +68,11 @@ the additional complexity.
 
 ## uv
 
+You need to install [task](https://taskfile.dev).
 Starting with
 
 ```bash
-make install
+task cvxcla:install
 ```
 
 will install [uv](https://github.com/astral-sh/uv) and create
@@ -84,7 +85,7 @@ We install [marimo](https://marimo.io) on the fly within the aforementioned
 virtual environment. Executing
 
 ```bash
-make marimo
+task cvxcla:marimo
 ```
 
 will install and start marimo.
