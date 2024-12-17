@@ -19,14 +19,14 @@ Before sending a pull request, make sure you do the following:
 ## Building cvxcla from source
 
 You'll need to build cvxcla locally in order to start editing code.
+Please install [task](https://taskfile.dev)
+
 To install cvxcla from source, clone the Github
 repository, navigate to its root, and run the following command:
 
 ```bash
-make install
+task cvxcla:install
 ```
-
-We assume you have [poetry](https://python-poetry.org) installed.
 
 ## Contributing code
 
@@ -63,7 +63,7 @@ Before sending us a pull request, navigate to the project root
 and run
 
 ```bash
-make fmt
+task cvxcla:fmt
 ```
 
 to make sure that your changes abide by our style conventions. Please fix any
@@ -87,13 +87,13 @@ We use `pytest` to run our unit tests.
 To run all unit tests run the following command:
 
 ```bash
-make test
+task cvxcla:test
 ```
 
 We keep a close eye on our coverage via
 
 ```bash
-make coverage
+task cvxcla:coverage
 ```
 
 Please make sure that your change doesn't cause any of the unit tests to fail.
