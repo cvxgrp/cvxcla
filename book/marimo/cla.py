@@ -12,9 +12,7 @@ def __(mo):
 
 @app.cell
 def __(mo):
-    mo.md(
-        r"""We compute an efficient frontier using the critical line algorithm (cla)"""
-    )
+    mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla)""")
     return
 
 

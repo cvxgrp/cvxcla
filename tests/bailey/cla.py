@@ -131,13 +131,7 @@ class CLA(CLAUX):
 
 class _Schur:
     def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
-        assert (
-            covariance.shape[0]
-            == covariance.shape[1]
-            == mean.shape[0]
-            == free.shape[0]
-            == weights.shape[0]
-        )
+        assert covariance.shape[0] == covariance.shape[1] == mean.shape[0] == free.shape[0] == weights.shape[0]
         self.covariance = covariance
         self.mean = mean
         self.free = free

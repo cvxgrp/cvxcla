@@ -22,9 +22,7 @@ def test_solver(input_data, results):
     observed = np.array([tp.mean(input_data.mean) for tp in cla.turning_points[1:]])
     assert np.allclose(results.mean, observed, atol=1e-2)
 
-    observed = np.array(
-        [tp.variance(input_data.covariance) for tp in cla.turning_points[1:]]
-    )
+    observed = np.array([tp.variance(input_data.covariance) for tp in cla.turning_points[1:]])
     assert np.allclose(results.variance, observed, atol=0.5)
 
 
@@ -33,9 +31,7 @@ def test_example(example, example_solution):
     means = example.mean(axis=0)
     std = example.std(axis=0, ddof=1)
     assert np.allclose(means.values, np.array([0.062, 0.146, 0.128]), atol=1e-3)
-    assert np.allclose(
-        np.power(std.values, 2), np.array([0.016, 0.091, 0.031]), atol=1e-3
-    )
+    assert np.allclose(np.power(std.values, 2), np.array([0.016, 0.091, 0.031]), atol=1e-3)
 
     ns = example.shape[1]
 
@@ -43,9 +39,7 @@ def test_example(example, example_solution):
     upper_bounds = 0.5 * np.ones(ns)
 
     # covariance = example.cov().values
-    tp = init_algo_lp(
-        mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds
-    )
+    tp = init_algo_lp(mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
     assert np.allclose(tp.weights, np.array([0.1, 0.5, 0.4]), atol=1e-9)
     assert np.allclose(tp.free, np.array([False, False, True]))
 
@@ -60,10 +54,6 @@ def test_example(example, example_solution):
 
     for row, turning_point in enumerate(cla.turning_points):
         if row > 0:
-            assert turning_point.lamb == pytest.approx(
-                example_solution["lambda"][row], abs=1e-3
-            )
+            assert turning_point.lamb == pytest.approx(example_solution["lambda"][row], abs=1e-3)
 
-        assert np.allclose(
-            turning_point.weights, example_solution.values[row, 1:], atol=1e-3
-        )
+        assert np.allclose(turning_point.weights, example_solution.values[row, 1:], atol=1e-3)

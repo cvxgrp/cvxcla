@@ -49,9 +49,7 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Turni
     # Move weights from lower to upper bound
     # until sum of weights hits or exceeds 1
     for index in np.argsort(-mean):
-        weights[index] += np.min(
-            [upper_bounds[index] - lower_bounds[index], 1.0 - np.sum(weights)]
-        )
+        weights[index] += np.min([upper_bounds[index] - lower_bounds[index], 1.0 - np.sum(weights)])
         if np.sum(weights) >= 1:
             free[index] = True
             break
@@ -73,7 +71,7 @@ def init_algo_lp(
     A_eq: MATRIX | None = None,
     b_eq: MATRIX | None = None,
     solver=cp.CLARABEL,
-    **kwargs
+    **kwargs,
     # A_ub: MATRIX | None = None,
     # b_ub: MATRIX | None = None,
 ) -> TurningPoint:
@@ -131,9 +129,7 @@ def init_algo_lp(
 
 
 def _free(w, lower_bounds, upper_bounds):
-    distance = np.min(
-        np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0
-    )
+    distance = np.min(np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0)
 
     index = np.argmax(distance)
 

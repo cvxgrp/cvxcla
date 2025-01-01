@@ -50,12 +50,8 @@ class CLAUX:
     def _append(self, tp: TurningPoint, tol=None):
         tol = tol or self.tol
 
-        assert np.all(
-            tp.weights >= (self.lower_bounds - tol)
-        ), f"{(tp.weights + tol) - self.lower_bounds}"
-        assert np.all(
-            tp.weights <= (self.upper_bounds + tol)
-        ), f"{(self.upper_bounds + tol) - tp.weights}"
+        assert np.all(tp.weights >= (self.lower_bounds - tol)), f"{(tp.weights + tol) - self.lower_bounds}"
+        assert np.all(tp.weights <= (self.upper_bounds + tol)), f"{(self.upper_bounds + tol) - tp.weights}"
         assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
 
         self.turning_points.append(tp)

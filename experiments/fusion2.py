@@ -16,9 +16,7 @@ if __name__ == "__main__":
 
         M.constraint("fully-invested", Expr.sum(x), Domain.equalsTo(1.0))
 
-        M.objective(
-            "expected_return", ObjectiveSense.Maximize, Expr.dot(data["mean"], x)
-        )
+        M.objective("expected_return", ObjectiveSense.Maximize, Expr.dot(data["mean"], x))
 
         # Solve the problem
         M._solve()

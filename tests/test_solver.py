@@ -11,9 +11,7 @@ def test_example(example, example_solution, solver):
     means = example.mean(axis=0)
     std = example.std(axis=0, ddof=1)
     assert np.allclose(means.values, np.array([0.062, 0.146, 0.128]), atol=1e-3)
-    assert np.allclose(
-        np.power(std.values, 2), np.array([0.016, 0.091, 0.031]), atol=1e-3
-    )
+    assert np.allclose(np.power(std.values, 2), np.array([0.016, 0.091, 0.031]), atol=1e-3)
 
     ns = example.shape[1]
 
@@ -31,13 +29,9 @@ def test_example(example, example_solution, solver):
 
     for row, turning_point in enumerate(cla.turning_points):
         if row > 0:
-            assert turning_point.lamb == pytest.approx(
-                example_solution["lambda"][row], abs=1e-3
-            )
+            assert turning_point.lamb == pytest.approx(example_solution["lambda"][row], abs=1e-3)
 
-        assert np.allclose(
-            turning_point.weights, example_solution.values[row, 1:], atol=1e-3
-        )
+        assert np.allclose(turning_point.weights, example_solution.values[row, 1:], atol=1e-3)
 
 
 @pytest.mark.parametrize("solver", [MARKOWITZ, BAILEY])

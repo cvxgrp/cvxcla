@@ -45,9 +45,7 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
         M.constraint("budget", Expr.sum(x), Domain.equalsTo(w + sum(x0)))
 
         # Computes the risk
-        M.constraint(
-            "variance", Expr.vstack(s, 0.5, Expr.mul(GT, x)), Domain.inRotatedQCone()
-        )
+        M.constraint("variance", Expr.vstack(s, 0.5, Expr.mul(GT, x)), Domain.inRotatedQCone())
 
         # Define objective as a weighted combination of return and variance
         alpha = M.parameter()
@@ -103,13 +101,9 @@ if __name__ == "__main__":
         10.0,
     ]
     frontier = EfficientFrontier(n, mu, GT, x0, w, alphas)
-    print(
-        "\n-----------------------------------------------------------------------------------"
-    )
+    print("\n-----------------------------------------------------------------------------------")
     print("Efficient frontier")
-    print(
-        "-----------------------------------------------------------------------------------\n"
-    )
+    print("-----------------------------------------------------------------------------------\n")
     print("%-12s  %-12s  %-12s" % ("alpha", "return", "risk (std. dev.)"))
     for i in frontier:
         print("{:<12.4f}  {:<12.4e}  {:<12.4e}".format(i[0], i[1], np.sqrt(i[2])))

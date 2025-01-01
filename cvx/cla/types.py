@@ -14,6 +14,7 @@
 """
 types
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -98,9 +99,7 @@ class Frontier:
             for w_right, w_left in zip(self.weights[0:-1], self.weights[1:]):
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
-                        yield FrontierPoint(
-                            weights=lamb * w_left + (1 - lamb) * w_right
-                        )
+                        yield FrontierPoint(weights=lamb * w_left + (1 - lamb) * w_right)
 
         points = list(_interpolate())
         return Frontier(frontier=points, mean=self.mean, covariance=self.covariance)
@@ -188,9 +187,7 @@ class Frontier:
                 bounds=((0, 1),),
             )
             var = out["x"][0]
-            w_right = (
-                var * self.weights[sr_position_max] + (1 - var) * self.weights[right]
-            )
+            w_right = var * self.weights[sr_position_max] + (1 - var) * self.weights[right]
             sharpe_ratio_right = -out["fun"]
         else:
             w_right = self.weights[sr_position_max]
@@ -204,9 +201,7 @@ class Frontier:
                 bounds=((0, 1),),
             )
             var = out["x"][0]
-            w_left = (
-                var * self.weights[left] + (1 - var) * self.weights[sr_position_max]
-            )
+            w_left = var * self.weights[left] + (1 - var) * self.weights[sr_position_max]
             sharpe_ratio_left = -out["fun"]
         else:
             w_left = self.weights[sr_position_max]

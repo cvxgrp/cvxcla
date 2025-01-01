@@ -60,9 +60,7 @@ class CLA(CLAUX):
 
             _IN = np.concatenate([IN, np.ones(m, dtype=np.bool_)])
 
-            bbb = np.array(
-                [np.block([up + dn, self.b]), np.block([top, np.zeros(m)])]
-            ).T
+            bbb = np.array([np.block([up + dn, self.b]), np.block([top, np.zeros(m)])]).T
 
             alpha, beta = CLA._solve(M, bbb, _IN)
 

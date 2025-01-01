@@ -12,9 +12,7 @@ def test_init_algo(n):
     lower_bounds = np.zeros(n)
     upper_bounds = np.random.rand(n)
 
-    first = init_algo_lp(
-        mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds
-    )
+    first = init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     assert np.sum(first.free) == 1
     assert np.sum(first.weights) == pytest.approx(1.0)
@@ -56,14 +54,10 @@ def test_no_fully_invested_portfolio():
     lower_bounds = np.array([0.0, 0.0, 0.0])
     upper_bounds = np.array([0.2, 0.2, 0.2])
 
-    with pytest.raises(
-        ValueError, match="Could not construct a fully invested portfolio"
-    ):
+    with pytest.raises(ValueError, match="Could not construct a fully invested portfolio"):
         init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
-    with pytest.raises(
-        ValueError, match="Could not construct a fully invested portfolio"
-    ):
+    with pytest.raises(ValueError, match="Could not construct a fully invested portfolio"):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
 

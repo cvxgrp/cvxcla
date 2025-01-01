@@ -10,12 +10,8 @@ if __name__ == "__main__":
 
     logger.info("Hello")
 
-    tp = init_algo(
-        mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound
-    )
+    tp = init_algo(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
     print(np.where(tp.free)[0])
 
-    tp = init_algo_lp(
-        mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound
-    )
+    tp = init_algo_lp(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
     print(np.where(tp.free)[0])
