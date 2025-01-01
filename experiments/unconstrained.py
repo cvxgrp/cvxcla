@@ -4,9 +4,9 @@ from loguru import logger
 
 def f(lamb):
     denom = np.sum(np.sum(np.linalg.inv(Sigma), axis=1))
-    numer = 1 - lamb * np.sum(np.linalg.inv(Sigma) @ mu)
+    numerator = 1 - lamb * np.sum(np.linalg.inv(Sigma) @ mu)
 
-    gamma = numer / denom
+    gamma = numerator / denom
 
     w = lamb * np.linalg.inv(Sigma) @ mu + gamma * np.sum(np.linalg.inv(Sigma), axis=1)
     logger.info("********************************************************")

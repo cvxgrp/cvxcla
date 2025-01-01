@@ -3,7 +3,6 @@ name = "cvxcla"
 version = "0.0.0"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
-packages = [{include = "cvx"}]
 requires-python = ">=3.10"
 dependencies = [
     "cvxpy-base>=1.6.0",
