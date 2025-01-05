@@ -10,7 +10,7 @@ jobs:
       - name: Checkout [${{ github.repository }}]
         uses: actions/checkout@v4
 
-      - uses: cvxgrp/.github/actions/uv/marimo@main
+      - uses: cvxgrp/.github/actions/uv/marimo@v2.0.0
 
   sphinx:
     runs-on: "ubuntu-latest"
