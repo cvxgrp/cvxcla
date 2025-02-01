@@ -1,0 +1,30 @@
+cla.markowitz.cla
+=================
+
+.. py:module:: cla.markowitz.cla
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   cla.markowitz.cla.CLA
+
+
+Module Contents
+---------------
+
+.. py:class:: CLA
+
+   Bases: :py:obj:`cla.claux.CLAUX`
+
+
+   .. py:method:: __post_init__()
+
+
+   .. py:method:: _solve(A, b, IN)
+      :staticmethod:
+
+
+

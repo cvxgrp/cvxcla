@@ -1,0 +1,15 @@
+cla.markowitz
+=============
+
+.. py:module:: cla.markowitz
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/cla/markowitz/cla/index
+
+
