@@ -117,7 +117,7 @@ toml = [
 
 [[package]]
 name = "cvxbson"
-version = "0.1.3"
+version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bson" },
@@ -127,9 +127,9 @@ dependencies = [
     { name = "pyarrow" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/df/36/df50f2c1e1d5f0ac413cf6443e4dd81f60c4fa88fbe71de172cae2379641/cvxbson-0.1.3.tar.gz", hash = "sha256:819a45104b4cc448566307710317dad7d4f3e0998209b31ecff8e52edd9e0309", size = 58757 }
+sdist = { url = "https://files.pythonhosted.org/packages/04/ea/e8cb01469f33931c6d8540c05267bd3c712c2c8ff18be9d3cf883f1c52c1/cvxbson-0.1.4.tar.gz", hash = "sha256:c952b32bc94422cad224b696fac6276b57dae465b76de9f57e4446ea2af2c524", size = 58153 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/dc/82255070ab9db3e044db8a34aa16bb18ea280e469ea50a2e7242c694f936/cvxbson-0.1.3-py3-none-any.whl", hash = "sha256:d0fc0e2714da47a5adbdc4e3b13a514920a29af167d1100b60436055ffcbea38", size = 12085 },
+    { url = "https://files.pythonhosted.org/packages/5d/81/7dcf305fe6a947ce1620b87a52f1d64646d20f97a1db9da96a89c4049eea/cvxbson-0.1.4-py3-none-any.whl", hash = "sha256:77f915e5a590487c74709aaa9feb9b7b79401d2a2f87fe20a07dc00e8c383c71", size = 12086 },
 ]
 
 [[package]]
