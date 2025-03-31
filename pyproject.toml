@@ -53,4 +53,3 @@ DEP002 = ["clarabel"]
 [tool.deptry]
 # see https://deptry.com/usage/#pep-621-dev-dependency-groups
 pep621_dev_dependency_groups = ["dev"]
-
