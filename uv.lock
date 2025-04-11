@@ -266,11 +266,11 @@ wheels = [
 
 [[package]]
 name = "narwhals"
-version = "1.33.0"
+version = "1.34.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/85/fd/484aa8bb557f97a1781f38c78b79f795a2fa320e4165c4230f679937d1e8/narwhals-1.33.0.tar.gz", hash = "sha256:6233d2457debf4b5fe4a1da54530c6fe2d84326f4a8e3bca35bbbff580a347cb", size = 262554 }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/6d/0ad9e8fe41dba509f1c3241a46e52c9677eb9f67f7eb3c8018b1ae088469/narwhals-1.34.1.tar.gz", hash = "sha256:8941a08cf62f39ae67be945090b20a19c51fb9048ac909cad2f95aee23f9e302", size = 265602 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/c1/e9bc6b67c774e7c1f939c91ea535f18f7644fedc61b20d6baa861ad52b34/narwhals-1.33.0-py3-none-any.whl", hash = "sha256:f653319112fd121a1f1c18a40cf70dada773cdacfd53e62c2aa0afae43c17129", size = 322750 },
+    { url = "https://files.pythonhosted.org/packages/b0/a2/2ea3f2058ae661b06fad1a14c0f29f1cc8e49478d02a2d68f0eac3872b86/narwhals-1.34.1-py3-none-any.whl", hash = "sha256:aee49a30d1624371ad975ede2bab16cd125ab5df0fd185e2f4757e103b074d27", size = 325548 },
 ]
 
 [[package]]
@@ -434,16 +434,16 @@ wheels = [
 
 [[package]]
 name = "polars"
-version = "1.26.0"
+version = "1.27.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/72/c2/56a750b82e74c5af7b821215eab3ee992d9ef11310dad353f5b2086ef7db/polars-1.26.0.tar.gz", hash = "sha256:b5492d38e5ec2ae6a8853833c5a31549194a361b901134fc5f2f57b49bd563ea", size = 4522991 }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/c1/e9a960a15b605fdfb59f8b96ed5652bafb06a53d61d0fa47bbe74973b5d9/polars-1.27.0.tar.gz", hash = "sha256:5207355926ad0a6a1b6e5c97fc8106f5c0618a22f5aaa84db233d77b10ef8118", size = 4555129 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/99/ce4427576a6134504e6dd58f5d411d55b228a05950c5fff5b75e90263cb1/polars-1.26.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:2afefcd356608981b2e15d46df9ddaa6e77f36095ebeb73c3261e198bd51c925", size = 34767938 },
-    { url = "https://files.pythonhosted.org/packages/e3/0a/5c9455ff271c3583bf0fd505911e5787ca7bc0f247968853cb6dcfbedffb/polars-1.26.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:587eb3c5000423eb20be998f523e605ddba0d3c598ba4a7e2a4d0b92b1fd2a7e", size = 31612374 },
-    { url = "https://files.pythonhosted.org/packages/6c/0a/c9e388b35533fc1827eaeb0f3940ba0a1058511bf77aaa689ebb1b0bef88/polars-1.26.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:66c30f4b7e060c2e7f3a45d6ac94ab3b179831a2f1e629401bf7912d54311529", size = 35404704 },
-    { url = "https://files.pythonhosted.org/packages/e6/eb/b420131563a42ac0866224aa6284a356107d036c32d825c5478767a1446e/polars-1.26.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:110d6987d37ae954a5ef16d739fb717df9d39b144790d12d98fb3e72ed35621c", size = 32569800 },
-    { url = "https://files.pythonhosted.org/packages/e9/8d/b28ae5d63a4bafdfe81d132efc6b8d076ef2c866ecbf5d24ca3b1f53b88b/polars-1.26.0-cp39-abi3-win_amd64.whl", hash = "sha256:189a58aaf393003515fa6d83e2dea815a2b448265f2007a926274ed12672583c", size = 35617074 },
-    { url = "https://files.pythonhosted.org/packages/af/21/7a76c58203f0806cb5b1155e4994693e618d4de5ca6a34388ae85267ccc4/polars-1.26.0-cp39-abi3-win_arm64.whl", hash = "sha256:58db2dce39cad5f8fc8e8c5c923a250eb21eff4146b03514d570d1c205a4874c", size = 31895936 },
+    { url = "https://files.pythonhosted.org/packages/65/b5/cc9d749419dfc9b9c74e7e3029855db61e04f4e58cc9e252024f42b791d3/polars-1.27.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:8df053bc9586e0672e99be43c5645f7b762c352d9212816c6cf238179af602e9", size = 34757761 },
+    { url = "https://files.pythonhosted.org/packages/50/c8/41bfeb2c10aecfcfca60e998a57cf5e7b54038a201a0b8402444fc01de3b/polars-1.27.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:3b6795f745021ca63742a382d1feb39e2c0b5b7d17657a4484683301e869a86f", size = 31618384 },
+    { url = "https://files.pythonhosted.org/packages/8d/4a/bba88bd4c256abf4d475574478543e737b9fe01f069ad4be26198357d176/polars-1.27.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b53cb3da131b0bceaa4fb0139ac916e516247e44184f863d09a6618a382bd04c", size = 35390209 },
+    { url = "https://files.pythonhosted.org/packages/34/c3/f5ad21b267c78578b99b6d40e4be456af7a9f3a001ef11022f755ff65229/polars-1.27.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:74cf7f972861d5d1bcdef017a4d4af3ce30036f9afaa609d5fc04b2fb3764f66", size = 32584669 },
+    { url = "https://files.pythonhosted.org/packages/9d/2b/dfb6a6fe434a637686384d6b3e365c95e836e18df222e8f7c9d493c3d6cb/polars-1.27.0-cp39-abi3-win_amd64.whl", hash = "sha256:83837056286f78e8a820a13ed803f0b27ea5015997a12f64cd0c8ff1b18fc555", size = 35600330 },
+    { url = "https://files.pythonhosted.org/packages/43/00/30dc53e2ec186d46b18886a801137611dcb9b563f757159c7d03837580ad/polars-1.27.0-cp39-abi3-win_arm64.whl", hash = "sha256:8824ecd9796f8663661ab147a25945e4d21a5b8dee5f2ed985b50633ef40038b", size = 31887550 },
 ]
 
 [[package]]
@@ -705,11 +705,11 @@ wheels = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.13.1"
+version = "4.13.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/76/ad/cd3e3465232ec2416ae9b983f27b9e94dc8171d56ac99b345319a9475967/typing_extensions-4.13.1.tar.gz", hash = "sha256:98795af00fb9640edec5b8e31fc647597b4691f099ad75f469a2616be1a76dff", size = 106633 }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/37/23083fcd6e35492953e8d2aaaa68b860eb422b34627b13f2ce3eb6106061/typing_extensions-4.13.2.tar.gz", hash = "sha256:e6c81219bd689f51865d9e372991c540bda33a0379d5573cddb9a3a23f7caaef", size = 106967 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/c5/e7a0b0f5ed69f94c8ab7379c599e6036886bffcde609969a5325f47f1332/typing_extensions-4.13.1-py3-none-any.whl", hash = "sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69", size = 45739 },
+    { url = "https://files.pythonhosted.org/packages/8b/54/b1ae86c0973cc6f0210b53d508ca3641fb6d0c56823f288d108bc7ab3cc8/typing_extensions-4.13.2-py3-none-any.whl", hash = "sha256:a439e7c04b49fec3e5d3e2beaa21755cadbbdc391694e28ccdd36ca4a1408f8c", size = 45806 },
 ]
 
 [[package]]
