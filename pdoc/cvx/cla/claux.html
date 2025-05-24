@@ -85,79 +85,143 @@
                     <h1 class="modulename">
 <a href="./../../cvx.html">cvx</a><wbr>.<a href="./../cla.html">cla</a><wbr>.claux    </h1>
 
-                
+                        <div class="docstring"><p>Critical Line Algorithm auxiliary class implementation.</p>
+
+<p>This module provides the CLAUX class which implements the core functionality
+for the Critical Line Algorithm (CLA) used to compute the efficient frontier
+in portfolio optimization problems.</p>
+</div>
+
                         <input id="mod-claux-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
                         <label class="view-source-button" for="mod-claux-view-source"><span>View Source</span></label>
 
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="c1">#    Copyright 2023 Stanford University Convex Optimization Group</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="c1">#</span>
-</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="c1">#    Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="c1">#    you may not use this file except in compliance with the License.</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="c1">#    You may obtain a copy of the License at</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="c1">#</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="c1">#        http://www.apache.org/licenses/LICENSE-2.0</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="c1">#</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="c1">#    Unless required by applicable law or agreed to in writing, software</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a><span class="c1">#    distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="c1">#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="c1">#    See the License for the specific language governing permissions and</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="c1">#    limitations under the License.</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.first</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_algo</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">Frontier</span><span class="p">,</span> <span class="n">FrontierPoint</span><span class="p">,</span> <span class="n">TurningPoint</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>
-</span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="k">class</span><span class="w"> </span><span class="nc">CLAUX</span><span class="p">:</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>    <span class="n">A</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>    <span class="n">b</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a>    <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-</span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>
-</span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="sd">        Returns the number of turning points</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a>
-</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="L-43"><a href="#L-43"><span class="linenos">43</span></a>        <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
-</span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
-</span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a>            <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a>            <span class="n">upper_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">,</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a>        <span class="p">)</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a>        <span class="k">return</span> <span class="n">first</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>        <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos">55</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos">56</span></a>
-</span><span id="L-57"><a href="#L-57"><span class="linenos">57</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>
-</span><span id="L-58"><a href="#L-58"><span class="linenos">58</span></a>
-</span><span id="L-59"><a href="#L-59"><span class="linenos">59</span></a>    <span class="nd">@property</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos">60</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos">61</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos">62</span></a><span class="sd">        Returns the frontier</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos">63</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos">64</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos">65</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos">66</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos">67</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos">68</span></a>        <span class="p">)</span>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">  1</span></a><span class="c1">#    Copyright 2023 Stanford University Convex Optimization Group</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos">  2</span></a><span class="c1">#</span>
+</span><span id="L-3"><a href="#L-3"><span class="linenos">  3</span></a><span class="c1">#    Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="c1">#    you may not use this file except in compliance with the License.</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a><span class="c1">#    You may obtain a copy of the License at</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="c1">#</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="c1">#        http://www.apache.org/licenses/LICENSE-2.0</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="c1">#</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="c1">#    Unless required by applicable law or agreed to in writing, software</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="c1">#    distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="c1">#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="c1">#    See the License for the specific language governing permissions and</span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="c1">#    limitations under the License.</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="sd">Critical Line Algorithm auxiliary class implementation.</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="sd">This module provides the CLAUX class which implements the core functionality</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="sd">for the Critical Line Algorithm (CLA) used to compute the efficient frontier</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">in portfolio optimization problems.</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.first</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_algo</span>
+</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MATRIX</span><span class="p">,</span> <span class="n">Frontier</span><span class="p">,</span> <span class="n">FrontierPoint</span><span class="p">,</span> <span class="n">TurningPoint</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a>
+</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>
+</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a><span class="k">class</span><span class="w"> </span><span class="nc">CLAUX</span><span class="p">:</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">    Critical Line Algorithm auxiliary class.</span>
+</span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>
+</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="sd">    This class implements the core functionality for the Critical Line Algorithm (CLA)</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="sd">    used to compute the efficient frontier in portfolio optimization problems.</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a>
+</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="sd">    Attributes:</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="sd">        mean: Vector of expected returns for each asset.</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="sd">        covariance: Covariance matrix of asset returns.</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="sd">        lower_bounds: Vector of lower bounds for asset weights.</span>
+</span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a><span class="sd">        upper_bounds: Vector of upper bounds for asset weights.</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="sd">        A: Matrix for linear equality constraints (Ax = b).</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a><span class="sd">        b: Vector for linear equality constraints (Ax = b).</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a><span class="sd">        turning_points: List of turning points on the efficient frontier.</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a><span class="sd">        tol: Tolerance for numerical calculations.</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a><span class="sd">        logger: Logger instance for logging information and errors.</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>    <span class="n">A</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a>    <span class="n">b</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>    <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>
+</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="sd">        Get the number of turning points in the efficient frontier.</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a><span class="sd">        Returns:</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a><span class="sd">            The number of turning points currently stored in the object.</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>
+</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurningPoint</span><span class="p">:</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a><span class="sd">        Calculate the first turning point on the efficient frontier.</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="sd">        This method uses the init_algo function to find the first turning point</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a><span class="sd">        based on the mean returns and the bounds on asset weights.</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a><span class="sd">        Returns:</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a><span class="sd">            A TurningPoint object representing the first point on the efficient frontier.</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>        <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>            <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>            <span class="n">upper_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">,</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>        <span class="p">)</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>        <span class="k">return</span> <span class="n">first</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a><span class="sd">        Append a turning point to the list of turning points.</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a><span class="sd">        This method validates that the turning point satisfies the constraints</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a><span class="sd">        before adding it to the list.</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a><span class="sd">        Args:</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="sd">            tp: The turning point to append.</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="sd">            tol: Tolerance for constraint validation. If None, uses the class&#39;s tol attribute.</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a><span class="sd">        Raises:</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="sd">            AssertionError: If the turning point violates any constraints.</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>        <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="nd">@property</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Frontier</span><span class="p">:</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a><span class="sd">        Get the efficient frontier constructed from the turning points.</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="sd">        This property creates a Frontier object from the list of turning points,</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="sd">        which can be used to analyze the risk-return characteristics of the</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="sd">        efficient portfolios.</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">        Returns:</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">            A Frontier object representing the efficient frontier.</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
@@ -174,55 +238,121 @@
 
     </div>
     <a class="headerlink" href="#CLAUX"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="CLAUX-25"><a href="#CLAUX-25"><span class="linenos">25</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="CLAUX-26"><a href="#CLAUX-26"><span class="linenos">26</span></a><span class="k">class</span><span class="w"> </span><span class="nc">CLAUX</span><span class="p">:</span>
-</span><span id="CLAUX-27"><a href="#CLAUX-27"><span class="linenos">27</span></a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-28"><a href="#CLAUX-28"><span class="linenos">28</span></a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-29"><a href="#CLAUX-29"><span class="linenos">29</span></a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-30"><a href="#CLAUX-30"><span class="linenos">30</span></a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-31"><a href="#CLAUX-31"><span class="linenos">31</span></a>    <span class="n">A</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-32"><a href="#CLAUX-32"><span class="linenos">32</span></a>    <span class="n">b</span><span class="p">:</span> <span class="n">MATRIX</span>
-</span><span id="CLAUX-33"><a href="#CLAUX-33"><span class="linenos">33</span></a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
-</span><span id="CLAUX-34"><a href="#CLAUX-34"><span class="linenos">34</span></a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
-</span><span id="CLAUX-35"><a href="#CLAUX-35"><span class="linenos">35</span></a>    <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
-</span><span id="CLAUX-36"><a href="#CLAUX-36"><span class="linenos">36</span></a>
-</span><span id="CLAUX-37"><a href="#CLAUX-37"><span class="linenos">37</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="CLAUX-38"><a href="#CLAUX-38"><span class="linenos">38</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="CLAUX-39"><a href="#CLAUX-39"><span class="linenos">39</span></a><span class="sd">        Returns the number of turning points</span>
-</span><span id="CLAUX-40"><a href="#CLAUX-40"><span class="linenos">40</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="CLAUX-41"><a href="#CLAUX-41"><span class="linenos">41</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span>
-</span><span id="CLAUX-42"><a href="#CLAUX-42"><span class="linenos">42</span></a>
-</span><span id="CLAUX-43"><a href="#CLAUX-43"><span class="linenos">43</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="CLAUX-44"><a href="#CLAUX-44"><span class="linenos">44</span></a>        <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
-</span><span id="CLAUX-45"><a href="#CLAUX-45"><span class="linenos">45</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
-</span><span id="CLAUX-46"><a href="#CLAUX-46"><span class="linenos">46</span></a>            <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
-</span><span id="CLAUX-47"><a href="#CLAUX-47"><span class="linenos">47</span></a>            <span class="n">upper_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">,</span>
-</span><span id="CLAUX-48"><a href="#CLAUX-48"><span class="linenos">48</span></a>        <span class="p">)</span>
-</span><span id="CLAUX-49"><a href="#CLAUX-49"><span class="linenos">49</span></a>        <span class="k">return</span> <span class="n">first</span>
-</span><span id="CLAUX-50"><a href="#CLAUX-50"><span class="linenos">50</span></a>
-</span><span id="CLAUX-51"><a href="#CLAUX-51"><span class="linenos">51</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="CLAUX-52"><a href="#CLAUX-52"><span class="linenos">52</span></a>        <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
-</span><span id="CLAUX-53"><a href="#CLAUX-53"><span class="linenos">53</span></a>
-</span><span id="CLAUX-54"><a href="#CLAUX-54"><span class="linenos">54</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="CLAUX-55"><a href="#CLAUX-55"><span class="linenos">55</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="CLAUX-56"><a href="#CLAUX-56"><span class="linenos">56</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="CLAUX-57"><a href="#CLAUX-57"><span class="linenos">57</span></a>
-</span><span id="CLAUX-58"><a href="#CLAUX-58"><span class="linenos">58</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>
-</span><span id="CLAUX-59"><a href="#CLAUX-59"><span class="linenos">59</span></a>
-</span><span id="CLAUX-60"><a href="#CLAUX-60"><span class="linenos">60</span></a>    <span class="nd">@property</span>
-</span><span id="CLAUX-61"><a href="#CLAUX-61"><span class="linenos">61</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="CLAUX-62"><a href="#CLAUX-62"><span class="linenos">62</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="CLAUX-63"><a href="#CLAUX-63"><span class="linenos">63</span></a><span class="sd">        Returns the frontier</span>
-</span><span id="CLAUX-64"><a href="#CLAUX-64"><span class="linenos">64</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="CLAUX-65"><a href="#CLAUX-65"><span class="linenos">65</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
-</span><span id="CLAUX-66"><a href="#CLAUX-66"><span class="linenos">66</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
-</span><span id="CLAUX-67"><a href="#CLAUX-67"><span class="linenos">67</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
-</span><span id="CLAUX-68"><a href="#CLAUX-68"><span class="linenos">68</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
-</span><span id="CLAUX-69"><a href="#CLAUX-69"><span class="linenos">69</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="CLAUX-33"><a href="#CLAUX-33"><span class="linenos"> 33</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="CLAUX-34"><a href="#CLAUX-34"><span class="linenos"> 34</span></a><span class="k">class</span><span class="w"> </span><span class="nc">CLAUX</span><span class="p">:</span>
+</span><span id="CLAUX-35"><a href="#CLAUX-35"><span class="linenos"> 35</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX-36"><a href="#CLAUX-36"><span class="linenos"> 36</span></a><span class="sd">    Critical Line Algorithm auxiliary class.</span>
+</span><span id="CLAUX-37"><a href="#CLAUX-37"><span class="linenos"> 37</span></a>
+</span><span id="CLAUX-38"><a href="#CLAUX-38"><span class="linenos"> 38</span></a><span class="sd">    This class implements the core functionality for the Critical Line Algorithm (CLA)</span>
+</span><span id="CLAUX-39"><a href="#CLAUX-39"><span class="linenos"> 39</span></a><span class="sd">    used to compute the efficient frontier in portfolio optimization problems.</span>
+</span><span id="CLAUX-40"><a href="#CLAUX-40"><span class="linenos"> 40</span></a>
+</span><span id="CLAUX-41"><a href="#CLAUX-41"><span class="linenos"> 41</span></a><span class="sd">    Attributes:</span>
+</span><span id="CLAUX-42"><a href="#CLAUX-42"><span class="linenos"> 42</span></a><span class="sd">        mean: Vector of expected returns for each asset.</span>
+</span><span id="CLAUX-43"><a href="#CLAUX-43"><span class="linenos"> 43</span></a><span class="sd">        covariance: Covariance matrix of asset returns.</span>
+</span><span id="CLAUX-44"><a href="#CLAUX-44"><span class="linenos"> 44</span></a><span class="sd">        lower_bounds: Vector of lower bounds for asset weights.</span>
+</span><span id="CLAUX-45"><a href="#CLAUX-45"><span class="linenos"> 45</span></a><span class="sd">        upper_bounds: Vector of upper bounds for asset weights.</span>
+</span><span id="CLAUX-46"><a href="#CLAUX-46"><span class="linenos"> 46</span></a><span class="sd">        A: Matrix for linear equality constraints (Ax = b).</span>
+</span><span id="CLAUX-47"><a href="#CLAUX-47"><span class="linenos"> 47</span></a><span class="sd">        b: Vector for linear equality constraints (Ax = b).</span>
+</span><span id="CLAUX-48"><a href="#CLAUX-48"><span class="linenos"> 48</span></a><span class="sd">        turning_points: List of turning points on the efficient frontier.</span>
+</span><span id="CLAUX-49"><a href="#CLAUX-49"><span class="linenos"> 49</span></a><span class="sd">        tol: Tolerance for numerical calculations.</span>
+</span><span id="CLAUX-50"><a href="#CLAUX-50"><span class="linenos"> 50</span></a><span class="sd">        logger: Logger instance for logging information and errors.</span>
+</span><span id="CLAUX-51"><a href="#CLAUX-51"><span class="linenos"> 51</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="CLAUX-52"><a href="#CLAUX-52"><span class="linenos"> 52</span></a>
+</span><span id="CLAUX-53"><a href="#CLAUX-53"><span class="linenos"> 53</span></a>    <span class="n">mean</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-54"><a href="#CLAUX-54"><span class="linenos"> 54</span></a>    <span class="n">covariance</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-55"><a href="#CLAUX-55"><span class="linenos"> 55</span></a>    <span class="n">lower_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-56"><a href="#CLAUX-56"><span class="linenos"> 56</span></a>    <span class="n">upper_bounds</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-57"><a href="#CLAUX-57"><span class="linenos"> 57</span></a>    <span class="n">A</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-58"><a href="#CLAUX-58"><span class="linenos"> 58</span></a>    <span class="n">b</span><span class="p">:</span> <span class="n">MATRIX</span>
+</span><span id="CLAUX-59"><a href="#CLAUX-59"><span class="linenos"> 59</span></a>    <span class="n">turning_points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">TurningPoint</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="CLAUX-60"><a href="#CLAUX-60"><span class="linenos"> 60</span></a>    <span class="n">tol</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span>
+</span><span id="CLAUX-61"><a href="#CLAUX-61"><span class="linenos"> 61</span></a>    <span class="n">logger</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+</span><span id="CLAUX-62"><a href="#CLAUX-62"><span class="linenos"> 62</span></a>
+</span><span id="CLAUX-63"><a href="#CLAUX-63"><span class="linenos"> 63</span></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="CLAUX-64"><a href="#CLAUX-64"><span class="linenos"> 64</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX-65"><a href="#CLAUX-65"><span class="linenos"> 65</span></a><span class="sd">        Get the number of turning points in the efficient frontier.</span>
+</span><span id="CLAUX-66"><a href="#CLAUX-66"><span class="linenos"> 66</span></a>
+</span><span id="CLAUX-67"><a href="#CLAUX-67"><span class="linenos"> 67</span></a><span class="sd">        Returns:</span>
+</span><span id="CLAUX-68"><a href="#CLAUX-68"><span class="linenos"> 68</span></a><span class="sd">            The number of turning points currently stored in the object.</span>
+</span><span id="CLAUX-69"><a href="#CLAUX-69"><span class="linenos"> 69</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="CLAUX-70"><a href="#CLAUX-70"><span class="linenos"> 70</span></a>        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">)</span>
+</span><span id="CLAUX-71"><a href="#CLAUX-71"><span class="linenos"> 71</span></a>
+</span><span id="CLAUX-72"><a href="#CLAUX-72"><span class="linenos"> 72</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_first_turning_point</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TurningPoint</span><span class="p">:</span>
+</span><span id="CLAUX-73"><a href="#CLAUX-73"><span class="linenos"> 73</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX-74"><a href="#CLAUX-74"><span class="linenos"> 74</span></a><span class="sd">        Calculate the first turning point on the efficient frontier.</span>
+</span><span id="CLAUX-75"><a href="#CLAUX-75"><span class="linenos"> 75</span></a>
+</span><span id="CLAUX-76"><a href="#CLAUX-76"><span class="linenos"> 76</span></a><span class="sd">        This method uses the init_algo function to find the first turning point</span>
+</span><span id="CLAUX-77"><a href="#CLAUX-77"><span class="linenos"> 77</span></a><span class="sd">        based on the mean returns and the bounds on asset weights.</span>
+</span><span id="CLAUX-78"><a href="#CLAUX-78"><span class="linenos"> 78</span></a>
+</span><span id="CLAUX-79"><a href="#CLAUX-79"><span class="linenos"> 79</span></a><span class="sd">        Returns:</span>
+</span><span id="CLAUX-80"><a href="#CLAUX-80"><span class="linenos"> 80</span></a><span class="sd">            A TurningPoint object representing the first point on the efficient frontier.</span>
+</span><span id="CLAUX-81"><a href="#CLAUX-81"><span class="linenos"> 81</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="CLAUX-82"><a href="#CLAUX-82"><span class="linenos"> 82</span></a>        <span class="n">first</span> <span class="o">=</span> <span class="n">init_algo</span><span class="p">(</span>
+</span><span id="CLAUX-83"><a href="#CLAUX-83"><span class="linenos"> 83</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+</span><span id="CLAUX-84"><a href="#CLAUX-84"><span class="linenos"> 84</span></a>            <span class="n">lower_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">,</span>
+</span><span id="CLAUX-85"><a href="#CLAUX-85"><span class="linenos"> 85</span></a>            <span class="n">upper_bounds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">,</span>
+</span><span id="CLAUX-86"><a href="#CLAUX-86"><span class="linenos"> 86</span></a>        <span class="p">)</span>
+</span><span id="CLAUX-87"><a href="#CLAUX-87"><span class="linenos"> 87</span></a>        <span class="k">return</span> <span class="n">first</span>
+</span><span id="CLAUX-88"><a href="#CLAUX-88"><span class="linenos"> 88</span></a>
+</span><span id="CLAUX-89"><a href="#CLAUX-89"><span class="linenos"> 89</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tp</span><span class="p">:</span> <span class="n">TurningPoint</span><span class="p">,</span> <span class="n">tol</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="CLAUX-90"><a href="#CLAUX-90"><span class="linenos"> 90</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX-91"><a href="#CLAUX-91"><span class="linenos"> 91</span></a><span class="sd">        Append a turning point to the list of turning points.</span>
+</span><span id="CLAUX-92"><a href="#CLAUX-92"><span class="linenos"> 92</span></a>
+</span><span id="CLAUX-93"><a href="#CLAUX-93"><span class="linenos"> 93</span></a><span class="sd">        This method validates that the turning point satisfies the constraints</span>
+</span><span id="CLAUX-94"><a href="#CLAUX-94"><span class="linenos"> 94</span></a><span class="sd">        before adding it to the list.</span>
+</span><span id="CLAUX-95"><a href="#CLAUX-95"><span class="linenos"> 95</span></a>
+</span><span id="CLAUX-96"><a href="#CLAUX-96"><span class="linenos"> 96</span></a><span class="sd">        Args:</span>
+</span><span id="CLAUX-97"><a href="#CLAUX-97"><span class="linenos"> 97</span></a><span class="sd">            tp: The turning point to append.</span>
+</span><span id="CLAUX-98"><a href="#CLAUX-98"><span class="linenos"> 98</span></a><span class="sd">            tol: Tolerance for constraint validation. If None, uses the class&#39;s tol attribute.</span>
+</span><span id="CLAUX-99"><a href="#CLAUX-99"><span class="linenos"> 99</span></a>
+</span><span id="CLAUX-100"><a href="#CLAUX-100"><span class="linenos">100</span></a><span class="sd">        Raises:</span>
+</span><span id="CLAUX-101"><a href="#CLAUX-101"><span class="linenos">101</span></a><span class="sd">            AssertionError: If the turning point violates any constraints.</span>
+</span><span id="CLAUX-102"><a href="#CLAUX-102"><span class="linenos">102</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="CLAUX-103"><a href="#CLAUX-103"><span class="linenos">103</span></a>        <span class="n">tol</span> <span class="o">=</span> <span class="n">tol</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tol</span>
+</span><span id="CLAUX-104"><a href="#CLAUX-104"><span class="linenos">104</span></a>
+</span><span id="CLAUX-105"><a href="#CLAUX-105"><span class="linenos">105</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">-</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="CLAUX-106"><a href="#CLAUX-106"><span class="linenos">106</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">+</span> <span class="n">tol</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">tol</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="CLAUX-107"><a href="#CLAUX-107"><span class="linenos">107</span></a>        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">),</span> <span class="mf">1.0</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="CLAUX-108"><a href="#CLAUX-108"><span class="linenos">108</span></a>
+</span><span id="CLAUX-109"><a href="#CLAUX-109"><span class="linenos">109</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span><span class="p">)</span>
+</span><span id="CLAUX-110"><a href="#CLAUX-110"><span class="linenos">110</span></a>
+</span><span id="CLAUX-111"><a href="#CLAUX-111"><span class="linenos">111</span></a>    <span class="nd">@property</span>
+</span><span id="CLAUX-112"><a href="#CLAUX-112"><span class="linenos">112</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Frontier</span><span class="p">:</span>
+</span><span id="CLAUX-113"><a href="#CLAUX-113"><span class="linenos">113</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX-114"><a href="#CLAUX-114"><span class="linenos">114</span></a><span class="sd">        Get the efficient frontier constructed from the turning points.</span>
+</span><span id="CLAUX-115"><a href="#CLAUX-115"><span class="linenos">115</span></a>
+</span><span id="CLAUX-116"><a href="#CLAUX-116"><span class="linenos">116</span></a><span class="sd">        This property creates a Frontier object from the list of turning points,</span>
+</span><span id="CLAUX-117"><a href="#CLAUX-117"><span class="linenos">117</span></a><span class="sd">        which can be used to analyze the risk-return characteristics of the</span>
+</span><span id="CLAUX-118"><a href="#CLAUX-118"><span class="linenos">118</span></a><span class="sd">        efficient portfolios.</span>
+</span><span id="CLAUX-119"><a href="#CLAUX-119"><span class="linenos">119</span></a>
+</span><span id="CLAUX-120"><a href="#CLAUX-120"><span class="linenos">120</span></a><span class="sd">        Returns:</span>
+</span><span id="CLAUX-121"><a href="#CLAUX-121"><span class="linenos">121</span></a><span class="sd">            A Frontier object representing the efficient frontier.</span>
+</span><span id="CLAUX-122"><a href="#CLAUX-122"><span class="linenos">122</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="CLAUX-123"><a href="#CLAUX-123"><span class="linenos">123</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
+</span><span id="CLAUX-124"><a href="#CLAUX-124"><span class="linenos">124</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
+</span><span id="CLAUX-125"><a href="#CLAUX-125"><span class="linenos">125</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+</span><span id="CLAUX-126"><a href="#CLAUX-126"><span class="linenos">126</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
+</span><span id="CLAUX-127"><a href="#CLAUX-127"><span class="linenos">127</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-    
+            <div class="docstring"><p>Critical Line Algorithm auxiliary class.</p>
+
+<p>This class implements the core functionality for the Critical Line Algorithm (CLA)
+used to compute the efficient frontier in portfolio optimization problems.</p>
+
+<p>Attributes:
+    mean: Vector of expected returns for each asset.
+    covariance: Covariance matrix of asset returns.
+    lower_bounds: Vector of lower bounds for asset weights.
+    upper_bounds: Vector of upper bounds for asset weights.
+    A: Matrix for linear equality constraints (Ax = b).
+    b: Vector for linear equality constraints (Ax = b).
+    turning_points: List of turning points on the efficient frontier.
+    tol: Tolerance for numerical calculations.
+    logger: Logger instance for logging information and errors.</p>
+</div>
+
 
                             <div id="CLAUX.__init__" class="classattr">
                                 <div class="attr function">
@@ -340,26 +470,40 @@
                             <div id="CLAUX.frontier" class="classattr">
                                         <input id="CLAUX.frontier-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr variable">
-            <span class="name">frontier</span>
+            <span class="name">frontier</span><span class="annotation">: <a href="types.html#Frontier">cvx.cla.types.Frontier</a></span>
 
                 <label class="view-source-button" for="CLAUX.frontier-view-source"><span>View Source</span></label>
 
     </div>
     <a class="headerlink" href="#CLAUX.frontier"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="CLAUX.frontier-60"><a href="#CLAUX.frontier-60"><span class="linenos">60</span></a>    <span class="nd">@property</span>
-</span><span id="CLAUX.frontier-61"><a href="#CLAUX.frontier-61"><span class="linenos">61</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-</span><span id="CLAUX.frontier-62"><a href="#CLAUX.frontier-62"><span class="linenos">62</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="CLAUX.frontier-63"><a href="#CLAUX.frontier-63"><span class="linenos">63</span></a><span class="sd">        Returns the frontier</span>
-</span><span id="CLAUX.frontier-64"><a href="#CLAUX.frontier-64"><span class="linenos">64</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="CLAUX.frontier-65"><a href="#CLAUX.frontier-65"><span class="linenos">65</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
-</span><span id="CLAUX.frontier-66"><a href="#CLAUX.frontier-66"><span class="linenos">66</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
-</span><span id="CLAUX.frontier-67"><a href="#CLAUX.frontier-67"><span class="linenos">67</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
-</span><span id="CLAUX.frontier-68"><a href="#CLAUX.frontier-68"><span class="linenos">68</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
-</span><span id="CLAUX.frontier-69"><a href="#CLAUX.frontier-69"><span class="linenos">69</span></a>        <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="CLAUX.frontier-111"><a href="#CLAUX.frontier-111"><span class="linenos">111</span></a>    <span class="nd">@property</span>
+</span><span id="CLAUX.frontier-112"><a href="#CLAUX.frontier-112"><span class="linenos">112</span></a>    <span class="k">def</span><span class="w"> </span><span class="nf">frontier</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Frontier</span><span class="p">:</span>
+</span><span id="CLAUX.frontier-113"><a href="#CLAUX.frontier-113"><span class="linenos">113</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="CLAUX.frontier-114"><a href="#CLAUX.frontier-114"><span class="linenos">114</span></a><span class="sd">        Get the efficient frontier constructed from the turning points.</span>
+</span><span id="CLAUX.frontier-115"><a href="#CLAUX.frontier-115"><span class="linenos">115</span></a>
+</span><span id="CLAUX.frontier-116"><a href="#CLAUX.frontier-116"><span class="linenos">116</span></a><span class="sd">        This property creates a Frontier object from the list of turning points,</span>
+</span><span id="CLAUX.frontier-117"><a href="#CLAUX.frontier-117"><span class="linenos">117</span></a><span class="sd">        which can be used to analyze the risk-return characteristics of the</span>
+</span><span id="CLAUX.frontier-118"><a href="#CLAUX.frontier-118"><span class="linenos">118</span></a><span class="sd">        efficient portfolios.</span>
+</span><span id="CLAUX.frontier-119"><a href="#CLAUX.frontier-119"><span class="linenos">119</span></a>
+</span><span id="CLAUX.frontier-120"><a href="#CLAUX.frontier-120"><span class="linenos">120</span></a><span class="sd">        Returns:</span>
+</span><span id="CLAUX.frontier-121"><a href="#CLAUX.frontier-121"><span class="linenos">121</span></a><span class="sd">            A Frontier object representing the efficient frontier.</span>
+</span><span id="CLAUX.frontier-122"><a href="#CLAUX.frontier-122"><span class="linenos">122</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="CLAUX.frontier-123"><a href="#CLAUX.frontier-123"><span class="linenos">123</span></a>        <span class="k">return</span> <span class="n">Frontier</span><span class="p">(</span>
+</span><span id="CLAUX.frontier-124"><a href="#CLAUX.frontier-124"><span class="linenos">124</span></a>            <span class="n">covariance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">,</span>
+</span><span id="CLAUX.frontier-125"><a href="#CLAUX.frontier-125"><span class="linenos">125</span></a>            <span class="n">mean</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+</span><span id="CLAUX.frontier-126"><a href="#CLAUX.frontier-126"><span class="linenos">126</span></a>            <span class="n">frontier</span><span class="o">=</span><span class="p">[</span><span class="n">FrontierPoint</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">turning_points</span><span class="p">],</span>
+</span><span id="CLAUX.frontier-127"><a href="#CLAUX.frontier-127"><span class="linenos">127</span></a>        <span class="p">)</span>
 </span></pre></div>
 
 
-            <div class="docstring"><p>Returns the frontier</p>
+            <div class="docstring"><p>Get the efficient frontier constructed from the turning points.</p>
+
+<p>This property creates a Frontier object from the list of turning points,
+which can be used to analyze the risk-return characteristics of the
+efficient portfolios.</p>
+
+<p>Returns:
+    A Frontier object representing the efficient frontier.</p>
 </div>
 
 
