@@ -1,4 +1,4 @@
-# [cvxcla](https://www.cvxgrp.org/cvxcla/book)
+# 📈 [cvxcla](https://www.cvxgrp.org/cvxcla/book)
 
 [![PyPI version](https://badge.fury.io/py/cvxcla.svg)](https://badge.fury.io/py/cvxcla)
 [![Apache 2.0 License](https://img.shields.io/badge/License-APACHEv2-brightgreen.svg)](https://github.com/cvxgrp/cvxcla/blob/master/LICENSE)
@@ -7,7 +7,7 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
-## Critical line algorithm
+## 📊 Critical line algorithm
 
 The critical line algorithm is a method to compute the efficient frontier of a
 portfolio optimization problem.
@@ -21,18 +21,18 @@ linear function if expected return is plotted over expected variance.
 The critical line algorithm computes the turning points, e.g. the corners
 of the efficient frontier.
 
-## Literature
+## 📚 Literature
 
 We are using the following sources
 
-### Niedermayer and Niedermayer
+### 📝 Niedermayer and Niedermayer
 
 They suggested a method to avoid the expensive inversion of the covariance matrix.
 [Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm)
 It turns out that implementing their method in Python is not significantly faster
 than the explicit inversion of the covariance matrix relying on LAPACK via `numpy.linalg.inv`.
 
-### Bailey and Lopez de Prado
+### 📝 Bailey and Lopez de Prado
 
 We have initially started with their code published in
 [An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
@@ -47,7 +47,7 @@ noteworthy changes:
 The code is not part of the published package though.
 It is only used for testing purposes. We recommend it for educational purposes only.
 
-### Markowitz et al
+### 📝 Markowitz et al
 
 In [Avoiding the Downside: A Practical Review of the Critical
 Line Algorithm for Mean-Semivariance Portfolio Optimizatio](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf)
@@ -66,7 +66,7 @@ We alter some of their Python code. Our experiments to combine it with Niedermay
 ideas to accelerate the computation of the matrix inverses did not yet justify
 the additional complexity.
 
-## uv
+## 🛠️ uv
 
 You need to install [task](https://taskfile.dev).
 Starting with
@@ -79,7 +79,7 @@ will install [uv](https://github.com/astral-sh/uv) and create
 the virtual environment defined in
 pyproject.toml and locked in uv.lock.
 
-## marimo
+## 🔬 marimo
 
 We install [marimo](https://marimo.io) on the fly within the aforementioned
 virtual environment. Executing
@@ -90,6 +90,6 @@ task cvxcla:marimo
 
 will install and start marimo.
 
-## previous work
+## 🔍 previous work
 
 In the [repo](https://github.com/phschiele/PyCLA) by Philipp Schiele.
