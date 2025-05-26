@@ -1,11 +1,26 @@
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 import pytest
+from pandas import DataFrame
 
 from cvx.cla.first import init_algo_lp
 from cvx.cla.markowitz.cla import CLA
 
 
-def test_solver(input_data, results):
+def test_solver(input_data: Any, results: Any) -> None:
+    """
+    Test the Markowitz CLA solver against expected results.
+
+    This test verifies that the Markowitz CLA implementation produces the expected
+    lambda values, mean returns, and variances for the turning points.
+
+    Args:
+        input_data: Test data containing covariance, mean, and bounds
+        results: Expected results for comparison
+    """
     cla = CLA(
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,
@@ -26,7 +41,18 @@ def test_solver(input_data, results):
     assert np.allclose(results.variance, observed, atol=0.5)
 
 
-def test_example(example, example_solution):
+def test_example(example: DataFrame, example_solution: DataFrame) -> None:
+    """
+    Test the Markowitz CLA solver against a known example from literature.
+
+    This test uses the example from section 3.1 in the Markowitz 2019 paper
+    to verify that the Markowitz CLA implementation produces the expected results.
+    It also tests the init_algo_lp function for computing the first turning point.
+
+    Args:
+        example: DataFrame containing the example data
+        example_solution: DataFrame containing the expected solution
+    """
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)
     std = example.std(axis=0, ddof=1)

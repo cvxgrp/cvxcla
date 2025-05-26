@@ -1,9 +1,23 @@
+from __future__ import annotations
+
+from typing import Any
+
 import numpy as np
 
 from tests.bailey.cla import CLA
 
 
-def test_big(input_data, results):
+def test_big(input_data: Any, results: Any) -> None:
+    """
+    Test the Bailey CLA implementation against expected results.
+
+    This test verifies that the Bailey CLA implementation produces the expected
+    lambda values, mean returns, variances, and weights for the turning points.
+
+    Args:
+        input_data: Test data containing covariance, mean, and bounds
+        results: Expected results for comparison
+    """
     cla = CLA(
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,

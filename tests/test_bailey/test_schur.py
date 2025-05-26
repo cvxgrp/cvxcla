@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import numpy as np
 import pytest
 
 from tests.bailey.cla import _Schur
 
 
-def test_compute_lambda():
+def test_compute_lambda() -> None:
+    """
+    Test the compute_lambda method of the _Schur class.
+
+    This test verifies that the compute_lambda method correctly calculates
+    the lambda value and gamma value for different inputs.
+    """
     # Create a _Schur instance with some sample data
     covariance = np.array([[1, 0.5, 0.2], [0.5, 2, 0.3], [0.2, 0.3, 3]])
     mean = np.array([1, 2, 3])
@@ -31,7 +39,13 @@ def test_compute_lambda():
     assert np.isclose(actual_gamma, expected_gamma)
 
 
-def test_compute_weight():
+def test_compute_weight() -> None:
+    """
+    Test the update_weights method of the _Schur class.
+
+    This test verifies that the update_weights method correctly calculates
+    the new weights for a given lambda value.
+    """
     # Define some test data
     covariance = np.array([[1, 0.5, 0.2], [0.5, 2, 0.3], [0.2, 0.3, 3]])
     mean = np.array([1.0, 1.0, 3.0])
@@ -48,7 +62,14 @@ def test_compute_weight():
     np.testing.assert_allclose(actual_weights, np.array([0.75, 0.25, 0.0]), rtol=1e-3)
 
 
-def test_special_minvar():
+def test_special_minvar() -> None:
+    """
+    Test special cases of the _Schur class for minimum variance portfolios.
+
+    This test verifies that the _Schur class correctly handles special cases
+    such as freeing an asset that is already at its bound or blocking an asset
+    that is already at its bound.
+    """
     mean = np.array([0.1, 0.2])
 
     lower_bounds = np.array([0.0, 0.0])
