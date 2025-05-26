@@ -105,19 +105,18 @@ if __name__ == "__main__":
     # Method 2: Solution using Cholesky decomposition
     # The Cholesky decomposition gives Sigma = C*C^T
     # We can solve the system more efficiently using this decomposition
-    print("\nMethod 2: Solution using Cholesky decomposition")
+    logger.info("Method 2: Solution using Cholesky decomposition")
     # Compute the Cholesky decomposition of Sigma
     C = np.linalg.cholesky(Sigma)
     # Solve the system C*x = 1 (more efficient than solving Sigma*w = gamma*1)
-    xxx = np.linalg.solve(C, np.ones(n))
-    # Normalize to ensure sum(a) = 1
-    a = xxx / np.sum(xxx)
+    b = np.linalg.solve(C.T, np.linalg.solve(C, np.ones(n)))
+    a = b / np.sum(b)
 
-    print(f"Optimal weights: {a}")
-    print(f"Portfolio variance: {a.T @ Sigma @ a}")
+    logger.info(f"Optimal weights: {a}")
+    logger.info(f"Portfolio variance: {a.T @ Sigma @ a}")
 
     # Method 3: Solution using convex optimization with CVXPY
-    print("\nMethod 3: Solution using convex optimization (CVXPY)")
+    logger.info("Method 3: Solution using convex optimization (CVXPY)")
     # Define the variable representing portfolio weights
     x = cp.Variable(n)
 
@@ -132,5 +131,5 @@ if __name__ == "__main__":
 
     # Get the optimal weights
     a = x.value
-    print(f"Optimal weights: {a}")
-    print(f"Portfolio variance: {a.T @ Sigma @ a}")
+    logger.info(f"Optimal weights: {a}")
+    logger.info(f"Portfolio variance: {a.T @ Sigma @ a}")
