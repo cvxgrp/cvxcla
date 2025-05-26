@@ -2,4 +2,4 @@
 
 ## Sphinx
 
-[API](https://www.cvxgrp.org/cvxcla/sphinx/)
+[API](https://www.cvxgrp.org/cvxcla/pdoc/)
