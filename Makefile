@@ -39,4 +39,3 @@ help: ## Show this help message
 # Marimo & Jupyter
 marimo: install ## Install a run a Jupyter Lab server
 	uv pip install marimo  # Install Marimo
-	#uv run jupyter lab  # Start JupyterLab server (currently commented out)
