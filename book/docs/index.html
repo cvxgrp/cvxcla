@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>📈 cvxcla &#8212; cvxcla</title>
+    <title>📈 cvxcla - Critical Line Algorithm for Portfolio Optimization &#8212; cvxcla</title>
   
   
   
@@ -57,8 +57,6 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'docs/index';</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -173,7 +171,7 @@
         <ul class="nav bd-sidenav bd-sidenav__home-link">
             <li class="toctree-l1 current active">
                 <a class="reference internal" href="#">
-                    📈 cvxcla
+                    📈 cvxcla - Critical Line Algorithm for Portfolio Optimization
                 </a>
             </li>
         </ul>
@@ -366,7 +364,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>📈 cvxcla</h1>
+    <h1>📈 cvxcla - Critical Line Algorithm for Portfolio Optimization</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -376,14 +374,26 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critical-line-algorithm">📊 Critical line algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature">📚 Literature</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">📋 Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features">✨ Features</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">🚀 Installation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-pip">Using pip</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#development-setup">Development Setup</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#usage">🔧 Usage</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature-and-implementations">📚 Literature and Implementations</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#niedermayer-and-niedermayer">📝 Niedermayer and Niedermayer</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bailey-and-lopez-de-prado">📝 Bailey and Lopez de Prado</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#markowitz-et-al">📝 Markowitz et al</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#previous-work">🔍 previous work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">🧪 Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-quality">🧹 Code Quality</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation">📖 Documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing">👥 Contributing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">📄 License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-projects">🔍 Related Projects</a></li>
 </ul>
             </nav>
         </div>
@@ -395,71 +405,190 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="cvxcla">
-<h1>📈 <a class="reference external" href="https://www.cvxgrp.org/cvxcla/book">cvxcla</a><a class="headerlink" href="#cvxcla" title="Link to this heading">#</a></h1>
+  <section class="tex2jax_ignore mathjax_ignore" id="cvxcla-critical-line-algorithm-for-portfolio-optimization">
+<h1>📈 cvxcla - Critical Line Algorithm for Portfolio Optimization<a class="headerlink" href="#cvxcla-critical-line-algorithm-for-portfolio-optimization" title="Link to this heading">#</a></h1>
 <p><a class="reference external" href="https://badge.fury.io/py/cvxcla"><img alt="PyPI version" src="https://badge.fury.io/py/cvxcla.svg" /></a>
 <a class="reference external" href="https://github.com/cvxgrp/cvxcla/blob/master/LICENSE"><img alt="Apache 2.0 License" src="https://img.shields.io/badge/License-APACHEv2-brightgreen.svg" /></a>
 <a class="reference external" href="https://pepy.tech/project/cvxcla"><img alt="Downloads" src="https://static.pepy.tech/personalized-badge/cvxcla?period=month&amp;units=international_system&amp;left_color=black&amp;right_color=orange&amp;left_text=PyPI%20downloads%20per%20month" /></a>
 <a class="reference external" href="https://coveralls.io/github/cvxgrp/cvxcla?branch=main"><img alt="Coverage Status" src="https://coveralls.io/repos/github/cvxgrp/cvxcla/badge.png?branch=main" /></a>
 <a class="reference external" href="https://github.com/renovatebot/renovate"><img alt="Renovate enabled" src="https://img.shields.io/badge/renovate-enabled-brightgreen.svg" /></a></p>
 <p><a class="reference external" href="https://codespaces.new/cvxgrp/cvxcla"><img alt="Open in GitHub Codespaces" src="https://github.com/codespaces/badge.svg" /></a></p>
-<section id="critical-line-algorithm">
-<h2>📊 Critical line algorithm<a class="headerlink" href="#critical-line-algorithm" title="Link to this heading">#</a></h2>
-<p>The critical line algorithm is a method to compute the efficient frontier of a
-portfolio optimization problem.</p>
-<p>The algorithm has been introduced by Markowitz in
-<a class="reference external" href="https://www.rand.org/pubs/research_memoranda/RM1438.html">The Optimization of Quadratic Functions Subject to Linear Constraints</a>
-and subsequently described in his book <a class="reference external" href="https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085">Portfolio Selection</a>.</p>
-<p>The algorithm is based on the observation that the efficient frontier is a piecewise
-linear function if expected return is plotted over expected variance.
-The critical line algorithm computes the turning points, e.g. the corners
-of the efficient frontier.</p>
+<section id="overview">
+<h2>📋 Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">cvxcla</span></code> is a Python package that implements the Critical Line Algorithm (CLA)
+for portfolio optimization.
+The CLA efficiently computes the entire efficient frontier for portfolio optimization
+problems with linear constraints and bounds on the weights.</p>
+<p>The Critical Line Algorithm was introduced by Harry Markowitz
+in <a class="reference external" href="https://www.rand.org/pubs/research_memoranda/RM1438.html">The Optimization of Quadratic Functions Subject to Linear Constraints</a>
+and further described in his book <a class="reference external" href="https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085">Portfolio Selection</a>.</p>
+<p>The algorithm is based on the observation that the efficient frontier
+is a piecewise linear function when expected return is plotted against
+expected variance. The CLA computes the turning points (corners)
+of the efficient frontier, allowing for efficient representation of the entire frontier.</p>
 </section>
-<section id="literature">
-<h2>📚 Literature<a class="headerlink" href="#literature" title="Link to this heading">#</a></h2>
-<p>We are using the following sources</p>
+<section id="features">
+<h2>✨ Features<a class="headerlink" href="#features" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Efficient computation of the entire efficient frontier</p></li>
+<li><p>Support for linear constraints and bounds on portfolio weights</p></li>
+<li><p>Multiple implementations based on different approaches from the literature</p></li>
+<li><p>Visualization of the efficient frontier using Plotly</p></li>
+<li><p>Computation of the maximum Sharpe ratio portfolio</p></li>
+<li><p>Fully tested and documented codebase</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>🚀 Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<section id="using-pip">
+<h3>Using pip<a class="headerlink" href="#using-pip" title="Link to this heading">#</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>cvxcla
+</pre></div>
+</div>
+</section>
+<section id="development-setup">
+<h3>Development Setup<a class="headerlink" href="#development-setup" title="Link to this heading">#</a></h3>
+<p>To set up a development environment:</p>
+<ol class="arabic">
+<li><p>Clone the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/cvxgrp/cvxcla.git
+<span class="nb">cd</span><span class="w"> </span>cvxcla
+</pre></div>
+</div>
+</li>
+<li><p>Create a virtual environment and install dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>install
+</pre></div>
+</div>
+</li>
+</ol>
+<p>This will:</p>
+<ul class="simple">
+<li><p>Install the uv package manager</p></li>
+<li><p>Create a Python 3.12 virtual environment</p></li>
+<li><p>Install all dependencies from pyproject.toml</p></li>
+</ul>
+</section>
+</section>
+<section id="usage">
+<h2>🔧 Usage<a class="headerlink" href="#usage" title="Link to this heading">#</a></h2>
+<p>Here’s a simple example of how to use <code class="docutils literal notranslate"><span class="pre">cvxcla</span></code> to compute the efficient frontier:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cvx.cla.markowitz.cla</span><span class="w"> </span><span class="kn">import</span> <span class="n">CLA</span>
+
+<span class="c1"># Define your portfolio problem</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># Number of assets</span>
+<span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>  <span class="c1"># Expected returns</span>
+<span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<span class="n">covariance</span> <span class="o">=</span> <span class="n">cov</span> <span class="o">@</span> <span class="n">cov</span><span class="o">.</span><span class="n">T</span>  <span class="c1"># Covariance matrix</span>
+<span class="n">lower_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>  <span class="c1"># No short selling</span>
+<span class="n">upper_bounds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>  <span class="c1"># No leverage</span>
+
+<span class="c1"># Create a CLA instance</span>
+<span class="n">cla</span> <span class="o">=</span> <span class="n">CLA</span><span class="p">(</span>
+    <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span>
+    <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span>
+    <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span>
+    <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span>
+    <span class="n">A</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)),</span>  <span class="c1"># Fully invested constraint</span>
+    <span class="n">b</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Access the efficient frontier</span>
+<span class="n">frontier</span> <span class="o">=</span> <span class="n">cla</span><span class="o">.</span><span class="n">frontier</span>
+
+<span class="c1"># Plot the efficient frontier</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">frontier</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">volatility</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c1"># Get the maximum Sharpe ratio portfolio</span>
+<span class="n">max_sharpe_ratio</span><span class="p">,</span> <span class="n">max_sharpe_weights</span> <span class="o">=</span> <span class="n">frontier</span><span class="o">.</span><span class="n">max_sharpe</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Maximum Sharpe ratio: </span><span class="si">{</span><span class="n">max_sharpe_ratio</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Weights for maximum Sharpe ratio portfolio: </span><span class="si">{</span><span class="n">max_sharpe_weights</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="literature-and-implementations">
+<h2>📚 Literature and Implementations<a class="headerlink" href="#literature-and-implementations" title="Link to this heading">#</a></h2>
+<p>The package includes implementations based on several key papers:</p>
 <section id="niedermayer-and-niedermayer">
 <h3>📝 Niedermayer and Niedermayer<a class="headerlink" href="#niedermayer-and-niedermayer" title="Link to this heading">#</a></h3>
-<p>They suggested a method to avoid the expensive inversion of the covariance matrix.
-<a class="reference external" href="https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm">Applying Markowitz’s critical line algorithm</a>
-It turns out that implementing their method in Python is not significantly faster
-than the explicit inversion of the covariance matrix relying on LAPACK via <code class="docutils literal notranslate"><span class="pre">numpy.linalg.inv</span></code>.</p>
+<p>They suggested a method to avoid the expensive inversion
+of the covariance matrix in <a class="reference external" href="https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm">Applying Markowitz’s critical line algorithm</a>.
+Our testing shows that in Python, this approach is not significantly
+faster than explicit matrix inversion using LAPACK via <code class="docutils literal notranslate"><span class="pre">numpy.linalg.inv</span></code>.</p>
 </section>
 <section id="bailey-and-lopez-de-prado">
 <h3>📝 Bailey and Lopez de Prado<a class="headerlink" href="#bailey-and-lopez-de-prado" title="Link to this heading">#</a></h3>
-<p>We have initially started with their code published in
-<a class="reference external" href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616">An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization</a>.
-We have updated their original code and covered it in tests. We have made a few
-noteworthy changes:</p>
+<p>We initially started with their code published
+in <a class="reference external" href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616">An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization</a>.
+We’ve made several improvements:</p>
 <ul class="simple">
-<li><p>Use a boolean numpy array to indicate whether a weight is free or blocked.</p></li>
-<li><p>Rewrote the computation of the first turning point.</p></li>
-<li><p>Isolated the computation of <span class="math notranslate nohighlight">\(\lambda\)</span> and the update of weights to make them testable.</p></li>
-<li><p>Use modern and immutable dataclasses throughout.</p></li>
+<li><p>Using boolean numpy arrays to indicate whether a weight is free or blocked</p></li>
+<li><p>Rewriting the computation of the first turning point</p></li>
+<li><p>Isolating the computation of λ and weight updates to make them testable</p></li>
+<li><p>Using modern and immutable dataclasses throughout</p></li>
 </ul>
-<p>The code is not part of the published package though.
-It is only used for testing purposes. We recommend it for educational purposes only.</p>
+<p>This implementation is included for testing and educational purposes only.</p>
 </section>
 <section id="markowitz-et-al">
 <h3>📝 Markowitz et al<a class="headerlink" href="#markowitz-et-al" title="Link to this heading">#</a></h3>
-<p>In <a class="reference external" href="https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf">Avoiding the Downside: A Practical Review of the Critical
-Line Algorithm for Mean-Semivariance Portfolio Optimizatio</a>
-Markowitz and a team of researchers from Hudson Bay Capital Management and Constantia
-Capital provide a step-by-step tutorial on how to implement the critical line algorithm.</p>
-<p>We address a problem they oversaw: After finding the first starting point
-all variables might be blocked. We need to enforce that one variable is labeled
-as free even it sits on a boundary otherwise the matrix needed is singular.</p>
-<p>Rather than using their involved construction of the sparse matrix
-to estimate the weights we bisect the weights into a free and a blocked part.
-We then use a linear solver to compute the weights only for the free part.</p>
-<p>We alter some of their Python code. Our experiments to combine it with Niedermayer’s
-ideas to accelerate the computation of the matrix inverses did not yet justify
-the additional complexity.</p>
+<p>In
+<a class="reference external" href="https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf">Avoiding the Downside: A Practical Review of the Critical Line Algorithm for Mean-Semivariance Portfolio Optimization</a>,
+Markowitz and researchers from Hudson Bay Capital Management and Constantia Capital
+a step-by-step tutorial.</p>
+<p>We address a problem they overlooked: after finding the first starting point,
+all variables might be blocked. We enforce that one variable
+labeled as free (even if it sits on a boundary) to avoid a singular matrix.</p>
+<p>Rather than using their sparse matrix construction, we bisect the
+weights into free and blocked parts and use a linear solver for the free part only.</p>
 </section>
 </section>
-<section id="previous-work">
-<h2>🔍 previous work<a class="headerlink" href="#previous-work" title="Link to this heading">#</a></h2>
-<p>In the <a class="reference external" href="https://github.com/phschiele/PyCLA">repo</a> by Philipp Schiele.</p>
+<section id="testing">
+<h2>🧪 Testing<a class="headerlink" href="#testing" title="Link to this heading">#</a></h2>
+<p>Run the test suite with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span><span class="nb">test</span>
+</pre></div>
+</div>
+</section>
+<section id="code-quality">
+<h2>🧹 Code Quality<a class="headerlink" href="#code-quality" title="Link to this heading">#</a></h2>
+<p>Format and lint the code with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>fmt
+</pre></div>
+</div>
+</section>
+<section id="documentation">
+<h2>📖 Documentation<a class="headerlink" href="#documentation" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.cvxgrp.org/cvxcla/book">Online Documentation</a></p></li>
+<li><p><a class="reference external" href="https://www.cvxgrp.org/cvxcla/pdoc/">API Reference</a></p></li>
+</ul>
+</section>
+<section id="contributing">
+<h2>👥 Contributing<a class="headerlink" href="#contributing" title="Link to this heading">#</a></h2>
+<p>Contributions are welcome! Please feel free to submit a Pull Request.</p>
+<ol class="arabic simple">
+<li><p>Fork the repository</p></li>
+<li><p>Create your feature branch (<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">-b</span> <span class="pre">feature/amazing-feature</span></code>)</p></li>
+<li><p>Run the tests to make sure everything works (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code>)</p></li>
+<li><p>Format your code (<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">fmt</span></code>)</p></li>
+<li><p>Commit your changes (<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span> <span class="pre">-m</span> <span class="pre">'Add</span> <span class="pre">some</span> <span class="pre">amazing</span> <span class="pre">feature'</span></code>)</p></li>
+<li><p>Push to the branch (<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">push</span> <span class="pre">origin</span> <span class="pre">feature/amazing-feature</span></code>)</p></li>
+<li><p>Open a Pull Request</p></li>
+</ol>
+</section>
+<section id="license">
+<h2>📄 License<a class="headerlink" href="#license" title="Link to this heading">#</a></h2>
+<p>This project is licensed under the Apache License 2.0 - see the <a class="reference internal" href="#LICENSE"><span class="xref myst">LICENSE</span></a>
+file for details.</p>
+</section>
+<section id="related-projects">
+<h2>🔍 Related Projects<a class="headerlink" href="#related-projects" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/phschiele/PyCLA">PyCLA</a> by Philipp Schiele - A
+previous implementation of the Critical Line Algorithm in Python.</p></li>
+</ul>
 </section>
 <div class="toctree-wrapper compound">
 </div>
@@ -520,14 +649,26 @@ the additional complexity.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#critical-line-algorithm">📊 Critical line algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature">📚 Literature</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">📋 Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#features">✨ Features</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">🚀 Installation</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-pip">Using pip</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#development-setup">Development Setup</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#usage">🔧 Usage</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#literature-and-implementations">📚 Literature and Implementations</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#niedermayer-and-niedermayer">📝 Niedermayer and Niedermayer</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#bailey-and-lopez-de-prado">📝 Bailey and Lopez de Prado</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#markowitz-et-al">📝 Markowitz et al</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#previous-work">🔍 previous work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#testing">🧪 Testing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-quality">🧹 Code Quality</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation">📖 Documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#contributing">👥 Contributing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#license">📄 License</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-projects">🔍 Related Projects</a></li>
 </ul>
   </nav></div>
 
