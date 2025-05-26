@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pytest
@@ -10,11 +13,22 @@ from cvx.cla.types import TurningPoint
 
 @dataclass(frozen=True)
 class Cla(CLAUX):
+    """Test subclass of CLAUX for testing purposes."""
+
     pass
 
 
 @pytest.fixture()
-def cla(input_data):
+def cla(input_data: Any) -> Cla:
+    """
+    Fixture that creates a Cla instance for testing.
+
+    Args:
+        input_data: Test data containing covariance, mean, and bounds
+
+    Returns:
+        A configured Cla instance
+    """
     return Cla(
         covariance=input_data.covariance,
         mean=input_data.mean,
@@ -27,9 +41,13 @@ def cla(input_data):
     )
 
 
-def test_claux(cla, input_data):
+def test_claux(cla: Cla, input_data: Any) -> None:
     """
-    Test that the CLAUX class is initialized correctly
+    Test that the CLAUX class is initialized correctly.
+
+    Args:
+        cla: The Cla instance to test
+        input_data: The input data used to create the Cla instance
     """
     np.testing.assert_equal(cla.covariance, input_data.covariance)
     np.testing.assert_equal(cla.mean, input_data.mean)
@@ -38,7 +56,16 @@ def test_claux(cla, input_data):
     assert cla.tol == 1e-5
 
 
-def test_append(cla):
+def test_append(cla: Cla) -> None:
+    """
+    Test the _append method of CLAUX class.
+
+    This test creates a random weight vector, creates a TurningPoint with it,
+    and tests that appending it to the Cla instance works correctly.
+
+    Args:
+        cla: The Cla instance to test
+    """
     weights = np.random.rand(10)
     weights = weights / np.sum(weights)
 
@@ -66,7 +93,13 @@ def test_append(cla):
     assert fig is not None
 
 
-def test_raise():
+def test_raise() -> None:
+    """
+    Test that the _append method raises AssertionError for invalid weights.
+
+    This test creates a Cla instance and tests that appending TurningPoints
+    with invalid weights (sum != 1, outside bounds) raises AssertionError.
+    """
     cla = Cla(
         covariance=np.eye(2),
         upper_bounds=np.ones(2),

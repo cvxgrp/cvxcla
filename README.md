@@ -67,30 +67,6 @@ We alter some of their Python code. Our experiments to combine it with Niedermay
 ideas to accelerate the computation of the matrix inverses did not yet justify
 the additional complexity.
 
-## 🛠️ uv
-
-You need to install [task](https://taskfile.dev).
-Starting with
-
-```bash
-task cvxcla:install
-```
-
-will install [uv](https://github.com/astral-sh/uv) and create
-the virtual environment defined in
-pyproject.toml and locked in uv.lock.
-
-## 🔬 marimo
-
-We install [marimo](https://marimo.io) on the fly within the aforementioned
-virtual environment. Executing
-
-```bash
-task cvxcla:marimo
-```
-
-will install and start marimo.
-
 ## 🔍 previous work
 
 In the [repo](https://github.com/phschiele/PyCLA) by Philipp Schiele.

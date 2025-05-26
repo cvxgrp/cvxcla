@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import numpy as np
 
 np.random.seed(42)
 
 
-def test_last_diagonal():
-    """test last diagonal element"""
+def test_last_diagonal() -> None:
+    """
+    Test accessing and modifying the last diagonal element of a numpy array.
+
+    This test verifies that the last diagonal element can be accessed and modified
+    using both explicit indices and negative indices.
+    """
     a = np.zeros((3, 3))
     a[2, 2] = 1.0
 
@@ -14,8 +21,14 @@ def test_last_diagonal():
     assert a[-1, -1] == 2.0
 
 
-def test_last_column():
-    """test last column of a numpy array"""
+def test_last_column() -> None:
+    """
+    Test accessing and modifying the last column of a numpy array.
+
+    This test verifies that the last column can be accessed and modified
+    using both explicit indices and negative indices, and that slicing
+    operations work correctly.
+    """
     a = np.zeros((3, 3))
     a[:, 2] = 1.0
 

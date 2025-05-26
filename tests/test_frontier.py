@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -10,9 +13,16 @@ from tests.bailey.cla import CLA as BAILEY
 
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
-def test_frontier(input_data, solver):
+def test_frontier(input_data: Any, solver: type) -> None:
     """
-    Test the frontier both for Bailey and Markowitz
+    Test the frontier computation for both Bailey and Markowitz implementations.
+
+    This test verifies that both implementations correctly compute the efficient frontier
+    and that the interpolation of the frontier preserves its properties.
+
+    Args:
+        input_data: Test data containing covariance, mean, and bounds
+        solver: The CLA implementation to test (either BAILEY or MARKOWITZ)
     """
     f = solver(
         covariance=input_data.covariance,
@@ -34,9 +44,16 @@ def test_frontier(input_data, solver):
 
 
 @pytest.mark.parametrize("n", [3, 5, 10, 20])
-def test_frontiers(n, resource_dir):
+def test_frontiers(n: int, resource_dir: Path) -> None:
     """
-    Compare the frontiers of BAILEY and MARKOWITZ for a variety of dimensions.
+    Compare the frontiers computed by Bailey and Markowitz implementations.
+
+    This test creates random portfolio optimization problems of different sizes
+    and verifies that both implementations produce consistent results.
+
+    Args:
+        n: The number of assets in the portfolio
+        resource_dir: Path to the test resources directory
     """
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)

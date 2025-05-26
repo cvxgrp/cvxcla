@@ -1,3 +1,7 @@
+# Continuous Integration workflow
+# This workflow runs tests across multiple operating systems and Python versions
+# It is triggered on push events to the repository
+
 name: "CI"
 
 on:
@@ -11,6 +15,8 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
 
+    # Matrix strategy to test across multiple environments
+    # Tests will run on all combinations of the specified operating systems and Python versions
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
@@ -18,9 +24,11 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      # Step 1: Set up the Python environment with the specified version
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Step 2: Run the tests using the cvxgrp test action
       - uses: cvxgrp/.github/actions/test@v2.2.8
