@@ -1,32 +1,33 @@
 import marimo
 
-__generated_with = "0.9.27"
+__generated_with = "0.13.11"
 app = marimo.App()
 
 
 @app.cell
-def __(mo):
+def _(mo):
     mo.md(r"""# Critical Line Algorithm""")
     return
 
 
 @app.cell
-def __(mo):
+def _(mo):
     mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla)""")
     return
 
 
 @app.cell
-def __():
+def _():
     import numpy as np
 
-    from cvx.cla.markowitz.cla import CLA as MARKOWITZ
+    from cvx.cla import CLA
+    from cvx.cla.plot import plot_frontier
 
-    return MARKOWITZ, np
+    return CLA, np, plot_frontier
 
 
 @app.cell
-def __(MARKOWITZ, np):
+def _(CLA, np):
     n = 10
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
@@ -35,7 +36,7 @@ def __(MARKOWITZ, np):
     factor = np.random.randn(n, n)
     covariance = factor @ factor.T
 
-    f1 = MARKOWITZ(
+    f1 = CLA(
         mean=mean,
         covariance=covariance,
         lower_bounds=lower_bounds,
@@ -43,23 +44,23 @@ def __(MARKOWITZ, np):
         A=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
-    return covariance, f1, factor, lower_bounds, mean, n, upper_bounds
+    return (f1,)
 
 
 @app.cell
-def __(f1):
-    f1.interpolate(10).plot(volatility=True, markers=False)
+def _(f1, plot_frontier):
+    plot_frontier(f1.interpolate(10), volatility=True, markers=False)
     return
 
 
 @app.cell
-def __(f1):
-    f1.plot()
+def _(f1, plot_frontier):
+    plot_frontier(f1)
     return
 
 
 @app.cell
-def __():
+def _():
     import marimo as mo
 
     return (mo,)

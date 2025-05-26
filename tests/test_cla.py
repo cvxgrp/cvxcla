@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 from pandas import DataFrame
 
+from cvx.cla import CLA
 from cvx.cla.first import init_algo_lp
-from cvx.cla.markowitz.cla import CLA
 
 
 def test_solver(input_data: Any, results: Any) -> None:
@@ -77,6 +77,8 @@ def test_example(example: DataFrame, example_solution: DataFrame) -> None:
         A=np.ones((1, len(means))),
         b=np.ones(1),
     )
+
+    assert len(cla) == 8
 
     for row, turning_point in enumerate(cla.turning_points):
         if row > 0:

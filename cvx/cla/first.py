@@ -11,16 +11,27 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+"""
+First turning point computation for the Critical Line Algorithm.
+
+This module provides functions to compute the first turning point on the efficient frontier,
+which is the portfolio with the highest expected return that satisfies the constraints.
+Two implementations are provided: a direct algorithm and a linear programming approach.
+"""
+
 from __future__ import annotations
 
 import cvxpy as cp
 import numpy as np
+from numpy.typing import NDArray
 
-from .types import MATRIX, TurningPoint
+from .types import TurningPoint
 
 
 #
-def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> TurningPoint:
+def init_algo(
+    mean: NDArray[np.float64], lower_bounds: NDArray[np.float64], upper_bounds: NDArray[np.float64]
+) -> TurningPoint:
     """The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
@@ -65,16 +76,41 @@ def init_algo(mean: MATRIX, lower_bounds: MATRIX, upper_bounds: MATRIX) -> Turni
 
 
 def init_algo_lp(
-    mean: MATRIX,
-    lower_bounds: MATRIX,
-    upper_bounds: MATRIX,
-    A_eq: MATRIX | None = None,
-    b_eq: MATRIX | None = None,
+    mean: NDArray[np.float64],
+    lower_bounds: NDArray[np.float64],
+    upper_bounds: NDArray[np.float64],
+    A_eq: NDArray[np.float64] | None = None,
+    b_eq: NDArray[np.float64] | None = None,
     solver=cp.CLARABEL,
     **kwargs,
-    # A_ub: MATRIX | None = None,
-    # b_ub: MATRIX | None = None,
+    # A_ub: NDArray[np.float64] | None = None,
+    # b_ub: NDArray[np.float64] | None = None,
 ) -> TurningPoint:
+    """
+    Compute the first turning point using linear programming.
+
+    This function formulates the problem of finding the first turning point as a linear
+    programming problem and solves it using a convex optimization solver. The objective
+    is to maximize the expected return subject to the constraints that the weights sum
+    to 1 and are within their bounds.
+
+    Args:
+        mean: Vector of expected returns for each asset.
+        lower_bounds: Vector of lower bounds for asset weights.
+        upper_bounds: Vector of upper bounds for asset weights.
+        A_eq: Matrix for additional linear equality constraints (Ax = b).
+            If None, only the fully invested constraint (sum(weights) = 1) is used.
+        b_eq: Vector for additional linear equality constraints (Ax = b).
+            If None, only the fully invested constraint (sum(weights) = 1) is used.
+        solver: The CVXPY solver to use for the optimization.
+        **kwargs: Additional keyword arguments to pass to the solver.
+
+    Returns:
+        A TurningPoint object representing the first point on the efficient frontier.
+
+    Raises:
+        ValueError: If the problem is infeasible or if lower bounds exceed upper bounds.
+    """
     if A_eq is None:
         A_eq = np.atleast_2d(np.ones_like(mean))
 
@@ -128,11 +164,31 @@ def init_algo_lp(
     return TurningPoint(free=free, weights=w)
 
 
-def _free(w, lower_bounds, upper_bounds):
+def _free(
+    w: NDArray[np.float64], lower_bounds: NDArray[np.float64], upper_bounds: NDArray[np.float64]
+) -> NDArray[np.bool_]:
+    """
+    Determine which asset should be free in the turning point.
+
+    This helper function identifies the asset that should be marked as free
+    in the turning point. It selects the asset that is furthest from its bounds,
+    which helps ensure numerical stability in the algorithm.
+
+    Args:
+        w: Vector of portfolio weights.
+        lower_bounds: Vector of lower bounds for asset weights.
+        upper_bounds: Vector of upper bounds for asset weights.
+
+    Returns:
+        A boolean vector indicating which asset is free (True) and which are blocked (False).
+    """
+    # Calculate the distance from each weight to its nearest bound
     distance = np.min(np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0)
 
+    # Find the index of the asset furthest from its bounds
     index = np.argmax(distance)
 
+    # Create a boolean vector with only that asset marked as free
     free = np.full_like(w, False, dtype=np.bool_)
     free[index] = True
     return free

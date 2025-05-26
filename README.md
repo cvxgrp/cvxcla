@@ -72,7 +72,7 @@ Here's a simple example of how to use `cvxcla` to compute the efficient frontier
 
 ```python
 import numpy as np
-from cvx.cla.markowitz.cla import CLA
+from cvx.cla.cla import CLA
 
 # Define your portfolio problem
 n = 10  # Number of assets
@@ -84,12 +84,12 @@ upper_bounds = np.ones(n)  # No leverage
 
 # Create a CLA instance
 cla = CLA(
-    mean=mean,
-    covariance=covariance,
-    lower_bounds=lower_bounds,
-    upper_bounds=upper_bounds,
-    A=np.ones((1, n)),  # Fully invested constraint
-    b=np.ones(1)
+   mean=mean,
+   covariance=covariance,
+   lower_bounds=lower_bounds,
+   upper_bounds=upper_bounds,
+   A=np.ones((1, n)),  # Fully invested constraint
+   b=np.ones(1)
 )
 
 # Access the efficient frontier

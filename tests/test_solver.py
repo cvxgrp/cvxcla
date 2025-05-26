@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from pandas import DataFrame
 
-from cvx.cla.markowitz.cla import CLA as MARKOWITZ
+from cvx.cla.cla import CLA as MARKOWITZ
 from tests.bailey.cla import CLA as BAILEY
 
 
