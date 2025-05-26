@@ -18,12 +18,9 @@ This module provides functions for visualizing the efficient frontier
 and other results from the Critical Line Algorithm.
 """
 
-# from typing import TYPE_CHECKING
-
 import plotly.express as px
 import plotly.graph_objects as go
 
-# if TYPE_CHECKING:
 from cvx.cla.types import Frontier
 
 

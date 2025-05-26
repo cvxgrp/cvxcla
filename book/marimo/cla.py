@@ -20,7 +20,7 @@ def __(mo):
 def __():
     import numpy as np
 
-    from cvx.cla.markowitz.cla import CLA as MARKOWITZ
+    from cvx.cla.cla import CLA as MARKOWITZ
 
     return MARKOWITZ, np
 

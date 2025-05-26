@@ -20,17 +20,19 @@ efficient frontier by finding all turning points, which are the points where the
 set of assets at their bounds changes.
 """
 
-from dataclasses import dataclass
+import logging
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
 
-from ..claux import CLAUX
-from ..types import TurningPoint
+from cvx.cla.first import init_algo
+from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
-class CLA(CLAUX):
+class CLA:
     """
     Critical Line Algorithm implementation based on Markowitz's approach.
 
@@ -53,6 +55,16 @@ class CLA(CLAUX):
         tol: Tolerance for numerical calculations.
         logger: Logger instance for logging information and errors.
     """
+
+    mean: NDArray[np.float64]
+    covariance: NDArray[np.float64]
+    lower_bounds: NDArray[np.float64]
+    upper_bounds: NDArray[np.float64]
+    A: NDArray[np.float64]
+    b: NDArray[np.float64]
+    turning_points: List[TurningPoint] = field(default_factory=list)
+    tol: float = 1e-5
+    logger: logging.Logger = logging.getLogger(__name__)
 
     def __post_init__(self):
         """
@@ -197,3 +209,69 @@ class CLA(CLAUX):
 
         # Return the two solution vectors
         return x[:, 0], x[:, 1]
+
+    def __len__(self) -> int:
+        """
+        Get the number of turning points in the efficient frontier.
+
+        Returns:
+            The number of turning points currently stored in the object.
+        """
+        return len(self.turning_points)
+
+    def _first_turning_point(self) -> TurningPoint:
+        """
+        Calculate the first turning point on the efficient frontier.
+
+        This method uses the init_algo function to find the first turning point
+        based on the mean returns and the bounds on asset weights.
+
+        Returns:
+            A TurningPoint object representing the first point on the efficient frontier.
+        """
+        first = init_algo(
+            mean=self.mean,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+        )
+        return first
+
+    def _append(self, tp: TurningPoint, tol: Optional[float] = None) -> None:
+        """
+        Append a turning point to the list of turning points.
+
+        This method validates that the turning point satisfies the constraints
+        before adding it to the list.
+
+        Args:
+            tp: The turning point to append.
+            tol: Tolerance for constraint validation. If None, uses the class's tol attribute.
+
+        Raises:
+            AssertionError: If the turning point violates any constraints.
+        """
+        tol = tol or self.tol
+
+        assert np.all(tp.weights >= (self.lower_bounds - tol)), f"{(tp.weights + tol) - self.lower_bounds}"
+        assert np.all(tp.weights <= (self.upper_bounds + tol)), f"{(self.upper_bounds + tol) - tp.weights}"
+        assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
+
+        self.turning_points.append(tp)
+
+    @property
+    def frontier(self) -> Frontier:
+        """
+        Get the efficient frontier constructed from the turning points.
+
+        This property creates a Frontier object from the list of turning points,
+        which can be used to analyze the risk-return characteristics of the
+        efficient portfolios.
+
+        Returns:
+            A Frontier object representing the efficient frontier.
+        """
+        return Frontier(
+            covariance=self.covariance,
+            mean=self.mean,
+            frontier=[FrontierPoint(point.weights) for point in self.turning_points],
+        )

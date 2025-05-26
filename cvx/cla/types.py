@@ -25,14 +25,11 @@ It also defines type aliases for commonly used types.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterator
+from typing import Iterator
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import minimize
-
-if TYPE_CHECKING:
-    import plotly.graph_objects as go
 
 
 @dataclass(frozen=True)
@@ -254,22 +251,3 @@ class Frontier:
             return sharpe_ratio_left, w_left
 
         return sharpe_ratio_right, w_right
-
-    def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
-        """
-        Plot the frontier.
-
-        This method creates a line plot of the efficient frontier, with expected return
-        on the y-axis and either variance or volatility on the x-axis.
-
-        Args:
-            volatility: If True, plot volatility (standard deviation) on the x-axis.
-                       If False, plot variance on the x-axis.
-            markers: If True, show markers at each point on the frontier.
-
-        Returns:
-            A plotly Figure object that can be displayed or saved.
-        """
-        from cvx.cla.plot import plot_frontier
-
-        return plot_frontier(self, volatility=volatility, markers=markers)

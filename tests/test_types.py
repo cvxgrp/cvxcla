@@ -358,7 +358,7 @@ def test_frontier_plot(frontier: Frontier) -> None:
         frontier: The Frontier instance to test
     """
     # Test with volatility=False (default)
-    fig = frontier.plot()
+    fig = plot_frontier(frontier)
     assert isinstance(fig, go.Figure)
 
     # Verify that the figure has one trace

@@ -23,4 +23,4 @@ The main class to use is CLA, which implements the algorithm and provides
 methods to compute and analyze the efficient frontier.
 """
 
-from .markowitz.cla import CLA
+from .cla import CLA
