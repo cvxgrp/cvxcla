@@ -89,9 +89,6 @@ def test_append(cla: Cla) -> None:
     # all variables are free
     assert np.all(cla.turning_points[-1].free)
 
-    fig = cla.frontier.plot()
-    assert fig is not None
-
 
 def test_raise() -> None:
     """

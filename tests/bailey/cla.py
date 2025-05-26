@@ -15,9 +15,10 @@ from dataclasses import dataclass
 
 import numpy as np
 from loguru import logger
+from numpy.typing import NDArray
 
 from cvx.cla.claux import CLAUX
-from cvx.cla.types import BOOLEAN_VECTOR, MATRIX, TurningPoint
+from cvx.cla.types import TurningPoint
 
 
 @dataclass(frozen=True)
@@ -130,7 +131,7 @@ class CLA(CLAUX):
 
 
 class _Schur:
-    def __init__(self, covariance, mean, free: BOOLEAN_VECTOR, weights: MATRIX):
+    def __init__(self, covariance, mean, free: NDArray[np.bool_], weights: np.ndarray):
         assert covariance.shape[0] == covariance.shape[1] == mean.shape[0] == free.shape[0] == weights.shape[0]
         self.covariance = covariance
         self.mean = mean

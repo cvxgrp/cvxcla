@@ -24,9 +24,10 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .first import init_algo
-from .types import MATRIX, Frontier, FrontierPoint, TurningPoint
+from .types import Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
@@ -49,12 +50,12 @@ class CLAUX:
         logger: Logger instance for logging information and errors.
     """
 
-    mean: MATRIX
-    covariance: MATRIX
-    lower_bounds: MATRIX
-    upper_bounds: MATRIX
-    A: MATRIX
-    b: MATRIX
+    mean: NDArray[np.float64]
+    covariance: NDArray[np.float64]
+    lower_bounds: NDArray[np.float64]
+    upper_bounds: NDArray[np.float64]
+    A: NDArray[np.float64]
+    b: NDArray[np.float64]
     turning_points: List[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)

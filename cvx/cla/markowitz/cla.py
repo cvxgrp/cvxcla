@@ -11,9 +11,19 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+"""
+Markowitz implementation of the Critical Line Algorithm.
+
+This module provides the CLA class, which implements the Critical Line Algorithm
+as described by Harry Markowitz and colleagues. The algorithm computes the entire
+efficient frontier by finding all turning points, which are the points where the
+set of assets at their bounds changes.
+"""
+
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from ..claux import CLAUX
 from ..types import TurningPoint
@@ -21,7 +31,46 @@ from ..types import TurningPoint
 
 @dataclass(frozen=True)
 class CLA(CLAUX):
+    """
+    Critical Line Algorithm implementation based on Markowitz's approach.
+
+    This class implements the Critical Line Algorithm as described by Harry Markowitz
+    and colleagues. It computes the entire efficient frontier by finding all turning
+    points, which are the points where the set of assets at their bounds changes.
+
+    The algorithm starts with the first turning point (the portfolio with the highest
+    expected return) and then iteratively computes the next turning point with a lower
+    expected return until it reaches the minimum variance portfolio.
+
+    Attributes:
+        mean: Vector of expected returns for each asset.
+        covariance: Covariance matrix of asset returns.
+        lower_bounds: Vector of lower bounds for asset weights.
+        upper_bounds: Vector of upper bounds for asset weights.
+        A: Matrix for linear equality constraints (Ax = b).
+        b: Vector for linear equality constraints (Ax = b).
+        turning_points: List of turning points on the efficient frontier.
+        tol: Tolerance for numerical calculations.
+        logger: Logger instance for logging information and errors.
+    """
+
     def __post_init__(self):
+        """
+        Initialize the CLA object and compute the efficient frontier.
+
+        This method is automatically called after initialization. It computes
+        the entire efficient frontier by finding all turning points, starting
+        from the first turning point (highest expected return) and iteratively
+        computing the next turning point with a lower expected return until
+        it reaches the minimum variance portfolio.
+
+        The algorithm uses a block matrix approach to solve the system of equations
+        that determine the turning points.
+
+        Raises:
+            AssertionError: If all variables are blocked, which would make the
+                            system of equations singular.
+        """
         ns = self.mean.shape[0]
         m = self.A.shape[0]
 
@@ -114,13 +163,37 @@ class CLA(CLAUX):
         self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
 
     @staticmethod
-    def _solve(A, b, IN):
+    def _solve(A: NDArray[np.float64], b: np.ndarray, IN: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Solve a system of linear equations with some variables fixed.
+
+        This method solves the system Ax = b, where some variables (indicated by IN)
+        are free to be determined by the solver, and others (indicated by OUT) are
+        fixed to specific values.
+
+        Args:
+            A: The coefficient matrix of the system.
+            b: The right-hand side of the system. This should be a matrix with two columns,
+               representing two different right-hand sides.
+            IN: A boolean vector indicating which variables are free (True) and which
+                are fixed (False).
+
+        Returns:
+            A tuple of two vectors (alpha, beta), where alpha is the solution to the first
+            right-hand side and beta is the solution to the second right-hand side.
+        """
         OUT = ~IN
         n = A.shape[1]
         x = np.zeros((n, 2))
 
+        # Set the fixed variables to their specified values
         x[OUT, :] = b[OUT, :]
+
+        # Adjust the right-hand side to account for the fixed variables
         bbb = b[IN, :] - A[IN, :][:, OUT] @ x[OUT, :]
 
+        # Solve the system for the free variables
         x[IN, :] = np.linalg.inv(A[IN, :][:, IN]) @ bbb
+
+        # Return the two solution vectors
         return x[:, 0], x[:, 1]
