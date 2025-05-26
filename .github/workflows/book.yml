@@ -1,9 +1,13 @@
+# Workflow for building and deploying the book
+# This workflow is triggered on push events to the repository
+
 name: "book"
 
 on:
 - push
 
 jobs:
+  # Job to process marimo notebooks
   marimo:
     runs-on: "ubuntu-latest"
     permissions:
@@ -15,6 +19,7 @@ jobs:
       - uses: cvxgrp/.github/actions/marimo@v2.2.8
 
 
+  # Job to run tests and generate coverage reports
   test:
     runs-on: "ubuntu-latest"
     permissions:
@@ -26,6 +31,7 @@ jobs:
       - uses: cvxgrp/.github/actions/coverage@v2.2.8
 
 
+  # Job to process Jupyter notebooks
   jupyter:
     runs-on: "ubuntu-latest"
     permissions:
@@ -36,6 +42,7 @@ jobs:
 
       - uses: cvxgrp/.github/actions/jupyter@v2.2.8
 
+  # Job to generate API documentation using pdoc
   pdoc:
     runs-on: ubuntu-latest
     permissions:
@@ -47,6 +54,8 @@ jobs:
       - uses: cvxgrp/.github/actions/pdoc@v2.2.8
 
 
+  # Final job to build and deploy the book
+  # This job runs only after all other jobs have completed successfully
   book:
     runs-on: "ubuntu-latest"
     needs: [test, jupyter, marimo, pdoc]

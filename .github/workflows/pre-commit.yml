@@ -1,3 +1,7 @@
+# Pre-commit workflow
+# This workflow runs code quality checks and dependency analysis
+# It is triggered on push events to the repository
+
 name: pre-commit
 
 on:
@@ -7,15 +11,20 @@ permissions:
   contents: read
 
 jobs:
+  # Job to run pre-commit hooks for code quality checks
   pre-commit:
     runs-on: ubuntu-latest
     steps:
+      # Run pre-commit hooks (linting, formatting, etc.)
       - uses: cvxgrp/.github/actions/pre-commit@v2.2.8
 
+  # Job to analyze dependencies using deptry
   deptry:
     runs-on: ubuntu-latest
     steps:
+      # Set up the Python environment
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
 
+      # Run deptry to check for dependency issues
       - uses: cvxgrp/.github/actions/deptry@v2.2.8
