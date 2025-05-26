@@ -128,14 +128,15 @@ We've made several improvements:
 - Isolating the computation of λ and weight updates to make them testable
 - Using modern and immutable dataclasses throughout
 
-This implementation is included for testing and educational purposes only.
+Our updated implementation is included in the tests but not part of cvxcla package.
+We use it to verify our results and include it for educational purposes.
 
 ### 📝 Markowitz et al
 
 In
 [Avoiding the Downside: A Practical Review of the Critical Line Algorithm for Mean-Semivariance Portfolio Optimization](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf),
 Markowitz and researchers from Hudson Bay Capital Management and Constantia Capital
-a step-by-step tutorial.
+present a step-by-step tutorial.
 
 We address a problem they overlooked: after finding the first starting point,
 all variables might be blocked. We enforce that one variable

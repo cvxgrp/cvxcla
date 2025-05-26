@@ -531,14 +531,15 @@ We’ve made several improvements:</p>
 <li><p>Isolating the computation of λ and weight updates to make them testable</p></li>
 <li><p>Using modern and immutable dataclasses throughout</p></li>
 </ul>
-<p>This implementation is included for testing and educational purposes only.</p>
+<p>Our updated implementation is included in the tests but not part of cvxcla package.
+We use it to verify our results and include it for educational purposes.</p>
 </section>
 <section id="markowitz-et-al">
 <h3>📝 Markowitz et al<a class="headerlink" href="#markowitz-et-al" title="Link to this heading">#</a></h3>
 <p>In
 <a class="reference external" href="https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf">Avoiding the Downside: A Practical Review of the Critical Line Algorithm for Mean-Semivariance Portfolio Optimization</a>,
 Markowitz and researchers from Hudson Bay Capital Management and Constantia Capital
-a step-by-step tutorial.</p>
+present a step-by-step tutorial.</p>
 <p>We address a problem they overlooked: after finding the first starting point,
 all variables might be blocked. We enforce that one variable
 labeled as free (even if it sits on a boundary) to avoid a singular matrix.</p>
