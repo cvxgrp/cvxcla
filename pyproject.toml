@@ -53,7 +53,7 @@ build-backend = "hatchling.build"
 packages = ["cvx"]
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["clarabel"]
+DEP002 = ["clarabel", "kaleido"]
 
 [tool.deptry]
 # see https://deptry.com/usage/#pep-621-dev-dependency-groups

@@ -21,7 +21,7 @@ and other results from the Critical Line Algorithm.
 import plotly.express as px
 import plotly.graph_objects as go
 
-from cvx.cla.types import Frontier
+from .types import Frontier
 
 
 def plot_frontier(frontier: Frontier, volatility: bool = False, markers: bool = True) -> go.Figure:

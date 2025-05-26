@@ -27,8 +27,8 @@ from typing import List, Optional
 import numpy as np
 from numpy.typing import NDArray
 
-from cvx.cla.first import init_algo
-from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
+from .first import init_algo
+from .types import Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
