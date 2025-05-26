@@ -24,6 +24,8 @@ is a piecewise linear function when expected return is plotted against
 expected variance. The CLA computes the turning points (corners)
 of the efficient frontier, allowing for efficient representation of the entire frontier.
 
+I gave the plenary talk at [EQD's Singapore conference](https://tschm.github.io/eqd_markowitz/PresentationEQDweb.pdf).
+
 ## ✨ Features
 
 - Efficient computation of the entire efficient frontier
@@ -183,3 +185,6 @@ file for details.
 
 - [PyCLA](https://github.com/phschiele/PyCLA) by Philipp Schiele - A
 previous implementation of the Critical Line Algorithm in Python.
+
+- [CLA](https://github.com/mdengler/cla) by Martin Dengler - The
+original implementation by David Bailey and Marcos Lopez de Prado.
