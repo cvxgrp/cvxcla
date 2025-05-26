@@ -475,7 +475,7 @@ of the efficient frontier, allowing for efficient representation of the entire f
 <h2>🔧 Usage<a class="headerlink" href="#usage" title="Link to this heading">#</a></h2>
 <p>Here’s a simple example of how to use <code class="docutils literal notranslate"><span class="pre">cvxcla</span></code> to compute the efficient frontier:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">cvx.cla.markowitz.cla</span><span class="w"> </span><span class="kn">import</span> <span class="n">CLA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cvx.cla.cla</span><span class="w"> </span><span class="kn">import</span> <span class="n">CLA</span>
 
 <span class="c1"># Define your portfolio problem</span>
 <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># Number of assets</span>
@@ -487,12 +487,12 @@ of the efficient frontier, allowing for efficient representation of the entire f
 
 <span class="c1"># Create a CLA instance</span>
 <span class="n">cla</span> <span class="o">=</span> <span class="n">CLA</span><span class="p">(</span>
-    <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span>
-    <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span>
-    <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span>
-    <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span>
-    <span class="n">A</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)),</span>  <span class="c1"># Fully invested constraint</span>
-    <span class="n">b</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+   <span class="n">mean</span><span class="o">=</span><span class="n">mean</span><span class="p">,</span>
+   <span class="n">covariance</span><span class="o">=</span><span class="n">covariance</span><span class="p">,</span>
+   <span class="n">lower_bounds</span><span class="o">=</span><span class="n">lower_bounds</span><span class="p">,</span>
+   <span class="n">upper_bounds</span><span class="o">=</span><span class="n">upper_bounds</span><span class="p">,</span>
+   <span class="n">A</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span><span class="p">)),</span>  <span class="c1"># Fully invested constraint</span>
+   <span class="n">b</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="p">)</span>
 
 <span class="c1"># Access the efficient frontier</span>
