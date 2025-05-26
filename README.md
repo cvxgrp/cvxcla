@@ -72,7 +72,8 @@ Here's a simple example of how to use `cvxcla` to compute the efficient frontier
 
 ```python
 import numpy as np
-from cvx.cla.cla import CLA
+from cvx.cla import CLA
+from cvx.cla.plot import plot_frontier
 
 # Define your portfolio problem
 n = 10  # Number of assets
@@ -96,7 +97,7 @@ cla = CLA(
 frontier = cla.frontier
 
 # Plot the efficient frontier
-fig = frontier.plot(volatility=True)
+fig = plot_frontier(frontier, volatility=True)
 fig.show()
 
 # Get the maximum Sharpe ratio portfolio
