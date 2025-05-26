@@ -11,7 +11,7 @@ venv: ## Create a Python virtual environment using uv
 
 install: venv ## Install dependencies and setup environment
 	uv pip install --upgrade pip  # Ensure pip is up to date
-	uv sync --dev --frozen  # Install dependencies from pyproject.toml
+	uv sync --dev --frozen --all-extras  # Install dependencies from pyproject.toml
 
 # Code Quality
 fmt: venv ## Format and lint code
@@ -27,7 +27,7 @@ clean: ## Clean build artifacts and stale branches
 # Testing
 test: install ## Run tests
 	uv pip install pytest  # Install pytest
-	uv run pytest src/tests  # Run tests in src/tests directory
+	uv run pytest tests  # Run tests in src/tests directory
 
 # Help
 help: ## Show this help message
