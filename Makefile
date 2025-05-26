@@ -38,4 +38,6 @@ help: ## Show this help message
 
 # Marimo & Jupyter
 marimo: install ## Install a run a Jupyter Lab server
-	uv pip install marimo  # Install Marimo
+	uv pip install --no-cache-dir marimo  # Install Marimo
+	# Launch marimo editor with notebooks in book/marimo directory
+	@uv run marimo edit book/marimo
