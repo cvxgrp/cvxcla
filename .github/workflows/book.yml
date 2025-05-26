@@ -6,6 +6,8 @@ on:
 jobs:
   marimo:
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
@@ -15,6 +17,8 @@ jobs:
 
   test:
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
@@ -24,6 +28,8 @@ jobs:
 
   jupyter:
     runs-on: "ubuntu-latest"
+    permissions:
+      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
@@ -32,6 +38,8 @@ jobs:
 
   pdoc:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: cvxgrp/.github/actions/environment@v2.2.8
