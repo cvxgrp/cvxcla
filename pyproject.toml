@@ -28,7 +28,8 @@ dev = [
     "pre-commit==4.2.0",
     "loguru",
     "pandas",
-    "cvxbson"
+    "cvxbson",
+    "mosek"
 ]
 
 [tool.ruff]
