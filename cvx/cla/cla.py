@@ -22,6 +22,7 @@ set of assets at their bounds changes.
 
 import logging
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import List, Optional
 
 import numpy as np
@@ -66,7 +67,7 @@ class CLA:
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)
 
-    @property
+    @cached_property
     def P(self):
         """
         Construct the projection matrix used in computing Lagrange multipliers.
@@ -80,7 +81,7 @@ class CLA:
         """
         return np.block([self.covariance, self.A.T])
 
-    @property
+    @cached_property
     def M(self):
         """
         Construct the Karush-Kuhn-Tucker (KKT) system matrix.
