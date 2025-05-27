@@ -22,7 +22,6 @@ set of assets at their bounds changes.
 
 import logging
 from dataclasses import dataclass, field
-from functools import cached_property
 from typing import List, Optional
 
 import numpy as np
@@ -67,12 +66,34 @@ class CLA:
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)
 
-    @cached_property
+    @property
     def P(self):
+        """
+        Construct the projection matrix used in computing Lagrange multipliers.
+
+        P is formed by horizontally stacking the covariance matrix and the transpose
+        of the equality constraint matrix A. It is used to compute:
+            - gamma = P @ alpha
+            - delta = P @ beta - mean
+
+        This step helps identify which constraints are becoming active or inactive.
+        """
         return np.block([self.covariance, self.A.T])
 
-    @cached_property
+    @property
     def M(self):
+        """
+        Construct the Karush-Kuhn-Tucker (KKT) system matrix.
+
+        The KKT matrix is built by augmenting the covariance matrix with the
+        equality constraints. It forms the linear system:
+            [Σ  Aᵗ]
+            [A   0 ]
+        which we solve to get the optimal portfolio weights (alpha) and the
+        Lagrange multipliers (lambda) corresponding to the constraints.
+
+        This matrix is symmetric but not necessarily positive definite.
+        """
         m = self.A.shape[0]
         return np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
 
