@@ -66,6 +66,37 @@ class CLA:
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)
 
+    @property
+    def P(self):
+        """
+        Construct the projection matrix used in computing Lagrange multipliers.
+
+        P is formed by horizontally stacking the covariance matrix and the transpose
+        of the equality constraint matrix A. It is used to compute:
+            - gamma = P @ alpha
+            - delta = P @ beta - mean
+
+        This step helps identify which constraints are becoming active or inactive.
+        """
+        return np.block([self.covariance, self.A.T])
+
+    @property
+    def M(self):
+        """
+        Construct the Karush-Kuhn-Tucker (KKT) system matrix.
+
+        The KKT matrix is built by augmenting the covariance matrix with the
+        equality constraints. It forms the linear system:
+            [Σ  Aᵗ]
+            [A   0 ]
+        which we solve to get the optimal portfolio weights (alpha) and the
+        Lagrange multipliers (lambda) corresponding to the constraints.
+
+        This matrix is symmetric but not necessarily positive definite.
+        """
+        m = self.A.shape[0]
+        return np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
+
     def __post_init__(self):
         """
         Initialize the CLA object and compute the efficient frontier.
@@ -83,131 +114,102 @@ class CLA:
             AssertionError: If all variables are blocked, which would make the
                             system of equations singular.
         """
-        ns = self.mean.shape[0]
         m = self.A.shape[0]
+        ns = len(self.mean)
 
-        # Initialize the portfolio.
-        first = self._first_turning_point()
-        self._append(first)
-
-        # Set the P matrix.
-        P = np.block([self.covariance, self.A.T])
-        M = np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
+        # Compute and store the first turning point
+        self._append(self._first_turning_point())
 
         lam = np.inf
 
         while lam > 0:
             last = self.turning_points[-1]
 
+            # --- Identify active set ---
             blocked = ~last.free
-            assert not np.all(blocked), "Not all variables can be blocked"
+            assert not np.all(blocked), "All variables cannot be blocked"
 
-            # Create the UP, DN, and IN
-            UP = blocked & np.isclose(last.weights, self.upper_bounds)
-            DN = blocked & np.isclose(last.weights, self.lower_bounds)
+            at_upper = blocked & np.isclose(last.weights, self.upper_bounds)
+            at_lower = blocked & np.isclose(last.weights, self.lower_bounds)
 
-            # a variable is out if it is UP or DN
-            OUT = np.logical_or(UP, DN)
+            OUT = at_upper | at_lower
             IN = ~OUT
 
-            up = np.zeros(ns)
-            up[UP] = self.upper_bounds[UP]
+            # --- Construct RHS for KKT system ---
+            fixed_weights = np.zeros(ns)
+            fixed_weights[at_upper] = self.upper_bounds[at_upper]
+            fixed_weights[at_lower] = self.lower_bounds[at_lower]
 
-            dn = np.zeros(ns)
-            dn[DN] = self.lower_bounds[DN]
+            adjusted_mean = self.mean.copy()
+            adjusted_mean[OUT] = 0.0
 
-            top = np.copy(self.mean)
-            top[OUT] = 0
+            free_mask = np.concatenate([IN, np.ones(m, dtype=bool)])
+            rhs_alpha = np.concatenate([fixed_weights, self.b])
+            rhs_beta = np.concatenate([adjusted_mean, np.zeros(m)])
+            rhs = np.column_stack([rhs_alpha, rhs_beta])
 
-            _IN = np.concatenate([IN, np.ones(m, dtype=np.bool_)])
+            # --- Solve KKT system ---
+            alpha, beta = CLA._solve(self.M, rhs, free_mask)
 
-            bbb = np.array([np.block([up + dn, self.b]), np.block([top, np.zeros(m)])]).T
+            # --- Compute Lagrange multipliers and directional derivatives ---
+            gamma = self.P @ alpha
+            delta = self.P @ beta - self.mean
 
-            alpha, beta = CLA._solve(M, bbb, _IN)
+            # --- Compute event ratios ---
+            L = np.full((ns, 4), -np.inf)
+            r_alpha, r_beta = alpha[:ns], beta[:ns]
+            tol = self.tol
 
-            gamma = P @ alpha
-            delta = P @ beta - self.mean
+            L[IN & (r_beta < -tol), 0] = (
+                self.upper_bounds[IN & (r_beta < -tol)] - r_alpha[IN & (r_beta < -tol)]
+            ) / r_beta[IN & (r_beta < -tol)]
+            L[IN & (r_beta > +tol), 1] = (
+                self.lower_bounds[IN & (r_beta > +tol)] - r_alpha[IN & (r_beta > +tol)]
+            ) / r_beta[IN & (r_beta > +tol)]
+            L[at_upper & (delta < -tol), 2] = -gamma[at_upper & (delta < -tol)] / delta[at_upper & (delta < -tol)]
+            L[at_lower & (delta > +tol), 3] = -gamma[at_lower & (delta > +tol)] / delta[at_lower & (delta > +tol)]
 
-            # Prepare the ratio matrix.
-            L = -np.inf * np.ones([ns, 4])
-
-            r_beta = beta[range(ns)]
-            r_alpha = alpha[range(ns)]
-
-            # IN security possibly going UP.
-            i = IN & (r_beta < -self.tol)
-            L[i, 0] = (self.upper_bounds[i] - r_alpha[i]) / r_beta[i]
-
-            # IN security possibly going DN.
-            i = IN & (r_beta > +self.tol)
-            L[i, 1] = (self.lower_bounds[i] - r_alpha[i]) / r_beta[i]
-
-            # UP security possibly going IN.
-            i = UP & (delta < -self.tol)
-            L[i, 2] = -gamma[i] / delta[i]
-
-            # DN security possibly going IN.
-            i = DN & (delta > +self.tol)
-            L[i, 3] = -gamma[i] / delta[i]
-
-            # If all elements of ratio are negative,
-            # we have reached the end of the efficient frontier.
+            # --- Determine next event ---
             if np.max(L) < 0:
                 break
 
-            secchg, dirchg = np.unravel_index(np.argmax(L, axis=None), L.shape)
-
-            # Set the new value of lambda_E.
+            secchg, dirchg = np.unravel_index(np.argmax(L), L.shape)
             lam = L[secchg, dirchg]
 
-            free = np.copy(last.free)
-            if dirchg == 0 or dirchg == 1:
-                free[secchg] = False
-            else:
-                free[secchg] = True
+            # --- Update free set ---
+            free = last.free.copy()
+            free[secchg] = dirchg >= 2  # boundary → IN if dirchg in {2, 3}
 
-            # Compute the portfolio at this corner.
-            x = r_alpha + lam * r_beta
+            # --- Compute new turning point ---
+            new_weights = r_alpha + lam * r_beta
+            self._append(TurningPoint(lamb=lam, weights=new_weights, free=free))
 
-            # Save the data computed at this corner.
-            self._append(TurningPoint(lamb=lam, weights=x, free=free))
-
+        # Final point at lambda = 0
         self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
 
     @staticmethod
     def _solve(A: NDArray[np.float64], b: np.ndarray, IN: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
-        Solve a system of linear equations with some variables fixed.
-
-        This method solves the system Ax = b, where some variables (indicated by IN)
-        are free to be determined by the solver, and others (indicated by OUT) are
-        fixed to specific values.
+        Solve the system A x = b with some variables fixed.
 
         Args:
-            A: The coefficient matrix of the system.
-            b: The right-hand side of the system. This should be a matrix with two columns,
-               representing two different right-hand sides.
-            IN: A boolean vector indicating which variables are free (True) and which
-                are fixed (False).
+            A: Coefficient matrix of shape (n, n).
+            b: Right-hand side matrix of shape (n, 2).
+            IN: Boolean array of shape (n,) indicating which variables are free.
 
         Returns:
-            A tuple of two vectors (alpha, beta), where alpha is the solution to the first
-            right-hand side and beta is the solution to the second right-hand side.
+            A tuple (alpha, beta) of solutions for the two RHS vectors.
         """
         OUT = ~IN
         n = A.shape[1]
         x = np.zeros((n, 2))
 
-        # Set the fixed variables to their specified values
-        x[OUT, :] = b[OUT, :]
+        x[OUT] = b[OUT]  # Set fixed variables
+        reduced_A = A[IN][:, IN]
+        reduced_b = b[IN] - A[IN][:, OUT] @ x[OUT]
 
-        # Adjust the right-hand side to account for the fixed variables
-        bbb = b[IN, :] - A[IN, :][:, OUT] @ x[OUT, :]
+        x[IN] = np.linalg.solve(reduced_A, reduced_b)
 
-        # Solve the system for the free variables
-        x[IN, :] = np.linalg.inv(A[IN, :][:, IN]) @ bbb
-
-        # Return the two solution vectors
         return x[:, 0], x[:, 1]
 
     def __len__(self) -> int:
