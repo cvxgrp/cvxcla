@@ -22,5 +22,8 @@ which are the points where the set of assets at their bounds changes.
 The main class to use is CLA, which implements the algorithm and provides
 methods to compute and analyze the efficient frontier.
 """
+import importlib.metadata
 
 from .cla import CLA
+
+__version__ = importlib.metadata.version("cvxcla")
