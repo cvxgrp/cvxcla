@@ -18,6 +18,7 @@ def _(mo):
 
 @app.cell
 def _():
+    # | hide_cell
     try:
         import micropip
 
