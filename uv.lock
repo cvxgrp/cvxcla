@@ -169,6 +169,7 @@ dependencies = [
     { name = "clarabel" },
     { name = "cvxpy-base" },
     { name = "numpy" },
+    { name = "plotly" },
     { name = "scipy" },
 ]
 
@@ -185,7 +186,6 @@ dev = [
 ]
 plot = [
     { name = "kaleido" },
-    { name = "plotly" },
 ]
 
 [package.metadata]
@@ -199,7 +199,7 @@ requires-dist = [
     { name = "mosek", marker = "extra == 'dev'", specifier = "==11.0.20" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", marker = "extra == 'dev'", specifier = "==2.2.3" },
-    { name = "plotly", marker = "extra == 'plot'", specifier = "==6.0.1" },
+    { name = "plotly", specifier = "==6.0.1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = "==4.2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==8.3.5" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = "==6.1.1" },
