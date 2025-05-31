@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from typing import Iterator
 
 import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
 from numpy.typing import NDArray
 from scipy.optimize import minimize
 
@@ -251,3 +253,34 @@ class Frontier:
             return sharpe_ratio_left, w_left
 
         return sharpe_ratio_right, w_right
+
+    def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
+        """
+        Plot the efficient frontier.
+
+        This function creates a line plot of the efficient frontier, with expected return
+        on the y-axis and either variance or volatility on the x-axis.
+
+        Args:
+            volatility: If True, plot volatility (standard deviation) on the x-axis.
+                       If False, plot variance on the x-axis.
+            markers: If True, show markers at each point on the frontier.
+
+        Returns:
+            A plotly Figure object that can be displayed or saved.
+        """
+        if not volatility:
+            fig = px.line(
+                x=self.variance,
+                y=self.returns,
+                markers=markers,
+                labels={"x": "Expected variance", "y": "Expected Return"},
+            )
+        else:
+            fig = px.line(
+                x=self.volatility,
+                y=self.returns,
+                markers=markers,
+                labels={"x": "Expected volatility", "y": "Expected Return"},
+            )
+        return fig
