@@ -17,7 +17,7 @@ def _(mo):
 
 
 @app.cell
-def _():
+async def _():
     # | hide_cell
     try:
         import micropip
