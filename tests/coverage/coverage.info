@@ -252,8 +252,8 @@ DA:239,1
 DA:245,1
 DA:246,1
 DA:247,1
-DA:249,1
-DA:250,1
+DA:249,0
+DA:250,0
 DA:252,1
 DA:253,1
 DA:255,1
@@ -263,7 +263,7 @@ DA:273,1
 DA:280,1
 DA:286,1
 LF:92
-LH:92
+LH:90
 FN:51,62,FrontierPoint.__post_init__
 FNDA:1,FrontierPoint.__post_init__
 FN:64,74,FrontierPoint.mean
