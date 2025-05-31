@@ -1,3 +1,3 @@
 # Demo
 
-- [Demo](https://www.cvxgrp.org/cvxcla/marimo/cla.html)
+- [Demo](https://www.cvxgrp.org/cvxcla/marimo/index.html)
