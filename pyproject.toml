@@ -21,7 +21,7 @@ repository = "https://github.com/cvxgrp/cvxcla"
 
 [project.optional-dependencies]
 plot = [
-    "plotly==6.0.1",
+    "plotly==6.1.2",
     "kaleido==0.2.1"
 ]
 
