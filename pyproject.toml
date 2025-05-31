@@ -32,7 +32,7 @@ dev = [
     "loguru==0.7.3",
     "pandas==2.2.3",
     "cvxbson==0.1.6",
-    "mosek==11.0.20",
+    "mosek==11.0.21",
     "marimo==0.13.15"
 ]
 
