@@ -19,14 +19,19 @@ def _(mo):
 @app.cell(hide_code=True)
 async def _():
     # | hide_cell
-    try:
+    import sys
+
+    IS_WASM = sys.platform == "emscripten"
+
+    print(f"WASM notebook: {IS_WASM}")
+
+    if IS_WASM:
         import micropip
 
         await micropip.install("cvxcla")
         await micropip.install("plotly")
         await micropip.install("pandas")
-    except ImportError:
-        pass
+
     return
 
 
@@ -41,8 +46,15 @@ def _():
 
 
 @app.cell
-def _(CLA, np):
-    n = 10
+def _(mo):
+    slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
+    slider
+    return (slider,)
+
+
+@app.cell(hide_code=True)
+def _(CLA, np, slider):
+    n = slider.value
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
     upper_bounds = np.ones(n)
@@ -63,7 +75,7 @@ def _(CLA, np):
 
 @app.cell
 def _(f1, plot_frontier):
-    plot_frontier(f1.interpolate(10), volatility=True, markers=False)
+    plot_frontier(f1.interpolate(10), volatility=True, markers=True)
     return
 
 
