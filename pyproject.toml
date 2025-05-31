@@ -8,7 +8,8 @@ dependencies = [
     "cvxpy-base>=1.5.1",
     "numpy>=2.0.0",
     "scipy>=1.14.1",
-    "clarabel>=0.9.0"
+    "clarabel>=0.9.0",
+    "plotly==6.0.1",
 ]
 
 # add Philipp
@@ -21,7 +22,6 @@ repository = "https://github.com/cvxgrp/cvxcla"
 
 [project.optional-dependencies]
 plot = [
-    "plotly==6.1.2",
     "kaleido==0.2.1"
 ]
 
