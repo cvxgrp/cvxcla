@@ -19,7 +19,9 @@ def _(mo):
 @app.cell
 def _():
     import micropip
+
     await micropip.install("cvxcla")
+
 
 @app.cell
 def _():
