@@ -25,7 +25,8 @@ jobs:
       - name: Convert Marimo files to HTML
         shell: bash
         run: |
-          marimo export html-wasm book/marimo/cla.py -o artifacts/marimo --show-code --mode run
+          #marimo export html-wasm book/marimo/cla.py -o artifacts/marimo --show-code --mode run
+          marimo export html book/marimo/cla.py -o artifacts/marimo/index.html --show-code
           ls -all artifacts/marimo
 
       - name: Upload HTML artifacts
