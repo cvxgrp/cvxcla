@@ -18,6 +18,11 @@ def _(mo):
 
 @app.cell
 def _():
+    import micropip
+    await micropip.install("cvxcla")
+
+@app.cell
+def _():
     import numpy as np
 
     from cvx.cla import CLA
