@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.13.15"
-app = marimo.App(layout_file="layouts/cla.slides.json")
+app = marimo.App()  # layout_file="layouts/cla.slides.json")
 
 
 @app.cell
@@ -12,7 +12,8 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla)""")
+    mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla).
+    The method was introduced by Harry M Markowitz in 1956.""")
     return
 
 
@@ -28,9 +29,8 @@ async def _():
     if IS_WASM:
         import micropip
 
+        # install the cvxcla package from PyPI
         await micropip.install("cvxcla")
-        await micropip.install("plotly")
-        await micropip.install("pandas")
 
     return
 

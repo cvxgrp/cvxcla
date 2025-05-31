@@ -18,7 +18,7 @@ def test_last_diagonal() -> None:
     a = np.zeros((3, 3))
     a[-1, -1] = 2.0
 
-    assert a[-1, -1] == 2.0
+    assert a[2, 2] == 2.0
 
 
 def test_last_column() -> None:
