@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           #marimo export html-wasm book/marimo/cla.py -o artifacts/marimo --show-code --mode run
-          marimo export html book/marimo/cla.py -o artifacts/marimo/index.html --show-code
+          marimo export html book/marimo/cla.py -o artifacts/marimo/index.html --include-code
           ls -all artifacts/marimo
 
       - name: Upload HTML artifacts
