@@ -44,3 +44,6 @@ marimo: install ## Install a run a Jupyter Lab server
 
 slides: install
 	@uv run marimo export html book/marimo/cla.py -o cla.html
+
+interactive: install
+	@uv run marimo run book/marimo/cla.py --include-code
