@@ -1,7 +1,7 @@
 import marimo
 
-__generated_with = "0.13.11"
-app = marimo.App(layout_file="layouts/notebook.slides.json")
+__generated_with = "0.13.15"
+app = marimo.App(layout_file="layouts/cla.slides.json")
 
 
 @app.cell
@@ -16,7 +16,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 async def _():
     # | hide_cell
     try:
@@ -27,6 +27,7 @@ async def _():
         await micropip.install("pandas")
     except ImportError:
         pass
+    return
 
 
 @app.cell
