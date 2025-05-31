@@ -18,9 +18,14 @@ def _(mo):
 
 @app.cell
 def _():
-    import micropip
+    try:
+        import micropip
 
-    await micropip.install("cvxcla")
+        await micropip.install("cvxcla")
+        await micropip.install("plotly")
+        await micropip.install("pandas")
+    except ImportError:
+        pass
 
 
 @app.cell
