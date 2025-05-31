@@ -4,7 +4,6 @@ import numpy as np
 import plotly.graph_objects as go
 import pytest
 
-from cvx.cla.plot import plot_frontier
 from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
 
 
@@ -358,7 +357,7 @@ def test_frontier_plot(frontier: Frontier) -> None:
         frontier: The Frontier instance to test
     """
     # Test with volatility=False (default)
-    fig = plot_frontier(frontier)
+    fig = frontier.plot()
     assert isinstance(fig, go.Figure)
 
     # Verify that the figure has one trace
@@ -371,7 +370,7 @@ def test_frontier_plot(frontier: Frontier) -> None:
     assert np.allclose(fig.data[0].y, frontier.returns)
 
     # Test with volatility=True
-    fig = plot_frontier(frontier, volatility=True)
+    fig = frontier.plot(volatility=True)
     assert isinstance(fig, go.Figure)
 
     # Verify that the x-axis data matches the volatility

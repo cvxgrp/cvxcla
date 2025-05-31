@@ -40,9 +40,8 @@ def _():
     import numpy as np
 
     from cvx.cla import CLA
-    from cvx.cla.plot import plot_frontier
 
-    return CLA, np, plot_frontier
+    return CLA, np
 
 
 @app.cell
@@ -74,14 +73,14 @@ def _(CLA, np, slider):
 
 
 @app.cell
-def _(f1, plot_frontier):
-    plot_frontier(f1.interpolate(10), volatility=True, markers=True)
+def _(f1):
+    f1.interpolate(10).plot(volatility=True, markers=True)
     return
 
 
 @app.cell
-def _(f1, plot_frontier):
-    plot_frontier(f1)
+def _(f1):
+    f1.plot()
     return
 
 
