@@ -5,4 +5,5 @@ root: docs/index
 chapters:
     - file: docs/api
     - file: docs/reports
-    - file: docs/marimo
+    - url: https://cvxgrp.org/cvxcla/marimo/cla/index.html
+      title: The critical line algorithm

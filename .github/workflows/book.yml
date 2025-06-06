@@ -18,7 +18,7 @@ jobs:
       contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: cvxgrp/.github/actions/environment@v2.2.8
+        uses: tschm/cradle/actions/environment@v0.1.71
 
 
       - name: Create output directory
@@ -46,9 +46,12 @@ jobs:
       contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: cvxgrp/.github/actions/environment@v2.2.8
+        uses: tschm/cradle/actions/environment@v0.1.71
 
-      - uses: cvxgrp/.github/actions/coverage@v2.2.8
+      - uses: tschm/cradle/actions/coverage@v0.1.71
+        with:
+          tests-folder: tests
+          source-folder: cvx
 
 
   # Job to process Jupyter notebooks
@@ -58,9 +61,9 @@ jobs:
       contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: cvxgrp/.github/actions/environment@v2.2.8
+        uses: tschm/cradle/actions/environment@v0.1.71
 
-      - uses: cvxgrp/.github/actions/jupyter@v2.2.8
+      - uses: tschm/cradle/actions/jupyter@v0.1.71
 
   # Job to generate API documentation using pdoc
   pdoc:
@@ -69,20 +72,26 @@ jobs:
       contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: cvxgrp/.github/actions/environment@v2.2.8
+        uses: tschm/cradle/actions/environment@v0.1.71
 
-      - uses: cvxgrp/.github/actions/pdoc@v2.2.8
+      - uses: tschm/cradle/actions/pdoc@v0.1.71
 
 
-  # Final job to build and deploy the book
-  # This job runs only after all other jobs have completed successfully
   book:
     runs-on: "ubuntu-latest"
-    needs: [test, jupyter, marimo, pdoc]
+    # This job depends on the completion of test, pdoc, and jupyter jobs
+    needs: [test, pdoc, jupyter, marimo]
+
+    environment:
+      name: github-pages
 
     permissions:
-      contents: write
+      contents: read
       pages: write
+      id-token: write
 
     steps:
-      - uses: cvxgrp/.github/actions/book@v2.2.8
+      # Step: Upload the generated documentation book
+      # Skipped when running locally with 'act' to prevent accidental deployments
+      - name: Upload the book
+        uses: tschm/cradle/actions/book@v0.1.71
