@@ -14,25 +14,26 @@ jobs:
   # Job to process marimo notebooks
   marimo:
     runs-on: "ubuntu-latest"
-    permissions:
-      contents: read
     steps:
-      - name: "Build the virtual environment for ${{ github.repository }}"
+      # Step: Set up the virtual environment
+      - name: "Build the virtual environment"
         uses: tschm/cradle/actions/environment@v0.1.71
 
-
-      - name: Create output directory
-        shell: bash
+      - name: Export notebook via wasm
         run: |
-          mkdir -p artifacts/marimo
+          uv pip install --no-cache-dir marimo
 
-      - name: Convert Marimo files to HTML
-        shell: bash
-        run: |
-          marimo export html book/marimo/cla.py -o artifacts/marimo/index.html --include-code
-          ls -all artifacts/marimo
+          # export all .py files in book/marimo directory
+          for py_file in book/marimo/*.py; do
+            if [ -f "$py_file" ]; then
+              filename=$(basename "$py_file" .py)
+              echo "Processing $py_file"
+              mkdir -p "artifacts/marimo/$filename"
+              uv run marimo export html-wasm "$py_file" -o "artifacts/marimo/$filename/index.html" --mode edit
+            fi
+          done
 
-      - name: Upload HTML artifacts
+      - name: Upload documentation
         uses: actions/upload-artifact@v4
         with:
           name: marimo
