@@ -11,8 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-Type definitions and classes for the Critical Line Algorithm.
+"""Type definitions and classes for the Critical Line Algorithm.
 
 This module defines the core data structures used in the Critical Line Algorithm:
 - FrontierPoint: Represents a point on the efficient frontier.
@@ -36,59 +35,60 @@ from scipy.optimize import minimize
 
 @dataclass(frozen=True)
 class FrontierPoint:
-    """
-    A point on the efficient frontier.
+    """A point on the efficient frontier.
 
     This class represents a portfolio on the efficient frontier, defined by its weights.
     It provides methods to compute the expected return and variance of the portfolio.
 
     Attributes:
         weights: Vector of portfolio weights for each asset.
+
     """
 
     weights: NDArray[np.float64]
 
     def __post_init__(self):
-        """
-        Validate that the weights sum to 1.
+        """Validate that the weights sum to 1.
 
         This method is automatically called after initialization to ensure that
         the portfolio weights sum to 1, which is required for a valid portfolio.
 
         Raises:
             AssertionError: If the sum of weights is not close to 1.
+
         """
         # check that the sum is close to 1
         assert np.isclose(np.sum(self.weights), 1.0)
 
     def mean(self, mean: NDArray[np.float64]) -> float:
-        """
-        Compute the expected return of the portfolio.
+        """Compute the expected return of the portfolio.
 
         Args:
             mean: Vector of expected returns for each asset.
 
         Returns:
             The expected return of the portfolio.
+
         """
         return float(mean.T @ self.weights)
 
     def variance(self, covariance: NDArray[np.float64]) -> float:
-        """
-        Compute the expected variance of the portfolio.
+        """Compute the expected variance of the portfolio.
 
         Args:
             covariance: Covariance matrix of asset returns.
 
         Returns:
             The expected variance of the portfolio.
+
         """
         return float(self.weights.T @ covariance @ self.weights)
 
 
 @dataclass(frozen=True)
 class TurningPoint(FrontierPoint):
-    """
+    """Turning point.
+
     A turning point is a vector of weights, a lambda value, and a boolean vector
     indicating which assets are free. All assets that are not free are blocked.
     """
@@ -98,32 +98,25 @@ class TurningPoint(FrontierPoint):
 
     @property
     def free_indices(self) -> np.ndarray:
-        """
-        Returns the indices of the free assets
-        """
+        """Returns the indices of the free assets."""
         return np.where(self.free)[0]
 
     @property
     def blocked_indices(self) -> np.ndarray:
-        """
-        Returns the indices of the blocked assets
-        """
+        """Returns the indices of the blocked assets."""
         return np.where(~self.free)[0]
 
 
 @dataclass(frozen=True)
 class Frontier:
-    """
-    A frontier is a list of frontier points. Some of them might be turning points.
-    """
+    """A frontier is a list of frontier points. Some of them might be turning points."""
 
     mean: NDArray[np.float64]
     covariance: NDArray[np.float64]
     frontier: list[FrontierPoint] = field(default_factory=list)
 
     def interpolate(self, num=100) -> Frontier:
-        """
-        Interpolate the frontier with additional points between existing points.
+        """Interpolate the frontier with additional points between existing points.
 
         This method creates a new Frontier object with additional points interpolated
         between the existing points. This is useful for creating a smoother representation
@@ -135,6 +128,7 @@ class Frontier:
 
         Returns:
             A new Frontier object with the interpolated points.
+
         """
 
         def _interpolate():
@@ -147,59 +141,45 @@ class Frontier:
         return Frontier(frontier=points, mean=self.mean, covariance=self.covariance)
 
     def __iter__(self) -> Iterator[FrontierPoint]:
-        """
-        Iterator for all frontier points
-        """
+        """Iterate over all frontier points."""
         yield from self.frontier
 
     def __len__(self) -> int:
-        """
-        Number of frontier points
-        """
+        """Give number of frontier points."""
         return len(self.frontier)
 
     @property
     def weights(self) -> np.ndarray:
-        """
-        Matrix of weights. One row per point
-        """
+        """Matrix of weights. One row per point."""
         return np.array([point.weights for point in self])
 
     @property
     def returns(self) -> np.ndarray:
-        """
-        Vector of expected returns.
-        """
+        """Vector of expected returns."""
         return np.array([point.mean(self.mean) for point in self])
 
     @property
     def variance(self) -> np.ndarray:
-        """
-        Vector of expected variances.
-        """
+        """Vector of expected variances."""
         return np.array([point.variance(self.covariance) for point in self])
 
     @property
     def sharpe_ratio(self) -> np.ndarray:
-        """
-        Vector of expected Sharpe ratios.
-        """
+        """Vector of expected Sharpe ratios."""
         return self.returns / self.volatility
 
     @property
     def volatility(self) -> np.ndarray:
-        """
-        Vector of expected volatilities.
-        """
+        """Vector of expected volatilities."""
         return np.sqrt(self.variance)
 
     @property
     def max_sharpe(self) -> tuple[float, np.ndarray]:
-        """
-        Maximal Sharpe ratio on the frontier
+        """Maximal Sharpe ratio on the frontier.
 
         Returns:
             Tuple of maximal Sharpe ratio and the weights to achieve it
+
         """
 
         def neg_sharpe(alpha: float, w_left: np.ndarray, w_right: np.ndarray) -> float:
@@ -255,8 +235,7 @@ class Frontier:
         return sharpe_ratio_right, w_right
 
     def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
-        """
-        Plot the efficient frontier.
+        """Plot the efficient frontier.
 
         This function creates a line plot of the efficient frontier, with expected return
         on the y-axis and either variance or volatility on the x-axis.
@@ -268,6 +247,7 @@ class Frontier:
 
         Returns:
             A plotly Figure object that can be displayed or saved.
+
         """
         if not volatility:
             fig = px.line(

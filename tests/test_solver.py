@@ -1,3 +1,11 @@
+"""Tests for comparing different Critical Line Algorithm solver implementations.
+
+This module contains tests that compare the Bailey and Markowitz implementations
+of the Critical Line Algorithm. It verifies that both implementations produce
+consistent results when tested against known examples and random problems of
+different sizes.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -10,8 +18,7 @@ from tests.bailey.cla import CLA as BAILEY
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_example(example: DataFrame, example_solution: DataFrame, solver: type) -> None:
-    """
-    Test solver implementations against a known example from literature.
+    """Test solver implementations against a known example from literature.
 
     This test uses the example from section 3.1 in the Markowitz 2019 paper
     to verify that both solver implementations produce the expected results.
@@ -20,6 +27,7 @@ def test_example(example: DataFrame, example_solution: DataFrame, solver: type) 
         example: DataFrame containing the example data
         example_solution: DataFrame containing the expected solution
         solver: The CLA implementation to test (either BAILEY or MARKOWITZ)
+
     """
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)
@@ -51,8 +59,7 @@ def test_example(example: DataFrame, example_solution: DataFrame, solver: type) 
 @pytest.mark.parametrize("solver", [MARKOWITZ, BAILEY])
 @pytest.mark.parametrize("n", [2, 4, 8, 16, 32, 64, 128])  # , 256, 512])
 def test_init_solver(solver: type, n: int) -> None:
-    """
-    Test solver initialization with random problems of different sizes.
+    """Test solver initialization with random problems of different sizes.
 
     This test creates random portfolio optimization problems of different sizes
     and verifies that both solver implementations can be initialized successfully.
@@ -60,6 +67,7 @@ def test_init_solver(solver: type, n: int) -> None:
     Args:
         solver: The CLA implementation to test (either BAILEY or MARKOWITZ)
         n: The number of assets in the portfolio
+
     """
     mean = np.random.randn(n)
     A = np.random.randn(n, n)

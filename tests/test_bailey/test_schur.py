@@ -1,3 +1,11 @@
+"""Tests for the Schur complement method used in the Bailey CLA implementation.
+
+This module contains tests for the _Schur class, which implements the Schur complement
+method used in the Bailey implementation of the Critical Line Algorithm. It verifies
+the correctness of lambda computation, weight updates, and handling of special cases
+for minimum variance portfolios.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -7,8 +15,7 @@ from tests.bailey.cla import _Schur
 
 
 def test_compute_lambda() -> None:
-    """
-    Test the compute_lambda method of the _Schur class.
+    """Test the compute_lambda method of the _Schur class.
 
     This test verifies that the compute_lambda method correctly calculates
     the lambda value and gamma value for different inputs.
@@ -40,8 +47,7 @@ def test_compute_lambda() -> None:
 
 
 def test_compute_weight() -> None:
-    """
-    Test the update_weights method of the _Schur class.
+    """Test the update_weights method of the _Schur class.
 
     This test verifies that the update_weights method correctly calculates
     the new weights for a given lambda value.
@@ -63,8 +69,7 @@ def test_compute_weight() -> None:
 
 
 def test_special_minvar() -> None:
-    """
-    Test special cases of the _Schur class for minimum variance portfolios.
+    """Test special cases of the _Schur class for minimum variance portfolios.
 
     This test verifies that the _Schur class correctly handles special cases
     such as freeing an asset that is already at its bound or blocking an asset

@@ -11,8 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-First turning point computation for the Critical Line Algorithm.
+"""First turning point computation for the Critical Line Algorithm.
 
 This module provides functions to compute the first turning point on the efficient frontier,
 which is the portfolio with the highest expected return that satisfies the constraints.
@@ -32,7 +31,9 @@ from .types import TurningPoint
 def init_algo(
     mean: NDArray[np.float64], lower_bounds: NDArray[np.float64], upper_bounds: NDArray[np.float64]
 ) -> TurningPoint:
-    """The key insight behind Markowitz’s CLA is to find first the
+    """Compute the first turning point.
+
+    The key insight behind Markowitz’s CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
     return than the previous. That first turning point consists in the
@@ -49,7 +50,6 @@ def init_algo(
     This last weight is the first free asset,
     and the resulting vector of weights the first turning point.
     """
-
     if np.any(lower_bounds > upper_bounds):
         raise ValueError("Lower bounds must be less than or equal to upper bounds")
 
@@ -86,8 +86,7 @@ def init_algo_lp(
     # A_ub: NDArray[np.float64] | None = None,
     # b_ub: NDArray[np.float64] | None = None,
 ) -> TurningPoint:
-    """
-    Compute the first turning point using linear programming.
+    """Compute the first turning point using linear programming.
 
     This function formulates the problem of finding the first turning point as a linear
     programming problem and solves it using a convex optimization solver. The objective
@@ -110,6 +109,7 @@ def init_algo_lp(
 
     Raises:
         ValueError: If the problem is infeasible or if lower bounds exceed upper bounds.
+
     """
     if A_eq is None:
         A_eq = np.atleast_2d(np.ones_like(mean))
@@ -167,8 +167,7 @@ def init_algo_lp(
 def _free(
     w: NDArray[np.float64], lower_bounds: NDArray[np.float64], upper_bounds: NDArray[np.float64]
 ) -> NDArray[np.bool_]:
-    """
-    Determine which asset should be free in the turning point.
+    """Determine which asset should be free in the turning point.
 
     This helper function identifies the asset that should be marked as free
     in the turning point. It selects the asset that is furthest from its bounds,
@@ -181,6 +180,7 @@ def _free(
 
     Returns:
         A boolean vector indicating which asset is free (True) and which are blocked (False).
+
     """
     # Calculate the distance from each weight to its nearest bound
     distance = np.min(np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0)

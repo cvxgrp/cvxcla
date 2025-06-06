@@ -1,3 +1,9 @@
+"""Tests for the Critical Line Algorithm (CLA) implementation.
+
+This module contains tests for the Markowitz Critical Line Algorithm implementation,
+verifying its correctness against expected results and known examples from literature.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -11,8 +17,7 @@ from cvx.cla.first import init_algo_lp
 
 
 def test_solver(input_data: Any, results: Any) -> None:
-    """
-    Test the Markowitz CLA solver against expected results.
+    """Test the Markowitz CLA solver against expected results.
 
     This test verifies that the Markowitz CLA implementation produces the expected
     lambda values, mean returns, and variances for the turning points.
@@ -20,6 +25,7 @@ def test_solver(input_data: Any, results: Any) -> None:
     Args:
         input_data: Test data containing covariance, mean, and bounds
         results: Expected results for comparison
+
     """
     cla = CLA(
         mean=input_data.mean,
@@ -42,8 +48,7 @@ def test_solver(input_data: Any, results: Any) -> None:
 
 
 def test_example(example: DataFrame, example_solution: DataFrame) -> None:
-    """
-    Test the Markowitz CLA solver against a known example from literature.
+    """Test the Markowitz CLA solver against a known example from literature.
 
     This test uses the example from section 3.1 in the Markowitz 2019 paper
     to verify that the Markowitz CLA implementation produces the expected results.
@@ -52,6 +57,7 @@ def test_example(example: DataFrame, example_solution: DataFrame) -> None:
     Args:
         example: DataFrame containing the example data
         example_solution: DataFrame containing the expected solution
+
     """
     # example from section 3.1 in the Markowitz 2019 paper
     means = example.mean(axis=0)

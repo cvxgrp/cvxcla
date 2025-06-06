@@ -1,5 +1,4 @@
-"""
-Initial Algorithm Comparison Experiment
+"""Initial Algorithm Comparison Experiment.
 
 This script compares two different implementations of the algorithm for finding
 the first turning point in the Critical Line Algorithm (CLA) for portfolio optimization:

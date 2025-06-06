@@ -11,8 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-Markowitz implementation of the Critical Line Algorithm.
+"""Markowitz implementation of the Critical Line Algorithm.
 
 This module provides the CLA class, which implements the Critical Line Algorithm
 as described by Harry Markowitz and colleagues. The algorithm computes the entire
@@ -34,8 +33,7 @@ from .types import Frontier, FrontierPoint, TurningPoint
 
 @dataclass(frozen=True)
 class CLA:
-    """
-    Critical Line Algorithm implementation based on Markowitz's approach.
+    """Critical Line Algorithm implementation based on Markowitz's approach.
 
     This class implements the Critical Line Algorithm as described by Harry Markowitz
     and colleagues. It computes the entire efficient frontier by finding all turning
@@ -55,6 +53,7 @@ class CLA:
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
         logger: Logger instance for logging information and errors.
+
     """
 
     mean: NDArray[np.float64]
@@ -69,8 +68,7 @@ class CLA:
 
     @cached_property
     def P(self):
-        """
-        Construct the projection matrix used in computing Lagrange multipliers.
+        """Construct the projection matrix used in computing Lagrange multipliers.
 
         P is formed by horizontally stacking the covariance matrix and the transpose
         of the equality constraint matrix A. It is used to compute:
@@ -83,8 +81,7 @@ class CLA:
 
     @cached_property
     def M(self):
-        """
-        Construct the Karush-Kuhn-Tucker (KKT) system matrix.
+        """Construct the Karush-Kuhn-Tucker (KKT) system matrix.
 
         The KKT matrix is built by augmenting the covariance matrix with the
         equality constraints. It forms the linear system:
@@ -99,8 +96,7 @@ class CLA:
         return np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
 
     def __post_init__(self):
-        """
-        Initialize the CLA object and compute the efficient frontier.
+        """Initialize the CLA object and compute the efficient frontier.
 
         This method is automatically called after initialization. It computes
         the entire efficient frontier by finding all turning points, starting
@@ -114,6 +110,7 @@ class CLA:
         Raises:
             AssertionError: If all variables are blocked, which would make the
                             system of equations singular.
+
         """
         m = self.A.shape[0]
         ns = len(self.mean)
@@ -190,8 +187,7 @@ class CLA:
 
     @staticmethod
     def _solve(A: NDArray[np.float64], b: np.ndarray, IN: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Solve the system A x = b with some variables fixed.
+        """Solve the system A x = b with some variables fixed.
 
         Args:
             A: Coefficient matrix of shape (n, n).
@@ -200,6 +196,7 @@ class CLA:
 
         Returns:
             A tuple (alpha, beta) of solutions for the two RHS vectors.
+
         """
         OUT = ~IN
         n = A.shape[1]
@@ -214,23 +211,23 @@ class CLA:
         return x[:, 0], x[:, 1]
 
     def __len__(self) -> int:
-        """
-        Get the number of turning points in the efficient frontier.
+        """Get the number of turning points in the efficient frontier.
 
         Returns:
             The number of turning points currently stored in the object.
+
         """
         return len(self.turning_points)
 
     def _first_turning_point(self) -> TurningPoint:
-        """
-        Calculate the first turning point on the efficient frontier.
+        """Calculate the first turning point on the efficient frontier.
 
         This method uses the init_algo function to find the first turning point
         based on the mean returns and the bounds on asset weights.
 
         Returns:
             A TurningPoint object representing the first point on the efficient frontier.
+
         """
         first = init_algo(
             mean=self.mean,
@@ -240,8 +237,7 @@ class CLA:
         return first
 
     def _append(self, tp: TurningPoint, tol: Optional[float] = None) -> None:
-        """
-        Append a turning point to the list of turning points.
+        """Append a turning point to the list of turning points.
 
         This method validates that the turning point satisfies the constraints
         before adding it to the list.
@@ -252,6 +248,7 @@ class CLA:
 
         Raises:
             AssertionError: If the turning point violates any constraints.
+
         """
         tol = tol or self.tol
 
@@ -263,8 +260,7 @@ class CLA:
 
     @property
     def frontier(self) -> Frontier:
-        """
-        Get the efficient frontier constructed from the turning points.
+        """Get the efficient frontier constructed from the turning points.
 
         This property creates a Frontier object from the list of turning points,
         which can be used to analyze the risk-return characteristics of the
@@ -272,6 +268,7 @@ class CLA:
 
         Returns:
             A Frontier object representing the efficient frontier.
+
         """
         return Frontier(
             covariance=self.covariance,

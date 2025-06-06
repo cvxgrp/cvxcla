@@ -1,5 +1,4 @@
-"""
-Basic Linear Optimization Example using MOSEK Fusion API
+"""Basic Linear Optimization Example using MOSEK Fusion API.
 
 This script demonstrates how to solve a simple linear programming problem using MOSEK's Fusion API.
 The problem is formulated as:

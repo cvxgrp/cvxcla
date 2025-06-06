@@ -1,3 +1,10 @@
+"""Tests for the Bailey implementation of the Critical Line Algorithm.
+
+This module contains tests that verify the correctness of the Bailey implementation
+of the Critical Line Algorithm by comparing its results against expected values
+for lambda, mean returns, variances, and weights at turning points.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,8 +15,7 @@ from tests.bailey.cla import CLA
 
 
 def test_big(input_data: Any, results: Any) -> None:
-    """
-    Test the Bailey CLA implementation against expected results.
+    """Test the Bailey CLA implementation against expected results.
 
     This test verifies that the Bailey CLA implementation produces the expected
     lambda values, mean returns, variances, and weights for the turning points.
@@ -17,6 +23,7 @@ def test_big(input_data: Any, results: Any) -> None:
     Args:
         input_data: Test data containing covariance, mean, and bounds
         results: Expected results for comparison
+
     """
     cla = CLA(
         mean=input_data.mean,

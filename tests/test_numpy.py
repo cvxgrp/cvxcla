@@ -1,3 +1,10 @@
+"""Tests for NumPy array operations used in the Critical Line Algorithm.
+
+This module contains tests for specific NumPy array operations that are used
+in the implementation of the Critical Line Algorithm, particularly focusing on
+array indexing and manipulation techniques.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -6,8 +13,7 @@ np.random.seed(42)
 
 
 def test_last_diagonal() -> None:
-    """
-    Test accessing and modifying the last diagonal element of a numpy array.
+    """Test accessing and modifying the last diagonal element of a numpy array.
 
     This test verifies that the last diagonal element can be accessed and modified
     using both explicit indices and negative indices.
@@ -22,8 +28,7 @@ def test_last_diagonal() -> None:
 
 
 def test_last_column() -> None:
-    """
-    Test accessing and modifying the last column of a numpy array.
+    """Test accessing and modifying the last column of a numpy array.
 
     This test verifies that the last column can be accessed and modified
     using both explicit indices and negative indices, and that slicing

@@ -1,3 +1,10 @@
+"""Tests for the initialization algorithms of the Critical Line Algorithm.
+
+This module contains tests for the initialization algorithms (init_algo and init_algo_lp)
+that compute the first turning point in the Critical Line Algorithm. The tests verify
+the algorithms' correctness with different problem sizes, edge cases, and known solutions.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -9,14 +16,14 @@ from cvx.cla.types import TurningPoint
 
 @pytest.mark.parametrize("n", [5, 20, 100, 1000, 10000])
 def test_init_algo(n: int) -> None:
-    """
-    Test computing a first turning point with different problem sizes.
+    """Test computing a first turning point with different problem sizes.
 
     This test verifies that both init_algo and init_algo_lp can compute a valid
     first turning point for problems of different sizes.
 
     Args:
         n: The number of assets in the portfolio
+
     """
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
@@ -36,8 +43,7 @@ def test_init_algo(n: int) -> None:
 
 
 def test_small() -> None:
-    """
-    Test computing a first turning point with a small problem.
+    """Test computing a first turning point with a small problem.
 
     This test verifies that both init_algo and init_algo_lp compute the correct
     first turning point for a small problem with known solution.
@@ -59,8 +65,7 @@ def test_small() -> None:
 
 
 def test_no_fully_invested_portfolio() -> None:
-    """
-    Test that the algorithm fails when no fully invested portfolio can be constructed.
+    """Test that the algorithm fails when no fully invested portfolio can be constructed.
 
     This test verifies that both init_algo and init_algo_lp raise a ValueError
     when the upper bounds are too restrictive to allow a fully invested portfolio.
@@ -77,8 +82,7 @@ def test_no_fully_invested_portfolio() -> None:
 
 
 def test_lb_ub_mixed() -> None:
-    """
-    Test that the algorithm fails when lower bounds exceed upper bounds.
+    """Test that the algorithm fails when lower bounds exceed upper bounds.
 
     This test verifies that both init_algo and init_algo_lp raise a ValueError
     when the lower bounds are greater than the upper bounds.

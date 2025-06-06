@@ -1,5 +1,4 @@
-"""
-Unconstrained Mean-Variance Portfolio Optimization Experiment
+"""Unconstrained Mean-Variance Portfolio Optimization Experiment.
 
 This script explores the analytical solution to the unconstrained mean-variance portfolio
 optimization problem for different values of the risk aversion parameter (lambda).
@@ -22,8 +21,7 @@ from loguru import logger
 
 
 def f(lamb):
-    """
-    Compute the optimal portfolio weights for a given risk aversion parameter (lambda).
+    """Compute the optimal portfolio weights for a given risk aversion parameter (lambda).
 
     This function implements the analytical solution to the unconstrained mean-variance
     portfolio optimization problem. It calculates the optimal weights and reports
@@ -48,6 +46,7 @@ def f(lamb):
 
     Prints:
         Lambda value, gamma value, optimal weights, sum of weights, and portfolio variance
+
     """
     # Calculate the denominator for gamma: sum(Sigma^(-1) * 1)
     denom = np.sum(np.sum(np.linalg.inv(Sigma), axis=1))

@@ -1,5 +1,4 @@
-"""
-Portfolio Optimization Example - Maximum Expected Return
+"""Portfolio Optimization Example - Maximum Expected Return.
 
 This script demonstrates how to solve a simple portfolio optimization problem using MOSEK's Fusion API.
 The problem maximizes the expected return of a portfolio subject to:

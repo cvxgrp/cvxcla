@@ -1,3 +1,11 @@
+"""Tests for the types defined in the Critical Line Algorithm module.
+
+This module contains tests for the types defined in the CLA module, including
+TurningPoint, FrontierPoint, and Frontier. It verifies their properties, methods,
+and behaviors under various conditions, ensuring they correctly implement the
+mathematical concepts of the Critical Line Algorithm.
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -9,35 +17,35 @@ from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
 
 @pytest.fixture()
 def fp() -> FrontierPoint:
-    """
-    Fixture that creates a FrontierPoint instance for testing.
+    """Fixture that creates a FrontierPoint instance for testing.
 
     Returns:
         A FrontierPoint instance with predefined weights
+
     """
     return FrontierPoint(weights=np.array([0.3, 0.7]))
 
 
 @pytest.fixture()
 def tp() -> TurningPoint:
-    """
-    Fixture that creates a TurningPoint instance for testing.
+    """Fixture that creates a TurningPoint instance for testing.
 
     Returns:
         A TurningPoint instance with predefined weights and free variables
+
     """
     return TurningPoint(weights=np.array([0.5, 0.5]), free=np.array([True, False]))
 
 
 def test_turningpoint(tp: TurningPoint) -> None:
-    """
-    Test the basic properties of a TurningPoint.
+    """Test the basic properties of a TurningPoint.
 
     Verifies that the lambda value is infinity by default and that
     the weights and free variables are correctly set.
 
     Args:
         tp: The TurningPoint instance to test
+
     """
     assert np.isinf(tp.lamb)
     assert np.allclose(tp.weights, [0.5, 0.5])
@@ -45,49 +53,48 @@ def test_turningpoint(tp: TurningPoint) -> None:
 
 
 def test_indices(tp: TurningPoint) -> None:
-    """
-    Test the free_indices and blocked_indices properties of a TurningPoint.
+    """Test the free_indices and blocked_indices properties of a TurningPoint.
 
     Verifies that the indices of free and blocked variables are correctly identified.
 
     Args:
         tp: The TurningPoint instance to test
+
     """
     assert np.allclose(tp.free_indices, [0])
     assert np.allclose(tp.blocked_indices, [1])
 
 
 def test_mean(tp: TurningPoint) -> None:
-    """
-    Test the mean method of a TurningPoint.
+    """Test the mean method of a TurningPoint.
 
     Verifies that the expected return is correctly calculated as the dot product
     of the weights and the mean vector.
 
     Args:
         tp: The TurningPoint instance to test
+
     """
     x = tp.mean(mean=np.array([1.0, 2.0]))
     assert x == pytest.approx(1.5)
 
 
 def test_variance(tp: TurningPoint) -> None:
-    """
-    Test the variance method of a TurningPoint.
+    """Test the variance method of a TurningPoint.
 
     Verifies that the expected variance is correctly calculated using
     the quadratic form with the covariance matrix.
 
     Args:
         tp: The TurningPoint instance to test
+
     """
     x = tp.variance(covariance=np.array([[2.0, 0.2], [0.2, 2.0]]))
     assert x == pytest.approx(1.1)
 
 
 def test_frontierpoint_post_init() -> None:
-    """
-    Test the __post_init__ method of FrontierPoint.
+    """Test the __post_init__ method of FrontierPoint.
 
     Verifies that the assertion for weights summing to 1 works correctly.
     """
@@ -105,28 +112,28 @@ def test_frontierpoint_post_init() -> None:
 
 
 def test_frontierpoint_mean(fp: FrontierPoint) -> None:
-    """
-    Test the mean method of FrontierPoint.
+    """Test the mean method of FrontierPoint.
 
     Verifies that the expected return is correctly calculated as the dot product
     of the weights and the mean vector.
 
     Args:
         fp: The FrontierPoint instance to test
+
     """
     x = fp.mean(mean=np.array([1.0, 2.0]))
     assert x == pytest.approx(1.0 * 0.3 + 2.0 * 0.7)
 
 
 def test_frontierpoint_variance(fp: FrontierPoint) -> None:
-    """
-    Test the variance method of FrontierPoint.
+    """Test the variance method of FrontierPoint.
 
     Verifies that the expected variance is correctly calculated using
     the quadratic form with the covariance matrix.
 
     Args:
         fp: The FrontierPoint instance to test
+
     """
     x = fp.variance(covariance=np.array([[2.0, 0.2], [0.2, 2.0]]))
     expected = 0.3 * 0.3 * 2.0 + 0.3 * 0.7 * 0.2 + 0.7 * 0.3 * 0.2 + 0.7 * 0.7 * 2.0
@@ -135,14 +142,14 @@ def test_frontierpoint_variance(fp: FrontierPoint) -> None:
 
 @pytest.fixture()
 def frontier() -> Frontier:
-    """
-    Fixture that creates a Frontier instance for testing.
+    """Fixture that creates a Frontier instance for testing.
 
     Creates a Frontier with mean returns, covariance matrix, and a list of
     FrontierPoint instances.
 
     Returns:
         A Frontier instance with predefined data
+
     """
     mean = np.array([0.1, 0.2, 0.3])
     covariance = np.array([[0.2, 0.05, 0.01], [0.05, 0.2, 0.05], [0.01, 0.05, 0.2]])
@@ -159,13 +166,13 @@ def frontier() -> Frontier:
 
 
 def test_frontier_init(frontier: Frontier) -> None:
-    """
-    Test the initialization of the Frontier class.
+    """Test the initialization of the Frontier class.
 
     Verifies that the mean, covariance, and frontier points are correctly set.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     assert frontier.mean.shape == (3,)
     assert frontier.covariance.shape == (3, 3)
@@ -173,14 +180,14 @@ def test_frontier_init(frontier: Frontier) -> None:
 
 
 def test_frontier_interpolate(frontier: Frontier) -> None:
-    """
-    Test the interpolate method of the Frontier class.
+    """Test the interpolate method of the Frontier class.
 
     Verifies that the interpolate method creates the correct number of points
     and that the interpolated points have weights that sum to 1.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     # Interpolate with 3 points between each pair
     interpolated = frontier.interpolate(num=3)
@@ -199,14 +206,14 @@ def test_frontier_interpolate(frontier: Frontier) -> None:
 
 
 def test_frontier_iter(frontier: Frontier) -> None:
-    """
-    Test the __iter__ method of the Frontier class.
+    """Test the __iter__ method of the Frontier class.
 
     Verifies that the Frontier class can be iterated over and yields
     the correct frontier points.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     points = list(frontier)
     assert len(points) == 4
@@ -216,25 +223,25 @@ def test_frontier_iter(frontier: Frontier) -> None:
 
 
 def test_frontier_len(frontier: Frontier) -> None:
-    """
-    Test the __len__ method of the Frontier class.
+    """Test the __len__ method of the Frontier class.
 
     Verifies that the len() function returns the correct number of frontier points.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     assert len(frontier) == 4
 
 
 def test_frontier_weights(frontier: Frontier) -> None:
-    """
-    Test the weights property of the Frontier class.
+    """Test the weights property of the Frontier class.
 
     Verifies that the weights property returns a matrix with one row per point.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     weights = frontier.weights
     assert weights.shape == (4, 3)
@@ -243,14 +250,14 @@ def test_frontier_weights(frontier: Frontier) -> None:
 
 
 def test_frontier_returns(frontier: Frontier) -> None:
-    """
-    Test the returns property of the Frontier class.
+    """Test the returns property of the Frontier class.
 
     Verifies that the returns property correctly calculates the expected return
     for each frontier point.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     returns = frontier.returns
     assert returns.shape == (4,)
@@ -269,14 +276,14 @@ def test_frontier_returns(frontier: Frontier) -> None:
 
 
 def test_frontier_variance(frontier: Frontier) -> None:
-    """
-    Test the variance property of the Frontier class.
+    """Test the variance property of the Frontier class.
 
     Verifies that the variance property correctly calculates the expected variance
     for each frontier point.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     variances = frontier.variance
     assert variances.shape == (4,)
@@ -289,14 +296,14 @@ def test_frontier_variance(frontier: Frontier) -> None:
 
 
 def test_frontier_volatility(frontier: Frontier) -> None:
-    """
-    Test the volatility property of the Frontier class.
+    """Test the volatility property of the Frontier class.
 
     Verifies that the volatility property correctly calculates the square root
     of the variance for each frontier point.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     volatilities = frontier.volatility
     variances = frontier.variance
@@ -306,14 +313,14 @@ def test_frontier_volatility(frontier: Frontier) -> None:
 
 
 def test_frontier_sharpe_ratio(frontier: Frontier) -> None:
-    """
-    Test the sharpe_ratio property of the Frontier class.
+    """Test the sharpe_ratio property of the Frontier class.
 
     Verifies that the sharpe_ratio property correctly calculates the ratio of
     returns to volatility for each frontier point.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     sharpe_ratios = frontier.sharpe_ratio
     returns = frontier.returns
@@ -324,14 +331,14 @@ def test_frontier_sharpe_ratio(frontier: Frontier) -> None:
 
 
 def test_frontier_max_sharpe(frontier: Frontier) -> None:
-    """
-    Test the max_sharpe property of the Frontier class.
+    """Test the max_sharpe property of the Frontier class.
 
     Verifies that the max_sharpe property correctly identifies the point with
     the maximum Sharpe ratio and returns the correct Sharpe ratio and weights.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     max_sharpe, max_weights = frontier.max_sharpe
 
@@ -347,14 +354,14 @@ def test_frontier_max_sharpe(frontier: Frontier) -> None:
 
 
 def test_frontier_plot(frontier: Frontier) -> None:
-    """
-    Test the plot method of the Frontier class.
+    """Test the plot method of the Frontier class.
 
     Verifies that the plot method returns a plotly figure object with the
     correct data.
 
     Args:
         frontier: The Frontier instance to test
+
     """
     # Test with volatility=False (default)
     fig = frontier.plot()

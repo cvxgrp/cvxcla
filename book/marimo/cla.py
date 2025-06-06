@@ -1,3 +1,5 @@
+"""Little demo for the Critical Line Algorithm."""
+
 import marimo
 
 __generated_with = "0.13.15"

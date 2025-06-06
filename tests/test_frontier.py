@@ -1,3 +1,11 @@
+"""Tests for the efficient frontier computation in the Critical Line Algorithm.
+
+This module contains tests that compare the efficient frontier computation between
+the Bailey and Markowitz implementations of the Critical Line Algorithm. It verifies
+that both implementations produce consistent results and that the interpolation of
+the frontier preserves its properties.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,8 +22,7 @@ from tests.bailey.cla import CLA as BAILEY
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
 def test_frontier(input_data: Any, solver: type) -> None:
-    """
-    Test the frontier computation for both Bailey and Markowitz implementations.
+    """Test the frontier computation for both Bailey and Markowitz implementations.
 
     This test verifies that both implementations correctly compute the efficient frontier
     and that the interpolation of the frontier preserves its properties.
@@ -23,6 +30,7 @@ def test_frontier(input_data: Any, solver: type) -> None:
     Args:
         input_data: Test data containing covariance, mean, and bounds
         solver: The CLA implementation to test (either BAILEY or MARKOWITZ)
+
     """
     f = solver(
         covariance=input_data.covariance,
@@ -45,8 +53,7 @@ def test_frontier(input_data: Any, solver: type) -> None:
 
 @pytest.mark.parametrize("n", [3, 5, 10, 20])
 def test_frontiers(n: int, resource_dir: Path) -> None:
-    """
-    Compare the frontiers computed by Bailey and Markowitz implementations.
+    """Compare the frontiers computed by Bailey and Markowitz implementations.
 
     This test creates random portfolio optimization problems of different sizes
     and verifies that both implementations produce consistent results.
@@ -54,6 +61,7 @@ def test_frontiers(n: int, resource_dir: Path) -> None:
     Args:
         n: The number of assets in the portfolio
         resource_dir: Path to the test resources directory
+
     """
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)

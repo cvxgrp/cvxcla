@@ -1,3 +1,5 @@
+"""The implementation of the Critical Line Algorithm by Bailey and Lopez de Prado."""
+
 #    Copyright 2023 Stanford University Convex Optimization Group
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,8 +38,7 @@ The implementation is included for testing and educational purposes only.
 
 @dataclass(frozen=True)
 class CLA:
-    """
-    Bailey and Lopez de Prado implementation of the Critical Line Algorithm.
+    """Bailey and Lopez de Prado implementation of the Critical Line Algorithm.
 
     This class implements the Critical Line Algorithm as described by Bailey and Lopez de Prado.
     It computes the entire efficient frontier by finding all turning points, which are the
@@ -57,6 +58,7 @@ class CLA:
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
         logger: Logger instance for logging information and errors.
+
     """
 
     mean: NDArray[np.float64]
@@ -70,8 +72,7 @@ class CLA:
     logger: logging.Logger = logging.getLogger(__name__)
 
     def __post_init__(self) -> None:
-        """
-        Initialize the CLA object and compute the efficient frontier.
+        """Initialize the CLA object and compute the efficient frontier.
 
         This method is automatically called after initialization. It computes
         the entire efficient frontier by finding all turning points, starting
@@ -195,23 +196,23 @@ class CLA:
         self._append(TurningPoint(lamb=0, weights=w, free=last.free))
 
     def __len__(self) -> int:
-        """
-        Get the number of turning points in the efficient frontier.
+        """Get the number of turning points in the efficient frontier.
 
         Returns:
             The number of turning points currently stored in the object.
+
         """
         return len(self.turning_points)
 
     def _first_turning_point(self) -> TurningPoint:
-        """
-        Calculate the first turning point on the efficient frontier.
+        """Calculate the first turning point on the efficient frontier.
 
         This method uses the init_algo function to find the first turning point
         based on the mean returns and the bounds on asset weights.
 
         Returns:
             A TurningPoint object representing the first point on the efficient frontier.
+
         """
         first = init_algo(
             mean=self.mean,
@@ -221,8 +222,7 @@ class CLA:
         return first
 
     def _append(self, tp: TurningPoint, tol: float | None = None) -> None:
-        """
-        Append a turning point to the list of turning points.
+        """Append a turning point to the list of turning points.
 
         This method validates that the turning point satisfies the constraints
         before adding it to the list.
@@ -233,6 +233,7 @@ class CLA:
 
         Raises:
             AssertionError: If the turning point violates any constraints.
+
         """
         tol = tol or self.tol
 
@@ -244,8 +245,7 @@ class CLA:
 
     @property
     def frontier(self) -> Frontier:
-        """
-        Get the efficient frontier constructed from the turning points.
+        """Get the efficient frontier constructed from the turning points.
 
         This property creates a Frontier object from the list of turning points,
         which can be used to analyze the risk-return characteristics of the
@@ -253,6 +253,7 @@ class CLA:
 
         Returns:
             A Frontier object representing the efficient frontier.
+
         """
         return Frontier(
             covariance=self.covariance,
@@ -262,8 +263,7 @@ class CLA:
 
 
 class _Schur:
-    """
-    Helper class for the Critical Line Algorithm.
+    """Helper class for the Critical Line Algorithm.
 
     This class implements the Schur complement method for efficiently computing
     the lambda values and weight updates in the Critical Line Algorithm.
@@ -274,6 +274,7 @@ class _Schur:
         free: Boolean vector indicating which assets are free.
         weights: Vector of portfolio weights.
         __free_inv: Cached inverse of the free part of the covariance matrix.
+
     """
 
     def __init__(
@@ -292,58 +293,57 @@ class _Schur:
 
     @property
     def covariance_free(self) -> NDArray[np.float64]:
-        """
-        Get the covariance matrix for free assets only.
+        """Get the covariance matrix for free assets only.
 
         Returns:
             The submatrix of the covariance matrix corresponding to free assets.
+
         """
         return self.covariance[self.free][:, self.free]
 
     @property
     def covariance_free_blocked(self) -> NDArray[np.float64]:
-        """
-        Get the cross-covariance matrix between free and blocked assets.
+        """Get the cross-covariance matrix between free and blocked assets.
 
         Returns:
             The submatrix of the covariance matrix with rows for free assets
             and columns for blocked assets.
+
         """
         return self.covariance[self.free][:, ~self.free]
 
     @property
     def covariance_free_inv(self) -> NDArray[np.float64]:
-        """
-        Get the inverse of the covariance matrix for free assets.
+        """Get the inverse of the covariance matrix for free assets.
 
         Returns:
             The inverse of the covariance matrix for free assets.
+
         """
         return self.__free_inv
 
     @property
     def mean_free(self) -> NDArray[np.float64]:
-        """
-        Get the expected returns for free assets only.
+        """Get the expected returns for free assets only.
 
         Returns:
             The subvector of the mean vector corresponding to free assets.
+
         """
         return self.mean[self.free]
 
     @property
     def weights_blocked(self) -> NDArray[np.float64]:
-        """
-        Get the weights for blocked assets only.
+        """Get the weights for blocked assets only.
 
         Returns:
             The subvector of the weights vector corresponding to blocked assets.
+
         """
         return self.weights[~self.free]
 
     def compute_lambda(self, index: int, bi: NDArray[np.float64]) -> tuple[float, float]:
-        """
-        Compute the lambda value for a given index and boundary values.
+        """Compute the lambda value for a given index and boundary values.
 
         This method computes the lambda value that would make the weight at the given
         index reach one of the boundary values. It is used to determine the next
@@ -355,11 +355,11 @@ class _Schur:
 
         Returns:
             A tuple containing the lambda value and the boundary value that would be reached.
+
         """
 
         def compute_bi(c: float, bi: NDArray[np.float64]) -> float:
-            """
-            Determine which boundary value to use based on the sign of c.
+            """Determine which boundary value to use based on the sign of c.
 
             Args:
                 c: A coefficient that determines which boundary to use.
@@ -367,6 +367,7 @@ class _Schur:
 
             Returns:
                 The appropriate boundary value.
+
             """
             if np.shape(bi)[0] == 1 or c <= 0:
                 return bi[0]
@@ -393,8 +394,7 @@ class _Schur:
         return ((1 - l1 + l2) * c4[index] - c1 * (bi + l3[index])) / aux, bi
 
     def _compute_weight(self, lamb: float) -> tuple[NDArray[np.float64], float]:
-        """
-        Compute the weights for free assets given a lambda value.
+        """Compute the weights for free assets given a lambda value.
 
         This is an internal helper method that computes the weights for the free assets
         and the gamma value (Lagrange multiplier for the budget constraint) for a given
@@ -405,6 +405,7 @@ class _Schur:
 
         Returns:
             A tuple containing the weights for free assets and the gamma value.
+
         """
         g1 = np.sum(self.covariance_free_inv @ self.mean_free, axis=0)
         g2 = np.sum(np.sum(self.covariance_free_inv))
@@ -424,8 +425,7 @@ class _Schur:
         return -w1 + gamma * w2 + lamb * w3, gamma
 
     def update_weights(self, lamb: float) -> NDArray[np.float64]:
-        """
-        Update the portfolio weights for a given lambda value.
+        """Update the portfolio weights for a given lambda value.
 
         This method computes the new portfolio weights for a given lambda value.
         It uses the _compute_weight method to compute the weights for the free assets
@@ -436,6 +436,7 @@ class _Schur:
 
         Returns:
             The updated portfolio weights vector.
+
         """
         weights, _ = self._compute_weight(lamb)
         new_weights = np.copy(self.weights)

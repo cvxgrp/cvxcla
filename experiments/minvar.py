@@ -1,5 +1,4 @@
-"""
-Minimum Variance Portfolio Optimization Experiment
+"""Minimum Variance Portfolio Optimization Experiment.
 
 This script demonstrates different methods to solve the minimum variance portfolio optimization problem:
 1. Analytical solution using Lagrange multipliers
@@ -22,8 +21,7 @@ from loguru import logger
 
 
 def bilinear(mat, left=None, right=None):
-    """
-    Compute the bilinear form: left^T * mat * right
+    """Compute the bilinear form: left^T * mat * right.
 
     This function calculates a bilinear form with a matrix and two vectors.
     If left or right are not provided, they default to vectors of ones.
@@ -35,6 +33,7 @@ def bilinear(mat, left=None, right=None):
 
     Returns:
         The scalar result of the bilinear form
+
     """
     n, m = mat.shape
     assert n == m, "Matrix must be square"

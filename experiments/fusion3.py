@@ -1,5 +1,4 @@
-"""
-Portfolio Optimization - Efficient Frontier Computation
+"""Portfolio Optimization - Efficient Frontier Computation.
 
 This script implements a basic portfolio optimization model using MOSEK's Fusion API.
 It computes points on the efficient frontier by solving a series of optimization problems
@@ -26,8 +25,7 @@ from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 
 def EfficientFrontier(n, mu, GT, x0, w, alphas):
-    """
-    Compute points on the efficient frontier for a portfolio optimization problem.
+    """Compute points on the efficient frontier for a portfolio optimization problem.
 
     This function solves a series of portfolio optimization problems with different
     risk aversion parameters (alphas) to trace out the efficient frontier.
@@ -43,6 +41,7 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
     Returns:
         A list of tuples (alpha, expected return, variance) representing points
         on the efficient frontier
+
     """
     # Create a MOSEK Fusion model for the efficient frontier computation
     with Model("Efficient frontier") as M:
