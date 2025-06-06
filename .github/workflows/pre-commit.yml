@@ -27,4 +27,10 @@ jobs:
         uses: tschm/cradle/actions/environment@v0.1.71
 
       # Run deptry to check for dependency issues
-      - uses: tschm/cradle/actions/deptry@v0.1.71
+      - name: Run Deptry
+        run: |
+          uvx deptry cvx
+
+      - name: Run ty
+        run: |
+          uvx ty cvx

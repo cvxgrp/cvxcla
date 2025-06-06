@@ -18,6 +18,10 @@ fmt: venv ## Format and lint code
 	uvx pre-commit install  # Set up pre-commit hooks
 	uvx pre-commit run --all-files  # Run pre-commit hooks on all files
 
+.PHONY: ty
+ty: install
+	@uvx ty check tests  #/jquantstats
+
 # Cleanup
 clean: ## Clean build artifacts and stale branches
 	git clean -X -d -f  # Remove files ignored by git
