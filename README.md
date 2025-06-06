@@ -71,39 +71,48 @@ This will:
 Here's a simple example of how to use `cvxcla` to compute the efficient frontier:
 
 ```python
-import numpy as np
-from cvx.cla import CLA
-from cvx.cla.plot import plot_frontier
+>>> import numpy as np
+>>> # Set a seed for reproducibility
+>>> np.random.seed(42)
+>>> from cvx.cla import CLA
+>>> from cvx.cla.plot import plot_frontier
+>>>
+>>> # Define your portfolio problem
+>>> n = 10  # Number of assets
+>>> mean = np.random.randn(n)  # Expected returns
+>>> cov = np.random.randn(n, n)
+>>> covariance = cov @ cov.T  # Covariance matrix
+>>> lower_bounds = np.zeros(n)  # No short selling
+>>> upper_bounds = np.ones(n)  # No leverage
+>>>
+>>> # Create a CLA instance
+>>> cla = CLA(
+...    mean=mean,
+...    covariance=covariance,
+...    lower_bounds=lower_bounds,
+...    upper_bounds=upper_bounds,
+...    A=np.ones((1, n)),  # Fully invested constraint
+...    b=np.ones(1)
+... )
+>>>
+>>> # Access the efficient frontier
+>>> frontier = cla.frontier
+>>>
+>>> # Get the maximum Sharpe ratio portfolio
+>>> max_sharpe_ratio, max_sharpe_weights = frontier.max_sharpe
+>>> print(f"Maximum Sharpe ratio: {max_sharpe_ratio:.6f}")
+Maximum Sharpe ratio: 2.946979
+>>> # Print first few weights to avoid long output
+>>> print(f"First 3 weights: {max_sharpe_weights[:3]}")
+First 3 weights: [0.         0.         0.08509841]
+```
 
-# Define your portfolio problem
-n = 10  # Number of assets
-mean = np.random.randn(n)  # Expected returns
-cov = np.random.randn(n, n)
-covariance = cov @ cov.T  # Covariance matrix
-lower_bounds = np.zeros(n)  # No short selling
-upper_bounds = np.ones(n)  # No leverage
+For visualization, you can plot the efficient frontier:
 
-# Create a CLA instance
-cla = CLA(
-   mean=mean,
-   covariance=covariance,
-   lower_bounds=lower_bounds,
-   upper_bounds=upper_bounds,
-   A=np.ones((1, n)),  # Fully invested constraint
-   b=np.ones(1)
-)
-
-# Access the efficient frontier
-frontier = cla.frontier
-
-# Plot the efficient frontier
+```python
+# Plot the efficient frontier (not run in doctests)
 fig = plot_frontier(frontier, volatility=True)
 fig.show()
-
-# Get the maximum Sharpe ratio portfolio
-max_sharpe_ratio, max_sharpe_weights = frontier.max_sharpe
-print(f"Maximum Sharpe ratio: {max_sharpe_ratio}")
-print(f"Weights for maximum Sharpe ratio portfolio: {max_sharpe_weights}")
 ```
 
 ## 📚 Literature and Implementations
