@@ -1,4 +1,11 @@
-"""The implementation of the Critical Line Algorithm by Bailey and Lopez de Prado."""
+"""Bailey and Lopez de Prado implementation of the Critical Line Algorithm.
+
+This module provides an implementation of the Critical Line Algorithm based on
+the approach described by David Bailey and Marcos Lopez de Prado in their paper
+"An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization".
+
+The implementation is included for testing and educational purposes only.
+"""
 
 #    Copyright 2023 Stanford University Convex Optimization Group
 #
@@ -24,16 +31,6 @@ from numpy.typing import NDArray
 
 from cvx.cla.first import init_algo
 from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
-
-"""
-Bailey and Lopez de Prado implementation of the Critical Line Algorithm.
-
-This module provides an implementation of the Critical Line Algorithm based on
-the approach described by David Bailey and Marcos Lopez de Prado in their paper
-"An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization".
-
-The implementation is included for testing and educational purposes only.
-"""
 
 
 @dataclass(frozen=True)
