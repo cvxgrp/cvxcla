@@ -15,9 +15,8 @@ install: venv ## Install dependencies and setup environment
 
 # Code Quality
 fmt: venv ## Format and lint code
-	uv pip install pre-commit  # Install pre-commit hooks
-	uv run pre-commit install  # Set up pre-commit hooks
-	uv run pre-commit run --all-files  # Run pre-commit hooks on all files
+	uvx pre-commit install  # Set up pre-commit hooks
+	uvx pre-commit run --all-files  # Run pre-commit hooks on all files
 
 # Cleanup
 clean: ## Clean build artifacts and stale branches
