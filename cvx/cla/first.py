@@ -20,7 +20,6 @@ Two implementations are provided: a direct algorithm and a linear programming ap
 
 from __future__ import annotations
 
-import cvxpy as cp
 import numpy as np
 from numpy.typing import NDArray
 
@@ -73,95 +72,6 @@ def init_algo(
 
     # Return first turning point, the point with the highest expected return.
     return TurningPoint(free=free, weights=weights)
-
-
-def init_algo_lp(
-    mean: NDArray[np.float64],
-    lower_bounds: NDArray[np.float64],
-    upper_bounds: NDArray[np.float64],
-    A_eq: NDArray[np.float64] | None = None,
-    b_eq: NDArray[np.float64] | None = None,
-    solver=cp.CLARABEL,
-    **kwargs,
-    # A_ub: NDArray[np.float64] | None = None,
-    # b_ub: NDArray[np.float64] | None = None,
-) -> TurningPoint:
-    """Compute the first turning point using linear programming.
-
-    This function formulates the problem of finding the first turning point as a linear
-    programming problem and solves it using a convex optimization solver. The objective
-    is to maximize the expected return subject to the constraints that the weights sum
-    to 1 and are within their bounds.
-
-    Args:
-        mean: Vector of expected returns for each asset.
-        lower_bounds: Vector of lower bounds for asset weights.
-        upper_bounds: Vector of upper bounds for asset weights.
-        A_eq: Matrix for additional linear equality constraints (Ax = b).
-            If None, only the fully invested constraint (sum(weights) = 1) is used.
-        b_eq: Vector for additional linear equality constraints (Ax = b).
-            If None, only the fully invested constraint (sum(weights) = 1) is used.
-        solver: The CVXPY solver to use for the optimization.
-        **kwargs: Additional keyword arguments to pass to the solver.
-
-    Returns:
-        A TurningPoint object representing the first point on the efficient frontier.
-
-    Raises:
-        ValueError: If the problem is infeasible or if lower bounds exceed upper bounds.
-
-    """
-    if A_eq is None:
-        A_eq = np.atleast_2d(np.ones_like(mean))
-
-    if b_eq is None:
-        b_eq = np.array([1.0])
-
-    # if A_ub is None:
-    #    A_ub = np.atleast_2d(np.zeros_like(mean))
-
-    # if b_ub is None:
-    #    b_ub = np.array([0.0])
-
-    w = cp.Variable(mean.shape[0], "weights")
-
-    objective = cp.Maximize(mean.T @ w)
-    constraints = [
-        A_eq @ w == b_eq,
-        # A_ub @ w <= b_ub,
-        lower_bounds <= w,
-        w <= upper_bounds,
-        cp.sum(w) == 1.0,
-    ]
-
-    problem = cp.Problem(objective, constraints)
-    problem.solve(solver=solver, **kwargs)
-    # check status of problem is optimal
-    if problem.status != cp.OPTIMAL:
-        raise ValueError("Could not construct a fully invested portfolio")
-
-    # assert problem.status == cp.OPTIMAL
-    # print(problem.status)
-    # print(status)
-
-    w = w.value
-
-    # compute the distance from the closest bound
-    # distance = np.min(
-    #    np.array([np.abs(w - lower_bounds), np.abs(upper_bounds - w)]), axis=0
-    # )
-
-    # which element has the largest distance to any bound?
-    # Even if all assets are at their bounds,
-    # we get a (somewhat random) free asset.
-    # index = np.argmax(distance)
-
-    # free = np.full_like(mean, False, dtype=np.bool_)
-    # free[index] = True
-
-    free = _free(w, lower_bounds, upper_bounds)
-
-    return TurningPoint(free=free, weights=w)
 
 
 def _free(

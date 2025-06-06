@@ -13,7 +13,7 @@ import pytest
 from pandas import DataFrame
 
 from cvx.cla import CLA
-from cvx.cla.first import init_algo_lp
+from cvx.cla.first import init_algo
 
 
 def test_solver(input_data: Any, results: Any) -> None:
@@ -71,7 +71,7 @@ def test_example(example: DataFrame, example_solution: DataFrame) -> None:
     upper_bounds = 0.5 * np.ones(ns)
 
     # covariance = example.cov().values
-    tp = init_algo_lp(mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
+    tp = init_algo(mean=means.values, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
     assert np.allclose(tp.weights, np.array([0.1, 0.5, 0.4]), atol=1e-9)
     assert np.allclose(tp.free, np.array([False, False, True]))
 
