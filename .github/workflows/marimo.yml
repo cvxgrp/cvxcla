@@ -21,4 +21,4 @@ jobs:
       - name: Run notebooks
         run: |
           uv pip install --no-cache-dir marimo
-          uv run python "notebooks/minimal enclosing circle.py"
+          uv run python "book/marimo/cla.py"
