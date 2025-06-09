@@ -9,6 +9,26 @@ with app.setup:
     import marimo as mo
     import numpy as np
 
+    async def install():
+        # | hide_cell
+        import sys
+    
+        IS_WASM = sys.platform == "emscripten"
+    
+        print(f"WASM notebook: {IS_WASM}")
+    
+        if IS_WASM:
+            import micropip
+    
+            # install the cvxcla package from PyPI
+            await micropip.install("cvxcla")
+    
+        return
+
+    await install()
+    
+    from cvx.cla import CLA
+
 
 @app.cell
 def _():
@@ -23,29 +43,29 @@ def _():
     return
 
 
-@app.cell(hide_code=True)
-async def _():
-    # | hide_cell
-    import sys
+#@app.cell(hide_code=True)
+#async def install():
+#    # | hide_cell
+#    import sys
+#
+#    IS_WASM = sys.platform == "emscripten"
+#
+#    print(f"WASM notebook: {IS_WASM}")
+#
+#    if IS_WASM:
+#        import micropip
+#
+#        # install the cvxcla package from PyPI
+#        await micropip.install("cvxcla")
+#
+#    return
 
-    IS_WASM = sys.platform == "emscripten"
 
-    print(f"WASM notebook: {IS_WASM}")
-
-    if IS_WASM:
-        import micropip
-
-        # install the cvxcla package from PyPI
-        await micropip.install("cvxcla")
-
-    return
-
-
-@app.cell
-def _():
-    from cvx.cla import CLA
-
-    return CLA
+#@app.cell
+#def _():
+#    from cvx.cla import CLA
+#
+#    return CLA
 
 
 @app.cell
