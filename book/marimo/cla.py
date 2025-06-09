@@ -8,7 +8,8 @@ app = marimo.App()  # layout_file="layouts/cla.slides.json")
 with app.setup:
     import marimo as mo
     import numpy as np
-    
+
+
 @app.cell
 def _():
     mo.md(r"""# Critical Line Algorithm""")
@@ -42,7 +43,6 @@ async def _():
 
 @app.cell
 def _():
-
     from cvx.cla import CLA
 
     return CLA
@@ -52,6 +52,7 @@ def _():
 def _():
     slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
     return slider
+
 
 @app.cell(hide_code=True)
 def _(CLA, slider):
