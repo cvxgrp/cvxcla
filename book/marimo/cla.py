@@ -1,13 +1,12 @@
 """Little demo for the Critical Line Algorithm."""
 import sys
+import marimo
 
 IS_WASM = sys.platform == "emscripten"
 
 if IS_WASM:
     import micropip
     await micropip.install("cvxcla")
-    
-import marimo
 
 __generated_with = "0.13.15"
 app = marimo.App()  # layout_file="layouts/cla.slides.json")
