@@ -5,15 +5,18 @@ import marimo
 __generated_with = "0.13.15"
 app = marimo.App()  # layout_file="layouts/cla.slides.json")
 
-
+with app.setup:
+    import marimo as mo
+    import numpy as np
+    
 @app.cell
-def _(mo):
+def _():
     mo.md(r"""# Critical Line Algorithm""")
     return
 
 
 @app.cell
-def _(mo):
+def _():
     mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla).
     The method was introduced by Harry M Markowitz in 1956.""")
     return
@@ -39,22 +42,19 @@ async def _():
 
 @app.cell
 def _():
-    import numpy as np
 
     from cvx.cla import CLA
 
-    return CLA, np
+    return CLA
 
 
 @app.cell
-def _(mo):
+def _():
     slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
-    slider
-    return (slider,)
-
+    return slider
 
 @app.cell(hide_code=True)
-def _(CLA, np, slider):
+def _(CLA, slider):
     n = slider.value
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
@@ -84,13 +84,6 @@ def _(f1):
 def _(f1):
     f1.plot()
     return
-
-
-@app.cell
-def _():
-    import marimo as mo
-
-    return (mo,)
 
 
 if __name__ == "__main__":
