@@ -1,12 +1,6 @@
 """Little demo for the Critical Line Algorithm."""
-import sys
+
 import marimo
-
-IS_WASM = sys.platform == "emscripten"
-
-if IS_WASM:
-    import micropip
-    await micropip.install("cvxcla")
 
 __generated_with = "0.13.15"
 app = marimo.App()  # layout_file="layouts/cla.slides.json")
@@ -14,7 +8,6 @@ app = marimo.App()  # layout_file="layouts/cla.slides.json")
 with app.setup:
     import marimo as mo
     import numpy as np
-    from cvx.cla import CLA
 
 
 @app.cell
@@ -30,29 +23,29 @@ def _():
     return
 
 
-#@app.cell(hide_code=True)
-#async def install():
-#    # | hide_cell
-#    import sys
-#
-#    IS_WASM = sys.platform == "emscripten"
-#
-#    print(f"WASM notebook: {IS_WASM}")
-#
-#    if IS_WASM:
-#        import micropip
-#
-#        # install the cvxcla package from PyPI
-#        await micropip.install("cvxcla")
-#
-#    return
+@app.cell(hide_code=True)
+async def _():
+    # | hide_cell
+    import sys
+
+    IS_WASM = sys.platform == "emscripten"
+
+    print(f"WASM notebook: {IS_WASM}")
+
+    if IS_WASM:
+        import micropip
+
+        # install the cvxcla package from PyPI
+        await micropip.install("cvxcla")
+
+    return
 
 
-#@app.cell
-#def _():
-#    from cvx.cla import CLA
-#
-#    return CLA
+@app.cell
+def _():
+    from cvx.cla import CLA
+
+    return CLA
 
 
 @app.cell
@@ -62,7 +55,7 @@ def _():
 
 
 @app.cell(hide_code=True)
-def _(slider):
+def _(CLA, slider):
     n = slider.value
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
