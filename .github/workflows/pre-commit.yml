@@ -32,4 +32,4 @@ jobs:
 
       - name: Run ty
         run: |
-          uvx ty cvx
+          uvx ty --check cvx
