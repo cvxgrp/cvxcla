@@ -1,5 +1,12 @@
 """Little demo for the Critical Line Algorithm."""
+import sys
 
+IS_WASM = sys.platform == "emscripten"
+
+if IS_WASM:
+    import micropip
+    await micropip.install("cvxcla")
+    
 import marimo
 
 __generated_with = "0.13.15"
@@ -8,25 +15,6 @@ app = marimo.App()  # layout_file="layouts/cla.slides.json")
 with app.setup:
     import marimo as mo
     import numpy as np
-
-    async def install():
-        # | hide_cell
-        import sys
-    
-        IS_WASM = sys.platform == "emscripten"
-    
-        print(f"WASM notebook: {IS_WASM}")
-    
-        if IS_WASM:
-            import micropip
-    
-            # install the cvxcla package from PyPI
-            await micropip.install("cvxcla")
-    
-        return
-
-    install()
-    
     from cvx.cla import CLA
 
 
@@ -75,7 +63,7 @@ def _():
 
 
 @app.cell(hide_code=True)
-def _(CLA, slider):
+def _(slider):
     n = slider.value
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
