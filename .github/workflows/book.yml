@@ -10,6 +10,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  
 jobs:
   # Job to process marimo notebooks
   marimo:
@@ -43,8 +46,6 @@ jobs:
   # Job to run tests and generate coverage reports
   test:
     runs-on: "ubuntu-latest"
-    permissions:
-      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: tschm/cradle/actions/environment@v0.1.71
@@ -58,8 +59,6 @@ jobs:
   # Job to process Jupyter notebooks
   jupyter:
     runs-on: "ubuntu-latest"
-    permissions:
-      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: tschm/cradle/actions/environment@v0.1.71
@@ -69,8 +68,6 @@ jobs:
   # Job to generate API documentation using pdoc
   pdoc:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
         uses: tschm/cradle/actions/environment@v0.1.71
@@ -87,7 +84,6 @@ jobs:
       name: github-pages
 
     permissions:
-      contents: read
       pages: write
       id-token: write
 
