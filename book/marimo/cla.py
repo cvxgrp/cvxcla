@@ -25,7 +25,7 @@ with app.setup:
     
         return
 
-    await install()
+    install()
     
     from cvx.cla import CLA
 
