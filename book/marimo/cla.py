@@ -12,13 +12,8 @@ with app.setup:
 
 @app.cell
 def _():
-    mo.md(r"""# Critical Line Algorithm""")
-    return
-
-
-@app.cell
-def _():
-    mo.md(r"""We compute an efficient frontier using the critical line algorithm (cla).
+    mo.md(r"""# The Critical Line Algorithm
+    We compute an efficient frontier using the critical line algorithm (cla).
     The method was introduced by Harry M Markowitz in 1956.""")
     return
 
@@ -43,6 +38,7 @@ async def _():
 
 @app.cell
 def _():
+    # This can not be part of app.setup unfortunately
     from cvx.cla import CLA
 
     return CLA
@@ -72,7 +68,7 @@ def _(CLA, slider):
         A=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
-    return (f1,)
+    return f1
 
 
 @app.cell
