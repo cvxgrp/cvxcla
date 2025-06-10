@@ -20,7 +20,7 @@ jobs:
     steps:
       # Step: Set up the virtual environment
       - name: "Build the virtual environment"
-        uses: tschm/cradle/actions/environment@v0.1.71
+        uses: tschm/cradle/actions/environment@v0.1.72
 
       - name: Export notebook via wasm
         run: |
@@ -48,9 +48,9 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.71
+        uses: tschm/cradle/actions/environment@v0.1.72
 
-      - uses: tschm/cradle/actions/coverage@v0.1.71
+      - uses: tschm/cradle/actions/coverage@v0.1.72
         with:
           tests-folder: tests
           source-folder: cvx
@@ -61,18 +61,18 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.71
+        uses: tschm/cradle/actions/environment@v0.1.72
 
-      - uses: tschm/cradle/actions/jupyter@v0.1.71
+      - uses: tschm/cradle/actions/jupyter@v0.1.72
 
   # Job to generate API documentation using pdoc
   pdoc:
     runs-on: ubuntu-latest
     steps:
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.71
+        uses: tschm/cradle/actions/environment@v0.1.72
 
-      - uses: tschm/cradle/actions/pdoc@v0.1.71
+      - uses: tschm/cradle/actions/pdoc@v0.1.72
 
 
   book:
@@ -91,4 +91,4 @@ jobs:
       # Step: Upload the generated documentation book
       # Skipped when running locally with 'act' to prevent accidental deployments
       - name: Upload the book
-        uses: tschm/cradle/actions/book@v0.1.71
+        uses: tschm/cradle/actions/book@v0.1.72
