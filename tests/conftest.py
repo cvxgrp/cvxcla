@@ -10,9 +10,8 @@ from types import SimpleNamespace
 
 import pandas as pd
 import pytest
-from pandas import DataFrame
-
 from cvx.bson import read_bson
+from pandas import DataFrame
 
 
 @pytest.fixture(scope="session", name="resource_dir")

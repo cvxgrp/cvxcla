@@ -11,9 +11,8 @@ The input data is loaded from a BSON file containing:
     - upper_bounds: Maximum allowed weight for each asset
 """
 
-from mosek.fusion import Domain, Expr, Model, ObjectiveSense
-
 from cvx.bson import read_bson
+from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 if __name__ == "__main__":
     # Load portfolio data from BSON file

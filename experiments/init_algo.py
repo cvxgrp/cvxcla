@@ -15,7 +15,7 @@ expected return and the same bounds, to test the performance and behavior of bot
 import numpy as np
 from loguru import logger
 
-from cvx.cla.first import init_algo, init_algo_lp
+from cvxcla.first import init_algo, init_algo_lp
 
 if __name__ == "__main__":
     # Define a large-scale portfolio problem with 10,000 assets

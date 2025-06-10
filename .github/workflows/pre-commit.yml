@@ -29,7 +29,8 @@ jobs:
       # Run deptry to check for dependency issues
       - name: Run Deptry
         uses: tschm/cradle/actions/deptry@v0.1.71
-
+        with:
+          source-folder: 'cvxcla'
       - name: Run ty
         run: |
-          uvx ty check cvx
+          uvx ty check cvxcla

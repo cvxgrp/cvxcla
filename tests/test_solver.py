@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from pandas import DataFrame
 
-from cvx.cla import CLA as MARKOWITZ
+from cvxcla import CLA as MARKOWITZ
 from tests.bailey.cla import CLA as BAILEY
 
 

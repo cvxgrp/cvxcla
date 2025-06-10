@@ -29,8 +29,8 @@ import numpy as np
 from loguru import logger
 from numpy.typing import NDArray
 
-from cvx.cla.first import init_algo
-from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
+from cvxcla.first import init_algo
+from cvxcla.types import Frontier, FrontierPoint, TurningPoint
 
 
 @dataclass(frozen=True)
