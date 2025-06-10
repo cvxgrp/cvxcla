@@ -3,55 +3,35 @@
 import marimo
 
 __generated_with = "0.13.15"
-app = marimo.App()  # layout_file="layouts/cla.slides.json")
+app = marimo.App()
 
 with app.setup:
     import marimo as mo
     import numpy as np
 
+    from cvxcla import CLA
+
 
 @app.cell
 def _():
-    mo.md(r"""# The Critical Line Algorithm
+    mo.md(
+        r"""
+    # The Critical Line Algorithm
     We compute an efficient frontier using the critical line algorithm (cla).
-    The method was introduced by Harry M Markowitz in 1956.""")
+    The method was introduced by Harry M Markowitz in 1956.
+    """
+    )
     return
-
-
-@app.cell(hide_code=True)
-async def _():
-    # | hide_cell
-    import sys
-
-    IS_WASM = sys.platform == "emscripten"
-
-    print(f"WASM notebook: {IS_WASM}")
-
-    if IS_WASM:
-        import micropip
-
-        # install the cvxcla package from PyPI
-        await micropip.install("cvxcla")
-
-    return
-
-
-@app.cell
-def _():
-    # This can not be part of app.setup unfortunately
-    from cvx.cla import CLA
-
-    return CLA
 
 
 @app.cell
 def _():
     slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
-    return slider
+    return (slider,)
 
 
 @app.cell(hide_code=True)
-def _(CLA, slider):
+def _(slider):
     n = slider.value
     mean = np.random.randn(n)
     lower_bounds = np.zeros(n)
@@ -68,7 +48,7 @@ def _(CLA, slider):
         A=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
-    return f1
+    return (f1,)
 
 
 @app.cell
