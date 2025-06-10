@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from cvx.cla import CLA as MARKOWITZ
+from cvxcla import CLA as MARKOWITZ
 from tests.bailey.cla import CLA as BAILEY
 
 # np.random.seed(40)

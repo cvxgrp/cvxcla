@@ -12,7 +12,7 @@ import numpy as np
 import plotly.graph_objects as go
 import pytest
 
-from cvx.cla.types import Frontier, FrontierPoint, TurningPoint
+from cvxcla.types import Frontier, FrontierPoint, TurningPoint
 
 
 @pytest.fixture()

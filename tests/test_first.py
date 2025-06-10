@@ -10,8 +10,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvx.cla.first import init_algo, init_algo_lp
-from cvx.cla.types import TurningPoint
+from cvxcla.first import init_algo, init_algo_lp
+from cvxcla.types import TurningPoint
 
 
 @pytest.mark.parametrize("n", [5, 20, 100, 1000, 10000])

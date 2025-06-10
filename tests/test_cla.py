@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 from pandas import DataFrame
 
-from cvx.cla import CLA
-from cvx.cla.first import init_algo_lp
+from cvxcla import CLA
+from cvxcla.first import init_algo_lp
 
 
 def test_solver(input_data: Any, results: Any) -> None:

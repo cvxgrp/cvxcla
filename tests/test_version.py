@@ -1,6 +1,6 @@
 """Test version number."""
 
-import cvx.cla as cvxcla
+import cvxcla as cvxcla
 
 
 def test_version():
