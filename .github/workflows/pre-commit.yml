@@ -31,6 +31,7 @@ jobs:
         uses: tschm/cradle/actions/deptry@v0.1.72
         with:
           source-folder: 'cvxcla'
+      
       - name: Run ty
         run: |
           uvx ty check cvxcla
