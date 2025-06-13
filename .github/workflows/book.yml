@@ -30,7 +30,7 @@ jobs:
               filename=$(basename "$py_file" .py)
               echo "Processing $py_file"
               mkdir -p "artifacts/marimo/$filename"
-              uvx marimo export html-wasm --sandbox "$py_file" -o "artifacts/marimo/$filename/index.html" --mode edit
+              uvx marimo export html-wasm --sandbox "$py_file" -o "artifacts/marimo/$filename" --mode edit
             fi
           done
 
