@@ -42,7 +42,7 @@ help: ## Show this help message
 marimo: install ## Install a run a Jupyter Lab server
 	# uv pip install --no-cache-dir marimo  # Install Marimo
 	# Launch marimo editor with notebooks in book/marimo directory
-	@uv run marimo edit book/marimo
+	@uvx marimo edit --sandbox book/marimo/cla.py
 
 slides: install
 	@uv run marimo export html book/marimo/cla.py -o cla.html
