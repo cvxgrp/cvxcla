@@ -5,6 +5,9 @@
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage Status](https://coveralls.io/repos/github/cvxgrp/cvxcla/badge.png?branch=main)](https://coveralls.io/github/cvxgrp/cvxcla?branch=main)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://github.com/renovatebot/renovate)
+[![CI](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml)
+[![pre-commit](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml)
+[![Marimo Notebooks](https://github.com/cvxgrp/cvxcla/actions/workflows/marimo.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/marimo.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
