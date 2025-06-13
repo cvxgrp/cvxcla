@@ -17,7 +17,8 @@ with app.setup:
     import marimo as mo
     import numpy as np
 
-    from cvxcla import CLA
+    import cvxcla as solver
+    # from cvxcla import CLA
 
 
 @app.cell
@@ -48,7 +49,7 @@ def _(slider):
     factor = np.random.randn(n, n)
     covariance = factor @ factor.T
 
-    f1 = CLA(
+    f1 = solver.CLA(
         mean=mean,
         covariance=covariance,
         lower_bounds=lower_bounds,
