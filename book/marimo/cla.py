@@ -1,3 +1,11 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "marimo==0.13.15",
+#     "numpy==2.3.0",
+#     "cvxcla==1.1.7",
+# ]
+# ///
 """Little demo for the Critical Line Algorithm."""
 
 import marimo

@@ -24,15 +24,13 @@ jobs:
 
       - name: Export notebook via wasm
         run: |
-          uv pip install --no-cache-dir marimo
-
           # export all .py files in book/marimo directory
           for py_file in book/marimo/*.py; do
             if [ -f "$py_file" ]; then
               filename=$(basename "$py_file" .py)
               echo "Processing $py_file"
               mkdir -p "artifacts/marimo/$filename"
-              uv run marimo export html-wasm "$py_file" -o "artifacts/marimo/$filename/index.html" --mode edit
+              uvx marimo export html-wasm --sandbox "$py_file" -o "artifacts/marimo/$filename/index.html" --mode edit
             fi
           done
 

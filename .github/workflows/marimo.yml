@@ -15,10 +15,17 @@ jobs:
     runs-on: ubuntu-latest  # Run on Ubuntu
 
     steps:
-      - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.72
+      # Check out the repository code
+      - name: Checkout [${{ github.repository }}]
+        uses: actions/checkout@v4
 
-      - name: Run notebooks
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: 3.13
+
+      - name: Run notebook
         run: |
-          uv pip install --no-cache-dir marimo
-          uv run python "book/marimo/cla.py"
+          uvx marimo run book/marimo/cla.py --sandbox --no-browser & pid=$!
+          sleep 1
+          kill $pid
