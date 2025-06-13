@@ -38,11 +38,6 @@ help: ## Show this help message
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)  # Extract and format targets with comments
 
-# Marimo & Jupyter
-marimo-sandbox: venv ## Run via sandbox
-	# uv pip install --no-cache-dir marimo  # Install Marimo
-	# Launch marimo editor with notebooks in book/marimo directory
-	@uvx marimo edit --sandbox book/marimo/cla.py
 
 marimo: install ## Run the current repo version
 	@uv pip install --no-cache-dir marimo
