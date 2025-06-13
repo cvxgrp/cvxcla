@@ -18,7 +18,6 @@ with app.setup:
     import numpy as np
 
     import cvxcla as solver
-    # from cvxcla import CLA
 
 
 @app.cell
@@ -36,7 +35,8 @@ def _():
 @app.cell
 def _():
     slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
-    return (slider,)
+    slider
+    return slider
 
 
 @app.cell(hide_code=True)
@@ -57,17 +57,12 @@ def _(slider):
         A=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
-    return (f1,)
+    return f1
 
 
 @app.cell
 def _(f1):
     f1.interpolate(10).plot(volatility=True, markers=True)
-    return
-
-
-@app.cell
-def _(f1):
     f1.plot()
     return
 
