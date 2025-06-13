@@ -3,7 +3,7 @@
 # dependencies = [
 #     "marimo==0.13.15",
 #     "numpy==2.3.0",
-#     "cvxcla==1.1.7",
+#     "cvxcla==1.1.10",
 # ]
 # ///
 """Little demo for the Critical Line Algorithm."""
