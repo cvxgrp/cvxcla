@@ -15,7 +15,6 @@ install: venv ## Install dependencies and setup environment
 
 # Code Quality
 fmt: venv ## Format and lint code
-	uvx pre-commit install  # Set up pre-commit hooks
 	uvx pre-commit run --all-files  # Run pre-commit hooks on all files
 
 .PHONY: ty
