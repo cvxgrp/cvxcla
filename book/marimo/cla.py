@@ -3,7 +3,7 @@
 # dependencies = [
 #     "marimo==0.13.15",
 #     "numpy==2.3.0",
-#     "cvxcla==1.1.7",
+#     "cvxcla==1.1.10",
 # ]
 # ///
 """Little demo for the Critical Line Algorithm."""
@@ -18,7 +18,6 @@ with app.setup:
     import numpy as np
 
     import cvxcla as solver
-    # from cvxcla import CLA
 
 
 @app.cell
@@ -36,6 +35,7 @@ def _():
 @app.cell
 def _():
     slider = mo.ui.slider(4, 100, step=1, value=10, label="Size of the problem")
+    slider
     return (slider,)
 
 
@@ -62,12 +62,7 @@ def _(slider):
 
 @app.cell
 def _(f1):
-    f1.interpolate(10).plot(volatility=True, markers=True)
-    return
-
-
-@app.cell
-def _(f1):
+    f1.interpolate(2).plot(volatility=True, markers=True)
     f1.plot()
     return
 

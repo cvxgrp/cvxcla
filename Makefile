@@ -15,7 +15,6 @@ install: venv ## Install dependencies and setup environment
 
 # Code Quality
 fmt: venv ## Format and lint code
-	uvx pre-commit install  # Set up pre-commit hooks
 	uvx pre-commit run --all-files  # Run pre-commit hooks on all files
 
 .PHONY: ty
@@ -29,8 +28,8 @@ clean: ## Clean build artifacts and stale branches
 
 # Testing
 test: install ## Run tests
-	uv pip install pytest  # Install pytest
-	uv run pytest tests  # Run tests in src/tests directory
+	uv pip install pytest pytest-cov # Install pytest
+	uv run pytest --cov=cvxcla tests  # Run tests in src/tests directory
 
 # Help
 help: ## Show this help message
@@ -39,14 +38,7 @@ help: ## Show this help message
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)  # Extract and format targets with comments
 
-# Marimo & Jupyter
-marimo: install ## Install a run a Jupyter Lab server
-	# uv pip install --no-cache-dir marimo  # Install Marimo
-	# Launch marimo editor with notebooks in book/marimo directory
-	@uv run marimo edit book/marimo
 
-slides: install
-	@uv run marimo export html book/marimo/cla.py -o cla.html
-
-interactive: install
-	@uv run marimo run book/marimo/cla.py --include-code
+marimo: install ## Run the current repo version
+	@uv pip install --no-cache-dir marimo
+	@uv run marimo edit book/marimo/cla.py

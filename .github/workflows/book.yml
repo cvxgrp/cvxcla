@@ -51,7 +51,7 @@ jobs:
       - uses: tschm/cradle/actions/coverage@v0.1.72
         with:
           tests-folder: tests
-          source-folder: cvx
+          source-folder: cvxcla
 
 
   # Job to process Jupyter notebooks
