@@ -20,7 +20,7 @@ jobs:
     steps:
       # Step: Set up the virtual environment
       - name: "Build the virtual environment"
-        uses: tschm/cradle/actions/environment@v0.1.72
+        uses: tschm/cradle/actions/environment@v0.1.73
 
       - name: Export notebook via wasm
         run: |
