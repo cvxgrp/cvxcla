@@ -32,7 +32,7 @@ dev = [
     "pre-commit==4.2.0",
     "loguru==0.7.3",
     "cvxbson==0.1.6",
-    "mosek==11.0.24",
+    "mosek==11.0.25",
     "marimo==0.14.9"
 ]
 
