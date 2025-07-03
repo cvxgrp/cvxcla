@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Run pre-commit hooks (linting, formatting, etc.)
-      - uses: tschm/cradle/actions/pre-commit@v0.1.73
+      - uses: tschm/cradle/actions/pre-commit@v0.1.75
 
   # Job to analyze dependencies using deptry
   deptry:
@@ -24,11 +24,11 @@ jobs:
     steps:
       # Set up the Python environment
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.73
+        uses: tschm/cradle/actions/environment@v0.1.75
 
       # Run deptry to check for dependency issues
       - name: Run Deptry
-        uses: tschm/cradle/actions/deptry@v0.1.73
+        uses: tschm/cradle/actions/deptry@v0.1.75
         with:
           source-folder: 'cvxcla'
 
