@@ -45,25 +45,26 @@ jobs:
 
 
   book:
+    # Combine all documentation and publish to GitHub Pages
     runs-on: "ubuntu-latest"
-    # This job depends on the completion of test, pdoc, and jupyter jobs
-    needs: [test, pdoc, marimo]
-
-    environment:
-      name: github-pages
+    needs: [test, pdoc, marimo]  # Wait for all other jobs to complete
 
     permissions:
-      pages: write
-      id-token: write
+      contents: read
+      pages: write            # Permission to deploy to Pages
+      id-token: write         # Permission to verify deployment origin
 
     steps:
-      # Step: Upload the generated documentation book
-      # Skipped when running locally with 'act' to prevent accidental deployments
-      - name: Upload the book
-        uses: tschm/cradle/actions/book@v0.1.75
+      - # Skip publish on forks
+        name: Skip on fork
+        if: ${{ github.event.repository.fork }}
+        run: echo "This is a fork; skipping publish." && exit 0
+
+      - uses: tschm/cradle/actions/book@v0.1.75
+        if: ${{ !github.event.repository.fork }}
         with:
-          title: "cvxcla"
+          title: "cvxRisk"
           links: |
             {
-                "API": "./pdoc/index.html"
+              "API": "./pdoc/index.html"
             }
