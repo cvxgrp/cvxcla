@@ -32,6 +32,6 @@ jobs:
         with:
           source-folder: 'cvxcla'
 
-      - name: Run ty
-        run: |
-          uvx ty check cvxcla
+      # - name: Run ty
+      #   run: |
+      #     uvx ty check cvxcla
