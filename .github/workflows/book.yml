@@ -63,7 +63,7 @@ jobs:
       - uses: tschm/cradle/actions/book@v0.3.01
         if: ${{ !github.event.repository.fork }}
         with:
-          title: "cvxRisk"
+          title: "cvxcla"
           links: |
             {
               "API": "./pdoc/index.html"
