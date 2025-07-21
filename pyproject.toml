@@ -33,7 +33,7 @@ dev = [
     "loguru==0.7.3",
     "cvxbson==0.1.6",
     "mosek==11.0.25",
-    "marimo==0.14.10"
+    "marimo==0.14.12"
 ]
 
 [tool.ruff]

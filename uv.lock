@@ -275,7 +275,7 @@ requires-dist = [
     { name = "cvxpy-base", specifier = ">=1.5.1" },
     { name = "kaleido", marker = "extra == 'plot'", specifier = "==1.0.0" },
     { name = "loguru", marker = "extra == 'dev'", specifier = "==0.7.3" },
-    { name = "marimo", marker = "extra == 'dev'", specifier = "==0.14.10" },
+    { name = "marimo", marker = "extra == 'dev'", specifier = "==0.14.12" },
     { name = "mosek", marker = "extra == 'dev'", specifier = "==11.0.25" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
@@ -548,7 +548,7 @@ wheels = [
 
 [[package]]
 name = "marimo"
-version = "0.14.10"
+version = "0.14.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -569,9 +569,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fa/93/d646fccda297843c41fa088e831212a425036e1cf7ea1c1fca41d7f7ad56/marimo-0.14.10.tar.gz", hash = "sha256:195247aabaccb7559532daa0313b7f47647ba78b98e151fe2b85df1f67bff79e", size = 29134153, upload-time = "2025-07-03T00:54:02.37Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/6d/8c0bdb68d608561e3039718f171ede292e7da7e7580a51b1f4b2ce6e204f/marimo-0.14.12.tar.gz", hash = "sha256:cf18513e30a5d2e8864930885b674dd89cbc9ad3a5e128b9ecfa48323de6d14f", size = 29622446, upload-time = "2025-07-18T16:46:26.68Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/7a/296b66193a41a3024b56280b53e5066050fa0213469dd528bc1b322dac88/marimo-0.14.10-py3-none-any.whl", hash = "sha256:1fb78e272aaa25405f03ce9103972660ea694efc65e5b39b653d8291a9dea719", size = 29611482, upload-time = "2025-07-03T00:54:06.436Z" },
+    { url = "https://files.pythonhosted.org/packages/79/fa/d802cd61fb4714c17529057dc4b07d48c3e115d0af331907b3d19f5482f6/marimo-0.14.12-py3-none-any.whl", hash = "sha256:154d168ceb8b9f4cc10f8cd9f6299cf0c5d8643b0291370a9e64a88b2f517ed3", size = 30118091, upload-time = "2025-07-18T16:46:30.286Z" },
 ]
 
 [[package]]
