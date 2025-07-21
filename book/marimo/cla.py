@@ -54,7 +54,7 @@ def _(slider):
         covariance=covariance,
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
-        A=np.ones((1, len(mean))),
+        a=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
     return (f1,)
