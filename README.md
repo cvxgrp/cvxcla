@@ -94,7 +94,7 @@ Here's a simple example of how to use `cvxcla` to compute the efficient frontier
 ...     covariance = covariance,
 ...     lower_bounds = lower_bounds,
 ...     upper_bounds = upper_bounds,
-...     A = np.ones((1, n)),  # Fully invested constraint
+...     a = np.ones((1, n)),  # Fully invested constraint
 ...     b = np.ones(1)
 ... )
 >>>
@@ -108,6 +108,7 @@ Maximum Sharpe ratio: 2.946979
 >>>  # Print first few weights to avoid long output
 >>> print(f"First 3 weights: {max_sharpe_weights[:3]}")
 First 3 weights: [0.         0.         0.08509841]
+
 ```
 
 For visualization, you can plot the efficient frontier:
