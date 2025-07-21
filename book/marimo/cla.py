@@ -17,7 +17,7 @@ with app.setup:
     import marimo as mo
     import numpy as np
 
-    import cvxcla as solver
+    from src import cvxcla as solver
 
 
 @app.cell
