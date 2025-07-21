@@ -32,3 +32,5 @@ jobs:
 
       # Step 2: Run the tests using the tschm test action
       - uses: tschm/cradle/actions/test@v0.1.73
+        with:
+          tests-folder: 'src/tests'
