@@ -90,13 +90,13 @@ Here's a simple example of how to use `cvxcla` to compute the efficient frontier
 >>>
 >>> # Create a CLA instance
 >>> cla = CLA(
-mean = mean,
-covariance = covariance,
-lower_bounds = lower_bounds,
-upper_bounds = upper_bounds,
-A = np.ones((1, n)),  # Fully invested constraint
-b = np.ones(1)
-)
+...     mean = mean,
+...     covariance = covariance,
+...     lower_bounds = lower_bounds,
+...     upper_bounds = upper_bounds,
+...     A = np.ones((1, n)),  # Fully invested constraint
+...     b = np.ones(1)
+... )
 >>>
 >>>  # Access the efficient frontier
 >>> frontier = cla.frontier
