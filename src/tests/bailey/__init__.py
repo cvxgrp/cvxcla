@@ -1,3 +1,9 @@
+"""Tests for the Bailey implementation of the Critical Line Algorithm.
+
+This package contains tests for the Bailey implementation of the Critical Line
+Algorithm, which is compared against the Markowitz implementation.
+"""
+
 #    Copyright 2023 Stanford University Convex Optimization Group
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
