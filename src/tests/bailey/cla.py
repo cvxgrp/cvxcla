@@ -50,7 +50,7 @@ class CLA:
         covariance: Covariance matrix of asset returns.
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
-        A: Matrix for linear equality constraints (Ax = b).
+        a: Matrix for linear equality constraints (Ax = b).
         b: Vector for linear equality constraints (Ax = b).
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
@@ -62,7 +62,7 @@ class CLA:
     covariance: NDArray[np.float64]
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
-    A: NDArray[np.float64]
+    a: NDArray[np.float64]
     b: NDArray[np.float64]
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
