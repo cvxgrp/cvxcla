@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-from tests.bailey.cla import CLA
+from .cla import CLA
 
 
 def test_big(input_data: Any, results: Any) -> None:
