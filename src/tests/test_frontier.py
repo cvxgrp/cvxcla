@@ -37,7 +37,7 @@ def test_frontier(input_data: Any, solver: type) -> None:
         mean=input_data.mean,
         lower_bounds=input_data.lower_bounds,
         upper_bounds=input_data.upper_bounds,
-        A=np.ones((1, len(input_data.mean))),
+        a=np.ones((1, len(input_data.mean))),
         b=np.ones(1),
     ).frontier
 
@@ -76,7 +76,7 @@ def test_frontiers(n: int, resource_dir: Path) -> None:
         mean=mean,
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
-        A=np.ones((1, n)),
+        a=np.ones((1, n)),
         b=np.ones(1),
         tol=1e-5,
     ).frontier
@@ -87,7 +87,7 @@ def test_frontiers(n: int, resource_dir: Path) -> None:
         upper_bounds=np.copy(upper_bounds),
         covariance=np.copy(covar),
         tol=1e-5,
-        A=np.ones((1, n)),
+        a=np.ones((1, n)),
         b=np.ones(1),
     ).frontier
 

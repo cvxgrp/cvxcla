@@ -138,4 +138,4 @@ if __name__ == "__main__":
 
     # Print each point on the frontier with its alpha, expected return, and standard deviation
     for i in frontier:
-        print("{:<12.4f}  {:<12.4e}  {:<12.4e}".format(i[0], i[1], np.sqrt(i[2])))
+        print(f"{i[0]:<12.4f}  {i[1]:<12.4e}  {np.sqrt(i[2]):<12.4e}")

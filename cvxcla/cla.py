@@ -22,7 +22,6 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -48,7 +47,7 @@ class CLA:
         covariance: Covariance matrix of asset returns.
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
-        A: Matrix for linear equality constraints (Ax = b).
+        a: Matrix for linear equality constraints (Ax = b).
         b: Vector for linear equality constraints (Ax = b).
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
@@ -60,9 +59,9 @@ class CLA:
     covariance: NDArray[np.float64]
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
-    A: NDArray[np.float64]
+    a: NDArray[np.float64]
     b: NDArray[np.float64]
-    turning_points: List[TurningPoint] = field(default_factory=list)
+    turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ class CLA:
 
         This step helps identify which constraints are becoming active or inactive.
         """
-        return np.block([self.covariance, self.A.T])
+        return np.block([self.covariance, self.a.T])
 
     @cached_property
     def M(self):
@@ -92,8 +91,8 @@ class CLA:
 
         This matrix is symmetric but not necessarily positive definite.
         """
-        m = self.A.shape[0]
-        return np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
+        m = self.a.shape[0]
+        return np.block([[self.covariance, self.a.T], [self.a, np.zeros((m, m))]])
 
     def __post_init__(self):
         """Initialize the CLA object and compute the efficient frontier.
@@ -112,7 +111,7 @@ class CLA:
                             system of equations singular.
 
         """
-        m = self.A.shape[0]
+        m = self.a.shape[0]
         ns = len(self.mean)
 
         # Compute and store the first turning point
@@ -236,7 +235,7 @@ class CLA:
         )
         return first
 
-    def _append(self, tp: TurningPoint, tol: Optional[float] = None) -> None:
+    def _append(self, tp: TurningPoint, tol: float | None = None) -> None:
         """Append a turning point to the list of turning points.
 
         This method validates that the turning point satisfies the constraints

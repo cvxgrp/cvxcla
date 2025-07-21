@@ -11,8 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-"""
-Critical Line Algorithm (CLA) for Portfolio Optimization.
+"""Critical Line Algorithm (CLA) for Portfolio Optimization.
 
 This package implements the Critical Line Algorithm introduced by Harry Markowitz
 for computing the efficient frontier in portfolio optimization problems.
@@ -22,6 +21,7 @@ which are the points where the set of assets at their bounds changes.
 The main class to use is CLA, which implements the algorithm and provides
 methods to compute and analyze the efficient frontier.
 """
+
 import importlib.metadata
 
 from .cla import CLA
