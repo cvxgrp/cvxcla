@@ -13,7 +13,8 @@ import pytest
 from pandas import DataFrame
 
 from cvxcla import CLA as MARKOWITZ
-from tests.bailey.cla import CLA as BAILEY
+
+from .bailey.cla import CLA as BAILEY
 
 
 @pytest.mark.parametrize("solver", [BAILEY, MARKOWITZ])
@@ -45,7 +46,7 @@ def test_example(example: DataFrame, example_solution: DataFrame, solver: type) 
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
         covariance=example.cov().values,
-        A=np.ones((1, len(means))),
+        a=np.ones((1, len(means))),
         b=np.ones(1),
     )
 
@@ -70,14 +71,14 @@ def test_init_solver(solver: type, n: int) -> None:
 
     """
     mean = np.random.randn(n)
-    A = np.random.randn(n, n)
+    a = np.random.randn(n, n)
     sigma = 0.1
 
     solver(
         mean=mean,
         lower_bounds=np.zeros(n),
         upper_bounds=np.ones(n),
-        covariance=A @ A.T + sigma * np.eye(n),
-        A=np.ones((1, len(mean))),
+        covariance=a @ a.T + sigma * np.eye(n),
+        a=np.ones((1, len(mean))),
         b=np.ones(1),
     )
