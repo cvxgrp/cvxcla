@@ -8,7 +8,6 @@
 
 [![CI](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml)
 [![pre-commit](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml)
-[![Marimo Notebooks](https://github.com/cvxgrp/cvxcla/actions/workflows/marimo.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/marimo.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 

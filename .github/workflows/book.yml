@@ -102,9 +102,20 @@ jobs:
       id-token: write         # Permission to verify deployment origin
 
     steps:
+
       - uses: tschm/cradle/actions/book@v0.3.04
         with:
           title: ${{ needs.parse-env.outputs.title }}
+
+      - # Skip publish on forks
+        name: Skip on fork
+        if: ${{ github.event.repository.fork }}
+        run: echo "This is a fork; skipping publish." && exit 0
+
+      - uses: tschm/cradle/actions/book@v0.3.04
+        if: ${{ !github.event.repository.fork }}
+        with:
+          title: "cvxcla"
           links: |
             {
               "API": "./pdoc/index.html",
