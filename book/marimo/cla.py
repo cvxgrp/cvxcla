@@ -3,7 +3,7 @@
 # dependencies = [
 #     "marimo==0.13.15",
 #     "numpy==2.3.0",
-#     "cvxcla==1.1.10",
+#     "cvxcla==1.2.0"
 # ]
 # ///
 """Little demo for the Critical Line Algorithm."""
@@ -17,7 +17,7 @@ with app.setup:
     import marimo as mo
     import numpy as np
 
-    from src import cvxcla as solver
+    from cvxcla import CLA
 
 
 @app.cell
@@ -49,12 +49,12 @@ def _(slider):
     factor = np.random.randn(n, n)
     covariance = factor @ factor.T
 
-    f1 = solver.CLA(
+    f1 = CLA(
         mean=mean,
         covariance=covariance,
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
-        a=np.ones((1, len(mean))),
+        A=np.ones((1, len(mean))),
         b=np.ones(1),
     ).frontier
     return (f1,)
@@ -64,6 +64,11 @@ def _(slider):
 def _(f1):
     f1.interpolate(2).plot(volatility=True, markers=True)
     f1.plot()
+    return
+
+
+@app.cell
+def _():
     return
 
 
