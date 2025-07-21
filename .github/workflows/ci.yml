@@ -26,11 +26,11 @@ jobs:
     steps:
       # Step 1: Set up the Python environment with the specified version
       - name: "Build the virtual environment for ${{ github.repository }}"
-        uses: tschm/cradle/actions/environment@v0.1.73
+        uses: tschm/cradle/actions/environment@v0.3.04
         with:
           python-version: ${{ matrix.python-version }}
 
       # Step 2: Run the tests using the tschm test action
-      - uses: tschm/cradle/actions/test@v0.1.73
+      - uses: tschm/cradle/actions/test@v0.3.04
         with:
           tests-folder: 'src/tests'
