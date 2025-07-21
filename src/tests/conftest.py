@@ -90,15 +90,11 @@ def readme_path() -> Path:
     This fixture searches for the README.md file by starting in the current
     directory and moving up through parent directories until it finds the file.
 
-    Returns
-    -------
-    Path
+    Returns:
         Path to the README.md file
 
-    Raises
-    ------
-    FileNotFoundError
-        If the README.md file cannot be found in any parent directory
+    Raises:
+        FileNotFoundError: If the README.md file cannot be found in any parent directory
 
     """
     current_dir = Path(__file__).resolve().parent

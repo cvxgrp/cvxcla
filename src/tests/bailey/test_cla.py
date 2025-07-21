@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-from tests.bailey.cla import CLA
+from .cla import CLA
 
 
 def test_big(input_data: Any, results: Any) -> None:
@@ -30,7 +30,7 @@ def test_big(input_data: Any, results: Any) -> None:
         lower_bounds=input_data.lower_bounds,
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance,
-        A=np.ones((1, len(input_data.mean))),
+        a=np.ones((1, len(input_data.mean))),
         b=np.ones(1),
     )
 

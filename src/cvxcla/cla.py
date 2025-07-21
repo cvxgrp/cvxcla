@@ -22,7 +22,6 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import List, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -48,7 +47,7 @@ class CLA:
         covariance: Covariance matrix of asset returns.
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
-        A: Matrix for linear equality constraints (Ax = b).
+        a: Matrix for linear equality constraints (Ax = b).
         b: Vector for linear equality constraints (Ax = b).
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
@@ -60,14 +59,14 @@ class CLA:
     covariance: NDArray[np.float64]
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
-    A: NDArray[np.float64]
+    a: NDArray[np.float64]
     b: NDArray[np.float64]
-    turning_points: List[TurningPoint] = field(default_factory=list)
+    turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: logging.Logger = logging.getLogger(__name__)
 
     @cached_property
-    def P(self):
+    def proj(self):
         """Construct the projection matrix used in computing Lagrange multipliers.
 
         P is formed by horizontally stacking the covariance matrix and the transpose
@@ -77,10 +76,10 @@ class CLA:
 
         This step helps identify which constraints are becoming active or inactive.
         """
-        return np.block([self.covariance, self.A.T])
+        return np.block([self.covariance, self.a.T])
 
     @cached_property
-    def M(self):
+    def kkt(self):
         """Construct the Karush-Kuhn-Tucker (KKT) system matrix.
 
         The KKT matrix is built by augmenting the covariance matrix with the
@@ -92,8 +91,8 @@ class CLA:
 
         This matrix is symmetric but not necessarily positive definite.
         """
-        m = self.A.shape[0]
-        return np.block([[self.covariance, self.A.T], [self.A, np.zeros((m, m))]])
+        m = self.a.shape[0]
+        return np.block([[self.covariance, self.a.T], [self.a, np.zeros((m, m))]])
 
     def __post_init__(self):
         """Initialize the CLA object and compute the efficient frontier.
@@ -112,7 +111,7 @@ class CLA:
                             system of equations singular.
 
         """
-        m = self.A.shape[0]
+        m = self.a.shape[0]
         ns = len(self.mean)
 
         # Compute and store the first turning point
@@ -130,8 +129,8 @@ class CLA:
             at_upper = blocked & np.isclose(last.weights, self.upper_bounds)
             at_lower = blocked & np.isclose(last.weights, self.lower_bounds)
 
-            OUT = at_upper | at_lower
-            IN = ~OUT
+            _out = at_upper | at_lower
+            _in = ~_out
 
             # --- Construct RHS for KKT system ---
             fixed_weights = np.zeros(ns)
@@ -139,40 +138,40 @@ class CLA:
             fixed_weights[at_lower] = self.lower_bounds[at_lower]
 
             adjusted_mean = self.mean.copy()
-            adjusted_mean[OUT] = 0.0
+            adjusted_mean[_out] = 0.0
 
-            free_mask = np.concatenate([IN, np.ones(m, dtype=bool)])
+            free_mask = np.concatenate([_in, np.ones(m, dtype=bool)])
             rhs_alpha = np.concatenate([fixed_weights, self.b])
             rhs_beta = np.concatenate([adjusted_mean, np.zeros(m)])
             rhs = np.column_stack([rhs_alpha, rhs_beta])
 
             # --- Solve KKT system ---
-            alpha, beta = CLA._solve(self.M, rhs, free_mask)
+            alpha, beta = CLA._solve(self.kkt, rhs, free_mask)
 
             # --- Compute Lagrange multipliers and directional derivatives ---
-            gamma = self.P @ alpha
-            delta = self.P @ beta - self.mean
+            gamma = self.proj @ alpha
+            delta = self.proj @ beta - self.mean
 
             # --- Compute event ratios ---
-            L = np.full((ns, 4), -np.inf)
+            l_mat = np.full((ns, 4), -np.inf)
             r_alpha, r_beta = alpha[:ns], beta[:ns]
             tol = self.tol
 
-            L[IN & (r_beta < -tol), 0] = (
-                self.upper_bounds[IN & (r_beta < -tol)] - r_alpha[IN & (r_beta < -tol)]
-            ) / r_beta[IN & (r_beta < -tol)]
-            L[IN & (r_beta > +tol), 1] = (
-                self.lower_bounds[IN & (r_beta > +tol)] - r_alpha[IN & (r_beta > +tol)]
-            ) / r_beta[IN & (r_beta > +tol)]
-            L[at_upper & (delta < -tol), 2] = -gamma[at_upper & (delta < -tol)] / delta[at_upper & (delta < -tol)]
-            L[at_lower & (delta > +tol), 3] = -gamma[at_lower & (delta > +tol)] / delta[at_lower & (delta > +tol)]
+            l_mat[_in & (r_beta < -tol), 0] = (
+                self.upper_bounds[_in & (r_beta < -tol)] - r_alpha[_in & (r_beta < -tol)]
+            ) / r_beta[_in & (r_beta < -tol)]
+            l_mat[_in & (r_beta > +tol), 1] = (
+                self.lower_bounds[_in & (r_beta > +tol)] - r_alpha[_in & (r_beta > +tol)]
+            ) / r_beta[_in & (r_beta > +tol)]
+            l_mat[at_upper & (delta < -tol), 2] = -gamma[at_upper & (delta < -tol)] / delta[at_upper & (delta < -tol)]
+            l_mat[at_lower & (delta > +tol), 3] = -gamma[at_lower & (delta > +tol)] / delta[at_lower & (delta > +tol)]
 
             # --- Determine next event ---
-            if np.max(L) < 0:
+            if np.max(l_mat) < 0:
                 break
 
-            secchg, dirchg = np.unravel_index(np.argmax(L), L.shape)
-            lam = L[secchg, dirchg]
+            secchg, dirchg = np.unravel_index(np.argmax(l_mat), l_mat.shape)
+            lam = l_mat[secchg, dirchg]
 
             # --- Update free set ---
             free = last.free.copy()
@@ -186,27 +185,27 @@ class CLA:
         self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
 
     @staticmethod
-    def _solve(A: NDArray[np.float64], b: np.ndarray, IN: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _solve(a: NDArray[np.float64], b: np.ndarray, _in: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Solve the system A x = b with some variables fixed.
 
         Args:
-            A: Coefficient matrix of shape (n, n).
+            a: Coefficient matrix of shape (n, n).
             b: Right-hand side matrix of shape (n, 2).
-            IN: Boolean array of shape (n,) indicating which variables are free.
+            _in: Boolean array of shape (n,) indicating which variables are free.
 
         Returns:
             A tuple (alpha, beta) of solutions for the two RHS vectors.
 
         """
-        OUT = ~IN
-        n = A.shape[1]
+        _out = ~_in
+        n = a.shape[1]
         x = np.zeros((n, 2))
 
-        x[OUT] = b[OUT]  # Set fixed variables
-        reduced_A = A[IN][:, IN]
-        reduced_b = b[IN] - A[IN][:, OUT] @ x[OUT]
+        x[_out] = b[_out]  # Set fixed variables
+        reduced_a = a[_in][:, _in]
+        reduced_b = b[_in] - a[_in][:, _out] @ x[_out]
 
-        x[IN] = np.linalg.solve(reduced_A, reduced_b)
+        x[_in] = np.linalg.solve(reduced_a, reduced_b)
 
         return x[:, 0], x[:, 1]
 
@@ -236,7 +235,7 @@ class CLA:
         )
         return first
 
-    def _append(self, tp: TurningPoint, tol: Optional[float] = None) -> None:
+    def _append(self, tp: TurningPoint, tol: float | None = None) -> None:
         """Append a turning point to the list of turning points.
 
         This method validates that the turning point satisfies the constraints

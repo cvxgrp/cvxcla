@@ -33,7 +33,7 @@ def test_solver(input_data: Any, results: Any) -> None:
         upper_bounds=input_data.upper_bounds,
         covariance=input_data.covariance,
         tol=1e-5,
-        A=np.array([np.ones_like(input_data.mean)]),
+        a=np.array([np.ones_like(input_data.mean)]),
         b=np.ones(1),
     )
 
@@ -80,7 +80,7 @@ def test_example(example: DataFrame, example_solution: DataFrame) -> None:
         lower_bounds=lower_bounds,
         upper_bounds=upper_bounds,
         covariance=example.cov().values,
-        A=np.ones((1, len(means))),
+        a=np.ones((1, len(means))),
         b=np.ones(1),
     )
 

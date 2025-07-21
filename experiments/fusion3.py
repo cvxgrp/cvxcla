@@ -24,7 +24,7 @@ import numpy as np
 from mosek.fusion import Domain, Expr, Model, ObjectiveSense
 
 
-def EfficientFrontier(n, mu, GT, x0, w, alphas):
+def efficient_frontier(n, mu, gt, x0, w, alphas):
     """Compute points on the efficient frontier for a portfolio optimization problem.
 
     This function solves a series of portfolio optimization problems with different
@@ -33,7 +33,7 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
     Args:
         n: Number of assets in the portfolio
         mu: An n-dimensional vector of expected returns for each asset
-        GT: A factor matrix such that (GT')*GT = covariance matrix
+        gt: A factor matrix such that (GT')*GT = covariance matrix
         x0: Initial holdings for each asset
         w: Initial cash holding
         alphas: List of risk aversion parameters to use
@@ -44,25 +44,25 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
 
     """
     # Create a MOSEK Fusion model for the efficient frontier computation
-    with Model("Efficient frontier") as M:
+    with Model("Efficient frontier") as model:
         frontier = []
 
         # Define the portfolio weight variables
         # Shortselling is not allowed, so weights must be non-negative
-        x = M.variable("x", n, Domain.greaterThan(0.0))  # Portfolio weights
-        s = M.variable("s", 1, Domain.unbounded())  # Variable representing portfolio variance
+        x = model.variable("x", n, Domain.greaterThan(0.0))  # Portfolio weights
+        s = model.variable("s", 1, Domain.unbounded())  # Variable representing portfolio variance
 
         # Add the budget constraint: sum of weights equals initial wealth
-        M.constraint("budget", Expr.sum(x), Domain.equalsTo(w + sum(x0)))
+        model.constraint("budget", Expr.sum(x), Domain.equalsTo(w + sum(x0)))
 
         # Add the variance computation constraint using a rotated quadratic cone
         # This efficiently represents: s >= x^T * Sigma * x, where Sigma = GT^T * GT
-        M.constraint("variance", Expr.vstack(s, 0.5, Expr.mul(GT, x)), Domain.inRotatedQCone())
+        model.constraint("variance", Expr.vstack(s, 0.5, Expr.mul(gt, x)), Domain.inRotatedQCone())
 
         # Define the objective function: maximize return - alpha * variance
         # Alpha is a parameter that will be varied to generate different points on the frontier
-        alpha = M.parameter()
-        M.objective(
+        alpha = model.parameter()
+        model.objective(
             "obj",
             ObjectiveSense.Maximize,
             Expr.sub(Expr.dot(mu, x), Expr.mul(alpha, s)),
@@ -74,7 +74,7 @@ def EfficientFrontier(n, mu, GT, x0, w, alphas):
             alpha.setValue(a)
 
             # Solve the optimization problem
-            M.solve()
+            model.solve()
 
             # Record the solution point (alpha, expected return, variance)
             frontier.append((a, np.dot(mu, x.level()), s.level()[0]))
@@ -128,14 +128,14 @@ if __name__ == "__main__":
     ]
 
     # Compute the efficient frontier
-    frontier = EfficientFrontier(n, mu, GT, x0, w, alphas)
+    frontier = efficient_frontier(n, mu, GT, x0, w, alphas)
 
     # Print the results in a formatted table
     print("\n-----------------------------------------------------------------------------------")
     print("Efficient frontier")
     print("-----------------------------------------------------------------------------------\n")
-    print("%-12s  %-12s  %-12s" % ("alpha", "return", "risk (std. dev.)"))
+    print(f"{'alpha':<12}  {'return':<12}  {'risk (std. dev.)':<12}")
 
     # Print each point on the frontier with its alpha, expected return, and standard deviation
     for i in frontier:
-        print("{:<12.4f}  {:<12.4e}  {:<12.4e}".format(i[0], i[1], np.sqrt(i[2])))
+        print(f"{i[0]:<12.4f}  {i[1]:<12.4e}  {np.sqrt(i[2]):<12.4e}")

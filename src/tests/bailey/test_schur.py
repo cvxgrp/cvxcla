@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from tests.bailey.cla import _Schur
+from .cla import _Schur
 
 
 def test_compute_lambda() -> None:
