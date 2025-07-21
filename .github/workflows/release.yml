@@ -19,7 +19,7 @@ jobs:
     steps:
       # Generate a new version tag based on commit history
       - name: Generate Tag
-        uses: tschm/cradle/actions/tag@v0.3.01
+        uses: tschm/cradle/actions/tag@v0.3.04
         id: tag_step
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -33,7 +33,7 @@ jobs:
       contents: read
     steps:
       - name: build
-        uses: tschm/cradle/actions/build@v0.3.01  # Use the build action to build the package
+        uses: tschm/cradle/actions/build@v0.3.04  # Use the build action to build the package
         with:
           tag: ${{ needs.tagging.outputs.new_tag }}  # Use the tag from the tagging job
 
