@@ -26,4 +26,6 @@ import importlib.metadata
 
 from .cla import CLA
 
+__all__ = ["CLA"]
+
 __version__ = importlib.metadata.version("cvxcla")

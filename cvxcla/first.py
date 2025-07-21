@@ -79,7 +79,7 @@ def init_algo_lp(
     mean: NDArray[np.float64],
     lower_bounds: NDArray[np.float64],
     upper_bounds: NDArray[np.float64],
-    A_eq: NDArray[np.float64] | None = None,
+    a_eq: NDArray[np.float64] | None = None,
     b_eq: NDArray[np.float64] | None = None,
     solver=cp.CLARABEL,
     **kwargs,
@@ -97,7 +97,7 @@ def init_algo_lp(
         mean: Vector of expected returns for each asset.
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
-        A_eq: Matrix for additional linear equality constraints (Ax = b).
+        a_eq: Matrix for additional linear equality constraints (Ax = b).
             If None, only the fully invested constraint (sum(weights) = 1) is used.
         b_eq: Vector for additional linear equality constraints (Ax = b).
             If None, only the fully invested constraint (sum(weights) = 1) is used.
@@ -111,8 +111,8 @@ def init_algo_lp(
         ValueError: If the problem is infeasible or if lower bounds exceed upper bounds.
 
     """
-    if A_eq is None:
-        A_eq = np.atleast_2d(np.ones_like(mean))
+    if a_eq is None:
+        a_eq = np.atleast_2d(np.ones_like(mean))
 
     if b_eq is None:
         b_eq = np.array([1.0])
@@ -127,7 +127,7 @@ def init_algo_lp(
 
     objective = cp.Maximize(mean.T @ w)
     constraints = [
-        A_eq @ w == b_eq,
+        a_eq @ w == b_eq,
         # A_ub @ w <= b_ub,
         lower_bounds <= w,
         w <= upper_bounds,
