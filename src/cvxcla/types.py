@@ -29,7 +29,8 @@ from dataclasses import dataclass, field
 import numpy as np
 import plotly.graph_objects as go
 from numpy.typing import NDArray
-from scipy.optimize import minimize
+
+from .optimize import minimize
 
 
 @dataclass(frozen=True)
