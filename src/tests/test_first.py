@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvxcla.first import init_algo, init_algo_lp
+from cvxcla.first import init_algo
 from cvxcla.types import TurningPoint
 
 
@@ -29,12 +29,6 @@ def test_init_algo(n: int) -> None:
     lower_bounds = np.zeros(n)
     upper_bounds = np.random.rand(n)
 
-    first = init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
-
-    assert np.sum(first.free) == 1
-    assert np.sum(first.weights) == pytest.approx(1.0)
-    assert isinstance(first, TurningPoint)
-
     first = init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     assert np.sum(first.free) == 1
@@ -51,11 +45,6 @@ def test_small() -> None:
     mean = np.array([1.0, 2.0, 3.0])
     lower_bound = np.array([0.0, 0.0, 0.0])
     upper_bound = np.array([0.4, 0.4, 0.4])
-    tp = init_algo_lp(mean=mean, lower_bounds=lower_bound, upper_bounds=upper_bound)
-
-    assert np.allclose(tp.weights, [0.2, 0.4, 0.4])
-    assert tp.lamb == np.inf
-    assert np.allclose(tp.free, [True, False, False])
 
     tp = init_algo(mean=mean, lower_bounds=lower_bound, upper_bounds=upper_bound)
 
@@ -75,9 +64,6 @@ def test_no_fully_invested_portfolio() -> None:
     upper_bounds = np.array([0.2, 0.2, 0.2])
 
     with pytest.raises(ValueError, match="Could not construct a fully invested portfolio"):
-        init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
-
-    with pytest.raises(ValueError, match="Could not construct a fully invested portfolio"):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
 
@@ -90,9 +76,6 @@ def test_lb_ub_mixed() -> None:
     upper_bounds = np.zeros(3)
     lower_bounds = np.ones(3)
     mean = np.ones(3)
-
-    with pytest.raises(ValueError):
-        init_algo_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
     with pytest.raises(ValueError):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
