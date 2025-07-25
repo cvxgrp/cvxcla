@@ -10,7 +10,6 @@ dependencies = [
     "scipy>=1.14.1",
     "clarabel>=0.9.0",
     "plotly>=6.0.1",
-    "pandas>=2.2.3",
     "kaleido==1.0.0"
 ]
 
@@ -31,6 +30,7 @@ dev = [
     "cvxbson==0.1.6",
     "mosek==11.0.25",
     "marimo==0.14.13",
+    "pandas==2.2.3",
     "python-dotenv==1.1.1"
 ]
 
@@ -43,7 +43,7 @@ packages = ["src/cvxcla"]
 
 [tool.deptry.per_rule_ignores]
 #DEP001 = ["cvxpy"]
-DEP002 = ["clarabel", "pandas", "kaleido"]
+DEP002 = ["clarabel", "kaleido"]
 
 [tool.deptry]
 # see https://deptry.com/usage/#pep-621-dev-dependency-groups
