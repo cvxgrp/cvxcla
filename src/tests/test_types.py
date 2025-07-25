@@ -353,6 +353,43 @@ def test_frontier_max_sharpe(frontier: Frontier) -> None:
     assert max_sharpe >= np.max(frontier.sharpe_ratio)
 
 
+def test_frontier_max_sharpe_edge_cases() -> None:
+    """Test the max_sharpe property with edge cases.
+
+    Verifies that the max_sharpe property works correctly when the maximum
+    Sharpe ratio is at the first or last point of the frontier.
+    """
+    # Create a frontier where the maximum Sharpe ratio is at the first point
+    mean = np.array([0.3, 0.2, 0.1])  # Decreasing returns
+    covariance = np.array([[0.1, 0.01, 0.01], [0.01, 0.2, 0.01], [0.01, 0.01, 0.3]])  # First asset has lowest variance
+
+    # Create points with decreasing Sharpe ratios
+    points = [
+        FrontierPoint(weights=np.array([0.8, 0.1, 0.1])),  # Highest Sharpe ratio
+        FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
+        FrontierPoint(weights=np.array([0.2, 0.3, 0.5])),
+    ]
+
+    frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
+
+    # Verify that the first point has the highest Sharpe ratio
+    sharpe_ratios = frontier.sharpe_ratio
+    assert np.argmax(sharpe_ratios) == 0
+
+    # Get the max Sharpe ratio
+    max_sharpe, max_weights = frontier.max_sharpe
+
+    # Verify that max_sharpe is a float and max_weights is an array
+    assert isinstance(max_sharpe, float)
+    assert isinstance(max_weights, np.ndarray)
+
+    # Verify that the weights sum to 1
+    assert np.isclose(np.sum(max_weights), 1.0)
+
+    # Verify that the max_sharpe is greater than or equal to all other Sharpe ratios
+    assert max_sharpe >= np.max(sharpe_ratios)
+
+
 def test_frontier_plot(frontier: Frontier) -> None:
     """Test the plot method of the Frontier class.
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvxcla.first import init_algo
+from cvxcla.first import init_algo, _free
 from cvxcla.types import TurningPoint
 
 
@@ -79,3 +79,32 @@ def test_lb_ub_mixed() -> None:
 
     with pytest.raises(ValueError):
         init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds)
+
+
+def test_free() -> None:
+    """Test the _free function that determines which asset should be free.
+
+    This test verifies that the _free function correctly identifies the asset
+    that is furthest from its bounds as the free asset.
+    """
+    # Case 1: One asset is clearly furthest from its bounds
+    weights = np.array([0.1, 0.3, 0.6])
+    lower_bounds = np.array([0.0, 0.0, 0.0])
+    upper_bounds = np.array([0.2, 1.0, 1.0])
+
+    free = _free(weights, lower_bounds, upper_bounds)
+
+    # The implementation selects the asset furthest from its bounds
+    # Asset 3 (index 2) is 0.6 from lower bound and 0.4 from upper bound
+    # The minimum distance is 0.4, which is greater than for other assets
+    assert np.allclose(free, [False, False, True])
+
+    # Case 2: Different scenario with different distances
+    weights = np.array([0.05, 0.45, 0.5])
+    lower_bounds = np.array([0.0, 0.4, 0.0])
+    upper_bounds = np.array([0.1, 0.5, 0.6])
+
+    free = _free(weights, lower_bounds, upper_bounds)
+
+    # Asset 3 should be free (index 2) as it's furthest from its bounds
+    assert np.allclose(free, [False, False, True])
