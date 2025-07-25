@@ -1,23 +1,20 @@
-"""
-A simple implementation of 1D line search optimization algorithm.
-This module provides a minimize function that mimics the interface of scipy.optimize.minimize
-but only supports 1D optimization problems.
-"""
+"""A simple implementation of 1D line search optimization algorithm."""
+
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
-from typing import Callable, Dict, Tuple, Any, Optional
 
 
 def minimize(
     fun: Callable[[float], float],
     x0: float,
-    args: Tuple = (),
-    bounds: Optional[Tuple[Tuple[float, float], ...]] = None,
+    args: tuple = (),
+    bounds: tuple[tuple[float, float], ...] | None = None,
     tol: float = 1e-8,  # Increased precision
     max_iter: int = 200,  # Increased max iterations
-) -> Dict[str, Any]:
-    """
-    Minimizes a scalar function of one variable using a simple line search algorithm.
+) -> dict[str, Any]:
+    """Minimize a scalar function of one variable using a simple line search algorithm.
 
     This function mimics the interface of scipy.optimize.minimize but only supports
     1D optimization problems.
@@ -37,7 +34,7 @@ def minimize(
     max_iter : int, optional
         Maximum number of iterations
 
-    Returns
+    Returns:
     -------
     dict
         A dictionary with keys:
@@ -108,9 +105,4 @@ def minimize(
         x_min = (a + b) / 2
         f_min = fun(x_min, *args)
 
-    return {
-        'x': np.array([x_min]),
-        'fun': f_min,
-        'success': iter_count < max_iter,
-        'nit': iter_count
-    }
+    return {"x": np.array([x_min]), "fun": f_min, "success": iter_count < max_iter, "nit": iter_count}
