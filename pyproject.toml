@@ -27,7 +27,7 @@ dev = [
     "cvxbson==0.1.6",
     "mosek==11.0.25",
     "marimo==0.14.13",
-    "pandas==2.2.3",
+    "pandas==2.3.1",
     "python-dotenv==1.1.1"
 ]
 
