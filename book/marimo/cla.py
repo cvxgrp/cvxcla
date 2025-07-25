@@ -42,10 +42,7 @@ def _():
 
 @app.function(hide_code=True)
 def cla(n):
-    """
-    This function performs a computation using the Critical Line Algorithm (CLA) to
-    generate an efficient frontier for portfolio optimization based on the input
-    parameters.
+    """Compute using the Critical Line Algorithm (CLA) an efficient frontier.
 
     Args:
         n (int): The dimension size of the mean vector, lower and upper bounds

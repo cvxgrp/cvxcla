@@ -32,4 +32,3 @@ if __name__ == "__main__":
     # Print the indices of free variables in the solution
     print("Free variables from init_algo:")
     print(np.where(tp.free)[0])
-
