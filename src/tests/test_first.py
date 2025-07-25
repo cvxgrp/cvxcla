@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cvxcla.first import init_algo, _free
+from cvxcla.first import _free, init_algo
 from cvxcla.types import TurningPoint
 
 
