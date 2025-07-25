@@ -267,6 +267,7 @@ source = { editable = "." }
 dependencies = [
     { name = "clarabel" },
     { name = "cvxpy-base" },
+    { name = "kaleido" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas" },
@@ -286,16 +287,13 @@ dev = [
     { name = "pytest-cov" },
     { name = "python-dotenv" },
 ]
-plot = [
-    { name = "kaleido" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "clarabel", specifier = ">=0.9.0" },
     { name = "cvxbson", marker = "extra == 'dev'", specifier = "==0.1.6" },
     { name = "cvxpy-base", specifier = ">=1.5.1" },
-    { name = "kaleido", marker = "extra == 'plot'", specifier = "==1.0.0" },
+    { name = "kaleido", specifier = "==1.0.0" },
     { name = "loguru", marker = "extra == 'dev'", specifier = "==0.7.3" },
     { name = "marimo", marker = "extra == 'dev'", specifier = "==0.14.13" },
     { name = "mosek", marker = "extra == 'dev'", specifier = "==11.0.25" },
@@ -308,7 +306,7 @@ requires-dist = [
     { name = "python-dotenv", marker = "extra == 'dev'", specifier = "==1.1.1" },
     { name = "scipy", specifier = ">=1.14.1" },
 ]
-provides-extras = ["plot", "dev"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "cvxpy-base"
