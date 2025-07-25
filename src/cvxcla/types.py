@@ -27,7 +27,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
 from numpy.typing import NDArray
 from scipy.optimize import minimize
@@ -249,18 +248,23 @@ class Frontier:
             A plotly Figure object that can be displayed or saved.
 
         """
-        if not volatility:
-            fig = px.line(
-                x=self.variance,
+        fig = go.Figure()
+
+        x = self.volatility if volatility else self.variance
+        axis_title = "Expected volatility" if volatility else "Expected variance"
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
                 y=self.returns,
-                markers=markers,
-                labels={"x": "Expected variance", "y": "Expected Return"},
+                mode="lines+markers" if markers else "lines",
+                name="Efficient Frontier"
             )
-        else:
-            fig = px.line(
-                x=self.volatility,
-                y=self.returns,
-                markers=markers,
-                labels={"x": "Expected volatility", "y": "Expected Return"},
-            )
+        )
+
+        fig.update_layout(
+            xaxis_title=axis_title,
+            yaxis_title="Expected Return",
+        )
+
         return fig
