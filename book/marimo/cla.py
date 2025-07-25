@@ -1,9 +1,9 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#     "marimo==0.13.15",
+#     "marimo==0.14.13",
 #     "numpy==2.3.0",
-#     "cvxcla==1.2.0"
+#     "cvxcla==1.3.1"
 # ]
 # ///
 """Little demo for the Critical Line Algorithm."""
