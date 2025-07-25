@@ -30,7 +30,7 @@ import numpy as np
 import plotly.graph_objects as go
 from numpy.typing import NDArray
 
-from cvxcla.optimize import minimize
+from .optimize import minimize
 
 
 @dataclass(frozen=True)
