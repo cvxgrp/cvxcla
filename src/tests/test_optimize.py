@@ -107,6 +107,7 @@ def test_minimize_with_overflow() -> None:
 
     # First, let's check the coverage to see if we've already covered the exception handlers
     import coverage
+
     cov = coverage.Coverage()
     cov.start()
 
