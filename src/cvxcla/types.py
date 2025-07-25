@@ -254,12 +254,7 @@ class Frontier:
         axis_title = "Expected volatility" if volatility else "Expected variance"
 
         fig.add_trace(
-            go.Scatter(
-                x=x,
-                y=self.returns,
-                mode="lines+markers" if markers else "lines",
-                name="Efficient Frontier"
-            )
+            go.Scatter(x=x, y=self.returns, mode="lines+markers" if markers else "lines", name="Efficient Frontier")
         )
 
         fig.update_layout(
