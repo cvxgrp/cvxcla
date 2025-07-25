@@ -13,6 +13,7 @@ def minimize(
     bounds: tuple[tuple[float, float], ...] | None = None,
     tol: float = 1e-8,  # Increased precision
     max_iter: int = 200,  # Increased max iterations
+    _test_mode: str = None,  # For testing only: 'left_overflow', 'right_overflow', or None
 ) -> dict[str, Any]:
     """Minimize a scalar function of one variable using a simple line search algorithm.
 
@@ -62,13 +63,27 @@ def minimize(
         # If bounds are infinite, start with a small interval around x0
         a, b = x - 1.0, x + 1.0
 
-        # Expand interval until we bracket a minimum
+        # Expand interval until we bracket a minimum, but limit expansion to avoid overflow
         f_x = fun(x, *args)
-        while np.isfinite(a) and fun(a, *args) > f_x:
-            a = max(lower, a - (b - a))
 
-        while np.isfinite(b) and fun(b, *args) > f_x:
-            b = min(upper, b + (b - a))
+        # Set a reasonable limit for expansion to avoid overflow
+        max_expansion = 100.0
+        min_bound = max(lower, x - max_expansion)
+        max_bound = min(upper, x + max_expansion)
+
+        # Expand to the left
+        try:
+            while a > min_bound and fun(a, *args) > f_x:
+                a = max(min_bound, a - (b - a))
+        except (OverflowError, FloatingPointError):
+            a = min_bound
+
+        # Expand to the right
+        try:
+            while b < max_bound and fun(b, *args) > f_x:
+                b = min(max_bound, b + (b - a))
+        except (OverflowError, FloatingPointError):
+            b = max_bound
 
     # Golden section search
     c = b - golden_ratio * (b - a)
