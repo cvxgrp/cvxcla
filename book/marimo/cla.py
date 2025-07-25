@@ -10,7 +10,7 @@
 
 import marimo
 
-__generated_with = "0.13.15"
+__generated_with = "0.14.13"
 app = marimo.App()
 
 with app.setup:
@@ -23,7 +23,7 @@ with app.setup:
 @app.cell
 def _():
     mo.md(
-    r"""
+        r"""
     # The Critical Line Algorithm
     We compute an efficient frontier using the critical line algorithm (cla).
     The method was introduced by Harry M Markowitz in 1956.
@@ -42,10 +42,7 @@ def _():
 
 @app.function(hide_code=True)
 def cla(n):
-    """
-    This function performs a computation using the Critical Line Algorithm (CLA) to
-    generate an efficient frontier for portfolio optimization based on the input
-    parameters.
+    """Compute using the Critical Line Algorithm (CLA) an efficient frontier.
 
     Args:
         n (int): The dimension size of the mean vector, lower and upper bounds

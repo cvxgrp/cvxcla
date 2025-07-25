@@ -15,7 +15,7 @@ expected return and the same bounds, to test the performance and behavior of bot
 import numpy as np
 from loguru import logger
 
-from src.cvxcla.first import init_algo, init_algo_lp
+from cvxcla.first import init_algo
 
 if __name__ == "__main__":
     # Define a large-scale portfolio problem with 10,000 assets
@@ -31,10 +31,4 @@ if __name__ == "__main__":
     tp = init_algo(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
     # Print the indices of free variables in the solution
     print("Free variables from init_algo:")
-    print(np.where(tp.free)[0])
-
-    # Compute the first turning point using the linear programming implementation
-    tp = init_algo_lp(mean=mean, lower_bounds=np.zeros_like(upper_bound), upper_bounds=upper_bound)
-    # Print the indices of free variables in the solution
-    print("Free variables from init_algo_lp:")
     print(np.where(tp.free)[0])
