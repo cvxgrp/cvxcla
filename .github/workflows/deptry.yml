@@ -25,7 +25,7 @@ jobs:
     outputs:
       pyproject_exists: ${{ steps.check_file.outputs.exists }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check for pyproject.toml
         id: check_file
