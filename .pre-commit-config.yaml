@@ -3,7 +3,7 @@
 #
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-toml
       - id: check-yaml
@@ -42,8 +42,3 @@ repos:
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
-
-  #- repo: https://github.com/crate-ci/typos
-  #  rev: v1.35.1
-  #  hooks:
-  #    - id: typos
