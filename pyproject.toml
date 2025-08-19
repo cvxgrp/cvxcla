@@ -24,7 +24,7 @@ dev = [
     "pytest==8.4.1",
     "pre-commit==4.3.0",
     "loguru==0.7.3",
-    "cvxbson==0.1.6",
+    "cvxbson==0.2.0",
     "mosek==11.0.27",
     "marimo==0.14.17",
     "pandas==2.3.1",

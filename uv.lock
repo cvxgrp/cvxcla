@@ -167,7 +167,7 @@ toml = [
 
 [[package]]
 name = "cvxbson"
-version = "0.1.6"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bson" },
@@ -176,11 +176,10 @@ dependencies = [
     { name = "pandas" },
     { name = "polars" },
     { name = "pyarrow" },
-    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/34/2dfd16e0f6219b822a3e14dc7de356a67339f2cb8b993c284768afe5b798/cvxbson-0.1.6.tar.gz", hash = "sha256:9f366ea7db09b1b7a66cea6b003027a4265413146811c15227fca484ca7307dc", size = 58945, upload-time = "2025-03-31T13:36:57.741Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/7a/2cdb0211384cec040423e8e24f7ffcc9e372274c86a3e9bc05c79c34c973/cvxbson-0.2.0.tar.gz", hash = "sha256:ece56c607bf81ad87250b9430fb43aaec34c429ab388e3e6b844a86bc931793c", size = 96680, upload-time = "2025-08-17T07:51:52.127Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6e/1a/8bf20ec09c13608c3723ac459d40dc8d854163e49bbc995688a1c9a71a41/cvxbson-0.1.6-py3-none-any.whl", hash = "sha256:240a0616cb9c8fc8be107f8beba5fc591487574647deb0f74b0fcc501d3ff87b", size = 12162, upload-time = "2025-03-31T13:36:56.37Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/33/4cfc96af654944a9324df89e3832175e4b87413a0c3c033483f66849e173/cvxbson-0.2.0-py3-none-any.whl", hash = "sha256:5749c9bb8a797f589d0f2ebd3d1666507c11d622c2666e5549b809dab737db43", size = 12804, upload-time = "2025-08-17T07:51:50.417Z" },
 ]
 
 [[package]]
@@ -209,7 +208,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cvxbson", marker = "extra == 'dev'", specifier = "==0.1.6" },
+    { name = "cvxbson", marker = "extra == 'dev'", specifier = "==0.2.0" },
     { name = "kaleido", specifier = "==1.0.0" },
     { name = "loguru", marker = "extra == 'dev'", specifier = "==0.7.3" },
     { name = "marimo", marker = "extra == 'dev'", specifier = "==0.14.17" },
