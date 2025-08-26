@@ -26,7 +26,7 @@ dev = [
     "loguru==0.7.3",
     "cvxbson==0.2.0",
     "mosek==11.0.28",
-    "marimo==0.14.17",
+    "marimo==0.15.0",
     "pandas==2.3.2",
     "python-dotenv==1.1.1"
 ]
