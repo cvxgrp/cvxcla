@@ -27,7 +27,7 @@ dev = [
     "mosek==11.0.29",
     "marimo==0.17.2",
     "pandas==2.3.3",
-    "python-dotenv==1.1.1"
+    "python-dotenv==1.2.1"
 ]
 
 [build-system]
