@@ -103,16 +103,16 @@ frontier = cla.frontier
 # Get the maximum Sharpe ratio portfolio
 max_sharpe_ratio, max_sharpe_weights = frontier.max_sharpe
 print(f"Maximum Sharpe ratio: {max_sharpe_ratio:.6f}")
-Maximum Sharpe ratio: 2.946979
 # Print first few weights to avoid long output
 print(f"First 3 weights: {max_sharpe_weights[:3]}")
-First 3 weights: [0.         0.         0.08509841]
 
 ```
 
 ```result
-
+Maximum Sharpe ratio: 2.946979
+First 3 weights: [0.         0.         0.08509841]
 ```
+
 For visualization, you can plot the efficient frontier:
 
 ```python
