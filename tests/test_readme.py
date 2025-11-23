@@ -38,4 +38,3 @@ def test_readme_runs():
 
     assert result.returncode == 0, f"README code exited with {result.returncode}. Stderr:\n{result.stderr}"
     assert stdout.strip() == expected.strip()
-
