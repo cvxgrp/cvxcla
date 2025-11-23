@@ -116,8 +116,8 @@ First 3 weights: [0.         0.         0.08509841]
 For visualization, you can plot the efficient frontier:
 
 ```python
-# Plot the efficient frontier (not run in doctests)
-fig = plot_frontier(frontier, volatility=True)
+# Plot the efficient frontier
+fig = frontier.plot(volatility=True)
 fig.show()
 ```
 
