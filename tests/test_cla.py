@@ -20,8 +20,8 @@ class TestCLA:
         np.random.seed(42)
         mean = np.array([0.1, 0.15, 0.2])
         # Create a positive definite covariance matrix
-        L = np.random.randn(n, n)
-        covariance = L @ L.T
+        l_matrix = np.random.randn(n, n)
+        covariance = l_matrix @ l_matrix.T
         lower_bounds = np.zeros(n)
         upper_bounds = np.ones(n)
         a = np.ones((1, n))  # Fully invested constraint
@@ -91,7 +91,7 @@ class TestCLA:
         upper_bounds = np.array([0.4, 0.4, 0.3, 0.3])
         a = np.ones((1, n))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -100,7 +100,7 @@ class TestCLA:
             a=a,
             b=b,
         )
-        
+
         assert len(cla) > 0
         for tp in cla.turning_points:
             assert np.all(tp.weights >= lower_bounds - cla.tol)
@@ -110,7 +110,7 @@ class TestCLA:
         """Test that maximum Sharpe ratio can be computed."""
         cla = CLA(**simple_problem)
         max_sr, max_weights = cla.frontier.max_sharpe
-        
+
         assert isinstance(max_sr, float)
         assert max_weights.shape == (3,)
         assert np.isclose(np.sum(max_weights), 1.0)
@@ -120,7 +120,7 @@ class TestCLA:
         """Test CLA with different tolerance values."""
         cla1 = CLA(**simple_problem, tol=1e-5)
         cla2 = CLA(**simple_problem, tol=1e-8)
-        
+
         # Both should produce valid frontiers
         assert len(cla1) > 0
         assert len(cla2) > 0
@@ -133,7 +133,7 @@ class TestCLA:
         upper_bounds = np.array([1.0, 1.0])
         a = np.ones((1, 2))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -142,7 +142,7 @@ class TestCLA:
             a=a,
             b=b,
         )
-        
+
         # Should generate a valid frontier
         assert len(cla) >= 2
         # First point should have all weight on higher return asset (if allowed)
@@ -153,7 +153,7 @@ class TestCLA:
         """Test the projection matrix property."""
         cla = CLA(**simple_problem)
         proj = cla.proj
-        
+
         # proj should be [covariance | a.T]
         n = simple_problem["mean"].shape[0]
         m = simple_problem["a"].shape[0]
@@ -163,7 +163,7 @@ class TestCLA:
         """Test the KKT matrix property."""
         cla = CLA(**simple_problem)
         kkt = cla.kkt
-        
+
         n = simple_problem["mean"].shape[0]
         m = simple_problem["a"].shape[0]
         assert kkt.shape == (n + m, n + m)
@@ -176,9 +176,9 @@ class TestCLA:
         a = np.array([[2.0, 1.0], [1.0, 2.0]])
         b = np.array([[3.0, 6.0], [3.0, 6.0]])
         free = np.array([True, True])
-        
+
         alpha, beta = CLA._solve(a, b, free)
-        
+
         # Check that the solution is correct
         assert np.allclose(a @ np.column_stack([alpha, beta]), b)
 
@@ -187,9 +187,9 @@ class TestCLA:
         a = np.array([[2.0, 1.0, 0.0], [1.0, 2.0, 1.0], [0.0, 1.0, 2.0]])
         b = np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
         free = np.array([True, False, True])
-        
+
         alpha, beta = CLA._solve(a, b, free)
-        
+
         # Solution should have shape (3, 2)
         assert alpha.shape == (3,)
         assert beta.shape == (3,)
@@ -206,7 +206,7 @@ class TestCLAEdgeCases:
         upper_bounds = np.array([1.0])
         a = np.ones((1, 1))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -215,7 +215,7 @@ class TestCLAEdgeCases:
             a=a,
             b=b,
         )
-        
+
         # Should have at least one turning point
         assert len(cla) >= 1
         # All weights should be 1.0
@@ -227,13 +227,13 @@ class TestCLAEdgeCases:
         n = 10
         np.random.seed(123)
         mean = np.random.rand(n) * 0.2
-        L = np.random.randn(n, n)
-        covariance = L @ L.T
+        l_matrix = np.random.randn(n, n)
+        covariance = l_matrix @ l_matrix.T
         lower_bounds = np.zeros(n)
         upper_bounds = np.ones(n)
         a = np.ones((1, n))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -242,7 +242,7 @@ class TestCLAEdgeCases:
             a=a,
             b=b,
         )
-        
+
         assert len(cla) > 0
         # Verify all constraints are satisfied
         for tp in cla.turning_points:
@@ -258,7 +258,7 @@ class TestCLAEdgeCases:
         upper_bounds = np.ones(3)
         a = np.ones((1, 3))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -267,7 +267,7 @@ class TestCLAEdgeCases:
             a=a,
             b=b,
         )
-        
+
         # Should still produce a valid frontier
         assert len(cla) > 0
 
@@ -276,13 +276,13 @@ class TestCLAEdgeCases:
         n = 5
         np.random.seed(456)
         mean = np.random.rand(n) * 0.15
-        L = np.random.randn(n, n)
-        covariance = L @ L.T
+        l_matrix = np.random.randn(n, n)
+        covariance = l_matrix @ l_matrix.T
         lower_bounds = np.zeros(n)  # No short selling
         upper_bounds = np.ones(n)
         a = np.ones((1, n))
         b = np.ones(1)
-        
+
         cla = CLA(
             mean=mean,
             covariance=covariance,
@@ -291,7 +291,7 @@ class TestCLAEdgeCases:
             a=a,
             b=b,
         )
-        
+
         # All weights should be non-negative
         for tp in cla.turning_points:
             assert np.all(tp.weights >= -cla.tol)

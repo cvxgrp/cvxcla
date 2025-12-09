@@ -176,7 +176,7 @@ class TestFrontier:
         covariance = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.01], [0.0, 0.01, 0.16]])
         points = [FrontierPoint(weights=np.array([0.3, 0.4, 0.3]))]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        
+
         max_sr, max_weights = frontier.max_sharpe
         # With only one point, should return that point
         assert np.allclose(max_weights, points[0].weights, atol=1e-4)
@@ -190,7 +190,7 @@ class TestFrontier:
             FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
         ]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        
+
         max_sr, max_weights = frontier.max_sharpe
         assert isinstance(max_sr, float)
         assert np.isclose(np.sum(max_weights), 1.0)
@@ -204,7 +204,7 @@ class TestFrontier:
             FrontierPoint(weights=np.array([0.3, 0.4, 0.3])),
         ]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        
+
         fig = frontier.plot(volatility=False, markers=True)
         assert fig is not None
         # Check that the figure has the expected properties
@@ -219,7 +219,7 @@ class TestFrontier:
             FrontierPoint(weights=np.array([0.3, 0.4, 0.3])),
         ]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        
+
         fig = frontier.plot(volatility=True, markers=False)
         assert fig is not None
         assert len(fig.data) > 0
