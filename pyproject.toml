@@ -25,7 +25,7 @@ dev = [
     "pre-commit==4.5.0",
     "loguru==0.7.3",
     "mosek==11.0.30",
-    "marimo==0.18.1",
+    "marimo==0.18.3",
     "pandas==2.3.3",
     "python-dotenv==1.2.1"
 ]
