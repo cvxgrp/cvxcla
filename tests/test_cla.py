@@ -45,7 +45,7 @@ class TestCLA:
     def test_turning_points_generated(self, simple_problem):
         """Test that multiple turning points are generated."""
         cla = CLA(**simple_problem)
-        # Should have at least 2 turning points (first and last at lambda=0)
+        # Should have at least 2 turning points (first at lambda=inf and last at lambda=0)
         assert len(cla) >= 2
         # First turning point should have lambda = inf
         assert cla.turning_points[0].lamb == np.inf
