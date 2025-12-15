@@ -1,6 +1,3 @@
-## Makefile for tschm/.config-templates
-# (https://github.com/tschm/.config-templates)
-#
 # Purpose: Developer tasks using uv/uvx (install, test, docs, marimushka, book).
 # Lines with `##` after a target are parsed into help text,
 # and lines starting with `##@` create section headers in the help output.
@@ -17,7 +14,7 @@ RESET := \033[0m
 .DEFAULT_GOAL := help
 
 # Declare phony targets (they don't produce files)
-.PHONY: install-uv install clean test marimo marimushka book fmt deptry docs release release-dry-run post-release sync help all
+.PHONY: install-uv install clean test marimo marimushka book fmt deptry docs release release-dry-run post-release sync help all update-readme
 
 UV_INSTALL_DIR := ./bin
 UV_BIN := ${UV_INSTALL_DIR}/uv
@@ -114,7 +111,7 @@ marimo: install ## fire up Marimo server
 	  ${UV_BIN} run marimo edit "${MARIMO_FOLDER}"; \
 	fi
 
-marimushka: install ## export Marimo notebooks to HTML
+marimushka: install-uv ## export Marimo notebooks to HTML
 	@printf "${BLUE}[INFO] Exporting notebooks from ${MARIMO_FOLDER}...${RESET}\n"
 	@if [ ! -d "${MARIMO_FOLDER}" ]; then \
 	  printf "${YELLOW}[WARN] Directory '${MARIMO_FOLDER}' does not exist. Skipping marimushka.${RESET}\n"; \
@@ -208,6 +205,9 @@ customisations: ## list available customisation scripts
 	else \
 		printf "${YELLOW}[INFO] No customisations found in ${CUSTOM_SCRIPTS_FOLDER}${RESET}\n"; \
 	fi
+
+update-readme: ## update README.md with current Makefile help output
+	@/bin/sh "${SCRIPTS_FOLDER}/update-readme-help.sh"
 
 # debugger tools
 custom-%: ## run a custom script (usage: make custom-scriptname)
