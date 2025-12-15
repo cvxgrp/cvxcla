@@ -1,6 +1,3 @@
-# This file is part of the tschm/.config-templates repository
-# (https://github.com/tschm/.config-templates).
-#
 # Workflow: Continuous Integration
 #
 # Purpose: Run tests on multiple Python versions to ensure compatibility.
@@ -53,6 +50,7 @@ jobs:
         uses: ./.github/actions/setup-project
         with:
           python-version: ${{ matrix.python-version }}
+          uv-extra-index-url: ${{ secrets.UV_EXTRA_INDEX_URL }}
 
       - name: Install dependencies
         run: |
