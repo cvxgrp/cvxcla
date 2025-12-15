@@ -4,11 +4,11 @@
 #     "marimo==0.14.13",
 #     "numpy==2.3.0",
 #     "cvxcla"
+# ]
 #
 # [tool.uv.sources]
 # cvxcla = { path = "../..", editable=true }
 #
-# ]
 # ///
 """Little demo for the Critical Line Algorithm."""
 
