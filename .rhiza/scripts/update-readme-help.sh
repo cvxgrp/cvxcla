@@ -6,7 +6,7 @@
 
 set -eu
 
-# Navigate to repository root
+# Navigate to repository root (from .rhiza/scripts/ up two levels to repo root)
 cd "$(dirname "$0")/../.."
 
 README_FILE="README.md"
