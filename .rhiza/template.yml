@@ -13,5 +13,6 @@ include:
 - pytest.ini
 - book
 - .rhiza
+- renovate.json
 exclude:
 - .github/workflows/docker.yml
