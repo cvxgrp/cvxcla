@@ -223,3 +223,37 @@ class TestFrontier:
         fig = frontier.plot(volatility=True, markers=False)
         assert fig is not None
         assert len(fig.data) > 0
+
+    def test_max_sharpe_not_at_last_point(self):
+        """Test max Sharpe when the maximum is not at the last point.
+        
+        This test ensures that the right-side optimization branch is covered.
+        """
+        # Create a frontier where max Sharpe is at the first point
+        # Use high return, low variance for first point
+        mean = np.array([0.3, 0.15, 0.1])  # First asset has highest return
+        # Low variance for first asset
+        covariance = np.array([
+            [0.01, 0.001, 0.0],
+            [0.001, 0.09, 0.01],
+            [0.0, 0.01, 0.16]
+        ])
+        
+        # Create points with first having most of high-return, low-variance asset
+        points = [
+            FrontierPoint(weights=np.array([0.6, 0.2, 0.2])),  # Should have highest Sharpe
+            FrontierPoint(weights=np.array([0.3, 0.4, 0.3])),
+            FrontierPoint(weights=np.array([0.2, 0.3, 0.5])),  # Low Sharpe
+        ]
+        frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
+        
+        # Verify max Sharpe is at first point (index 0)
+        sr_position = np.argmax(frontier.sharpe_ratio)
+        assert sr_position == 0, f"Expected max Sharpe at position 0, got {sr_position}"
+        
+        # Call max_sharpe - this should exercise the right > sr_position_max branch
+        max_sr, max_weights = frontier.max_sharpe
+        assert isinstance(max_sr, float)
+        assert np.isclose(np.sum(max_weights), 1.0)
+        # Max Sharpe should be at least as good as the discrete maximum
+        assert max_sr >= np.max(frontier.sharpe_ratio) - 1e-6
