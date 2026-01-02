@@ -36,7 +36,3 @@ packages = ["src/cvxcla"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
-
-[tool.marimo.runtime]
-pythonpath = ["src"]
-
