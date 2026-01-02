@@ -28,4 +28,8 @@ from .cla import CLA
 
 __all__ = ["CLA"]
 
-__version__ = importlib.metadata.version("cvxcla")
+try:
+    __version__ = importlib.metadata.version("cvxcla")
+except importlib.metadata.PackageNotFoundError:
+    # Package metadata not available (development/editable install)
+    __version__ = "0.0.0"
