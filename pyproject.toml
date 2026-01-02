@@ -1,6 +1,6 @@
 [project]
 name = "cvxcla"
-version = "1.4.3"
+version = "1.4.4"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 requires-python = ">=3.11"

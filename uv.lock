@@ -55,7 +55,7 @@ wheels = [
 
 [[package]]
 name = "cvxcla"
-version = "0.0.0"
+version = "1.4.4"
 source = { editable = "." }
 dependencies = [
     { name = "kaleido" },
