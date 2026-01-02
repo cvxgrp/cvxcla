@@ -174,3 +174,49 @@ class TestMinimize:
         assert isinstance(result["fun"], (float, np.floating))
         assert isinstance(result["success"], bool)
         assert isinstance(result["nit"], int)
+
+    def test_overflow_handling_left(self):
+        """Test overflow handling when expanding left bound."""
+        
+        # Counter to track how many times function is called
+        call_count = [0]
+
+        def f(x):
+            call_count[0] += 1
+            # Cause overflow on the second call during left expansion
+            # First call is f_x = fun(x, *args) at line 67
+            # Second call should be during left expansion at line 76
+            if call_count[0] == 2 and x < 0:
+                raise OverflowError("Simulated overflow during left expansion")
+            return (x - 5.0) ** 2
+
+        # Start with no bounds, so the algorithm will try to expand the search interval
+        result = minimize(f, x0=0.0, bounds=None)
+
+        # Should still succeed despite overflow
+        assert result["success"]
+
+    def test_overflow_handling_right(self):
+        """Test overflow handling when expanding right bound."""
+
+        def f(x):
+            # Prevent left expansion: return small value for x < 0
+            if x < 0:
+                return -1
+            # Raise exception at specific value during right expansion
+            # We'll use narrow initial bounds to get gradual expansion
+            if 8 < x < 10:
+                raise OverflowError("Simulated overflow during right expansion")
+            return x**2
+
+        # Use bounds to create small initial interval
+        # With bounds=((0, 20),), initial a=0, b=20
+        # But we want NO left expansion and gradual right
+        # Actually, with finite bounds, expansion doesn't happen at all!
+        # So we need bounds=None but carefully chosen function
+        
+        # Better: use finite lower bound, infinite upper bound
+        result = minimize(f, x0=0.0, bounds=((0.0, None),))
+
+        # Should still succeed - the exception is caught
+        assert result["success"]
