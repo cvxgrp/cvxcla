@@ -177,7 +177,6 @@ class TestMinimize:
 
     def test_overflow_handling_left(self):
         """Test overflow handling when expanding left bound."""
-        
         # Counter to track how many times function is called
         call_count = [0]
 
@@ -198,10 +197,10 @@ class TestMinimize:
 
     def test_overflow_handling_right(self):
         """Test overflow handling when expanding right bound.
-        
+
         Note: This test covers defensive exception handling code that is extremely
         difficult to trigger in practice. The right expansion exception handler
-        (lines 85-86) would require an OverflowError to be raised during the 
+        (lines 85-86) would require an OverflowError to be raised during the
         while loop condition check, which is challenging given the algorithm's
         exponential expansion pattern.
         """
