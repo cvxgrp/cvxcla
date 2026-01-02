@@ -5,9 +5,7 @@ is not available (e.g., in development mode or when not properly installed).
 """
 
 import sys
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 
 class TestPackageMetadata:
