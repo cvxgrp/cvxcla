@@ -1,15 +1,15 @@
+<div align="center">
+    
 # 📈 [cvxcla](https://www.cvxgrp.org/cvxcla) - Critical Line Algorithm for Portfolio Optimization
 
 [![PyPI version](https://badge.fury.io/py/cvxcla.svg)](https://badge.fury.io/py/cvxcla)
 [![Apache 2.0 License](https://img.shields.io/badge/License-APACHEv2-brightgreen.svg)](https://github.com/cvxgrp/cvxcla/blob/master/LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage Status](https://coveralls.io/repos/github/cvxgrp/cvxcla/badge.png?branch=main)](https://coveralls.io/github/cvxgrp/cvxcla?branch=main)
-[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://github.com/renovatebot/renovate)
-
-[![CI](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/ci.yml)
-[![pre-commit](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/cvxgrp/cvxcla/actions/workflows/pre-commit.yml)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
+
+</div>
 
 ## 📋 Overview
 
