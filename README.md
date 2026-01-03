@@ -9,6 +9,16 @@
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
+---
+
+**Quick Links:** 
+[📖 Documentation](https://tschm.github.io/minibook/) • 
+[🐛 Report Bug](https://github.com/tschm/minibook/issues) • 
+[💡 Request Feature](https://github.com/tschm/minibook/issues) • 
+[💬 Discussions](https://github.com/tschm/minibook/discussions)
+
+---
+
 </div>
 
 ## 📋 Overview
