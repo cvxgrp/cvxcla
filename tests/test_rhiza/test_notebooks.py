@@ -1,5 +1,6 @@
 """Tests for Marimo notebooks in the book/marimo directory."""
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -48,7 +49,7 @@ def test_notebook_execution(notebook_path: Path):
     if local_uvx.exists() and local_uvx.is_file():
         uvx_cmd = str(local_uvx.resolve())  # Use absolute path
     else:
-        uvx_cmd = "uvx"
+        uvx_cmd = shutil.which("uvx")
         if uvx_cmd is None:
             pytest.skip("uvx not found (neither ./bin/uvx nor uvx on PATH); skipping marimo notebook tests")
 
