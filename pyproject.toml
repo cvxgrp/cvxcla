@@ -23,7 +23,7 @@ repository = "https://github.com/cvxgrp/cvxcla"
 dev = [
     "loguru==0.7.3",
     "mosek==11.0.30",
-    "marimo==0.18.4",
+    "marimo==0.19.2",
     "pandas==2.3.3",
 ]
 
