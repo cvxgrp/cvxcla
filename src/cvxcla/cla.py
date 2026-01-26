@@ -63,7 +63,7 @@ class CLA:
     b: NDArray[np.float64]
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
-    logger: logging.Logger = logging.getLogger(__name__)
+    logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     @cached_property
     def proj(self):

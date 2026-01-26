@@ -13,7 +13,7 @@ def minimize(
     bounds: tuple[tuple[float, float], ...] | None = None,
     tol: float = 1e-8,  # Increased precision
     max_iter: int = 200,  # Increased max iterations
-    _test_mode: str = None,  # For testing only: 'left_overflow', 'right_overflow', or None
+    _test_mode: str | None = None,  # For testing only: 'left_overflow', 'right_overflow', or None
 ) -> dict[str, Any]:
     """Minimize a scalar function of one variable using a simple line search algorithm.
 

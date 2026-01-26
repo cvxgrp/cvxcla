@@ -177,7 +177,7 @@ class TestFrontier:
         points = [FrontierPoint(weights=np.array([0.3, 0.4, 0.3]))]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
 
-        max_sr, max_weights = frontier.max_sharpe
+        _max_sr, max_weights = frontier.max_sharpe
         # With only one point, should return that point
         assert np.allclose(max_weights, points[0].weights, atol=1e-4)
 

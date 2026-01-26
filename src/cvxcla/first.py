@@ -32,7 +32,7 @@ def init_algo(
 ) -> TurningPoint:
     """Compute the first turning point.
 
-    The key insight behind Markowitz’s CLA is to find first the
+    The key insight behind Markowitz's CLA is to find first the
     turning point associated with the highest expected return, and then
     compute the sequence of turning points, each with a lower expected
     return than the previous. That first turning point consists in the
@@ -50,7 +50,8 @@ def init_algo(
     and the resulting vector of weights the first turning point.
     """
     if np.any(lower_bounds > upper_bounds):
-        raise ValueError("Lower bounds must be less than or equal to upper bounds")
+        msg = "Lower bounds must be less than or equal to upper bounds"
+        raise ValueError(msg)
 
     # Initialize weights to lower bounds
     weights = np.copy(lower_bounds)
@@ -68,7 +69,8 @@ def init_algo(
 
     if not np.any(free):
         #    # We have not reached the sum of weights of 1...
-        raise ValueError("Could not construct a fully invested portfolio")
+        msg = "Could not construct a fully invested portfolio"
+        raise ValueError(msg)
 
     # Return first turning point, the point with the highest expected return.
     return TurningPoint(free=free, weights=weights)

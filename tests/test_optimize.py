@@ -186,7 +186,8 @@ class TestMinimize:
             # First call is f_x = fun(x, *args) at line 67
             # Second call should be during left expansion at line 76
             if call_count[0] == 2 and x < 0:
-                raise OverflowError("Simulated overflow during left expansion")
+                msg = "Simulated overflow during left expansion"
+                raise OverflowError(msg)
             return (x - 5.0) ** 2
 
         # Start with no bounds, so the algorithm will try to expand the search interval

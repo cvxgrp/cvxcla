@@ -132,7 +132,7 @@ class Frontier:
         """
 
         def _interpolate():
-            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:]):
+            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
                         yield FrontierPoint(weights=lamb * w_left + (1 - lamb) * w_right)
