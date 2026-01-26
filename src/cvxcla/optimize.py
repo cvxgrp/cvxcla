@@ -9,7 +9,7 @@ import numpy as np
 def minimize(
     fun: Callable[[float], float],
     x0: float,
-    args: tuple = (),
+    args: tuple[Any, ...] = (),
     bounds: tuple[tuple[float, float], ...] | None = None,
     tol: float = 1e-8,  # Increased precision
     max_iter: int = 200,  # Increased max iterations

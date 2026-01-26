@@ -36,3 +36,6 @@ packages = ["src/cvxcla"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
+
+[tool.mypy]
+ignore_missing_imports = true

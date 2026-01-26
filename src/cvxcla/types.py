@@ -47,7 +47,7 @@ class FrontierPoint:
 
     weights: NDArray[np.float64]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate that the weights sum to 1.
 
         This method is automatically called after initialization to ensure that
@@ -115,7 +115,7 @@ class Frontier:
     covariance: NDArray[np.float64]
     frontier: list[FrontierPoint] = field(default_factory=list)
 
-    def interpolate(self, num=100) -> Frontier:
+    def interpolate(self, num: int = 100) -> Frontier:
         """Interpolate the frontier with additional points between existing points.
 
         This method creates a new Frontier object with additional points interpolated
@@ -131,7 +131,7 @@ class Frontier:
 
         """
 
-        def _interpolate():
+        def _interpolate() -> Iterator[FrontierPoint]:
             for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
@@ -182,12 +182,13 @@ class Frontier:
 
         """
 
-        def neg_sharpe(alpha: float, w_left: np.ndarray, w_right: np.ndarray) -> float:
+        def neg_sharpe(alpha: float, *args: np.ndarray) -> float:
+            w_left, w_right = args[0], args[1]
             # convex combination of left and right weights
             weight = alpha * w_left + (1 - alpha) * w_right
             # compute the variance
-            var = weight.T @ self.covariance @ weight
-            returns = self.mean.T @ weight
+            var = float(weight.T @ self.covariance @ weight)
+            returns = float(self.mean.T @ weight)
             return -returns / np.sqrt(var)
 
         sharpe_ratios = self.sharpe_ratio
