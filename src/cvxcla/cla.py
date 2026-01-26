@@ -63,10 +63,10 @@ class CLA:
     b: NDArray[np.float64]
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
-    logger: logging.Logger = logging.getLogger(__name__)
+    logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     @cached_property
-    def proj(self):
+    def proj(self) -> np.ndarray:
         """Construct the projection matrix used in computing Lagrange multipliers.
 
         P is formed by horizontally stacking the covariance matrix and the transpose
@@ -79,7 +79,7 @@ class CLA:
         return np.block([self.covariance, self.a.T])
 
     @cached_property
-    def kkt(self):
+    def kkt(self) -> np.ndarray:
         """Construct the Karush-Kuhn-Tucker (KKT) system matrix.
 
         The KKT matrix is built by augmenting the covariance matrix with the
@@ -94,7 +94,7 @@ class CLA:
         m = self.a.shape[0]
         return np.block([[self.covariance, self.a.T], [self.a, np.zeros((m, m))]])
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
 
         This method is automatically called after initialization. It computes

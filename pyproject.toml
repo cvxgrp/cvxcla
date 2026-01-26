@@ -36,3 +36,15 @@ packages = ["src/cvxcla"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
+
+[tool.deptry.package_module_name_map]
+numpy = "numpy"
+plotly = "plotly"
+kaleido = "kaleido"
+loguru = "loguru"
+mosek = "mosek"
+marimo = "marimo"
+pandas = "pandas"
+
+[tool.mypy]
+ignore_missing_imports = true

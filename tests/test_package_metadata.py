@@ -51,4 +51,4 @@ class TestPackageMetadata:
         # Clean up - reimport without mock for other tests
         if "cvxcla" in sys.modules:
             del sys.modules["cvxcla"]
-        import cvxcla  # noqa: F401
+        import cvxcla
