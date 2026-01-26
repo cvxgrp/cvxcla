@@ -189,7 +189,7 @@ class Frontier:
             # compute the variance
             var = float(weight.T @ self.covariance @ weight)
             returns = float(self.mean.T @ weight)
-            return -returns / np.sqrt(var)
+            return float(-returns / np.sqrt(var))
 
         sharpe_ratios = self.sharpe_ratio
 
