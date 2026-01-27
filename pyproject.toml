@@ -24,7 +24,7 @@ dev = [
     "loguru==0.7.3",
     "mosek==11.1.3",
     "marimo==0.19.6",
-    "pandas==2.3.3",
+    "pandas==3.0.0",
 ]
 
 [build-system]
