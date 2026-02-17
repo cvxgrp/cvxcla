@@ -23,9 +23,9 @@ class TestFrontierPoint:
         assert np.array_equal(point.weights, weights)
 
     def test_frontier_point_invalid_weights(self):
-        """Test that invalid weights (not summing to 1) raise an assertion error."""
+        """Test that invalid weights (not summing to 1) raise a ValueError."""
         weights = np.array([0.3, 0.3, 0.3])  # Sum = 0.9, not 1.0
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError, match="Weights do not sum to 1"):
             FrontierPoint(weights=weights)
 
     def test_mean_computation(self):
