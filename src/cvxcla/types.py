@@ -58,7 +58,9 @@ class FrontierPoint:
 
         """
         # check that the sum is close to 1
-        assert np.isclose(np.sum(self.weights), 1.0)
+        if not np.isclose(np.sum(self.weights), 1.0):
+            msg = "Weights do not sum to 1"
+            raise ValueError(msg)
 
     def mean(self, mean: NDArray[np.float64]) -> float:
         """Compute the expected return of the portfolio.
@@ -196,9 +198,9 @@ class Frontier:
         # in which point is the maximal Sharpe ratio?
         sr_position_max = np.argmax(self.sharpe_ratio)
 
-        # np.min only there for security...
-        right = np.min([sr_position_max + 1, len(self) - 1])
-        left = np.max([0, sr_position_max - 1])
+        # min only there for security...
+        right = min(sr_position_max + 1, len(self) - 1)
+        left = max(0, sr_position_max - 1)
 
         # Look to the left and look to the right
 
