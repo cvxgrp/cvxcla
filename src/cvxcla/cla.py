@@ -124,7 +124,9 @@ class CLA:
 
             # --- Identify active set ---
             blocked = ~last.free
-            assert not np.all(blocked), "All variables cannot be blocked"
+            if np.all(blocked):
+                msg = "All variables cannot be blocked"
+                raise RuntimeError(msg)
 
             at_upper = blocked & np.isclose(last.weights, self.upper_bounds)
             at_lower = blocked & np.isclose(last.weights, self.lower_bounds)
@@ -251,9 +253,15 @@ class CLA:
         """
         tol = tol or self.tol
 
-        assert np.all(tp.weights >= (self.lower_bounds - tol)), f"{(tp.weights + tol) - self.lower_bounds}"
-        assert np.all(tp.weights <= (self.upper_bounds + tol)), f"{(self.upper_bounds + tol) - tp.weights}"
-        assert np.allclose(np.sum(tp.weights), 1.0), f"{np.sum(tp.weights)}"
+        if not np.all(tp.weights >= (self.lower_bounds - tol)):
+            msg = "Weights below lower bounds"
+            raise ValueError(msg)
+        if not np.all(tp.weights <= (self.upper_bounds + tol)):
+            msg = "Weights above upper bounds"
+            raise ValueError(msg)
+        if not np.allclose(np.sum(tp.weights), 1.0):
+            msg = "Weights do not sum to 1"
+            raise ValueError(msg)
 
         self.turning_points.append(tp)
 

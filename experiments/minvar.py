@@ -36,7 +36,9 @@ def bilinear(mat, left=None, right=None):
 
     """
     n, m = mat.shape
-    assert n == m, "Matrix must be square"
+    if n != m:
+        msg = "Matrix must be square"
+        raise ValueError(msg)
 
     if left is None:
         left = np.ones(n)

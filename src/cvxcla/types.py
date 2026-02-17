@@ -58,7 +58,9 @@ class FrontierPoint:
 
         """
         # check that the sum is close to 1
-        assert np.isclose(np.sum(self.weights), 1.0)
+        if not np.isclose(np.sum(self.weights), 1.0):
+            msg = "Weights do not sum to 1"
+            raise ValueError(msg)
 
     def mean(self, mean: NDArray[np.float64]) -> float:
         """Compute the expected return of the portfolio.
