@@ -131,8 +131,6 @@ fig = frontier.plot(volatility=True)
 fig.show()
 ```
 
-```result
-```
 
 ## 📚 Literature and Implementations
 
