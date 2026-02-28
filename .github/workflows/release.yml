@@ -18,7 +18,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName')
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Checkout at latest tag
