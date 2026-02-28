@@ -4,7 +4,7 @@ version = "1.5.2"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = ["Private :: Do Not Upload"]
+# Private :: Do Not Upload (prevents rhiza_release.yml from publishing to PyPI)
 
 dependencies = [
     "numpy>=2.0.0",
