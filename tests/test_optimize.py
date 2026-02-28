@@ -218,3 +218,25 @@ class TestMinimize:
         assert result["success"]
         # Solution should be near x=10
         assert abs(result["x"][0] - 10.0) < 0.01
+
+    def test_overflow_handling_right_actual_exception(self):
+        """Test that OverflowError raised in the right-expansion loop is caught.
+
+        With x0=0.0 and f(x)=(x+5)^2:
+          Call 1: f_x = fun(0.0) = 25
+          Call 2: left-expansion condition fun(-1.0) = 16 < 25, loop exits immediately
+          Call 3: right-expansion condition fun(1.0) -> raises OverflowError -> caught -> b=max_bound
+        Subsequent calls (golden section search) proceed normally.
+        """
+        call_count = [0]
+
+        def f(x):
+            call_count[0] += 1
+            if call_count[0] == 3:
+                msg = "Simulated overflow during right expansion"
+                raise OverflowError(msg)
+            return (x + 5.0) ** 2  # minimum at x=-5
+
+        result = minimize(f, x0=0.0, bounds=None)
+
+        assert result["success"]

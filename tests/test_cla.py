@@ -4,10 +4,13 @@ This module tests the main Critical Line Algorithm implementation,
 including initialization, turning point computation, and frontier generation.
 """
 
+from unittest.mock import patch
+
 import numpy as np
 import pytest
 
 from cvxcla import CLA
+from cvxcla.types import TurningPoint
 
 
 class TestCLA:
@@ -295,3 +298,85 @@ class TestCLAEdgeCases:
         # All weights should be non-negative
         for tp in cla.turning_points:
             assert np.all(tp.weights >= -cla.tol)
+
+
+class TestCLAErrors:
+    """Test error conditions in CLA."""
+
+    def test_all_variables_blocked_raises_runtime_error(self):
+        """Test that RuntimeError is raised when all variables are blocked."""
+        mean = np.array([0.1, 0.15, 0.2])
+        covariance = np.eye(3) * 0.04
+        lower_bounds = np.zeros(3)
+        upper_bounds = np.ones(3)
+        a = np.ones((1, 3))
+        b = np.ones(1)
+
+        # A TurningPoint with all free=False triggers the error in the main loop
+        bad_tp = TurningPoint(
+            weights=np.array([1.0, 0.0, 0.0]),
+            free=np.array([False, False, False]),
+        )
+
+        with (
+            patch.object(CLA, "_first_turning_point", return_value=bad_tp),
+            pytest.raises(RuntimeError, match="All variables cannot be blocked"),
+        ):
+            CLA(
+                mean=mean,
+                covariance=covariance,
+                lower_bounds=lower_bounds,
+                upper_bounds=upper_bounds,
+                a=a,
+                b=b,
+            )
+
+    def test_append_weights_below_lower_bounds(self):
+        """Test that _append raises ValueError when weights are below lower bounds."""
+        mean = np.array([0.1, 0.15, 0.2])
+        covariance = np.eye(3) * 0.04
+        lower_bounds = np.zeros(3)
+        upper_bounds = np.ones(3)
+        a = np.ones((1, 3))
+        b = np.ones(1)
+
+        cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b)
+
+        # -0.5 is below lower_bounds[0]=0 - tol
+        tp = TurningPoint(weights=np.array([-0.5, 0.75, 0.75]), free=np.array([True, False, False]))
+        with pytest.raises(ValueError, match="Weights below lower bounds"):
+            cla._append(tp)
+
+    def test_append_weights_above_upper_bounds(self):
+        """Test that _append raises ValueError when weights are above upper bounds."""
+        mean = np.array([0.1, 0.15, 0.2])
+        covariance = np.diag([0.04, 0.04, 0.04])
+        lower_bounds = np.zeros(3)
+        upper_bounds = np.array([0.8, 0.8, 0.8])  # tight upper bounds
+        a = np.ones((1, 3))
+        b = np.ones(1)
+
+        cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b)
+
+        # weight 1.0 > upper_bounds[2]=0.8 + tol
+        tp = TurningPoint(weights=np.array([0.0, 0.0, 1.0]), free=np.array([True, False, False]))
+        with pytest.raises(ValueError, match="Weights above upper bounds"):
+            cla._append(tp)
+
+    def test_append_weights_do_not_sum_to_one(self):
+        """Test that _append raises ValueError when weights don't sum to 1."""
+        mean = np.array([0.1, 0.15, 0.2])
+        covariance = np.eye(3) * 0.04
+        lower_bounds = np.zeros(3)
+        upper_bounds = np.ones(3)
+        a = np.ones((1, 3))
+        b = np.ones(1)
+
+        cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b)
+
+        # Use a duck-typed object to bypass TurningPoint's own sum-to-1 validation
+        class FakeTP:
+            weights = np.array([0.2, 0.2, 0.2])  # sums to 0.6, not 1
+
+        with pytest.raises(ValueError, match="Weights do not sum to 1"):
+            cla._append(FakeTP())
