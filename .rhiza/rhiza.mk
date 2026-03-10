@@ -33,6 +33,7 @@ RESET := \033[0m
 	readme \
 	summarise-sync \
 	sync \
+	sync-experimental \
 	validate \
 	version-matrix
 
@@ -76,7 +77,7 @@ endef
 export RHIZA_LOGO
 
 # Declare phony targets for Rhiza Core
-.PHONY: print-logo sync validate readme pre-sync post-sync pre-validate post-validate
+.PHONY: print-logo sync sync-experimental validate readme pre-sync post-sync pre-validate post-validate
 
 # Hook targets (double-colon rules allow multiple definitions)
 # Note: pre-install/post-install are defined in bootstrap.mk
@@ -98,6 +99,15 @@ sync: pre-sync ## sync with template repository as defined in .rhiza/template.ym
 	else \
 		$(MAKE) install-uv; \
 		${UVX_BIN} "rhiza==$(RHIZA_VERSION)" sync .; \
+	fi
+	@$(MAKE) post-sync
+
+sync-experimental: pre-sync ## sync with template repository using the experimental rhiza version
+	@if git remote get-url origin 2>/dev/null | grep -iqE 'jebel-quant/rhiza(\.git)?$$'; then \
+		printf "${BLUE}[INFO] Skipping sync-experimental in rhiza repository (no template.yml by design)${RESET}\n"; \
+	else \
+		$(MAKE) install-uv; \
+		${UVX_BIN} "rhiza" sync .; \
 	fi
 	@$(MAKE) post-sync
 
