@@ -56,6 +56,12 @@ I gave the plenary talk at [EQD's Singapore conference](https://tschm.github.io/
 pip install cvxcla
 ```
 
+To include plotting support (Plotly and Kaleido):
+
+```bash
+pip install cvxcla[plot]
+```
+
 ### Development Setup
 
 To set up a development environment:

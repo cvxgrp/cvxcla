@@ -62,8 +62,12 @@ name = "cvxcla"
 version = "1.5.3"
 source = { editable = "." }
 dependencies = [
-    { name = "kaleido" },
     { name = "numpy" },
+]
+
+[package.optional-dependencies]
+plot = [
+    { name = "kaleido" },
     { name = "plotly" },
 ]
 
@@ -77,10 +81,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "kaleido", specifier = "==1.2.0" },
+    { name = "kaleido", marker = "extra == 'plot'", specifier = "==1.2.0" },
     { name = "numpy", specifier = ">=2.0.0" },
-    { name = "plotly", specifier = ">=6.0.1" },
+    { name = "plotly", marker = "extra == 'plot'", specifier = ">=6.0.1" },
 ]
+provides-extras = ["plot"]
 
 [package.metadata.requires-dev]
 dev = [

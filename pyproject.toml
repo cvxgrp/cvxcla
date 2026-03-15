@@ -8,13 +8,17 @@ requires-python = ">=3.11"
 
 dependencies = [
     "numpy>=2.0.0",
-    "plotly>=6.0.1",
-    "kaleido==1.2.0"
 ]
 
 # add Philipp
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
            {name = "Philipp Schiele", email = "pschiele@stanford.edu"}]
+
+[project.optional-dependencies]
+plot = [
+    "plotly>=6.0.1",
+    "kaleido==1.2.0",
+]
 
 [project.urls]
 repository = "https://github.com/cvxgrp/cvxcla"
