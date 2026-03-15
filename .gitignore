@@ -4,6 +4,8 @@
 .ruff_cache
 .ty_cache
 
+ocaml
+
 ### Don't expose API keys, etc.
 .env
 
