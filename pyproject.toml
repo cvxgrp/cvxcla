@@ -46,6 +46,3 @@ loguru = "loguru"
 mosek = "mosek"
 marimo = "marimo"
 pandas = "pandas"
-
-[tool.mypy]
-ignore_missing_imports = true
