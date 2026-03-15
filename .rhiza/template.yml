@@ -1,5 +1,5 @@
 repository: "jebel-quant/rhiza"
-ref: "v0.8.9"
+ref: "v0.8.12"
 
 templates:
   - core
@@ -9,3 +9,8 @@ templates:
   - marimo
   - tests
   - legal
+
+exclude:
+  - docs
+  - tests/benchmarks
+  - .github/workflows/rhiza_benchmarks.yml  
