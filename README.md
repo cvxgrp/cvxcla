@@ -39,6 +39,45 @@ of the efficient frontier, allowing for efficient representation of the entire f
 
 I gave the plenary talk at [EQD's Singapore conference](https://tschm.github.io/eqd_markowitz/PresentationEQDweb.pdf).
 
+## 🧮 Why the Algorithm Works
+
+The Markowitz problem is a quadratic program parametrized by a return target λ:
+
+```
+min  wᵀΣw - λ · μᵀw
+s.t. Aw = b,  lb ≤ w ≤ ub
+```
+
+As λ sweeps from ∞ (maximize return) down to 0 (minimize variance), the solution
+traces the entire efficient frontier. The key insight is that **between consecutive
+events, the optimal weights are a linear function of λ**:
+
+```
+w(λ) = α + λ · β
+```
+
+This holds because the KKT optimality conditions are linear in λ whenever the active
+set — which assets sit at their bounds — is fixed. The algorithm exploits this in
+three steps:
+
+1. **Start** at λ = ∞, where the portfolio concentrates on the highest-return asset
+   within bounds
+   ([`init_algo`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/first.py),
+   called from [`_first_turning_point`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L223)).
+
+2. **Solve** the KKT system for the current active set to find α and β
+   ([`_solve`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L189)),
+   then decrease λ until one of two events occurs
+   ([main loop](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L122)):
+   - a **free** asset hits its bound (leaves the free set), or
+   - a **blocked** asset's KKT multiplier changes sign (enters the free set).
+
+3. **Update** the active set (exactly one asset changes status) and repeat until λ ≤ 0.
+
+Because only one asset changes per step and each step requires only a single linear
+solve, the algorithm traces the full frontier cheaply and exactly — no approximation
+needed.
+
 ## ✨ Features
 
 - Efficient computation of the entire efficient frontier
