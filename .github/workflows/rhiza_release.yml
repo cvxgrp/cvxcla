@@ -232,7 +232,7 @@ jobs:
         continue-on-error: true
 
       - name: Create GitHub Release with artifacts
-        uses: ncipollo/release-action@v1.20.0
+        uses: ncipollo/release-action@v1.21.0
         with:
           tag: ${{ needs.tag.outputs.tag }}
           name: ${{ needs.tag.outputs.tag }}
