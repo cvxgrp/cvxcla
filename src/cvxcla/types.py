@@ -25,9 +25,12 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 import numpy as np
-import plotly.graph_objects as go
 from numpy.typing import NDArray
 
 from .optimize import minimize
@@ -252,6 +255,12 @@ class Frontier:
             A plotly Figure object that can be displayed or saved.
 
         """
+        try:
+            import plotly.graph_objects as go
+        except ImportError as e:
+            msg = "Plotting requires plotly. Install it with: pip install cvxcla[plot]"
+            raise ImportError(msg) from e
+
         fig = go.Figure()
 
         x = self.volatility if volatility else self.variance
