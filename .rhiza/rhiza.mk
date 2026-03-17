@@ -77,7 +77,7 @@ endef
 export RHIZA_LOGO
 
 # Declare phony targets for Rhiza Core
-.PHONY: print-logo sync sync-experimental validate readme pre-sync post-sync pre-validate post-validate
+.PHONY: print-logo sync sync-experimental materialize validate readme pre-sync post-sync pre-validate post-validate
 
 # Hook targets (double-colon rules allow multiple definitions)
 # Note: pre-install/post-install are defined in bootstrap.mk
@@ -110,6 +110,11 @@ sync-experimental: pre-sync ## sync with template repository using the experimen
 		${UVX_BIN} "rhiza" sync .; \
 	fi
 	@$(MAKE) post-sync
+
+materialize: ## [DEPRECATED] use 'make sync' instead — materialize --force is now sync
+	@printf "${YELLOW}[WARN] 'make materialize' is deprecated and will be removed in a future release.${RESET}\n"
+	@printf "${YELLOW}[WARN] Please use 'make sync' instead (e.g. 'materialize --force' is now 'make sync').${RESET}\n"
+	@$(MAKE) sync
 
 summarise-sync: install-uv ## summarise differences created by sync with template repository
 	@if git remote get-url origin 2>/dev/null | grep -iqE 'jebel-quant/rhiza(\.git)?$$'; then \

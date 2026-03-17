@@ -1,17 +1,13 @@
-sha: 3c7662d23fb345846b4cf5c66ea96b80bf6e823f
+sha: fb328a06f788ffe40f8f2ba53d82fe6ac8878d33
 repo: jebel-quant/rhiza
 host: github
-ref: v0.8.12
+ref: v0.8.13
 include: []
 exclude:
 - docs
-- tests/benchmarks
-- .github/workflows/rhiza_benchmarks.yml
 templates:
-- core
 - github
 - devcontainer
-- book
 - marimo
 - tests
 - legal
@@ -117,5 +113,5 @@ files:
 - book/marimo/notebooks/rhiza.py
 - pytest.ini
 - ruff.toml
-synced_at: '2026-03-15T04:10:50Z'
+synced_at: '2026-03-17T07:10:30Z'
 strategy: merge
