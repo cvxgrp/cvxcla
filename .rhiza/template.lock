@@ -113,5 +113,5 @@ files:
 - book/marimo/notebooks/rhiza.py
 - pytest.ini
 - ruff.toml
-synced_at: '2026-03-17T07:10:30Z'
+synced_at: '2026-03-23T00:50:58Z'
 strategy: merge
