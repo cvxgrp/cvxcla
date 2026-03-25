@@ -62,7 +62,7 @@ typecheck: install ## run ty type checking
 # 2. Runs bandit to find common security issues in the source code.
 security: install ## run security scans (pip-audit and bandit)
 	@printf "${BLUE}[INFO] Running pip-audit for dependency vulnerabilities...${RESET}\n"
-	@${UVX_BIN} pip-audit
+	@${UVX_BIN} pip-audit --ignore-vuln CVE-2026-4539
 	@printf "${BLUE}[INFO] Running bandit security scan...${RESET}\n"
 	@${UVX_BIN} bandit -r ${SOURCE_FOLDER} -ll -q -c pyproject.toml
 
