@@ -7,8 +7,6 @@
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage](https://raw.githubusercontent.com/cvxgrp/cvxcla/gh-pages/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/tests/html-coverage/index.html)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
-
 ---
 
 **Quick Links:**

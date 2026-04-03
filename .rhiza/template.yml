@@ -3,7 +3,6 @@ ref: "v0.8.20"
 
 templates:
   - github
-  - devcontainer
   - marimo
   - tests
   - legal

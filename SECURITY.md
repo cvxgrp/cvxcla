@@ -6,9 +6,9 @@ We actively support the following versions with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.8.x   | :white_check_mark: |
-| 0.7.x   | :white_check_mark: |
-| < 0.7   | :x:                |
+| 1.6.x   | :white_check_mark: |
+| 1.5.x   | :white_check_mark: |
+| < 1.5   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -21,7 +21,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 Instead, please report them via one of the following methods:
 
 1. **GitHub Security Advisories** (Preferred)
-   - Go to the [Security Advisories](https://github.com/jebel-quant/rhiza/security/advisories) page
+   - Go to the [Security Advisories](https://github.com/cvxgrp/cvxcla/security/advisories) page
    - Click "New draft security advisory"
    - Fill in the details and submit
 
@@ -50,10 +50,8 @@ Please include the following information in your report:
 
 This security policy applies to:
 
-- The Rhiza template system and configuration files
+- The `cvxcla` Python package and its source code
 - GitHub Actions workflows provided by this repository
-- Shell scripts in `.rhiza/scripts/`
-- Python utilities in `.rhiza/utils/`
 
 ### Out of Scope
 
@@ -87,14 +85,12 @@ This project implements several security measures:
 
 ## Security Best Practices for Users
 
-When using Rhiza templates in your projects:
+When using `cvxcla` in your projects:
 
-1. **Keep Updated**: Regularly sync with upstream templates
-2. **Review Changes**: Review template sync PRs before merging
-3. **Enable Security Features**: Enable CodeQL, secret scanning, and Dependabot in your repositories
-4. **Use Locked Dependencies**: Always commit `uv.lock` for reproducible builds
-5. **Configure Branch Protection**: Require PR reviews and status checks
+1. **Keep Updated**: Regularly update to the latest supported version
+2. **Use Locked Dependencies**: Always commit `uv.lock` for reproducible builds
+3. **Pin Versions**: Pin `cvxcla` to a specific version in production environments
 
 ## Acknowledgments
 
-We thank the security researchers and community members who help keep Rhiza secure.
+We thank the security researchers and community members who help keep cvxcla secure.
