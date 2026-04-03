@@ -1,5 +1,5 @@
 repository: "jebel-quant/rhiza"
-ref: "v0.8.13"
+ref: "v0.8.20"
 
 templates:
   - github
@@ -7,6 +7,3 @@ templates:
   - marimo
   - tests
   - legal
-
-exclude:
-  - docs
