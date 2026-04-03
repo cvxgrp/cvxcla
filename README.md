@@ -5,7 +5,7 @@
 [![PyPI version](https://badge.fury.io/py/cvxcla.svg)](https://badge.fury.io/py/cvxcla)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
-[![Coverage](https://img.shields.io/endpoint?url=https://www.cvxgrp.org/cvxcla/tests/coverage-badge.json)](https://www.cvxgrp.org/cvxcla/tests/html-coverage/index.html)
+[![Coverage](https://raw.githubusercontent.com/cvxgrp/cvxcla/gh-pages/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/tests/html-coverage/index.html)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/cvxgrp/cvxcla)
 
