@@ -111,8 +111,9 @@ files:
 - docs/GLOSSARY.md
 - docs/MARIMO.md
 - docs/QUICK_REFERENCE.md
+- docs/SECURITY.md
 - docs/TESTS.md
 - pytest.ini
 - ruff.toml
-synced_at: '2026-04-03T02:15:15Z'
+synced_at: '2026-04-13T00:58:24Z'
 strategy: merge
