@@ -27,7 +27,7 @@ repository = "https://github.com/cvxgrp/cvxcla"
 [dependency-groups]
 dev = [
     "loguru==0.7.3",
-    "mosek==11.1.10",
+    "mosek==11.1.11",
     "marimo==0.23.1",
     "pandas==3.0.2",
 ]
