@@ -7,7 +7,7 @@
 # ]
 #
 # [tool.uv.sources]
-# cvxcla = { path = "../..", editable=true }
+# cvxcla = { path = "../../..", editable=true }
 #
 # ///
 """Little demo for the Critical Line Algorithm."""
