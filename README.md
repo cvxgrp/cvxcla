@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center" markdown="1">
 
 # 📈 [cvxcla](https://www.cvxgrp.org/cvxcla) - Critical Line Algorithm for Portfolio Optimization
 
