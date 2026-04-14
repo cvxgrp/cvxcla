@@ -1,0 +1,18 @@
+INHERIT: docs/mkdocs-base.yml
+
+site_name: cvxcla
+site_url: https://www.cvxgrp.org/cvxcla/
+repo_url: https://github.com/cvxgrp/cvxcla
+repo_name: cvxgrp/cvxcla
+
+docs_dir: docs
+
+theme:
+  name: material
+  logo: assets/rhiza-logo.svg
+  favicon: assets/rhiza-logo.svg
+
+nav:
+  - Home: index.md
+  - Notebooks: notebooks.md
+  - Reports: reports.md
