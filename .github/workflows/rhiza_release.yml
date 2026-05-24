@@ -123,11 +123,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
-<<<<<<< ours
-          version: "0.11.12"
-=======
           version: "0.11.16"
->>>>>>> upstream
 
       - name: Configure git auth for private packages
         uses: ./.github/actions/configure-git-auth
@@ -436,11 +432,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
-<<<<<<< ours
-          version: "0.11.12"
-=======
           version: "0.11.16"
->>>>>>> upstream
 
       - name: "Sync the virtual environment for ${{ github.repository }}"
         shell: bash

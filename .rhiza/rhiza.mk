@@ -109,22 +109,11 @@ sync: pre-sync ## sync with template repository as defined in .rhiza/template.ym
 	fi
 	@$(MAKE) post-sync
 
-<<<<<<< ours
-sync-experimental: pre-sync ## sync with template repository using the experimental rhiza version
-	@if git remote get-url origin 2>/dev/null | grep -iqE 'jebel-quant/rhiza(\.git)?$$'; then \
-		printf "${BLUE}[INFO] Skipping sync-experimental in rhiza repository (no template.yml by design)${RESET}\n"; \
-	else \
-		$(MAKE) install-uv; \
-		${UVX_BIN} "rhiza" sync .; \
-	fi
-	@$(MAKE) post-sync
-=======
 _apply-sync-schedule: ## (internal) apply RHIZA_SYNC_SCHEDULE override to GitHub Actions sync workflow
 	@if [ "$(RHIZA_SYNC_SCHEDULE)" != "0 0 * * 1" ] && [ -f .github/workflows/rhiza_sync.yml ]; then \
 		sed -i.bak "s|cron: '[^']*'|cron: '$(RHIZA_SYNC_SCHEDULE)'|" .github/workflows/rhiza_sync.yml && rm -f .github/workflows/rhiza_sync.yml.bak; \
 		printf "${BLUE}[INFO] Applied custom sync schedule: $(RHIZA_SYNC_SCHEDULE)${RESET}\n"; \
 	fi
->>>>>>> upstream
 
 materialize: ## [DEPRECATED] use 'make sync' instead — materialize --force is now sync
 	@printf "${YELLOW}[WARN] 'make materialize' is deprecated and will be removed in a future release.${RESET}\n"
