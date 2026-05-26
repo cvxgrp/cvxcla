@@ -33,7 +33,6 @@ RESET := \033[0m
 	readme \
 	summarise-sync \
 	sync \
-	sync-experimental \
 	validate \
 	version-matrix \
 	ci-os-matrix
