@@ -13,6 +13,7 @@ changes.
 from __future__ import annotations
 
 import os
+import re
 
 import pytest
 from api.conftest import SPLIT_MAKEFILES, run_make, setup_rhiza_git_repo, strip_ansi
@@ -23,9 +24,13 @@ def assert_uvx_command_uses_version(output: str, tmp_path, command_fragment: str
     python_version_file = tmp_path / ".python-version"
     if python_version_file.exists():
         python_version = python_version_file.read_text().strip()
-        assert f"uvx -p {python_version} {command_fragment}" in output
+        # Use regex to handle full UVX_BIN paths and any whitespace between -p and version
+        assert re.search(
+            rf"uvx\s+-p\s+{re.escape(python_version)}\s+{re.escape(command_fragment)}",
+            output,
+        ), f"Expected uvx -p {python_version} {command_fragment} in output"
     else:
-        assert "uvx -p" in output
+        assert re.search(r"uvx\s+-p", output)
         assert command_fragment in output
 
 

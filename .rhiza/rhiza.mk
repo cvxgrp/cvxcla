@@ -44,7 +44,7 @@ UVX_BIN ?= $(shell command -v uvx 2>/dev/null || echo ${INSTALL_DIR}/uvx)
 VENV ?= .venv
 
 # Read Python version from .python-version (single source of truth)
-PYTHON_VERSION ?= $(shell cat .python-version 2>/dev/null || echo "3.13")
+PYTHON_VERSION ?= $(strip $(shell cat .python-version 2>/dev/null || echo "3.13"))
 export PYTHON_VERSION
 
 # Read Rhiza version from .rhiza/.rhiza-version (single source of truth for rhiza-tools)
