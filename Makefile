@@ -11,7 +11,5 @@ MKDOCS_EXTRA_PACKAGES = --with-editable . --with 'mkdocstrings[python]'
 # Always include the Rhiza API (template-managed)
 include .rhiza/rhiza.mk
 
-MARIMO_FOLDER=book/marimo/notebooks
-
 # Optional: developer-local extensions (not committed)
 -include local.mk

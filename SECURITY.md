@@ -6,9 +6,9 @@ We actively support the following versions with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.6.x   | :white_check_mark: |
-| 1.5.x   | :white_check_mark: |
-| < 1.5   | :x:                |
+| latest  | :white_check_mark: |
+| n-1     | :white_check_mark: |
+| older   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -21,7 +21,7 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 Instead, please report them via one of the following methods:
 
 1. **GitHub Security Advisories** (Preferred)
-   - Go to the [Security Advisories](https://github.com/cvxgrp/cvxcla/security/advisories) page
+   - Go to the Security Advisories page of this repository
    - Click "New draft security advisory"
    - Fill in the details and submit
 
@@ -50,8 +50,9 @@ Please include the following information in your report:
 
 This security policy applies to:
 
-- The `cvxcla` Python package and its source code
+- The source code and configuration files in this repository
 - GitHub Actions workflows provided by this repository
+- Python utilities and scripts maintained in this repository
 
 ### Out of Scope
 
@@ -83,14 +84,14 @@ This project implements several security measures:
 - **Signed Commits**: GPG signing supported for releases
 - **Tag Protection**: Releases require version tag validation
 
-## Security Best Practices for Users
+## Security Best Practices
 
-When using `cvxcla` in your projects:
-
-1. **Keep Updated**: Regularly update to the latest supported version
-2. **Use Locked Dependencies**: Always commit `uv.lock` for reproducible builds
-3. **Pin Versions**: Pin `cvxcla` to a specific version in production environments
+1. **Keep Updated**: Regularly update dependencies and review security advisories
+2. **Review Changes**: Review dependency update PRs before merging
+3. **Enable Security Features**: Enable CodeQL, secret scanning, and Dependabot in your repositories
+4. **Use Locked Dependencies**: Always commit `uv.lock` for reproducible builds
+5. **Configure Branch Protection**: Require PR reviews and status checks
 
 ## Acknowledgments
 
-We thank the security researchers and community members who help keep cvxcla secure.
+We thank the security researchers and community members who help keep this project secure.
