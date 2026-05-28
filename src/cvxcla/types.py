@@ -74,6 +74,12 @@ class FrontierPoint:
         Returns:
             The expected return of the portfolio.
 
+        Examples:
+            >>> import numpy as np
+            >>> fp = FrontierPoint(weights=np.array([0.5, 0.5]))
+            >>> fp.mean(np.array([0.1, 0.2]))
+            0.15000000000000002
+
         """
         return float(mean.T @ self.weights)
 
