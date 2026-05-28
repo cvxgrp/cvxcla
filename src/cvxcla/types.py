@@ -74,6 +74,12 @@ class FrontierPoint:
         Returns:
             The expected return of the portfolio.
 
+        Examples:
+            >>> import numpy as np
+            >>> fp = FrontierPoint(weights=np.array([0.5, 0.5]))
+            >>> fp.mean(np.array([0.1, 0.2]))
+            0.15000000000000002
+
         """
         return float(mean.T @ self.weights)
 
@@ -137,6 +143,7 @@ class Frontier:
         """
 
         def _interpolate() -> Iterator[FrontierPoint]:
+            """Yield interpolated frontier points between each adjacent pair."""
             for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
@@ -188,6 +195,7 @@ class Frontier:
         """
 
         def neg_sharpe(alpha: float, *args: np.ndarray) -> float:
+            """Return the negative Sharpe ratio for a convex combination of two weight vectors."""
             w_left, w_right = args[0], args[1]
             # convex combination of left and right weights
             weight = alpha * w_left + (1 - alpha) * w_right

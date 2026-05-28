@@ -4,6 +4,13 @@ version = "1.6.2"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+]
 # Private :: Do Not Upload (prevents rhiza_release.yml from publishing to PyPI)
 
 dependencies = [
@@ -21,7 +28,8 @@ plot = [
 ]
 
 [project.urls]
-repository = "https://github.com/cvxgrp/cvxcla"
+Homepage = "https://github.com/cvxgrp/cvxcla"
+Repository = "https://github.com/cvxgrp/cvxcla"
 
 
 [dependency-groups]
@@ -31,6 +39,10 @@ dev = [
     "marimo==0.23.6",
     "pandas==3.0.3",
 ]
+test = [
+    "pytest",
+]
+lint = []
 
 [build-system]
 requires = ["hatchling"]
