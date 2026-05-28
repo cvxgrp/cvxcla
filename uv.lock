@@ -169,7 +169,7 @@ dev = [
     { name = "pandas", specifier = "==3.0.3" },
 ]
 lint = []
-test = [{ name = "pytest" }]
+test = [{ name = "pytest", specifier = ">=7.0" }]
 
 [[package]]
 name = "docutils"
