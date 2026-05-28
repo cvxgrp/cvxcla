@@ -197,6 +197,7 @@ class TestFrontier:
 
     def test_plot_with_variance(self):
         """Test plotting with variance on x-axis."""
+        pytest.importorskip("plotly")
         mean = np.array([0.1, 0.15, 0.2])
         covariance = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.01], [0.0, 0.01, 0.16]])
         points = [
@@ -212,6 +213,7 @@ class TestFrontier:
 
     def test_plot_with_volatility(self):
         """Test plotting with volatility on x-axis."""
+        pytest.importorskip("plotly")
         mean = np.array([0.1, 0.15, 0.2])
         covariance = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.01], [0.0, 0.01, 0.16]])
         points = [
