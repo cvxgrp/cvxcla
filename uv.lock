@@ -165,7 +165,7 @@ provides-extras = ["plot"]
 dev = [
     { name = "loguru", specifier = "==0.7.3" },
     { name = "marimo", specifier = "==0.23.8" },
-    { name = "mosek", specifier = "==11.2.0" },
+    { name = "mosek", specifier = "==11.2.1" },
     { name = "pandas", specifier = "==3.0.3" },
 ]
 lint = []
@@ -396,16 +396,16 @@ wheels = [
 
 [[package]]
 name = "mosek"
-version = "11.2.0"
+version = "11.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/a4/c5989935b88160444ec60979defd0d1b9376dc7deafe323c0d2461d97aea/mosek-11.2.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:8ba099ca55fec3564fdfc1a17e65112c29cb798681026f764c92a1013d8356a5", size = 8794368, upload-time = "2026-05-13T05:29:49.864Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/6d/fdb3f03cdbc371070f1364bdf1ec30cc92bc725183c815375f75ccbd3d51/mosek-11.2.0-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:deda8d0826919bc3166f734cbad1fd9dbcf90bfe8665ce94b844c456f41aaa41", size = 15361789, upload-time = "2026-05-13T05:29:54.291Z" },
-    { url = "https://files.pythonhosted.org/packages/40/fb/5fb9819fdc37b278751041ac6564d8452dc3f5be7e5fde699c1066e4eb4a/mosek-11.2.0-cp39-abi3-manylinux_2_27_aarch64.whl", hash = "sha256:bc36aba53cb7423c9211620542c058e8d02d6b495a1fe74855bb11cfa8220f3a", size = 9908530, upload-time = "2026-05-13T05:29:57.614Z" },
-    { url = "https://files.pythonhosted.org/packages/78/eb/2f8b4a1224777835bf8d683e8bbde7544df8ca9ad46793609d590267efc3/mosek-11.2.0-cp39-abi3-win_amd64.whl", hash = "sha256:e56e4a97119670385342bc9f526e086a87788e8c5ff9a0cab86f3b55b7326975", size = 11202108, upload-time = "2026-05-13T05:30:00.685Z" },
+    { url = "https://files.pythonhosted.org/packages/62/e5/1fee2addb4d0879d9312820d0151b93aea1a51d817440955e203f2663c50/mosek-11.2.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:94184192fd9e7c4aacdbdb3f0581a0daae93d3625f88074dfd0783eb3338043b", size = 8794360, upload-time = "2026-06-02T06:14:53.172Z" },
+    { url = "https://files.pythonhosted.org/packages/78/1e/0f5680a9e5faa67908a0ca0033f5bde7ec61145dd0dd2ef469125a50a671/mosek-11.2.1-cp39-abi3-manylinux2014_x86_64.whl", hash = "sha256:c8d203863c30cae1d4fffdbaf6da439fe3242794c57ffd8d1c4029cbdc5b7d1e", size = 15362132, upload-time = "2026-06-02T06:14:56.239Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/c3/bb10da6aa2fb8cf2603a19c8ae7f149522d948c5efe1bb31f50e05c5cb34/mosek-11.2.1-cp39-abi3-manylinux_2_27_aarch64.whl", hash = "sha256:4588d0a272a67716f33c5531611148dac7186ee68e9f9f62627ecc3a616d1868", size = 9908792, upload-time = "2026-06-02T06:14:59.373Z" },
+    { url = "https://files.pythonhosted.org/packages/4c/3d/9af286dff444f956294e60d6f29bce72990dc75db44dd4dbd9a53b1c4ac6/mosek-11.2.1-cp39-abi3-win_amd64.whl", hash = "sha256:c8b2f1560e67d8be98ea854f6dffad9a11c528b8ab78999bec7440165369358b", size = 11202816, upload-time = "2026-06-02T06:15:01.956Z" },
 ]
 
 [[package]]
@@ -701,15 +701,15 @@ wheels = [
 
 [[package]]
 name = "plotly"
-version = "6.7.0"
+version = "6.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "narwhals" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3a/7f/0f100df1172aadf88a929a9dbb902656b0880ba4b960fe5224867159d8f4/plotly-6.7.0.tar.gz", hash = "sha256:45eea0ff27e2a23ccd62776f77eb43aa1ca03df4192b76036e380bb479b892c6", size = 6911286, upload-time = "2026-04-09T20:36:45.738Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/fd/d72c292d78aadb93d1a9bcd76bf3c678271040c7cf10abe5788b33040a39/plotly-6.8.0.tar.gz", hash = "sha256:e088e7ddc68d4f70e3d66659224727a45296d71d2b8284181862d3d8f1f0d88f", size = 6915161, upload-time = "2026-06-03T18:33:40.226Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/ad/cba91b3bcf04073e4d1655a5c1710ef3f457f56f7d1b79dcc3d72f4dd912/plotly-6.7.0-py3-none-any.whl", hash = "sha256:ac8aca1c25c663a59b5b9140a549264a5badde2e057d79b8c772ae2920e32ff0", size = 9898444, upload-time = "2026-04-09T20:36:39.812Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/14/abe5ce876ab5b66ee3c691bf537fcd43d037aea55d447aacf74630a8f31e/plotly-6.8.0-py3-none-any.whl", hash = "sha256:13c5c4a0f70b74cab1913eda0de49b826df5931708eb6f9c3010040614700ec8", size = 9902055, upload-time = "2026-06-03T18:33:34.26Z" },
 ]
 
 [[package]]
