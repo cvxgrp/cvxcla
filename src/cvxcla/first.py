@@ -58,14 +58,16 @@ def init_algo(
     free = np.full_like(mean, False, dtype=np.bool_)
 
     # Move weights from lower to upper bound
-    # until sum of weights hits or exceeds 1
+    # until sum of weights hits or exceeds 1. The check needs a tolerance:
+    # the increment 1 - sum(weights) can bring the sum to 1 only up to
+    # floating-point error, and without the slack the loop would move on and
+    # mark the NEXT asset (with weight ~0, sitting on its bound) as free
+    # while the genuinely interior asset stays blocked.
     for index in np.argsort(-mean):
         weights[index] += np.min([upper_bounds[index] - lower_bounds[index], 1.0 - np.sum(weights)])
-        if np.sum(weights) >= 1:
+        if np.sum(weights) >= 1 - 1e-12:
             free[index] = True
             break
-
-    # free = _free(weights, lower_bounds, upper_bounds)
 
     if not np.any(free):
         #    # We have not reached the sum of weights of 1...
