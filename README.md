@@ -244,6 +244,12 @@ Run the test suite with:
 make test
 ```
 
+or directly via pytest:
+
+```bash
+uv run pytest
+```
+
 ## 🧹 Code Quality
 
 Format and lint the code with:

@@ -40,8 +40,13 @@ dev = [
 ]
 test = [
     "pytest>=7.0",
+    "pytest-timeout>=2.3",
 ]
 lint = []
+
+# make a fresh `uv run pytest` work without knowing about dependency groups
+[tool.uv]
+default-groups = ["dev", "test"]
 
 [build-system]
 requires = ["hatchling"]
