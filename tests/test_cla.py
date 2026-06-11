@@ -335,3 +335,128 @@ class TestCLAErrors:
 
         with pytest.raises(ValueError, match="Weights do not sum to 1"):
             cla._append(FakeTP())
+
+
+class TestDegenerateProblems:
+    """Regression tests for degenerate problems (https://github.com/cvxgrp/cvxcla/issues/648).
+
+    Each case below raised ValueError ("Weights below lower bounds") before the
+    event logic learned to (a) classify bounds with the configurable tol,
+    (b) discard spurious event ratios above the current lambda, (c) keep
+    slow bound crossings whose slope falls below the old tol filter, and
+    (d) tolerate float error in the fully-invested check of init_algo.
+    """
+
+    def _assert_valid_frontier(self, cla, upper_bound):
+        """Check lambda monotonicity (within tol) and bounds on all turning points."""
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert np.all(np.diff(lambdas) <= cla.tol)
+        weights = np.array([tp.weights for tp in cla.turning_points])
+        assert np.all(weights >= -cla.tol)
+        assert np.all(weights <= upper_bound + cla.tol)
+
+    @pytest.mark.parametrize("n", [20, 50, 100])
+    def test_tied_mean_blocks_with_capped_weights(self, n):
+        """Blocks of identical means with capped upper bounds produce tied events.
+
+        Spurious ratios above the current lambda used to win the argmax and
+        push weights far outside their bounds.
+        """
+        rng = np.random.default_rng(0)
+        _ = rng.standard_normal((10, 10))  # keep historical draw order of the report
+        _ = rng.standard_normal((6, 6))
+        _ = rng.standard_normal(6)
+        l_matrix = rng.standard_normal((n, n))
+        covariance = l_matrix @ l_matrix.T + 0.1 * np.eye(n)
+        mean = np.repeat(rng.standard_normal(n // 5), 5)
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, 0.4),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        self._assert_valid_frontier(cla, 0.4)
+
+    def test_slow_bound_crossing_is_not_missed(self):
+        """A free weight with slope just below tol still crosses its bound.
+
+        Over a long lambda range even a slope of ~7e-6 walks a weight out of
+        bounds; the old event filter (|slope| > tol) silently dropped the
+        crossing.
+        """
+        rng = np.random.default_rng(63)
+        n = int(rng.integers(3, 40))
+        l_matrix = rng.standard_normal((n, n))
+        covariance = l_matrix @ l_matrix.T + 0.05 * np.eye(n)
+        mean = rng.standard_normal(n)
+        upper = np.full(n, float(rng.uniform(2.0 / n, 1.0)))
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=upper,
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        self._assert_valid_frontier(cla, upper[0])
+
+    def test_first_turning_point_full_within_float_error(self):
+        """The fully-invested check of init_algo needs a float tolerance.
+
+        When the partial fill brings the sum to 1 only up to float error, the
+        next asset (weight ~0, on its bound) used to be marked free while the
+        interior asset stayed blocked, breaking the first segment.
+        """
+        rng = np.random.default_rng(411)
+        n = int(rng.integers(3, 40))
+        l_matrix = rng.standard_normal((n, n))
+        covariance = l_matrix @ l_matrix.T + 0.05 * np.eye(n)
+        mean = rng.standard_normal(n)
+        upper = np.full(n, float(rng.uniform(2.0 / n, 1.0)))
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=upper,
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        # the first turning point must have its free asset strictly inside the bounds
+        first = cla.turning_points[0]
+        assert first.weights[first.free].item() > cla.tol
+        self._assert_valid_frontier(cla, upper[0])
+
+
+class TestAppendTolerance:
+    """Tests for the tol argument of _append (https://github.com/cvxgrp/cvxcla/issues/651)."""
+
+    @pytest.fixture
+    def cla(self):
+        """A solved 3-asset problem to call _append on."""
+        return CLA(
+            mean=np.array([0.1, 0.15, 0.2]),
+            covariance=np.eye(3) * 0.04,
+            lower_bounds=np.zeros(3),
+            upper_bounds=np.ones(3),
+            a=np.ones((1, 3)),
+            b=np.ones(1),
+        )
+
+    def test_explicit_zero_tol_is_honored(self, cla):
+        """tol=0 must validate exactly instead of falling back to self.tol."""
+        # violates the lower bound by less than self.tol but more than 0
+        tp = TurningPoint(weights=np.array([-1e-7, 0.5, 0.5 + 1e-7]), free=np.array([True, False, False]))
+        with pytest.raises(ValueError, match="Weights below lower bounds"):
+            cla._append(tp, tol=0)
+
+    def test_default_tol_accepts_tiny_violation(self, cla):
+        """The same point passes under the default tolerance."""
+        tp = TurningPoint(weights=np.array([-1e-7, 0.5, 0.5 + 1e-7]), free=np.array([True, False, False]))
+        before = len(cla)
+        cla._append(tp)
+        assert len(cla) == before + 1

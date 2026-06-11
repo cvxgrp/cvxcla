@@ -3,7 +3,7 @@
 # 📈 [cvxcla](https://www.cvxgrp.org/cvxcla) - Critical Line Algorithm for Portfolio Optimization
 
 [![PyPI version](https://img.shields.io/pypi/v/cvxcla)](https://pypi.org/project/cvxcla/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage](https://www.cvxgrp.org/cvxcla/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/tests/html-coverage/index.html)
 
@@ -60,13 +60,11 @@ three steps:
 
 1. **Start** at λ = ∞, where the portfolio concentrates on the highest-return asset
    within bounds
-   ([`init_algo`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/first.py),
-   called from [`_first_turning_point`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L223)).
+   ([`init_algo`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/first.py)).
 
-2. **Solve** the KKT system for the current active set to find α and β
-   ([`_solve`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L189)),
-   then decrease λ until one of two events occurs
-   ([main loop](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py#L122)):
+2. **Solve** the KKT system for the current active set to find α and β by
+   block elimination, then decrease λ until one of two events occurs
+   (main loop in [`cla.py`](https://github.com/cvxgrp/cvxcla/blob/main/src/cvxcla/cla.py)):
    - a **free** asset hits its bound (leaves the free set), or
    - a **blocked** asset's KKT multiplier changes sign (enters the free set).
 
@@ -244,6 +242,12 @@ Run the test suite with:
 
 ```bash
 make test
+```
+
+or directly via pytest:
+
+```bash
+uv run pytest
 ```
 
 ## 🧹 Code Quality

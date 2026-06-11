@@ -106,6 +106,7 @@ class CLA:
         m = self.a.shape[0]
         ns = len(self.mean)
         cov = self.covariance_operator
+        tol = self.tol
 
         # Compute and store the first turning point
         self._append(self._first_turning_point())
@@ -121,8 +122,8 @@ class CLA:
                 msg = "All variables cannot be blocked"
                 raise RuntimeError(msg)
 
-            at_upper = blocked & np.isclose(last.weights, self.upper_bounds)
-            at_lower = blocked & np.isclose(last.weights, self.lower_bounds)
+            at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= tol)
+            at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= tol)
 
             _out = at_upper | at_lower
             _in = ~_out
@@ -166,23 +167,45 @@ class CLA:
             delta = cov.matvec(r_beta) + self.a.T @ nu_beta - self.mean
 
             # --- Compute event ratios ---
+            # A free weight moves along w(lam) = r_alpha + lam * r_beta, so even
+            # a tiny slope crosses a bound given a long enough lam range.
+            # Filtering slopes at self.tol misses such crossings and lets
+            # weights drift out of bounds; only slopes at floating-point noise
+            # level are excluded: below sqrt(machine epsilon) a slope is
+            # indistinguishable from solve noise, and the huge ratios it would
+            # produce only amplify rounding errors. Spurious ratios above the
+            # current lam are removed by the lam window below.
+            eps = np.sqrt(np.finfo(np.float64).eps)
             l_mat = np.full((ns, 4), -np.inf)
-            tol = self.tol
 
-            l_mat[_in & (r_beta < -tol), 0] = (
-                self.upper_bounds[_in & (r_beta < -tol)] - r_alpha[_in & (r_beta < -tol)]
-            ) / r_beta[_in & (r_beta < -tol)]
-            l_mat[_in & (r_beta > +tol), 1] = (
-                self.lower_bounds[_in & (r_beta > +tol)] - r_alpha[_in & (r_beta > +tol)]
-            ) / r_beta[_in & (r_beta > +tol)]
-            l_mat[at_upper & (delta < -tol), 2] = -gamma[at_upper & (delta < -tol)] / delta[at_upper & (delta < -tol)]
-            l_mat[at_lower & (delta > +tol), 3] = -gamma[at_lower & (delta > +tol)] / delta[at_lower & (delta > +tol)]
+            l_mat[_in & (r_beta < -eps), 0] = (
+                self.upper_bounds[_in & (r_beta < -eps)] - r_alpha[_in & (r_beta < -eps)]
+            ) / r_beta[_in & (r_beta < -eps)]
+            l_mat[_in & (r_beta > +eps), 1] = (
+                self.lower_bounds[_in & (r_beta > +eps)] - r_alpha[_in & (r_beta > +eps)]
+            ) / r_beta[_in & (r_beta > +eps)]
+            l_mat[at_upper & (delta < -eps), 2] = -gamma[at_upper & (delta < -eps)] / delta[at_upper & (delta < -eps)]
+            l_mat[at_lower & (delta > +eps), 3] = -gamma[at_lower & (delta > +eps)] / delta[at_lower & (delta > +eps)]
 
             # --- Determine next event ---
-            if np.max(l_mat) < 0:
+            # The current segment w(lam) = r_alpha + lam * r_beta is only valid
+            # for lam at or below the current value: the frontier is traced with
+            # non-increasing lam, so ratios above it are spurious crossings
+            # outside the segment and must not be selected. Ties at the current
+            # lam are kept; degenerate problems resolve them one per iteration.
+            l_mat[l_mat > lam + tol] = -np.inf
+
+            lam_max = np.max(l_mat)
+            if lam_max < 0:
                 break
 
-            secchg, dirchg = np.unravel_index(np.argmax(l_mat), l_mat.shape)
+            # Bland-style anti-cycling rule: on degenerate problems (tied means,
+            # duplicated assets) several events coincide at the same ratio. Among
+            # all events within tol of the best ratio we pick the lowest asset
+            # index (and, within an asset, the lowest event type), so the choice
+            # is deterministic and cannot cycle.
+            tied = np.argwhere(l_mat >= lam_max - tol)
+            secchg, dirchg = tied[0]
             lam = l_mat[secchg, dirchg]
 
             # --- Update free set ---
@@ -230,13 +253,14 @@ class CLA:
 
         Args:
             tp: The turning point to append.
-            tol: Tolerance for constraint validation. If None, uses the class's tol attribute.
+            tol: Tolerance for constraint validation. If None, uses the class's
+                tol attribute. Pass 0 for exact validation.
 
         Raises:
-            AssertionError: If the turning point violates any constraints.
+            ValueError: If the turning point violates any constraints.
 
         """
-        tol = tol or self.tol
+        tol = self.tol if tol is None else tol
 
         if not np.all(tp.weights >= (self.lower_bounds - tol)):
             msg = "Weights below lower bounds"

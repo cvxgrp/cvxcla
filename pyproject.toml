@@ -17,7 +17,6 @@ dependencies = [
     "numpy>=2.0.0",
 ]
 
-# add Philipp
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
            {name = "Philipp Schiele", email = "pschiele@stanford.edu"}]
 
@@ -41,8 +40,14 @@ dev = [
 ]
 test = [
     "pytest>=7.0",
+    "pytest-timeout>=2.3",
+    "hypothesis>=6.100",
 ]
 lint = []
+
+# make a fresh `uv run pytest` work without knowing about dependency groups
+[tool.uv]
+default-groups = ["dev", "test"]
 
 [build-system]
 requires = ["hatchling"]
