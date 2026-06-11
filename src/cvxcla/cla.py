@@ -22,6 +22,7 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -77,7 +78,7 @@ class CLA:
         the single point where the input form is normalised.
         """
         if isinstance(self.covariance, np.ndarray):
-            return DenseCovariance(self.covariance)
+            return DenseCovariance(cast("NDArray[np.float64]", self.covariance))
         return self.covariance
 
     @cached_property
@@ -95,7 +96,7 @@ class CLA:
                 explicit ``matrix``.
         """
         if isinstance(self.covariance, np.ndarray):
-            return self.covariance
+            return cast("NDArray[np.float64]", self.covariance)
         matrix = getattr(self.covariance, "matrix", None)
         if matrix is not None:
             return matrix
