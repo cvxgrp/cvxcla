@@ -14,5 +14,6 @@ theme:
 
 nav:
   - Home: index.md
+  - Factor backend: factor.md
   - Notebooks: notebooks.md
   - Reports: reports.md
