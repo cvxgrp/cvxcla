@@ -25,8 +25,9 @@ methods to compute and analyze the efficient frontier.
 import importlib.metadata
 
 from .cla import CLA
+from .operators import CovarianceOperator, DenseCovariance
 
-__all__ = ["CLA"]
+__all__ = ["CLA", "CovarianceOperator", "DenseCovariance"]
 
 try:
     __version__ = importlib.metadata.version("cvxcla")

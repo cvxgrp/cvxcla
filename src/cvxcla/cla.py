@@ -27,6 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .first import init_algo
+from .operators import CovarianceOperator, DenseCovariance
 from .types import Frontier, FrontierPoint, TurningPoint
 
 
@@ -44,7 +45,9 @@ class CLA:
 
     Attributes:
         mean: Vector of expected returns for each asset.
-        covariance: Covariance matrix of asset returns.
+        covariance: Covariance matrix of asset returns, either as a plain
+            ``numpy`` array or as a ``CovarianceOperator`` backend
+            (see ``cvxcla.operators``).
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
         a: Matrix for linear equality constraints (Ax = b).
@@ -56,7 +59,7 @@ class CLA:
     """
 
     mean: NDArray[np.float64]
-    covariance: NDArray[np.float64]
+    covariance: NDArray[np.float64] | CovarianceOperator
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
     a: NDArray[np.float64]
@@ -64,6 +67,44 @@ class CLA:
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
+
+    @cached_property
+    def covariance_operator(self) -> CovarianceOperator:
+        """Return the covariance as a ``CovarianceOperator`` backend.
+
+        A plain ``numpy`` covariance matrix is wrapped in ``DenseCovariance``;
+        an object already implementing the protocol is passed through. This is
+        the single point where the input form is normalised.
+        """
+        if isinstance(self.covariance, np.ndarray):
+            return DenseCovariance(self.covariance)
+        return self.covariance
+
+    @cached_property
+    def _dense_covariance(self) -> NDArray[np.float64]:
+        """Return the covariance as an explicit dense matrix.
+
+        The current turning-point loop assembles dense block matrices and
+        therefore needs an explicit covariance. Structured backends without a
+        ``matrix`` attribute are not yet supported here; routing the loop
+        through the operator interface is Phase 2 of
+        https://github.com/cvxgrp/cvxcla/issues/646.
+
+        Raises:
+            NotImplementedError: If the covariance backend does not expose an
+                explicit ``matrix``.
+        """
+        if isinstance(self.covariance, np.ndarray):
+            return self.covariance
+        matrix = getattr(self.covariance, "matrix", None)
+        if matrix is not None:
+            return matrix
+        msg = (
+            "The turning-point loop currently requires a dense covariance; "
+            "structured CovarianceOperator backends are supported from Phase 2 "
+            "of https://github.com/cvxgrp/cvxcla/issues/646 onwards."
+        )
+        raise NotImplementedError(msg)
 
     @cached_property
     def proj(self) -> np.ndarray:
@@ -76,7 +117,7 @@ class CLA:
 
         This step helps identify which constraints are becoming active or inactive.
         """
-        return np.block([self.covariance, self.a.T])
+        return np.block([self._dense_covariance, self.a.T])
 
     @cached_property
     def kkt(self) -> np.ndarray:
@@ -92,7 +133,7 @@ class CLA:
         This matrix is symmetric but not necessarily positive definite.
         """
         m = self.a.shape[0]
-        return np.block([[self.covariance, self.a.T], [self.a, np.zeros((m, m))]])
+        return np.block([[self._dense_covariance, self.a.T], [self.a, np.zeros((m, m))]])
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
@@ -278,7 +319,7 @@ class CLA:
 
         """
         return Frontier(
-            covariance=self.covariance,
+            covariance=self._dense_covariance,
             mean=self.mean,
             frontier=[FrontierPoint(point.weights) for point in self.turning_points],
         )
