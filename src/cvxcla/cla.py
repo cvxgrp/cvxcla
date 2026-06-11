@@ -253,13 +253,14 @@ class CLA:
 
         Args:
             tp: The turning point to append.
-            tol: Tolerance for constraint validation. If None, uses the class's tol attribute.
+            tol: Tolerance for constraint validation. If None, uses the class's
+                tol attribute. Pass 0 for exact validation.
 
         Raises:
-            AssertionError: If the turning point violates any constraints.
+            ValueError: If the turning point violates any constraints.
 
         """
-        tol = tol or self.tol
+        tol = self.tol if tol is None else tol
 
         if not np.all(tp.weights >= (self.lower_bounds - tol)):
             msg = "Weights below lower bounds"

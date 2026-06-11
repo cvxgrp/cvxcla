@@ -67,7 +67,7 @@ class FrontierPoint:
         the portfolio weights sum to 1, which is required for a valid portfolio.
 
         Raises:
-            AssertionError: If the sum of weights is not close to 1.
+            ValueError: If the sum of weights is not close to 1.
 
         """
         # check that the sum is close to 1

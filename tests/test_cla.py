@@ -430,3 +430,33 @@ class TestDegenerateProblems:
         first = cla.turning_points[0]
         assert first.weights[first.free].item() > cla.tol
         self._assert_valid_frontier(cla, upper[0])
+
+
+class TestAppendTolerance:
+    """Tests for the tol argument of _append (https://github.com/cvxgrp/cvxcla/issues/651)."""
+
+    @pytest.fixture
+    def cla(self):
+        """A solved 3-asset problem to call _append on."""
+        return CLA(
+            mean=np.array([0.1, 0.15, 0.2]),
+            covariance=np.eye(3) * 0.04,
+            lower_bounds=np.zeros(3),
+            upper_bounds=np.ones(3),
+            a=np.ones((1, 3)),
+            b=np.ones(1),
+        )
+
+    def test_explicit_zero_tol_is_honored(self, cla):
+        """tol=0 must validate exactly instead of falling back to self.tol."""
+        # violates the lower bound by less than self.tol but more than 0
+        tp = TurningPoint(weights=np.array([-1e-7, 0.5, 0.5 + 1e-7]), free=np.array([True, False, False]))
+        with pytest.raises(ValueError, match="Weights below lower bounds"):
+            cla._append(tp, tol=0)
+
+    def test_default_tol_accepts_tiny_violation(self, cla):
+        """The same point passes under the default tolerance."""
+        tp = TurningPoint(weights=np.array([-1e-7, 0.5, 0.5 + 1e-7]), free=np.array([True, False, False]))
+        before = len(cla)
+        cla._append(tp)
+        assert len(cla) == before + 1
