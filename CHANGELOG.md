@@ -1,3 +1,17 @@
+## [1.7.0] - 2026-06-11
+
+### 🚀 Features
+
+- Covariance backend abstraction (Phase 1 of #646) (#647)
+
+### 💼 Other
+
+- Bump version 1.6.3 → 1.7.0
+
+### ⚙️ Miscellaneous Tasks
+
+- Update CHANGELOG.md for v1.6.3 [skip ci]
+- Update rhiza template to v0.18.8 (#643)
 ## [1.6.3] - 2026-06-04
 
 ### 🚀 Features
