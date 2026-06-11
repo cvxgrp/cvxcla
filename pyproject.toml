@@ -41,6 +41,7 @@ dev = [
 test = [
     "pytest>=7.0",
     "pytest-timeout>=2.3",
+    "hypothesis>=6.100",
 ]
 lint = []
 
