@@ -80,6 +80,9 @@ needed.
 
 - Efficient computation of the entire efficient frontier
 - Support for linear constraints and bounds on portfolio weights
+- Factor covariance backend: exact frontiers for diagonal-plus-low-rank
+  covariances (factor models, RMT-cleaned matrices) in O(nk) memory via the
+  Woodbury identity
 - Multiple implementations based on different approaches from the literature
 - Visualization of the efficient frontier using Plotly
 - Computation of the maximum Sharpe ratio portfolio
@@ -174,6 +177,27 @@ fig = frontier.plot(volatility=True)
 fig.show()
 ```
 
+### Factor models at scale
+
+For diagonal-plus-low-rank covariances (factor risk models, eigenvalue-clipped
+covariances) pass a `FactorCovariance` instead of a dense matrix; the algorithm
+then never forms an n-by-n matrix:
+
+```python
+import numpy as np
+from cvxcla import CLA, FactorCovariance
+
+rng = np.random.default_rng(42)
+n, k = 10_000, 50
+covariance = FactorCovariance(
+    d=rng.uniform(0.1, 0.5, n),      # idiosyncratic variances
+    u=rng.standard_normal((n, k)),   # factor loadings
+    delta=rng.uniform(0.5, 2.0, k),  # factor variances, (k,) or (k, k)
+)
+```
+
+See the [factor backend documentation](https://www.cvxgrp.org/cvxcla/factor/)
+for the protocol, the math, and benchmarks against the dense path.
 
 ## 📚 Literature and Implementations
 

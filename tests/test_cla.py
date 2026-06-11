@@ -152,51 +152,6 @@ class TestCLA:
         first_tp = cla.turning_points[0]
         assert first_tp.weights[1] >= first_tp.weights[0]  # Asset 1 has higher return
 
-    def test_proj_property(self, simple_problem):
-        """Test the projection matrix property."""
-        cla = CLA(**simple_problem)
-        proj = cla.proj
-
-        # proj should be [covariance | a.T]
-        n = simple_problem["mean"].shape[0]
-        m = simple_problem["a"].shape[0]
-        assert proj.shape == (n, n + m)
-
-    def test_kkt_property(self, simple_problem):
-        """Test the KKT matrix property."""
-        cla = CLA(**simple_problem)
-        kkt = cla.kkt
-
-        n = simple_problem["mean"].shape[0]
-        m = simple_problem["a"].shape[0]
-        assert kkt.shape == (n + m, n + m)
-        # KKT matrix should be symmetric
-        assert np.allclose(kkt, kkt.T)
-
-    def test_solve_static_method(self):
-        """Test the static _solve method."""
-        # Create a simple system: [2 1; 1 2] @ x = b
-        a = np.array([[2.0, 1.0], [1.0, 2.0]])
-        b = np.array([[3.0, 6.0], [3.0, 6.0]])
-        free = np.array([True, True])
-
-        alpha, beta = CLA._solve(a, b, free)
-
-        # Check that the solution is correct
-        assert np.allclose(a @ np.column_stack([alpha, beta]), b)
-
-    def test_solve_with_fixed_variables(self):
-        """Test _solve with some variables fixed."""
-        a = np.array([[2.0, 1.0, 0.0], [1.0, 2.0, 1.0], [0.0, 1.0, 2.0]])
-        b = np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
-        free = np.array([True, False, True])
-
-        alpha, beta = CLA._solve(a, b, free)
-
-        # Solution should have shape (3, 2)
-        assert alpha.shape == (3,)
-        assert beta.shape == (3,)
-
 
 class TestCLAEdgeCases:
     """Test edge cases and special scenarios for CLA."""

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -33,7 +33,17 @@ if TYPE_CHECKING:
 import numpy as np
 from numpy.typing import NDArray
 
+from .operators import CovarianceOperator
 from .optimize import minimize
+
+
+def _covariance_matvec(
+    covariance: NDArray[np.float64] | CovarianceOperator, x: NDArray[np.float64]
+) -> NDArray[np.float64]:
+    """Compute ``Sigma @ x`` for a dense matrix or a ``CovarianceOperator`` backend."""
+    if isinstance(covariance, np.ndarray):
+        return cast("NDArray[np.float64]", covariance) @ x
+    return covariance.matvec(x)
 
 
 @dataclass(frozen=True)
@@ -83,17 +93,18 @@ class FrontierPoint:
         """
         return float(mean.T @ self.weights)
 
-    def variance(self, covariance: NDArray[np.float64]) -> float:
+    def variance(self, covariance: NDArray[np.float64] | CovarianceOperator) -> float:
         """Compute the expected variance of the portfolio.
 
         Args:
-            covariance: Covariance matrix of asset returns.
+            covariance: Covariance matrix of asset returns, either as a dense
+                matrix or as a ``CovarianceOperator`` backend.
 
         Returns:
             The expected variance of the portfolio.
 
         """
-        return float(self.weights.T @ covariance @ self.weights)
+        return float(self.weights.T @ _covariance_matvec(covariance, self.weights))
 
 
 @dataclass(frozen=True)
@@ -123,7 +134,7 @@ class Frontier:
     """A frontier is a list of frontier points. Some of them might be turning points."""
 
     mean: NDArray[np.float64]
-    covariance: NDArray[np.float64]
+    covariance: NDArray[np.float64] | CovarianceOperator
     frontier: list[FrontierPoint] = field(default_factory=list)
 
     def interpolate(self, num: int = 100) -> Frontier:
@@ -200,7 +211,7 @@ class Frontier:
             # convex combination of left and right weights
             weight = alpha * w_left + (1 - alpha) * w_right
             # compute the variance
-            var = float(weight.T @ self.covariance @ weight)
+            var = float(weight.T @ _covariance_matvec(self.covariance, weight))
             returns = float(self.mean.T @ weight)
             return float(-returns / np.sqrt(var))
 

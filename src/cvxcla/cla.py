@@ -22,11 +22,13 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .first import init_algo
+from .operators import CovarianceOperator, DenseCovariance
 from .types import Frontier, FrontierPoint, TurningPoint
 
 
@@ -44,7 +46,9 @@ class CLA:
 
     Attributes:
         mean: Vector of expected returns for each asset.
-        covariance: Covariance matrix of asset returns.
+        covariance: Covariance matrix of asset returns, either as a plain
+            ``numpy`` array or as a ``CovarianceOperator`` backend
+            (see ``cvxcla.operators``).
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
         a: Matrix for linear equality constraints (Ax = b).
@@ -56,7 +60,7 @@ class CLA:
     """
 
     mean: NDArray[np.float64]
-    covariance: NDArray[np.float64]
+    covariance: NDArray[np.float64] | CovarianceOperator
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
     a: NDArray[np.float64]
@@ -66,33 +70,16 @@ class CLA:
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     @cached_property
-    def proj(self) -> np.ndarray:
-        """Construct the projection matrix used in computing Lagrange multipliers.
+    def covariance_operator(self) -> CovarianceOperator:
+        """Return the covariance as a ``CovarianceOperator`` backend.
 
-        P is formed by horizontally stacking the covariance matrix and the transpose
-        of the equality constraint matrix A. It is used to compute:
-            - gamma = P @ alpha
-            - delta = P @ beta - mean
-
-        This step helps identify which constraints are becoming active or inactive.
+        A plain ``numpy`` covariance matrix is wrapped in ``DenseCovariance``;
+        an object already implementing the protocol is passed through. This is
+        the single point where the input form is normalised.
         """
-        return np.block([self.covariance, self.a.T])
-
-    @cached_property
-    def kkt(self) -> np.ndarray:
-        """Construct the Karush-Kuhn-Tucker (KKT) system matrix.
-
-        The KKT matrix is built by augmenting the covariance matrix with the
-        equality constraints. It forms the linear system:
-            [Σ  Aᵗ]
-            [A   0 ]
-        which we solve to get the optimal portfolio weights (alpha) and the
-        Lagrange multipliers (lambda) corresponding to the constraints.
-
-        This matrix is symmetric but not necessarily positive definite.
-        """
-        m = self.a.shape[0]
-        return np.block([[self.covariance, self.a.T], [self.a, np.zeros((m, m))]])
+        if isinstance(self.covariance, np.ndarray):
+            return DenseCovariance(cast("NDArray[np.float64]", self.covariance))
+        return self.covariance
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
@@ -103,16 +90,22 @@ class CLA:
         computing the next turning point with a lower expected return until
         it reaches the minimum variance portfolio.
 
-        The algorithm uses a block matrix approach to solve the system of equations
-        that determine the turning points.
+        The reduced KKT system at each turning point is solved by block
+        elimination: two multi-RHS solves against the free covariance block
+        (via the covariance backend) and a small m x m Schur complement
+        ``A_F @ Sigma_FF^{-1} @ A_F.T``, where m is the number of equality
+        constraints. The covariance only enters through the
+        ``CovarianceOperator`` interface, so structured backends (e.g.
+        ``FactorCovariance``) never materialise an n x n matrix.
 
         Raises:
-            AssertionError: If all variables are blocked, which would make the
-                            system of equations singular.
+            RuntimeError: If all variables are blocked, which would make the
+                          system of equations singular.
 
         """
         m = self.a.shape[0]
         ns = len(self.mean)
+        cov = self.covariance_operator
 
         # Compute and store the first turning point
         self._append(self._first_turning_point())
@@ -134,29 +127,46 @@ class CLA:
             _out = at_upper | at_lower
             _in = ~_out
 
-            # --- Construct RHS for KKT system ---
             fixed_weights = np.zeros(ns)
             fixed_weights[at_upper] = self.upper_bounds[at_upper]
             fixed_weights[at_lower] = self.lower_bounds[at_lower]
 
-            adjusted_mean = self.mean.copy()
-            adjusted_mean[_out] = 0.0
+            # --- Solve the reduced KKT system by block elimination ---
+            # [Sigma_FF  A_F.T] [x ]   [r1]      with r1, r2 the RHS for the
+            # [A_F       0    ] [nu] = [r2]      alpha (weights) and beta system
+            a_free = self.a[:, _in]
 
-            free_mask = np.concatenate([_in, np.ones(m, dtype=bool)])
-            rhs_alpha = np.concatenate([fixed_weights, self.b])
-            rhs_beta = np.concatenate([adjusted_mean, np.zeros(m)])
-            rhs = np.column_stack([rhs_alpha, rhs_beta])
+            # Free-block solves: Sigma_FF^{-1} [A_F.T | r1_alpha | r1_beta]
+            rhs_free = np.column_stack(
+                [
+                    a_free.T,
+                    -cov.cross(_in, fixed_weights),
+                    self.mean[_in],
+                ]
+            )
+            solved = cov.solve_free(_in, rhs_free)
+            y = solved[:, :m]  # Sigma_FF^{-1} A_F.T
+            z_alpha = solved[:, m]
+            z_beta = solved[:, m + 1]
 
-            # --- Solve KKT system ---
-            alpha, beta = CLA._solve(self.kkt, rhs, free_mask)
+            # Schur complement A_F Sigma_FF^{-1} A_F.T and multipliers
+            schur = a_free @ y
+            r2_alpha = self.b - self.a[:, _out] @ fixed_weights[_out]
+            nu = np.linalg.solve(schur, np.column_stack([a_free @ z_alpha - r2_alpha, a_free @ z_beta]))
+            nu_alpha, nu_beta = nu[:, 0], nu[:, 1]
+
+            # Back-substitute the free weights
+            r_alpha = fixed_weights.copy()
+            r_alpha[_in] = z_alpha - y @ nu_alpha
+            r_beta = np.zeros(ns)
+            r_beta[_in] = z_beta - y @ nu_beta
 
             # --- Compute Lagrange multipliers and directional derivatives ---
-            gamma = self.proj @ alpha
-            delta = self.proj @ beta - self.mean
+            gamma = cov.matvec(r_alpha) + self.a.T @ nu_alpha
+            delta = cov.matvec(r_beta) + self.a.T @ nu_beta - self.mean
 
             # --- Compute event ratios ---
             l_mat = np.full((ns, 4), -np.inf)
-            r_alpha, r_beta = alpha[:ns], beta[:ns]
             tol = self.tol
 
             l_mat[_in & (r_beta < -tol), 0] = (
@@ -185,31 +195,6 @@ class CLA:
 
         # Final point at lambda = 0
         self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
-
-    @staticmethod
-    def _solve(a: NDArray[np.float64], b: np.ndarray, _in: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Solve the system A x = b with some variables fixed.
-
-        Args:
-            a: Coefficient matrix of shape (n, n).
-            b: Right-hand side matrix of shape (n, 2).
-            _in: Boolean array of shape (n,) indicating which variables are free.
-
-        Returns:
-            A tuple (alpha, beta) of solutions for the two RHS vectors.
-
-        """
-        _out = ~_in
-        n = a.shape[1]
-        x = np.zeros((n, 2))
-
-        x[_out] = b[_out]  # Set fixed variables
-        reduced_a = a[_in][:, _in]
-        reduced_b = b[_in] - a[_in][:, _out] @ x[_out]
-
-        x[_in] = np.linalg.solve(reduced_a, reduced_b)
-
-        return x[:, 0], x[:, 1]
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
