@@ -38,6 +38,10 @@ on:
 
 jobs:
   mutation:
+    # Opt-in gate: mutation testing is OFF by default. The job only runs when
+    # this repo sets the `MUTATION_ENABLED` variable to 'true'. Gating here in
+    # the caller keeps it optional regardless of the pinned reusable workflow.
+    if: ${{ vars.MUTATION_ENABLED == 'true' }}
     uses: jebel-quant/rhiza/.github/workflows/rhiza_mutation.yml@v0.19.1
     secrets: inherit
     permissions:
