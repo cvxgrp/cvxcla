@@ -6,3 +6,4 @@ profiles:
 
 templates:
   - legal
+  - github-paper
