@@ -62,6 +62,13 @@ packages = ["src/cvxcla"]
 ignore-nested-functions = true
 ignore-nested-classes = true
 
+[tool.mypy]
+# plotly ships no py.typed marker / stubs, so --strict cannot analyze it.
+# The import is type-check-only (under TYPE_CHECKING) in types.py.
+[[tool.mypy.overrides]]
+module = ["plotly.*"]
+ignore_missing_imports = true
+
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
 

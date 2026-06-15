@@ -131,7 +131,7 @@ class DenseCovariance:
     @property
     def n(self) -> int:
         """Number of assets (the dimension of the covariance)."""
-        return self.matrix.shape[0]
+        return int(self.matrix.shape[0])
 
     def matvec(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the matrix-vector product ``Sigma @ x``.
@@ -154,7 +154,7 @@ class DenseCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        return np.linalg.solve(self.matrix[np.ix_(free, free)], rhs)
+        return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
@@ -243,12 +243,12 @@ class FactorCovariance:
     @property
     def n(self) -> int:
         """Number of assets (the dimension of the covariance)."""
-        return self.d.shape[0]
+        return int(self.d.shape[0])
 
     @property
     def k(self) -> int:
         """Number of factors (the rank of the low-rank part)."""
-        return self.u.shape[1]
+        return int(self.u.shape[1])
 
     @cached_property
     def _delta_matrix(self) -> NDArray[np.float64]:

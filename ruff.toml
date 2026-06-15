@@ -149,6 +149,11 @@ line-ending = "auto"
     "RUF001",  # Allow ambiguous unicode in notebooks
     "RUF002",  # Allow ambiguous unicode in notebooks
 ]
+# Exploratory benchmark/experiment scripts - throwaway research code, not
+# shipped API, so exempt from strict annotation coverage.
+"experiments/**/*.py" = [
+    "ANN",   # experiments prioritize quick iteration over strict annotation coverage
+]
 # Internal utility scripts - specific exceptions for internal tooling
 ".rhiza/utils/*.py" = [
     "PLW2901",  # Allow loop variable overwriting in utility scripts
