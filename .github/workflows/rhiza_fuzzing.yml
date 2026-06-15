@@ -29,7 +29,12 @@ permissions:
 
 jobs:
   fuzzing:
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_fuzzing.yml@v0.19.1
+    # TEMPORARY: v0.19.1's reusable workflow runs build_fuzzers unconditionally and
+    # fails with "lstat .clusterfuzzlite: no such file or directory" in repos (like
+    # this one) that ship no .clusterfuzzlite/ config. Pin to the commit that adds
+    # the skip-guard + FUZZING_ENABLED opt-in (jebel-quant/rhiza#1246) until a
+    # release including it lands; the next template sync will re-pin this to a tag.
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_fuzzing.yml@6fcf7843f14ed0ebc6fd0a0dec64878827609a68  # main / #1246
     secrets: inherit
     permissions:
       contents: read
