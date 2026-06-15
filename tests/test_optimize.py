@@ -219,6 +219,63 @@ class TestMinimize:
         # Solution should be near x=10
         assert abs(result["x"][0] - 10.0) < 0.01
 
+    def test_nit_zero_when_bracket_already_within_tol(self):
+        """Nit stays 0 when the initial bracket is already narrower than tol.
+
+        Pins the iter_count initial value: with bounds whose width is below tol,
+        the golden-section loop never executes, so the reported iteration count
+        must be exactly 0.
+        """
+
+        def f(x):
+            return x**2
+
+        result = minimize(f, x0=0.5, bounds=((0.5, 0.5 + 1e-12),))
+
+        assert result["nit"] == 0
+
+    def test_nit_counts_every_iteration(self):
+        """Nit grows past 1, pinning the in-loop increment (not a reset to 1)."""
+
+        def f(x):
+            return (x - 0.3) ** 2
+
+        result = minimize(f, x0=0.0, bounds=((0.0, 1.0),), tol=1e-10)
+
+        assert result["nit"] > 1
+
+    def test_success_false_when_max_iter_reached(self):
+        """Success is False exactly when the iteration cap is hit.
+
+        Pins the strict `<` in `iter_count < max_iter`: with a cap small enough
+        that the search cannot converge, nit equals max_iter and success must
+        be False (a `<=` would wrongly report success).
+        """
+
+        def f(x):
+            return (x - 0.123456789) ** 2
+
+        result = minimize(f, x0=0.0, bounds=((0.0, 1.0),), max_iter=3)
+
+        assert result["nit"] == 3
+        assert result["success"] is False
+
+    def test_one_sided_infinite_bound_uses_expansion_branch(self):
+        """A single infinite bound must take the expansion branch, not lower/upper.
+
+        Pins the `and` in the finite-bounds check: with `or`, one finite bound
+        would set the bracket to (lower, +inf), producing NaN in the golden
+        section. The minimum at the finite lower bound must still be found.
+        """
+
+        def f(x):
+            return (x - 2.0) ** 2
+
+        result = minimize(f, x0=2.0, bounds=((2.0, np.inf),))
+
+        assert np.isfinite(result["x"][0])
+        assert np.isclose(result["x"][0], 2.0, atol=1e-3)
+
     def test_overflow_handling_right_actual_exception(self):
         """Test that OverflowError raised in the right-expansion loop is caught.
 

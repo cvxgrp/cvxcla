@@ -275,7 +275,7 @@ class TestCLAErrors:
 
         with (
             patch.object(CLA, "_first_turning_point", return_value=bad_tp),
-            pytest.raises(RuntimeError, match="All variables cannot be blocked"),
+            pytest.raises(RuntimeError, match=r"^All variables cannot be blocked$"),
         ):
             CLA(
                 mean=mean,
@@ -299,7 +299,7 @@ class TestCLAErrors:
 
         # -0.5 is below lower_bounds[0]=0 - tol
         tp = TurningPoint(weights=np.array([-0.5, 0.75, 0.75]), free=np.array([True, False, False]))
-        with pytest.raises(ValueError, match="Weights below lower bounds"):
+        with pytest.raises(ValueError, match=r"^Weights below lower bounds$"):
             cla._append(tp)
 
     def test_append_weights_above_upper_bounds(self):
@@ -315,7 +315,7 @@ class TestCLAErrors:
 
         # weight 1.0 > upper_bounds[2]=0.8 + tol
         tp = TurningPoint(weights=np.array([0.0, 0.0, 1.0]), free=np.array([True, False, False]))
-        with pytest.raises(ValueError, match="Weights above upper bounds"):
+        with pytest.raises(ValueError, match=r"^Weights above upper bounds$"):
             cla._append(tp)
 
     def test_append_weights_do_not_sum_to_one(self):
@@ -333,7 +333,7 @@ class TestCLAErrors:
         class FakeTP:
             weights = np.array([0.2, 0.2, 0.2])  # sums to 0.6, not 1
 
-        with pytest.raises(ValueError, match="Weights do not sum to 1"):
+        with pytest.raises(ValueError, match=r"^Weights do not sum to 1$"):
             cla._append(FakeTP())
 
 
@@ -460,3 +460,55 @@ class TestAppendTolerance:
         before = len(cla)
         cla._append(tp)
         assert len(cla) == before + 1
+
+
+class TestCLAMutationHardening:
+    """Targeted tests pinning behaviour that mutation testing flagged as unguarded."""
+
+    @pytest.fixture
+    def small_problem(self):
+        """A small, well-conditioned problem with a fully-invested constraint."""
+        np.random.seed(7)
+        n = 4
+        mean = np.array([0.10, 0.12, 0.15, 0.20])
+        m = np.random.randn(n, n)
+        covariance = m @ m.T
+        return {
+            "mean": mean,
+            "covariance": covariance,
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+
+    def test_cla_is_frozen(self, small_problem):
+        """CLA is an immutable (frozen) dataclass."""
+        import dataclasses
+
+        cla = CLA(lower_bounds=np.zeros(4), upper_bounds=np.ones(4), **small_problem)
+        with pytest.raises(dataclasses.FrozenInstanceError):
+            cla.tol = 1e-3
+
+    def test_cla_logger_is_a_logger(self, small_problem):
+        """The default logger is a real ``logging.Logger`` instance, not None."""
+        import logging
+
+        cla = CLA(lower_bounds=np.zeros(4), upper_bounds=np.ones(4), **small_problem)
+        assert isinstance(cla.logger, logging.Logger)
+
+    def test_nonzero_lower_bounds_respected(self, small_problem):
+        """Every turning point honours non-zero lower bounds.
+
+        With non-zero lower bounds, the at-lower-bound test must subtract (not
+        add) the bounds; otherwise blocked assets are misclassified and the
+        frontier drifts below its lower bounds.
+        """
+        n = 4
+        lower = np.full(n, 0.1)
+        upper = np.ones(n)
+        cla = CLA(lower_bounds=lower, upper_bounds=upper, **small_problem)
+
+        assert len(cla.turning_points) >= 2
+        for tp in cla.turning_points:
+            assert np.all(tp.weights >= lower - cla.tol)
+            assert np.all(tp.weights <= upper + cla.tol)
+            assert np.isclose(np.sum(tp.weights), 1.0)

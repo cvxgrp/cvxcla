@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import plotly.graph_objects as go
@@ -42,7 +42,7 @@ def _covariance_matvec(
 ) -> NDArray[np.float64]:
     """Compute ``Sigma @ x`` for a dense matrix or a ``CovarianceOperator`` backend."""
     if isinstance(covariance, np.ndarray):
-        return cast("NDArray[np.float64]", covariance) @ x
+        return covariance @ x
     return covariance.matvec(x)
 
 
@@ -155,7 +155,7 @@ class Frontier:
 
         def _interpolate() -> Iterator[FrontierPoint]:
             """Yield interpolated frontier points between each adjacent pair."""
-            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):
+            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):  # pragma: no mutate
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
                         yield FrontierPoint(weights=lamb * w_left + (1 - lamb) * w_right)
@@ -189,12 +189,14 @@ class Frontier:
     @property
     def sharpe_ratio(self) -> np.ndarray:
         """Vector of expected Sharpe ratios."""
-        return self.returns / self.volatility
+        ratios: np.ndarray = self.returns / self.volatility
+        return ratios
 
     @property
     def volatility(self) -> np.ndarray:
         """Vector of expected volatilities."""
-        return np.sqrt(self.variance)
+        vol: np.ndarray = np.sqrt(self.variance)
+        return vol
 
     @property
     def max_sharpe(self) -> tuple[float, np.ndarray]:
@@ -218,7 +220,7 @@ class Frontier:
         sharpe_ratios = self.sharpe_ratio
 
         # in which point is the maximal Sharpe ratio?
-        sr_position_max = np.argmax(self.sharpe_ratio)
+        sr_position_max = int(np.argmax(self.sharpe_ratio))
 
         # min only there for security...
         right = min(sr_position_max + 1, len(self) - 1)
