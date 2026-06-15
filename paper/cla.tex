@@ -14,10 +14,13 @@
 \usepackage{geometry}
 \usepackage{hyperref}
 \usepackage{booktabs}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \usepackage{xcolor}
 \usepackage[round,authoryear]{natbib}
+
+% The algorithm listing below is typeset with only base LaTeX (a boxed minipage
+% plus nested enumerate), so the paper builds without the algorithm/algorithmicx
+% packages (algorithm.sty / algpseudocode.sty), which are not present in every
+% TeX distribution.
 
 \geometry{margin=1in}
 \hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black,
@@ -324,31 +327,45 @@ budget constraint before being accepted.
 
 \subsection{The complete procedure}
 
-Algorithm~\ref{alg:cla} collects the steps.
+Algorithm~1 collects the steps.
 
-\begin{algorithm}[t]
-\caption{Critical Line Algorithm (as implemented in \texttt{cvxcla})}
-\label{alg:cla}
-\begin{algorithmic}[1]
-\Require mean $\mu$, covariance $\Sig$, bounds $\lb,\ub$, constraints $A,b$, tolerance $\tau$
-\State $w^{(0)} \gets \texttt{init\_algo}(\mu,\lb,\ub)$ \Comment{max-return vertex, \S\ref{sec:first}}
-\State append $w^{(0)}$ with $\lambda \gets \infty$
-\While{$\lambda > 0$}
-  \State $(\F,\B) \gets$ free/blocked partition of the last turning point
-  \State classify $\B$ into \emph{at-upper} / \emph{at-lower}; fix $w_\B$ to the active bounds
-  \State solve the free block $\Sig_{\F\F}$ for $Y, z^{\alpha}, z^{\beta}$ \Comment{multi-RHS, \S\ref{sec:blockelim}}
-  \State form Schur complement $S = A_\F Y$; solve \eqref{eq:schur} for $\nu^{\alpha},\nu^{\beta}$
-  \State back-substitute \eqref{eq:freesoln} to get $\alpha,\beta$
-  \State compute reduced gradients $\gamma,\delta$ via \eqref{eq:gamma}--\eqref{eq:delta}
-  \State assemble candidate ratios $L$ from \eqref{eq:freeevents}--\eqref{eq:blockedevents}; apply slope floor and $\lambda$ window
-  \State $\lambda^{\star} \gets \max L$; \textbf{if} $\lambda^{\star} < 0$ \textbf{then break}
-  \State pick the event by the Bland-style rule (\S\ref{sec:bland}); update the \texttt{free} mask for that one asset
-  \State $\lambda \gets \lambda^{\star}$; append turning point $w \gets \alpha + \lambda^{\star}\beta$
-\EndWhile
-\State append final turning point $w \gets \alpha$ at $\lambda = 0$ \Comment{minimum-variance portfolio}
-\State \Return list of turning points
-\end{algorithmic}
-\end{algorithm}
+\begin{center}
+\fbox{\begin{minipage}{0.93\textwidth}
+\textbf{Algorithm 1.}~Critical Line Algorithm (as implemented in \texttt{cvxcla}).
+
+\smallskip
+\textit{Input:} mean $\mu$, covariance $\Sig$, bounds $\lb,\ub$, equality
+constraints $A,b$, tolerance $\tau$.
+
+\smallskip
+\begin{enumerate}\setlength{\itemsep}{2pt}
+\item Compute $w^{(0)} \gets \texttt{init\_algo}(\mu,\lb,\ub)$, the maximum-return
+      vertex (\S\ref{sec:first}); append it with $\lambda \gets \infty$.
+\item \textbf{While} $\lambda > 0$:
+  \begin{enumerate}\setlength{\itemsep}{2pt}
+  \item Read the free/blocked partition $(\F,\B)$ of the last turning point;
+        classify $\B$ into \emph{at-upper}/\emph{at-lower} and fix $w_\B$ to the
+        active bounds.
+  \item Solve the free block $\Sig_{\F\F}$ for $Y, z^{\alpha}, z^{\beta}$
+        (multi-RHS, \S\ref{sec:blockelim}).
+  \item Form the Schur complement $S = A_\F Y$ and solve \eqref{eq:schur} for
+        $\nu^{\alpha},\nu^{\beta}$; back-substitute \eqref{eq:freesoln} to get
+        $\alpha,\beta$.
+  \item Compute the reduced gradients $\gamma,\delta$ via
+        \eqref{eq:gamma}--\eqref{eq:delta}.
+  \item Assemble the candidate ratios $L$ from
+        \eqref{eq:freeevents}--\eqref{eq:blockedevents}; apply the slope floor and
+        the $\lambda$ window. Set $\lambda^{\star} \gets \max L$; \textbf{if}
+        $\lambda^{\star} < 0$ \textbf{break}.
+  \item Pick the event by the Bland-style rule (\S\ref{sec:bland}) and flip the
+        \texttt{free} status of that one asset. Set $\lambda \gets \lambda^{\star}$
+        and append the turning point $w \gets \alpha + \lambda^{\star}\beta$.
+  \end{enumerate}
+\item Append the final turning point $w \gets \alpha$ at $\lambda = 0$ (the
+      minimum-variance portfolio) and \textbf{return} the list of turning points.
+\end{enumerate}
+\end{minipage}}
+\end{center}
 
 \section{The covariance operator abstraction}
 \label{sec:operators}
