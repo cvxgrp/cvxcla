@@ -22,9 +22,17 @@ on:
       - main
       - master
 
+# Cancel superseded in-progress runs of this workflow for the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   book:
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_book.yml@v0.18.8
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_book.yml@v0.19.0
     secrets: inherit
     permissions:
       contents: read
