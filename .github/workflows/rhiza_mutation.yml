@@ -7,8 +7,13 @@
 #          coverage proves code is executed, not that a wrong result would be
 #          caught; surviving mutants reveal assertions that are too weak.
 #
-#          Enforced gate: mutation runs are required and fail when mutants
-#          survive (100% mutation score threshold in the reusable workflow).
+#          Opt-in: mutation testing is OFF by default and very optional. Set the
+#          repository variable `MUTATION_ENABLED` to 'true' to run it; otherwise
+#          the reusable workflow skips the mutation job (the run stays green).
+#
+#          Enforced gate (when enabled): mutation runs are required and fail when
+#          mutants survive (100% mutation score threshold in the reusable
+#          workflow).
 #
 #          Thin stub: the mutation logic and the opt-in gate live in the
 #          reusable workflow in jebel-quant/rhiza; this file only wires up the
@@ -33,7 +38,7 @@ on:
 
 jobs:
   mutation:
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_mutation.yml@v0.19.0
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_mutation.yml@v0.19.1
     secrets: inherit
     permissions:
       contents: read

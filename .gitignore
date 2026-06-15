@@ -122,3 +122,6 @@ local.mk
 
 .bandit-baseline.json
 
+# mutmut mutation testing cache
+.mutmut-cache
+
