@@ -22,11 +22,6 @@
 
 name: "(RHIZA) MUTATION"
 
-# Cancel superseded in-progress runs of this workflow for the same ref.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
@@ -42,3 +37,5 @@ jobs:
     secrets: inherit
     permissions:
       contents: read
+      pages: write       # publish-mutation-badge deploys the badge to Pages
+      id-token: write    # publish-mutation-badge needs OIDC for the Pages deploy
