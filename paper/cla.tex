@@ -1,0 +1,492 @@
+% The Critical Line Algorithm as implemented in cvxcla
+%
+% This paper documents the algorithm implemented in src/cvxcla/cla.py
+% (with supporting modules first.py, operators.py and types.py).
+%
+% Build with:  pdflatex cla.tex   (no bibliography tool required)
+
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage[round,authoryear]{natbib}
+
+% The algorithm listing below is typeset with only base LaTeX (a boxed minipage
+% plus nested enumerate), so the paper builds without the algorithm/algorithmicx
+% packages (algorithm.sty / algpseudocode.sty), which are not present in every
+% TeX distribution.
+
+\geometry{margin=1in}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black,
+  citecolor=blue!50!black}
+
+% --- notation shortcuts -------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Sig}{\Sigma}
+\newcommand{\F}{\mathcal{F}}        % free set
+\newcommand{\B}{\mathcal{B}}        % blocked set
+\newcommand{\lb}{\ell}              % lower bound
+\newcommand{\ub}{u}                 % upper bound
+\newcommand{\trans}{^{\mathsf{T}}}
+\newcommand{\inv}{^{-1}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\title{\textbf{The Critical Line Algorithm}\\[0.3em]
+\large A parametric active-set method for the entire mean--variance efficient frontier,
+as implemented in \texttt{cvxcla}}
+
+\author{cvxcla --- Stanford University Convex Optimization Group}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We describe the Critical Line Algorithm (CLA) of Markowitz as implemented in the
+\texttt{cvxcla} package. The CLA computes the \emph{entire} mean--variance
+efficient frontier of a long-only (or box-constrained) portfolio problem exactly,
+rather than sampling it point by point. It exploits the fact that the efficient
+frontier is piecewise linear in the weight space: between two consecutive
+\emph{turning points} the optimal weights are an affine function $w(\lambda) =
+\alpha + \lambda\beta$ of a single scalar parameter $\lambda$ that trades expected
+return against variance. The algorithm starts at the maximum-return portfolio
+($\lambda=\infty$) and walks the frontier down to the minimum-variance portfolio
+($\lambda=0$), changing the status of exactly one asset at each turning point.
+Each step amounts to a single solve of a reduced Karush--Kuhn--Tucker (KKT) system,
+handled here by block elimination through a small Schur complement. We document the
+problem formulation, the optimality conditions, the event logic that detects
+turning points, the anti-cycling rule used on degenerate problems, and the
+covariance-operator abstraction that lets structured risk models (diagonal plus
+low rank) avoid ever materialising a dense $n\times n$ matrix.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+
+The mean--variance portfolio selection problem of \citet{markowitz1952} asks for the
+allocation of capital across $n$ assets that minimises risk for a given level of
+expected return. Sweeping the return level produces a one-parameter family of optimal
+portfolios whose risk--return image is the \emph{efficient frontier}. The Critical
+Line Algorithm (CLA), introduced by \citet{markowitz1956} and developed in
+\citet{markowitz1959}, computes this frontier \emph{exactly and in full}: it returns a
+finite list of \emph{turning points} between which the frontier is described in closed
+form, so no discretisation or repeated re-optimisation is required.
+
+This document describes the implementation in the \texttt{cvxcla} package. The core of
+the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
+supported by \texttt{first.py} (the starting portfolio), \texttt{operators.py} (the
+covariance backend), and \texttt{types.py} (the turning-point and frontier data
+structures). The notation below follows the code: $\mu$ is the vector of expected
+returns, $\Sig$ the covariance, $A,b$ the linear equality constraints, and $\lb,\ub$ the
+box bounds on the weights.
+
+\section{Problem formulation}
+
+\subsection{The parametric quadratic program}
+
+Let $w\in\R^n$ be the vector of portfolio weights, $\mu\in\R^n$ the expected returns,
+$\Sig\in\R^{n\times n}$ the (symmetric, positive semidefinite) covariance matrix,
+$A\in\R^{m\times n}$ and $b\in\R^m$ the equality constraints, and $\lb,\ub\in\R^n$ the
+lower and upper bounds. The implementation traces the frontier through the
+\emph{return-parametrised} quadratic program
+\begin{equation}
+\label{eq:qp}
+\begin{aligned}
+\min_{w\in\R^n}\quad & \tfrac12\, w\trans \Sig\, w \;-\; \lambda\,\mu\trans w \\
+\text{subject to}\quad & A w = b, \\
+& \lb \le w \le \ub,
+\end{aligned}
+\end{equation}
+where $\lambda \ge 0$ is a scalar that weights expected return against variance. The
+canonical instance has a single equality constraint, the budget constraint
+$\mathbf{1}\trans w = 1$ (so $A = \mathbf{1}\trans$ and $b = 1$), but
+\eqref{eq:qp} and the implementation allow any $m$ linear equalities.
+
+As $\lambda$ decreases from $+\infty$ to $0$, the optimiser of \eqref{eq:qp} moves from
+the maximum expected-return portfolio (subject to the constraints) to the global
+minimum-variance portfolio. The locus of these optimisers is exactly the efficient
+frontier.
+
+\subsection{Optimality conditions}
+
+At a fixed $\lambda$ the program \eqref{eq:qp} is convex, so the Karush--Kuhn--Tucker
+(KKT) conditions are necessary and sufficient. Partition the assets into a
+\emph{free} set $\F$ (weights strictly inside their bounds) and a \emph{blocked} set
+$\B = \F^{c}$ (weights pinned at a bound, $w_i \in \{\lb_i,\ub_i\}$). For the free
+assets the stationarity condition holds with no bound multiplier:
+\begin{equation}
+\label{eq:kkt}
+\Sig_{\F\F}\, w_\F + \Sig_{\F\B}\, w_\B + A_\F\trans \nu \;=\; \lambda\, \mu_\F,
+\qquad
+A_\F\, w_\F + A_\B\, w_\B \;=\; b,
+\end{equation}
+where $\nu\in\R^m$ is the multiplier of the equality constraints and the subscripts
+select the free/blocked rows and columns. The blocked weights $w_\B$ are known (they
+sit on $\lb$ or $\ub$), so \eqref{eq:kkt} is a linear system in the unknowns
+$(w_\F,\nu)$.
+
+\subsection{Piecewise-linearity: the affine segment}
+
+The crucial structural fact is that, \emph{while the free/blocked partition is fixed},
+the right-hand side of \eqref{eq:kkt} is affine in $\lambda$ and the system matrix is
+constant. Hence the solution is affine in $\lambda$:
+\begin{equation}
+\label{eq:segment}
+w(\lambda) \;=\; \alpha \;+\; \lambda\,\beta,
+\end{equation}
+where $\alpha,\beta\in\R^n$ are constant on the segment (the blocked entries of $\beta$
+are zero; the blocked entries of $\alpha$ equal the active bound values). The
+implementation calls these vectors \texttt{r\_alpha} and \texttt{r\_beta}. Equation
+\eqref{eq:segment} is the \emph{critical line}: a straight line in weight space valid
+for an interval of $\lambda$. A \emph{turning point} is a value of $\lambda$ at which
+the partition $(\F,\B)$ must change, i.e.\ an endpoint of such an interval.
+
+\section{The first turning point}
+\label{sec:first}
+
+The walk starts at $\lambda = +\infty$, where variance is irrelevant and \eqref{eq:qp}
+degenerates into ``earn the most expected return that the bounds and budget allow.''
+This portfolio is computed in closed form by \texttt{init\_algo}
+(\texttt{src/cvxcla/first.py}):
+
+\begin{enumerate}
+\item Initialise every weight at its lower bound, $w \gets \lb$.
+\item Sort the assets by descending expected return.
+\item Walk down that order, raising each asset's weight from $\lb_i$ towards $\ub_i$,
+      accumulating capital, until the budget $\sum_i w_i = 1$ is reached (within a
+      floating-point tolerance). The last asset touched is only \emph{partially}
+      filled --- it absorbs the residual $1 - \sum_i w_i$ --- and is the single
+      \emph{free} asset of the first turning point. All others are blocked, either at
+      their lower bound (not yet reached) or upper bound (fully filled).
+\end{enumerate}
+
+The result is ``the smallest subset of assets with highest return whose upper bounds
+sum to at least one,'' which is the maximum-return vertex of the feasible polytope. It
+is returned as a \texttt{TurningPoint} with $\lambda = \infty$, a weight vector, and a
+boolean \texttt{free} mask. The tolerance $1-10^{-12}$ on the budget test matters: the
+increment $1 - \sum_i w_i$ can only reach $1$ up to rounding, and without the slack the
+loop would skip past the genuinely interior asset and mark the next (zero-weight) asset
+as free.
+
+\section{The turning-point iteration}
+
+From the first turning point the algorithm repeatedly: (i) solves the reduced KKT
+system for the current partition to obtain the affine segment \eqref{eq:segment};
+(ii) finds the largest $\lambda$ below the current one at which an \emph{event}
+occurs; (iii) updates the partition by the single asset responsible for that event;
+and (iv) records the new turning point. It stops when $\lambda$ reaches $0$.
+
+\subsection{Solving the reduced KKT system by block elimination}
+\label{sec:blockelim}
+
+For the free partition $\F$ the system \eqref{eq:kkt} is the saddle-point (KKT) system
+\begin{equation}
+\label{eq:saddle}
+\begin{bmatrix} \Sig_{\F\F} & A_\F\trans \\[2pt] A_\F & 0 \end{bmatrix}
+\begin{bmatrix} w_\F \\ \nu \end{bmatrix}
+=
+\begin{bmatrix} r_1 \\ r_2 \end{bmatrix}.
+\end{equation}
+Because the right-hand side splits into a constant part and a $\lambda$-part, the
+implementation solves \eqref{eq:saddle} for \emph{two} right-hand sides simultaneously
+(the ``$\alpha$ system'' and the ``$\beta$ system''):
+\[
+r_1^{\alpha} = -\,\Sig_{\F\B}\, w_\B, \quad r_2^{\alpha} = b - A_\B\, w_\B;
+\qquad
+r_1^{\beta} = \mu_\F, \quad r_2^{\beta} = 0 .
+\]
+Rather than assembling and factoring the full saddle matrix, the code eliminates the
+free block first (\emph{block elimination} / Schur complement). With
+\[
+Y = \Sig_{\F\F}\inv A_\F\trans, \qquad
+z^{\alpha} = \Sig_{\F\F}\inv r_1^{\alpha}, \qquad
+z^{\beta} = \Sig_{\F\F}\inv r_1^{\beta},
+\]
+obtained from a \emph{single} multi-column solve against $\Sig_{\F\F}$, the equality
+multipliers come from the $m\times m$ Schur complement
+$S = A_\F\,\Sig_{\F\F}\inv A_\F\trans = A_\F Y$:
+\begin{equation}
+\label{eq:schur}
+\nu^{\alpha} = S\inv\!\left(A_\F z^{\alpha} - r_2^{\alpha}\right),
+\qquad
+\nu^{\beta} = S\inv\!\left(A_\F z^{\beta}\right).
+\end{equation}
+Back-substitution then gives the free part of the affine segment,
+\begin{equation}
+\label{eq:freesoln}
+\alpha_\F = z^{\alpha} - Y\nu^{\alpha},
+\qquad
+\beta_\F = z^{\beta} - Y\nu^{\beta},
+\end{equation}
+while the blocked entries are fixed: $\alpha_\B = w_\B$ and $\beta_\B = 0$. The
+dominant cost is the multi-right-hand-side solve against the free block
+$\Sig_{\F\F}$; the Schur solve \eqref{eq:schur} is only $m\times m$, and for the
+standard budget constraint $m=1$, so it is a scalar division.
+
+\subsection{Reduced gradients for blocked assets}
+
+To decide when a blocked asset should re-enter the free set we need the reduced
+gradient of the Lagrangian at the blocked coordinates. The implementation forms two
+vectors, again split into a constant and a $\lambda$-linear part:
+\begin{align}
+\gamma &= \Sig\,\alpha + A\trans \nu^{\alpha}, \label{eq:gamma}\\
+\delta &= \Sig\,\beta + A\trans \nu^{\beta} - \mu. \label{eq:delta}
+\end{align}
+For a blocked asset $i$ the quantity $\gamma_i + \lambda\,\delta_i$ is (proportional to)
+its bound multiplier along the segment. While that multiplier keeps the correct sign
+the asset is correctly blocked; the $\lambda$ at which it would change sign is exactly
+the value at which the asset wants to become free. (The covariance products
+$\Sig\alpha$ and $\Sig\beta$ are applied through the covariance operator of
+\S\ref{sec:operators}, never as an explicit dense multiply when a structured backend is
+in use.)
+
+\subsection{Event detection}
+\label{sec:events}
+
+Walking down from the current $\lambda$, the segment \eqref{eq:segment} stays optimal
+until one of two things happens. The implementation enumerates four event \emph{types},
+two for each direction:
+
+\paragraph{A free asset reaches a bound (free $\to$ blocked).}
+A free weight evolves as $w_i(\lambda) = \alpha_i + \lambda\beta_i$. It meets a bound at
+\begin{equation}
+\label{eq:freeevents}
+\lambda_i \;=\;
+\begin{cases}
+\dfrac{\ub_i - \alpha_i}{\beta_i}, & \beta_i < 0 \quad\text{(heads to the \emph{upper} bound)},\\[1.2em]
+\dfrac{\lb_i - \alpha_i}{\beta_i}, & \beta_i > 0 \quad\text{(heads to the \emph{lower} bound)}.
+\end{cases}
+\end{equation}
+
+\paragraph{A blocked asset's multiplier changes sign (blocked $\to$ free).}
+A blocked asset wants to become free at
+\begin{equation}
+\label{eq:blockedevents}
+\lambda_i \;=\; -\,\frac{\gamma_i}{\delta_i},
+\end{equation}
+admissible only when the asset is at its \emph{upper} bound with $\delta_i < 0$, or at
+its \emph{lower} bound with $\delta_i > 0$.
+
+These candidate ratios are assembled into a matrix $L\in\R^{n\times 4}$ (one column per
+event type), with entries set to $-\infty$ where the event cannot occur. Two
+numerical guards apply:
+
+\begin{itemize}
+\item \textbf{Slope floor.} Slopes $\beta_i$ and derivatives $\delta_i$ are tested
+against $\sqrt{\varepsilon_{\text{mach}}}$, not the user tolerance. A free weight with a
+\emph{tiny but nonzero} slope still crosses a bound given a long enough $\lambda$ range,
+so filtering at the coarser tolerance would let weights drift out of bounds; only slopes
+at floating-point noise level (below $\sqrt{\varepsilon_{\text{mach}}}$) are discarded,
+since the enormous ratios they would produce merely amplify rounding error.
+
+\item \textbf{$\lambda$ window.} The segment is valid only for $\lambda$ at or below the
+current value, because the frontier is traced with non-increasing $\lambda$. Candidate
+ratios above the current $\lambda$ (by more than the tolerance) are spurious crossings
+outside the segment and are set to $-\infty$.
+\end{itemize}
+
+The next turning point is at $\lambda^{\star} = \max_{i,t} L_{it}$. If
+$\lambda^{\star} < 0$ the frontier is complete.
+
+\subsection{Anti-cycling on degenerate problems}
+\label{sec:bland}
+
+On degenerate problems --- tied expected returns, duplicated assets, or several
+constraints active at once --- multiple events can occur at the same ratio
+$\lambda^{\star}$. A naive ``pick any maximiser'' rule can cycle (the same partitions
+recurring without progress). The implementation uses a \textbf{Bland-style rule}: among
+all events within the tolerance of $\lambda^{\star}$ it selects the one with the lowest
+asset index, and within an asset the lowest event-type column. This makes the choice
+deterministic and guarantees termination, resolving degeneracies one asset per
+iteration.
+
+The asset and event type selected determine the partition update: event types
+``free $\to$ blocked'' clear the asset's \texttt{free} flag, while ``blocked $\to$ free''
+set it. Exactly one asset changes status. The new weight vector
+$w(\lambda^{\star}) = \alpha + \lambda^{\star}\beta$ is stored as the next turning
+point.
+
+\subsection{Termination and the minimum-variance endpoint}
+
+The loop runs while $\lambda > 0$. When no admissible event has a positive ratio the
+walk has reached the global minimum-variance portfolio; the algorithm appends a final
+turning point at $\lambda = 0$ with weights $\alpha$ (the constant part of the current
+segment). A hard iteration cap of $100(n+1)$ guards against non-termination: since each
+step fixes the status of at least one asset, a correct trace runs $O(n)$ times, and far
+exceeding this signals a failure (e.g.\ cycling), which is raised loudly rather than
+allowed to hang. Every stored turning point is validated to satisfy the bounds and the
+budget constraint before being accepted.
+
+\subsection{The complete procedure}
+
+Algorithm~1 collects the steps.
+
+\begin{center}
+\fbox{\begin{minipage}{0.93\textwidth}
+\textbf{Algorithm 1.}~Critical Line Algorithm (as implemented in \texttt{cvxcla}).
+
+\smallskip
+\textit{Input:} mean $\mu$, covariance $\Sig$, bounds $\lb,\ub$, equality
+constraints $A,b$, tolerance $\tau$.
+
+\smallskip
+\begin{enumerate}\setlength{\itemsep}{2pt}
+\item Compute $w^{(0)} \gets \texttt{init\_algo}(\mu,\lb,\ub)$, the maximum-return
+      vertex (\S\ref{sec:first}); append it with $\lambda \gets \infty$.
+\item \textbf{While} $\lambda > 0$:
+  \begin{enumerate}\setlength{\itemsep}{2pt}
+  \item Read the free/blocked partition $(\F,\B)$ of the last turning point;
+        classify $\B$ into \emph{at-upper}/\emph{at-lower} and fix $w_\B$ to the
+        active bounds.
+  \item Solve the free block $\Sig_{\F\F}$ for $Y, z^{\alpha}, z^{\beta}$
+        (multi-RHS, \S\ref{sec:blockelim}).
+  \item Form the Schur complement $S = A_\F Y$ and solve \eqref{eq:schur} for
+        $\nu^{\alpha},\nu^{\beta}$; back-substitute \eqref{eq:freesoln} to get
+        $\alpha,\beta$.
+  \item Compute the reduced gradients $\gamma,\delta$ via
+        \eqref{eq:gamma}--\eqref{eq:delta}.
+  \item Assemble the candidate ratios $L$ from
+        \eqref{eq:freeevents}--\eqref{eq:blockedevents}; apply the slope floor and
+        the $\lambda$ window. Set $\lambda^{\star} \gets \max L$; \textbf{if}
+        $\lambda^{\star} < 0$ \textbf{break}.
+  \item Pick the event by the Bland-style rule (\S\ref{sec:bland}) and flip the
+        \texttt{free} status of that one asset. Set $\lambda \gets \lambda^{\star}$
+        and append the turning point $w \gets \alpha + \lambda^{\star}\beta$.
+  \end{enumerate}
+\item Append the final turning point $w \gets \alpha$ at $\lambda = 0$ (the
+      minimum-variance portfolio) and \textbf{return} the list of turning points.
+\end{enumerate}
+\end{minipage}}
+\end{center}
+
+\section{The covariance operator abstraction}
+\label{sec:operators}
+
+The turning-point loop touches the covariance matrix through only three operations:
+a full matrix--vector product $\Sig x$ (\texttt{matvec}); a solve against the free block,
+$\Sig_{\F\F}\inv R$ for a multi-column right-hand side $R$ (\texttt{solve\_free}); and a
+free-to-blocked cross product $\Sig_{\F\B}\,x_\B$ (\texttt{cross}). The package captures
+exactly this contract in the \texttt{CovarianceOperator} protocol
+(\texttt{src/cvxcla/operators.py}), so the algorithm never assumes an explicit matrix.
+Two backends implement it.
+
+\subsection{Dense covariance}
+
+\texttt{DenseCovariance} wraps an explicit symmetric $n\times n$ matrix and implements
+the three operations with plain \texttt{numpy} calls: \texttt{matvec} is $\Sig x$,
+\texttt{solve\_free} is \texttt{np.linalg.solve} on the principal submatrix
+$\Sig_{\F\F}$, and \texttt{cross} is the off-diagonal block product. This reproduces
+exactly the behaviour of the classical CLA on a raw matrix and is the reference
+backend.
+
+\subsection{Factor (diagonal-plus-low-rank) covariance}
+
+\texttt{FactorCovariance} represents a structured risk model
+\begin{equation}
+\label{eq:factor}
+\Sig \;=\; \operatorname{diag}(d) \;+\; U\,\Delta\,U\trans,
+\qquad d\in\R^{n}_{>0},\; U\in\R^{n\times k},\; \Delta\in\R^{k\times k},
+\end{equation}
+the form taken by factor models and by random-matrix-theory-cleaned covariances
+(constant-residual-eigenvalue / eigenvalue clipping). The free-block solve never forms
+$\Sig_{\F\F}$; instead it uses the Woodbury identity
+\begin{equation}
+\label{eq:woodbury}
+\Sig_{\F\F}\inv \;=\; D_\F\inv \;-\; D_\F\inv U_\F\, W\inv\, U_\F\trans D_\F\inv,
+\qquad
+W \;=\; \Delta\inv + U_\F\trans D_\F\inv U_\F \;\in\;\R^{k\times k},
+\end{equation}
+so a solve costs $O(n_\F k^2 + k^3)$ rather than $O(n_\F^3)$, and no $n\times n$ matrix
+is ever allocated --- memory and per-solve cost scale as $O(nk)$ instead of $O(n^2)$.
+The cross product \eqref{eq:factor} contributes only through its low-rank part, since
+the diagonal has no off-diagonal block:
+\(
+\Sig_{\F\B}\,x_\B = U_\F\,\Delta\,(U_\B\trans x_\B).
+\)
+Because the CLA accesses the covariance solely through the protocol, switching from a
+dense matrix to a factor model requires no change to the turning-point loop.
+
+\section{The efficient frontier object}
+
+The list of turning points is wrapped in a \texttt{Frontier} object
+(\texttt{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
+exposes its expected return $\mu\trans w$ and variance $w\trans\Sig w$. Between adjacent
+turning points the frontier in \emph{weight} space is the straight segment
+\eqref{eq:segment}, so the object can \texttt{interpolate} any number of intermediate
+portfolios by convex combination. Derived quantities --- volatility, Sharpe ratio --- are
+computed pointwise. The maximum-Sharpe portfolio is found by a one-dimensional search
+over the convex combination of the two turning points bracketing the discrete Sharpe
+maximum, exploiting the same piecewise-linear weight structure.
+
+\section{Complexity and properties}
+
+\begin{itemize}
+\item \textbf{Exactness.} The frontier is returned exactly as a finite set of turning
+points; between them the closed-form segment \eqref{eq:segment} holds. No
+discretisation error is introduced.
+
+\item \textbf{Number of turning points.} Each iteration changes exactly one asset's
+status, so the number of turning points is $O(n)$ in practice; the implementation caps
+iterations at $100(n+1)$ as a safety net.
+
+\item \textbf{Per-iteration cost.} Dominated by the free-block solve: $O(n_\F^3)$ for
+the dense backend, or $O(n_\F k^2 + k^3)$ for the factor backend via Woodbury
+\eqref{eq:woodbury}. The Schur complement \eqref{eq:schur} adds only an $m\times m$
+solve ($m=1$ for the budget constraint).
+
+\item \textbf{Robustness on degenerate data.} The Bland-style tie-break
+(\S\ref{sec:bland}) and the $\sqrt{\varepsilon_{\text{mach}}}$ slope floor
+(\S\ref{sec:events}) make the trace deterministic and prevent both cycling and
+out-of-bounds drift.
+\end{itemize}
+
+\section{Conclusion}
+
+The Critical Line Algorithm computes the complete mean--variance efficient frontier by
+recognising its piecewise-linear structure in weight space and walking from the
+maximum-return portfolio to the minimum-variance portfolio, flipping one asset between
+the free and blocked sets at each turning point. The \texttt{cvxcla} implementation
+realises each step as a single block-eliminated KKT solve, hardens the event logic
+against degeneracy and floating-point noise, and abstracts the covariance behind a
+small operator protocol so that structured risk models obtain the same exact frontier
+at a fraction of the dense cost.
+
+\begin{thebibliography}{9}
+
+\bibitem[Markowitz(1952)]{markowitz1952}
+H.~M. Markowitz.
+\newblock Portfolio selection.
+\newblock \emph{The Journal of Finance}, 7(1):77--91, 1952.
+
+\bibitem[Markowitz(1956)]{markowitz1956}
+H.~M. Markowitz.
+\newblock The optimization of a quadratic function subject to linear constraints.
+\newblock \emph{Naval Research Logistics Quarterly}, 3(1--2):111--133, 1956.
+
+\bibitem[Markowitz(1959)]{markowitz1959}
+H.~M. Markowitz.
+\newblock \emph{Portfolio Selection: Efficient Diversification of Investments}.
+\newblock John Wiley \& Sons, New York, 1959.
+
+\bibitem[Niedermayer and Niedermayer(2010)]{niedermayer2010}
+A.~Niedermayer and D.~Niedermayer.
+\newblock Applying Markowitz's critical line algorithm.
+\newblock In \emph{Handbook of Portfolio Construction}, pages 383--400. Springer, 2010.
+
+\bibitem[Bailey and L\'opez de Prado(2013)]{bailey2013}
+D.~H. Bailey and M.~L\'opez de Prado.
+\newblock An open-source implementation of the critical-line algorithm for portfolio
+optimization.
+\newblock \emph{Algorithms}, 6(1):169--196, 2013.
+
+\end{thebibliography}
+
+\end{document}
