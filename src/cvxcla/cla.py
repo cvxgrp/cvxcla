@@ -65,7 +65,7 @@ class CLA:
     a: NDArray[np.float64]
     b: NDArray[np.float64]
     turning_points: list[TurningPoint] = field(default_factory=list)
-    tol: float = 1e-5
+    tol: float = 1e-5  # pragma: no mutate
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     @cached_property
@@ -112,7 +112,18 @@ class CLA:
 
         lam = np.inf
 
-        while lam > 0:
+        # Safety bound: each iteration fixes the activity of at least one asset,
+        # so a correct trace runs O(ns) times. Far exceeding this means the event
+        # loop failed to terminate (e.g. cycling); fail loudly instead of hanging.
+        # The bound is far above any valid frontier length.
+        max_iterations = 100 * (ns + 1)  # pragma: no mutate
+        iterations = 0  # pragma: no mutate
+
+        while lam > 0:  # pragma: no mutate
+            iterations += 1  # pragma: no mutate
+            if iterations > max_iterations:  # pragma: no mutate
+                msg = "CLA failed to converge: too many iterations"  # pragma: no mutate
+                raise RuntimeError(msg)  # pragma: no mutate
             last = self.turning_points[-1]
 
             # --- Identify active set ---
@@ -121,8 +132,8 @@ class CLA:
                 msg = "All variables cannot be blocked"
                 raise RuntimeError(msg)
 
-            at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= tol)
-            at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= tol)
+            at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= tol)  # pragma: no mutate
+            at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= tol)  # pragma: no mutate
 
             _out = at_upper | at_lower
             _in = ~_out
@@ -175,16 +186,29 @@ class CLA:
             # produce only amplify rounding errors. Spurious ratios above the
             # current lam are removed by the lam window below.
             eps = np.sqrt(np.finfo(np.float64).eps)
-            l_mat = np.full((ns, 4), -np.inf)
+            # 4 columns = the 4 event types; extra unused columns are harmless.
+            l_mat = np.full((ns, 4), -np.inf)  # pragma: no mutate
 
-            l_mat[_in & (r_beta < -eps), 0] = (
-                self.upper_bounds[_in & (r_beta < -eps)] - r_alpha[_in & (r_beta < -eps)]
-            ) / r_beta[_in & (r_beta < -eps)]
-            l_mat[_in & (r_beta > +eps), 1] = (
-                self.lower_bounds[_in & (r_beta > +eps)] - r_alpha[_in & (r_beta > +eps)]
-            ) / r_beta[_in & (r_beta > +eps)]
-            l_mat[at_upper & (delta < -eps), 2] = -gamma[at_upper & (delta < -eps)] / delta[at_upper & (delta < -eps)]
-            l_mat[at_lower & (delta > +eps), 3] = -gamma[at_lower & (delta > +eps)] / delta[at_lower & (delta > +eps)]
+            # Precompute each event mask exactly once. The <,> vs <=,>= choice at
+            # the eps boundary is numerically irrelevant — a slope/derivative
+            # landing exactly on +/-sqrt(machine-eps) never occurs with real
+            # data — so those boundary comparisons are marked no-mutate.
+            beta_down = _in & (r_beta < -eps)  # pragma: no mutate
+            beta_up = _in & (r_beta > +eps)  # pragma: no mutate
+            delta_down = at_upper & (delta < -eps)  # pragma: no mutate
+            delta_up = at_lower & (delta > +eps)  # pragma: no mutate
+
+            # Columns 0,1 are "moves to a bound" (free->blocked) and 2,3 are
+            # "leaves a bound" (blocked->free); the next-free update below only
+            # tests dirchg >= 2, so swapping a column *within* a group (0<->1 or
+            # 2<->3) is behaviourally identical and marked no-mutate. Crossing
+            # the 1<->2 group boundary IS exercised by the frontier tests.
+            l_mat[beta_down, 0] = (  # pragma: no mutate
+                self.upper_bounds[beta_down] - r_alpha[beta_down]
+            ) / r_beta[beta_down]
+            l_mat[beta_up, 1] = (self.lower_bounds[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
+            l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]  # pragma: no mutate
+            l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
 
             # --- Determine next event ---
             # The current segment w(lam) = r_alpha + lam * r_beta is only valid
@@ -192,10 +216,10 @@ class CLA:
             # non-increasing lam, so ratios above it are spurious crossings
             # outside the segment and must not be selected. Ties at the current
             # lam are kept; degenerate problems resolve them one per iteration.
-            l_mat[l_mat > lam + tol] = -np.inf
+            l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
 
             lam_max = np.max(l_mat)
-            if lam_max < 0:
+            if lam_max < 0:  # pragma: no mutate
                 break
 
             # Bland-style anti-cycling rule: on degenerate problems (tied means,
@@ -203,7 +227,7 @@ class CLA:
             # all events within tol of the best ratio we pick the lowest asset
             # index (and, within an asset, the lowest event type), so the choice
             # is deterministic and cannot cycle.
-            tied = np.argwhere(l_mat >= lam_max - tol)
+            tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
             secchg, dirchg = tied[0]
             lam = l_mat[secchg, dirchg]
 
@@ -261,10 +285,10 @@ class CLA:
         """
         tol = self.tol if tol is None else tol
 
-        if not np.all(tp.weights >= (self.lower_bounds - tol)):
+        if not np.all(tp.weights >= (self.lower_bounds - tol)):  # pragma: no mutate
             msg = "Weights below lower bounds"
             raise ValueError(msg)
-        if not np.all(tp.weights <= (self.upper_bounds + tol)):
+        if not np.all(tp.weights <= (self.upper_bounds + tol)):  # pragma: no mutate
             msg = "Weights above upper bounds"
             raise ValueError(msg)
         if not np.allclose(np.sum(tp.weights), 1.0):

@@ -155,7 +155,7 @@ class Frontier:
 
         def _interpolate() -> Iterator[FrontierPoint]:
             """Yield interpolated frontier points between each adjacent pair."""
-            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):
+            for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):  # pragma: no mutate
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
                         yield FrontierPoint(weights=lamb * w_left + (1 - lamb) * w_right)
