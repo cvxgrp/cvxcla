@@ -636,34 +636,38 @@ the structured solve over the dense one.
 
 For external context we also time PyPortfolioOpt, whose pure-Python implementation
 scales far more steeply ($\approx n^{3.4}$): at $n=640$ it takes about
-$253$~seconds, so \texttt{cvxcla}'s dense backend is roughly $330\times$ faster
-and the factor backend roughly $2800\times$ faster. This larger gap should be read
-with care --- it is dominated by \emph{implementation} (a vectorised
-block-elimination over \texttt{numpy} versus element-wise Python loops), not by the
-algorithm; the $\approx 330\times$ dense-over-PyPortfolioOpt factor is essentially
-all vectorisation, and only the residual $\approx 8\times$ on top of it is the
-Woodbury contribution. Disentangling the two cleanly would require a vectorised
-explicit-inverse baseline, which we leave to future work.
+$264$~seconds, so \texttt{cvxcla}'s dense backend is roughly $340\times$ faster
+and the factor backend roughly $2900\times$ faster. This gap must be read with
+care --- it conflates two effects, which \S\ref{sec:baseline} disentangles with a
+vectorised explicit-inverse baseline. The short version: the dense-over-PyPortfolioOpt
+factor is \emph{entirely} implementation (vectorised \texttt{numpy} versus
+element-wise Python loops); the only genuine \emph{algorithmic} advantage over a
+well-implemented CLA is the structured factor backend.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{rrrrr}
+\begin{tabular}{rrrrrr}
 \toprule
-$n$ & Turning points & PyPortfolioOpt [ms] & \texttt{cvxcla} dense [ms] & \texttt{cvxcla} factor [ms] \\
+$n$ & Turning points & PyPortfolioOpt [ms] & Inverse baseline [ms] & \texttt{cvxcla} dense [ms] & \texttt{cvxcla} factor [ms] \\
 \midrule
-$20$  & $21$  & $7.4$        & $1.3$   & $1.5$ \\
-$40$  & $42$  & $40.3$       & $3.2$   & $3.2$ \\
-$80$  & $81$  & $212.1$      & $7.2$   & $6.3$ \\
-$160$ & $159$ & $1{,}477$    & $23.5$  & $14.3$ \\
-$320$ & $322$ & $15{,}932$   & $113.8$ & $33.4$ \\
-$640$ & $641$ & $253{,}307$  & $762.7$ & $91.6$ \\
+$20$  & $21$  & $7.4$        & $0.8$   & $1.2$   & $1.5$ \\
+$40$  & $42$  & $42.0$       & $2.0$   & $3.2$   & $3.3$ \\
+$80$  & $81$  & $211.1$      & $5.0$   & $7.3$   & $6.5$ \\
+$160$ & $159$ & $1{,}473$    & $12.7$  & $23.5$  & $14.2$ \\
+$320$ & $322$ & $16{,}712$   & $49.6$  & $112.2$ & $33.5$ \\
+$640$ & $641$ & $263{,}782$  & $325.6$ & $774.9$ & $92.0$ \\
 \bottomrule
 \end{tabular}
-\caption{Frontier trace time versus number of assets $n$ ($K=10$ factors;
-\texttt{cvxcla} times are the median of $3$ repetitions, PyPortfolioOpt a single
-run). All implementations return the same $O(n)$-point frontier. Empirically the
-times scale like $\approx n^{3.4}$ (PyPortfolioOpt), $\approx n^{2.2}$
-(\texttt{cvxcla} dense) and $\approx n^{1.3}$ (\texttt{cvxcla} factor).}
+\caption{Frontier trace time versus number of assets $n$ ($K=10$ factors). All
+four implementations are timed with the \emph{same} protocol --- the median of
+$3$ repetitions on the same machine and inputs --- and return the same
+$O(n)$-point frontier. ``Inverse baseline'' is the vectorised
+explicit-inverse CLA of \S\ref{sec:baseline}
+(\texttt{experiments/inverse\_cla.py}): PyPortfolioOpt's incremental-inverse
+linear algebra, vectorised over \texttt{numpy} like \texttt{cvxcla}. Empirically
+the times scale like $\approx n^{3.4}$ (PyPortfolioOpt), $\approx n^{2.0}$
+(inverse baseline), $\approx n^{2.2}$ (\texttt{cvxcla} dense) and
+$\approx n^{1.3}$ (\texttt{cvxcla} factor).}
 \label{tab:scaling}
 \end{table}
 
@@ -672,14 +676,59 @@ times scale like $\approx n^{3.4}$ (PyPortfolioOpt), $\approx n^{2.2}$
 \includegraphics[width=0.72\textwidth]{scaling.pdf}
 \caption{Frontier trace time as a function of the number of assets $n$ (log--log).
 PyPortfolioOpt \citep{pyportfolioopt}, a critical-line implementation in pure
-Python, scales like $\approx n^{3.4}$; \texttt{cvxcla}'s dense backend like
-$\approx n^{2.2}$;
-and its diagonal-plus-low-rank factor backend, solving the identical covariance
-through the Woodbury identity, like $\approx n^{1.3}$. At $n = 640$ the factor
-backend is roughly $2800\times$ faster than PyPortfolioOpt and $8\times$ faster
-than the dense backend.}
+Python, scales like $\approx n^{3.4}$; the vectorised explicit-inverse baseline of
+\S\ref{sec:baseline} like $\approx n^{2.0}$; \texttt{cvxcla}'s dense backend like
+$\approx n^{2.2}$; and its diagonal-plus-low-rank factor backend, solving the
+identical covariance through the Woodbury identity, like $\approx n^{1.3}$. At
+$n = 640$ the factor backend is roughly $2900\times$ faster than PyPortfolioOpt and
+$8\times$ faster than the dense backend. The baseline and the dense backend nearly
+coincide, far below PyPortfolioOpt: the gap to PyPortfolioOpt is vectorisation, not
+algorithm.}
 \label{fig:scaling}
 \end{figure}
+
+\subsection{Isolating vectorisation from the algorithm}
+\label{sec:baseline}
+
+The $\approx 340\times$ gap between \texttt{cvxcla}'s dense backend and
+PyPortfolioOpt at $n=640$ has two possible sources, and it matters which one
+dominates. One is \emph{implementation}: \texttt{cvxcla} vectorises the per-step
+linear algebra over \texttt{numpy}, while PyPortfolioOpt is written as element-wise
+Python loops. The other is \emph{strategy}: where PyPortfolioOpt à la
+\citet{bailey2013} maintains an explicit inverse of the free block and updates it
+incrementally as one asset enters or leaves, \texttt{cvxcla} discards that inverse
+and re-solves the block-eliminated KKT system from scratch each step
+(\S\ref{sec:blockelim}). To separate the two we add a third implementation
+(\texttt{experiments/inverse\_cla.py}): a CLA that keeps PyPortfolioOpt's
+incremental-inverse strategy --- maintaining $\Sig_{\F\F}\inv$ through rank-one
+bordered (asset enters) and deletion (asset leaves) updates --- but vectorises it
+over \texttt{numpy} exactly as \texttt{cvxcla} does. It traces the identical
+turning points to machine precision (max.\ weight discrepancy $<10^{-13}$ across
+$n=20$--$160$), so a timing comparison is clean.
+
+The decomposition at $n=640$ is unambiguous (Table~\ref{tab:scaling}). The
+vectorised baseline runs in $326$~ms versus PyPortfolioOpt's $264$~seconds --- a
+$\approx 810\times$ speed-up from \emph{vectorisation alone}, the two
+implementations running the same algorithm. The remaining step, from the baseline's
+incremental inverse to \texttt{cvxcla}'s fresh block-eliminated solve, is not a
+speed-up at all: the baseline ($\approx n^{2.0}$) is in fact about $2.4\times$
+\emph{faster} than the dense backend ($\approx n^{2.2}$, $775$~ms), exactly as one
+would expect since a rank-one inverse update costs $O(n_\F^2)$ against the fresh
+solve's $O(n_\F^3)$. In other words, \texttt{cvxcla}'s advantage over PyPortfolioOpt
+on a dense covariance is \emph{entirely} vectorisation; the block-elimination
+strategy is, on its own, marginally slower than a well-maintained explicit inverse.
+
+This is not a defect but a deliberate trade. \texttt{cvxcla} re-solves rather than
+updating an inverse because the fresh solve is what composes with the covariance
+operator (\S\ref{sec:operators}): the factor backend never forms $\Sig_{\F\F}$ at
+all, so there is no inverse to update --- it solves through the Woodbury identity.
+The dense backend gives up the modest incremental-inverse win to keep one
+turning-point loop that runs over \emph{any} backend, and the factor backend then
+more than repays it: at $n=640$ it is $\approx 8.4\times$ faster than the dense
+backend and $\approx 3.5\times$ faster than the incremental-inverse baseline, the
+only one of the four implementations with a genuinely sub-quadratic exponent
+($\approx n^{1.3}$). The structured solve, not the linear-algebra bookkeeping, is
+the real algorithmic advance.
 
 \subsection{Runtime versus factor rank}
 \label{sec:rankscaling}
