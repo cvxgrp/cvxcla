@@ -256,7 +256,7 @@ class IncrementalDenseCovariance:
         cur = np.flatnonzero(free)
         inv = self._inverse_for(cur)
         self._free_idx, self._inv = cur, inv
-        return cast("NDArray[np.float64]", inv @ rhs)
+        return inv @ rhs
 
     def _inverse_for(self, cur: NDArray[np.intp]) -> NDArray[np.float64]:
         """Return ``Sigma[cur][:, cur]^{-1}``, updating the cache incrementally."""
@@ -309,7 +309,7 @@ class IncrementalDenseCovariance:
         is_new = cur == asset
         perm[is_new] = k
         perm[~is_new] = np.searchsorted(prev, cur[~is_new])
-        return aug[np.ix_(perm, perm)]
+        return cast("NDArray[np.float64]", aug[np.ix_(perm, perm)])
 
     def _delete(
         self,
@@ -329,7 +329,7 @@ class IncrementalDenseCovariance:
         mask = np.ones(prev.shape[0], dtype=bool)
         mask[p] = False
         col = prev_inv[mask, p]
-        return prev_inv[np.ix_(mask, mask)] - np.outer(col, col) / pivot
+        return cast("NDArray[np.float64]", prev_inv[np.ix_(mask, mask)] - np.outer(col, col) / pivot)
 
 
 @dataclass(frozen=True)

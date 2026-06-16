@@ -76,9 +76,9 @@ class CLA:
         an object already implementing the protocol is passed through. This is
         the single point where the input form is normalised.
         """
-        if isinstance(self.covariance, np.ndarray):
-            return DenseCovariance(self.covariance)
-        return self.covariance
+        if isinstance(self.covariance, CovarianceOperator):
+            return self.covariance
+        return DenseCovariance(self.covariance)
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
