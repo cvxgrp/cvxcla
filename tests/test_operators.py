@@ -164,6 +164,46 @@ class TestIncrementalDenseCovariance:
             atol=1e-10,
         )
 
+    def test_solve_free_empty_refactors(self, random_spd):
+        """An all-False free mask refactorises to a 0x0 inverse and a length-0 solution."""
+        matrix, _, _ = random_spd
+        cov = IncrementalDenseCovariance(matrix)
+        empty = np.zeros(matrix.shape[0], dtype=bool)
+        result = cov.solve_free(empty, np.zeros(0))
+        assert result.shape == (0,)
+
+    def test_insert_nonpositive_schur_refactors(self):
+        """A non-positive Schur pivot on insert falls back to a fresh factorisation.
+
+        ``[[1, 2], [2, 1]]`` is symmetric but indefinite, so bordering the cached
+        ``{0}`` inverse with asset 1 yields a negative Schur complement; the update
+        bails out and the full block is refactorised instead.
+        """
+        matrix = np.array([[1.0, 2.0], [2.0, 1.0]])
+        cov = IncrementalDenseCovariance(matrix)
+        cov.solve_free(np.array([True, False]), np.zeros(1))  # seed cache with {0}
+        rhs = np.array([1.0, -1.0])
+        np.testing.assert_allclose(
+            cov.solve_free(np.array([True, True]), rhs),
+            np.linalg.solve(matrix, rhs),
+        )
+
+    def test_delete_nonpositive_pivot_refactors(self):
+        """A non-positive pivot on delete falls back to a fresh factorisation.
+
+        The inverse of the indefinite ``[[1, 2], [2, 1]]`` has negative diagonal
+        entries, so removing asset 1 from the cached ``{0, 1}`` inverse hits a
+        non-positive pivot and the remaining block is refactorised instead.
+        """
+        matrix = np.array([[1.0, 2.0], [2.0, 1.0]])
+        cov = IncrementalDenseCovariance(matrix)
+        cov.solve_free(np.array([True, True]), np.zeros(2))  # seed cache with {0, 1}
+        rhs = np.array([3.0])
+        np.testing.assert_allclose(
+            cov.solve_free(np.array([True, False]), rhs),
+            np.linalg.solve(matrix[:1, :1], rhs),
+        )
+
     def test_rejects_non_square_and_non_symmetric(self):
         """Validation is inherited from the dense reference."""
         with pytest.raises(ValueError, match="square"):
