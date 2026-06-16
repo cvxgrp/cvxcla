@@ -14,8 +14,8 @@ matrix and the structured ``FactorCovariance`` (Woodbury) backend. Because the
 matrix is identical, both backends trace the *same* frontier; only the per-solve
 linear algebra differs.
 
-Prints the summary statistics quoted in paper/cla.tex and, when matplotlib is
-available, writes the frontier figure to paper/frontier.pdf.
+Prints the summary statistics quoted in docs/paper/cla.tex and, when matplotlib is
+available, writes the frontier figure to docs/paper/frontier.pdf.
 
 Usage:
     uv run python experiments/frontier_20x50.py
@@ -108,7 +108,7 @@ def main() -> None:
         mpl.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
-        print("matplotlib not available - skipping paper/frontier.pdf")
+        print("matplotlib not available - skipping docs/paper/frontier.pdf")
         return
 
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
@@ -123,7 +123,7 @@ def main() -> None:
     ax.set_title(f"Efficient frontier: {N_ASSETS} assets, {N_DAYS} days ({len(cla)} turning points)", fontsize=9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    out = "paper/frontier.pdf"
+    out = "docs/paper/frontier.pdf"
     fig.savefig(out)
     print(f"wrote {out}")
 
