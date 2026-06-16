@@ -11,14 +11,15 @@ structured ``FactorCovariance``.
 
 For reference we also time PyPortfolioOpt's ``CLA`` (the Bailey & Lopez de Prado
 critical-line implementation) on the same dense problem, when it is installed,
-and a *vectorised explicit-inverse* baseline (``InverseCLA`` from
-``inverse_cla.py``) that keeps PyPortfolioOpt's incremental-inverse linear
-algebra but is vectorised over numpy exactly like cvxcla. Comparing the four
-decomposes the speed-up into a vectorisation component (PyPortfolioOpt ->
-InverseCLA) and a linear-algebra-strategy component (InverseCLA -> cvxcla dense,
-i.e. incremental inverse vs fresh block-eliminated solve). All implementations
-are timed with the same protocol --- the median of REPEATS repetitions --- so the
-comparison is apples-to-apples.
+and an incremental-inverse baseline (``InverseCLA`` from ``inverse_cla.py``) that
+shares cvxcla's vectorised event logic but maintains ``Sigma_FF^{-1}`` through
+rank-1 updates instead of re-solving each step. The baseline-vs-cvxcla-dense
+comparison cleanly isolates the linear-algebra strategy (maintained inverse vs
+fresh block-eliminated solve), since only that differs between them. (PyPortfolioOpt
+differs from both algorithmically --- it recomputes a full inverse per candidate
+each step --- so it is reported for context, not as a clean vectorisation control.)
+All implementations are timed with the same protocol --- the median of REPEATS
+repetitions --- so the comparison is apples-to-apples.
 
 Prints a table and, when matplotlib is available, writes paper/scaling.pdf
 (log-log runtime vs n for each implementation).
@@ -153,19 +154,21 @@ def main() -> None:
             f"factor={t_factor * 1e3:8.1f} ms  speedup={t_dense / t_factor:5.2f}x{inv_str}{ppo_str}"
         )
 
-    # Decompose the speed-up at the largest size: vectorisation (PyPortfolioOpt
-    # -> vectorised explicit-inverse baseline) vs linear-algebra strategy
-    # (incremental inverse -> fresh block-eliminated solve).
-    if inv_times[-1] is not None and ppo_times[-1] is not None:
+    # The clean comparison is the incremental-inverse baseline vs the dense
+    # backend: same vectorised event logic, differing only in the linear-algebra
+    # strategy (maintained inverse vs fresh block-eliminated solve). PyPortfolioOpt
+    # differs algorithmically (per-candidate full inverse), so its ratio is an
+    # overall figure, not a clean control.
+    if inv_times[-1] is not None:
         n_last = ns[-1]
-        vec_gain = ppo_times[-1] / inv_times[-1]
-        algo_gain = inv_times[-1] / dense_times[-1]
-        print(
-            f"\nspeed-up decomposition at n={n_last}: "
-            f"vectorisation (pypfopt/inverse) = {vec_gain:.0f}x, "
-            f"linear-algebra strategy (inverse/dense) = {algo_gain:.2f}x, "
-            f"factor/dense = {dense_times[-1] / factor_times[-1]:.1f}x"
+        strategy = dense_times[-1] / inv_times[-1]  # solve cost / incremental-inverse cost
+        line = (
+            f"\nat n={n_last}: incremental inverse is {strategy:.2f}x the speed of the "
+            f"dense fresh-solve backend; factor/dense = {dense_times[-1] / factor_times[-1]:.1f}x"
         )
+        if ppo_times[-1] is not None:
+            line += f"; dense/pypfopt (overall) = {ppo_times[-1] / dense_times[-1]:.0f}x"
+        print(line)
 
     # Empirical log-log slope (runtime ~ n^p) over the largest few sizes.
     def slope(times: list[float]) -> float:

@@ -1,31 +1,28 @@
-"""A fair, vectorised explicit-inverse CLA baseline (for issue #671).
+"""An incremental-inverse CLA baseline that isolates solve-vs-inverse (issue #671).
 
-The runtime experiment (``runtime_scaling.py``) shows ``cvxcla`` beating
-PyPortfolioOpt's pure-Python CLA by ~330x (dense) to ~2800x (factor). That gap
-mixes *two* effects: vectorisation (numpy vs element-wise Python loops) and the
-linear-algebra strategy (``cvxcla`` solves a fresh block-eliminated KKT system
-each step; PyPortfolioOpt à la Bailey & Lopez de Prado maintains an explicit
-inverse of the free block and updates it incrementally). To isolate the
-*algorithmic* component we need a baseline that keeps PyPortfolioOpt's
-incremental-inverse strategy but is vectorised over numpy exactly like
-``cvxcla``.
+``cvxcla``'s dense backend re-solves a fresh block-eliminated KKT system at every
+turning point (``np.linalg.solve(Sigma_FF, .)``), discarding the previous
+factorisation. A classical alternative is to keep an explicit ``Sigma_FF^{-1}``
+and update it incrementally as a single asset enters or leaves the free set.
+``InverseCLA`` below does exactly that: it shares ``cvxcla``'s *vectorised* event
+logic (the whole event search is one matrix operation, no Python loop over
+candidate assets), and differs from the dense backend in one thing only --- it
+maintains ``Sigma_FF^{-1}`` through rank-1 bordered (asset enters) and deletion
+(asset leaves) updates, O(n_F^2) per step instead of the O(n_F^3) of a fresh
+factorisation. Timing it against ``cvxcla``'s dense backend therefore isolates the
+cost of the linear-algebra *strategy* (fresh solve vs maintained inverse) with the
+event logic held fixed. It is restricted to the budget-constrained box problem (a
+single equality row ``1^T w = 1``), the case the scaling experiment uses.
 
-``InverseCLA`` below is that baseline. It traces the same turning points as
-``cvxcla.CLA`` using the identical event logic, but instead of
-``np.linalg.solve(Sigma_FF, .)`` at every step it maintains ``Sigma_FF^{-1}``
-explicitly and updates it with rank-1 bordered (insert) / deletion (remove)
-formulas as a single asset enters or leaves the free set --- O(n_F^2) per step
-rather than the O(n_F^3) of a fresh factorisation. It is restricted to the
-budget-constrained box problem (a single equality row ``1^T w = 1``), which is
-exactly the case the scaling experiment uses and the only case PyPortfolioOpt
-supports.
-
-Comparing the three on the same dense problems decomposes the speed-up:
-
-    PyPortfolioOpt  --(vectorisation)-->  InverseCLA  --(solve-vs-inverse)-->  cvxcla dense
+This is NOT a reimplementation of PyPortfolioOpt. PyPortfolioOpt's CLA (after
+Bailey & Lopez de Prado) does the opposite of an incremental update: it calls
+``np.linalg.inv`` on the free block *from scratch* at every step, and in the
+branch that decides which blocked asset re-enters it recomputes that full inverse
+once for *every* candidate blocked asset (a Python loop) --- O(n) dense inverses
+per turning point. That structure, not a lack of numpy, is why it scales steeply.
 
 Usage:
-    uv run --with pyportfolioopt python experiments/inverse_cla.py
+    uv run python experiments/inverse_cla.py        # verify vs cvxcla
 """
 
 from __future__ import annotations
