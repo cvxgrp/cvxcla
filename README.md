@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/cvxcla)](https://pypi.org/project/cvxcla/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
-[![Coverage](https://www.cvxgrp.org/cvxcla/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/tests/html-coverage/index.html)
+[![Coverage](https://www.cvxgrp.org/cvxcla/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/reports/html-coverage/index.html)
 
 ---
 
