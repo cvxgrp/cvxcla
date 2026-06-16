@@ -412,7 +412,7 @@ $\Sig_{\F\F}\inv R$ for a multi-column right-hand side $R$ (\texttt{solve\_free}
 free-to-blocked cross product $\Sig_{\F\B}\,x_\B$ (\texttt{cross}). The package captures
 exactly this contract in the \texttt{CovarianceOperator} protocol
 (\texttt{src/cvxcla/operators.py}), so the algorithm never assumes an explicit matrix.
-Two backends implement it.
+Three backends implement it.
 
 \subsection{Dense covariance}
 
@@ -422,6 +422,37 @@ the three operations with plain \texttt{numpy} calls: \texttt{matvec} is $\Sig x
 $\Sig_{\F\F}$, and \texttt{cross} is the off-diagonal block product. This reproduces
 exactly the behaviour of the classical CLA on a raw matrix and is the reference
 backend.
+
+\subsection{Incremental dense covariance}
+\label{sec:incremental}
+
+\texttt{IncrementalDenseCovariance} wraps the same explicit matrix and returns
+identical results, but computes \texttt{solve\_free} differently. The reference
+backend factorises $\Sig_{\F\F}$ from scratch at every turning point, an
+$O(n_\F^3)$ cost. Because the CLA changes the free set by exactly one asset
+between consecutive turning points (\S\ref{sec:bland}), this backend instead
+\emph{maintains} the explicit inverse $\Sig_{\F\F}\inv$ and updates it in place as
+the free set changes. When an asset enters the free set, a rank-one bordered
+update appends its row and column through the Schur scalar
+$s = \Sig_{aa} - c\trans \Sig_{\F\F}\inv c$ (with $c = \Sig_{\F a}$ the new
+cross-column); when an asset leaves, the symmetric deletion formula
+$\Sig_{\F'\F'}\inv = B_{\setminus p} - B_{\cdot p}B_{p\cdot}/B_{pp}$ drops its row
+and column from the current inverse $B$. Each update costs $O(n_\F^2)$ rather than
+$O(n_\F^3)$, so the linear-algebra strategy matches the incremental-inverse
+baseline of \S\ref{sec:baseline}: on a dense problem of a few hundred assets it
+runs roughly twice as fast per solve, and traces the identical frontier to machine
+precision.
+
+The trade is numerical. A maintained inverse accumulates floating-point error over
+the $O(n)$ rank-one updates of a trace, whereas the fresh solve is clean at every
+step; a non-positive or non-finite Schur pivot, or any free-set change that is not
+a single-asset flip, triggers a full refactorisation as a guard. For
+well-conditioned, positive-definite problems the two backends agree to solver
+precision, but on ill-conditioned or near-degenerate inputs the plain
+\texttt{DenseCovariance} --- or the factor backend below --- is the safer choice.
+This backend is therefore offered as an opt-in fast path, not the default, and the
+win is dense-only: the factor backend never forms $\Sig_{\F\F}$ at all, so there is
+no inverse to maintain.
 
 \subsection{Factor (diagonal-plus-low-rank) covariance}
 
@@ -724,10 +755,13 @@ The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $326$~ms
 $n=640$) is about $2.4\times$ \emph{faster} than the dense backend
 ($\approx n^{2.2}$, $775$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
 predicts. \texttt{cvxcla}'s block elimination is therefore not the fastest possible
-dense strategy. It is used anyway because the fresh solve is what composes with the
-covariance operator (\S\ref{sec:operators}): the factor backend never forms
-$\Sig_{\F\F}$ at all, so there is no inverse to maintain --- it solves through the
-Woodbury identity. The dense backend gives up the modest incremental-inverse win to
+dense strategy --- and the package ships the incremental inverse as the opt-in
+\texttt{IncrementalDenseCovariance} backend (\S\ref{sec:incremental}) for callers
+who want that win. It is not the \emph{default} because the fresh solve is what
+composes cleanly with the covariance operator (\S\ref{sec:operators}) and is
+numerically robust step to step: the factor backend never forms $\Sig_{\F\F}$ at
+all, so there is no inverse to maintain --- it solves through the Woodbury
+identity. The default dense backend gives up the modest incremental-inverse win to
 keep one turning-point loop that runs over \emph{any} backend, and the factor
 backend more than repays it: at $n=640$ it is $\approx 8.4\times$ faster than the
 dense backend and $\approx 3.5\times$ faster than the incremental-inverse baseline,
