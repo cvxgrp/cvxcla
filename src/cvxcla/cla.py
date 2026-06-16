@@ -298,18 +298,22 @@ class CLA:
         self.turning_points.append(tp)
 
     def _emit(self, lamb: float, weights: NDArray[np.float64], free: NDArray[np.bool_]) -> None:
-        """Build and store a turning point, diagnosing covariance degeneracy.
+        """Build and store a turning point, diagnosing event-logic degeneracy.
 
-        The turning-point loop assumes a strictly convex objective, i.e. a
-        positive-definite covariance. When the covariance is rank-deficient (for
-        example a sample covariance estimated from fewer days than assets), the
-        trace eventually frees more assets than the covariance has rank; the
-        free-asset block ``Sigma_FF`` is then (near-)singular and the reduced KKT
-        solve returns an infeasible point — a weight outside its bounds or a
-        budget that no longer sums to one. Rather than surface the resulting
-        low-level constraint error, raise an actionable diagnosis that names the
-        cause and the remedy. Well-posed (positive-definite) problems never reach
-        this branch, so their behaviour is unchanged.
+        On tie-heavy or near-degenerate problems (a short, near-rank-deficient
+        sample covariance, duplicated assets, or many coincident events) the walk
+        can reach a degenerate vertex at which a free weight sits essentially on
+        one of its bounds. Accumulated floating-point round-off over the many
+        turning points of a large trace then places that weight just outside its
+        box, by more than the feasibility tolerance ``tol``, and the point cannot
+        be certified feasible. This is not a conditioning failure: the free-asset
+        block ``Sigma_FF`` is typically still well-conditioned here (the covariance
+        may even be positive definite and well-conditioned), and forcing the trace
+        past the violation yields a non-monotone ``lambda`` and a frontier that
+        departs measurably from the true optimiser. Rather than emit an
+        uncertifiable point, stop and raise an actionable diagnosis. Well-posed
+        problems with well-separated events never reach this branch, so their
+        behaviour is unchanged.
 
         Raises:
             ValueError: With a degeneracy-specific message when the turning point
@@ -321,13 +325,16 @@ class CLA:
             n_free = int(np.count_nonzero(free))
             msg = (
                 f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
-                f"(free-set size {n_free}): the free-asset covariance block is "
-                "(near-)singular, so the reduced KKT system has no unique, "
-                "feasible solution. The algorithm requires a positive-definite "
-                "covariance. Remedies: apply covariance shrinkage (e.g. "
-                "Ledoit-Wolf) so the covariance is full rank, or use a "
-                "FactorCovariance backend (diagonal-plus-low-rank with a positive "
-                "idiosyncratic floor), which is positive definite by construction."
+                f"(free-set size {n_free}): a turning-point weight fell outside its "
+                "box bounds by more than the feasibility tolerance, so the point "
+                "cannot be certified feasible and the trace was stopped. This "
+                "happens on tie-heavy or near-degenerate problems (for example a "
+                "sample covariance from fewer days than assets, where events nearly "
+                "coincide); it is a coincident-event and round-off limitation, not a "
+                "conditioning failure, and covariance shrinkage alone does not "
+                "remedy it. Use a well-conditioned estimate with well-separated "
+                "expected returns (ample history), or a FactorCovariance backend "
+                "(diagonal-plus-low-rank), for which the frontier traces cleanly."
             )
             raise ValueError(msg) from exc
 
