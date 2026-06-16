@@ -899,7 +899,10 @@ rank-$20$ diagonal-plus-low-rank approximation of the same covariance traces a
 near-identical frontier ($89$ turning points) in $\approx 9$~ms through the
 Woodbury backend. The annualised frontier spans expected returns of
 $0.14$--$0.89$ over volatilities of $0.10$--$0.87$, with a maximum Sharpe ratio of
-about $2.7$.
+about $2.7$. This figure is measured in-sample --- the frontier is optimised over
+the same sample mean and covariance from which it is computed --- and so overstates
+what is achievable out-of-sample; it is reported only to characterise the geometry
+of the frontier on a realistic problem, not as a claim of attainable performance.
 
 \begin{figure}[h]
 \centering
