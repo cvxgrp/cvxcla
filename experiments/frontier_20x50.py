@@ -1,13 +1,14 @@
-"""Numerical experiment for the CLA paper: 200 assets, 2000 days.
+"""Numerical experiment for the CLA paper: 20 assets, 50 days.
 
-Simulates T = 2000 daily return observations for N = 200 assets from a
-K = 15 factor model and traces the entire long-only, fully-invested efficient
-frontier with the Critical Line Algorithm.
+Simulates T = 50 daily return observations for N = 20 assets from a
+K = 5 factor model and traces the entire long-only, fully-invested efficient
+frontier with the Critical Line Algorithm. The small size keeps the frontier's
+piecewise-linear corner structure clearly visible in the figure.
 
 We adopt the factor risk model itself as the covariance,
 ``Sigma = diag(d) + U diag(delta) U^T`` (the standard practice -- a structured
 risk model rather than the noisy sample covariance), and estimate expected
-returns by the sample mean over the 2000 days. The frontier is then traced twice
+returns by the sample mean over the 50 days. The frontier is then traced twice
 with two mathematically identical representations of the same Sigma: the dense
 matrix and the structured ``FactorCovariance`` (Woodbury) backend. Because the
 matrix is identical, both backends trace the *same* frontier; only the per-solve
@@ -17,7 +18,7 @@ Prints the summary statistics quoted in paper/cla.tex and, when matplotlib is
 available, writes the frontier figure to paper/frontier.pdf.
 
 Usage:
-    uv run python experiments/frontier_200x2000.py
+    uv run python experiments/frontier_20x50.py
 """
 
 from __future__ import annotations
@@ -28,9 +29,9 @@ import numpy as np
 
 from cvxcla import CLA, FactorCovariance
 
-N_ASSETS = 200
-N_DAYS = 2000
-N_FACTORS = 15
+N_ASSETS = 20
+N_DAYS = 50
+N_FACTORS = 5
 SEED = 42
 REPEATS = 5
 

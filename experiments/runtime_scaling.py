@@ -123,6 +123,7 @@ def main() -> None:
 
         mpl.use("Agg")
         import matplotlib.pyplot as plt
+        from matplotlib.ticker import NullFormatter, ScalarFormatter
     except ImportError:
         print("matplotlib not available - skipping paper/scaling.pdf")
         return
@@ -138,6 +139,16 @@ def main() -> None:
     ax.set_xlabel("Number of assets $n$")
     ax.set_ylabel("Frontier trace time [s]")
     ax.set_title("CLA runtime vs problem size", fontsize=9)
+
+    # Label the x-axis at the actual problem sizes as plain integers, not the
+    # default powers of ten (which never coincide with 20, 40, ..., 640 and
+    # leave cluttered minor-tick labels on a log axis).
+    ax.set_xticks(ns)
+    ax.xaxis.set_major_formatter(ScalarFormatter())
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlim(ns[0] * 0.85, ns[-1] * 1.18)
+    ax.tick_params(axis="x", labelsize=8)
+
     ax.grid(True, which="both", alpha=0.3)
     ax.legend(fontsize=7.5)
     fig.tight_layout()
