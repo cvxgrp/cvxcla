@@ -1,13 +1,20 @@
 """Numerical experiment for the CLA paper: 200 assets, 2000 days.
 
 Simulates T = 2000 daily return observations for N = 200 assets from a
-K = 15 factor model, estimates the sample mean vector and sample covariance
-matrix, and traces the entire long-only, fully-invested efficient frontier
-with the Critical Line Algorithm. The same frontier is traced twice: once with
-the dense covariance backend and once with a diagonal-plus-low-rank factor
-estimate of the sample covariance (the Woodbury backend). Prints the summary
-statistics quoted in paper/cla.tex and, when matplotlib is available, writes the
-frontier figure to paper/frontier.pdf.
+K = 15 factor model and traces the entire long-only, fully-invested efficient
+frontier with the Critical Line Algorithm.
+
+We adopt the factor risk model itself as the covariance,
+``Sigma = diag(d) + U diag(delta) U^T`` (the standard practice -- a structured
+risk model rather than the noisy sample covariance), and estimate expected
+returns by the sample mean over the 2000 days. The frontier is then traced twice
+with two mathematically identical representations of the same Sigma: the dense
+matrix and the structured ``FactorCovariance`` (Woodbury) backend. Because the
+matrix is identical, both backends trace the *same* frontier; only the per-solve
+linear algebra differs.
+
+Prints the summary statistics quoted in paper/cla.tex and, when matplotlib is
+available, writes the frontier figure to paper/frontier.pdf.
 
 Usage:
     uv run python experiments/frontier_200x2000.py
@@ -28,37 +35,20 @@ SEED = 42
 REPEATS = 5
 
 
-def simulate_returns(rng: np.random.Generator) -> np.ndarray:
-    """Return a (N_DAYS, N_ASSETS) matrix of synthetic daily returns.
-
-    A K-factor data-generating process: each asset loads on N_FACTORS common
-    factors plus a well-conditioned idiosyncratic shock, with a dispersed
-    cross-section of expected returns. N_DAYS > N_ASSETS, so the sample
-    covariance is full rank.
-    """
-    loadings = rng.standard_normal((N_ASSETS, N_FACTORS)) / np.sqrt(N_ASSETS)
-    factor_var = rng.uniform(0.5, 2.0, N_FACTORS) * N_ASSETS
-    factor_returns = rng.standard_normal((N_DAYS, N_FACTORS)) * np.sqrt(factor_var)
-    idio_var = rng.uniform(0.5, 2.0, N_ASSETS)
-    idiosyncratic = rng.standard_normal((N_DAYS, N_ASSETS)) * np.sqrt(idio_var)
+def build_model(rng: np.random.Generator) -> tuple[FactorCovariance, np.ndarray]:
+    """Return the ground-truth factor covariance and the per-asset expected returns."""
+    u = rng.standard_normal((N_ASSETS, N_FACTORS)) / np.sqrt(N_ASSETS)
+    delta = rng.uniform(0.5, 2.0, N_FACTORS) * N_ASSETS
+    d = rng.uniform(0.5, 2.0, N_ASSETS)
     expected = rng.uniform(0.0, 1.0, N_ASSETS)  # dispersed expected returns
-    return expected + factor_returns @ loadings.T + idiosyncratic
+    return FactorCovariance(d=d, u=u, delta=delta), expected
 
 
-def factor_estimate(sample_cov: np.ndarray, k: int) -> FactorCovariance:
-    """Diagonal-plus-low-rank estimate of ``sample_cov`` from its top-k eigenpairs.
-
-    Keeps the leading ``k`` eigenpairs as the low-rank part and matches the
-    full diagonal of the sample covariance via the idiosyncratic residual, so
-    ``diag(estimate) == diag(sample_cov)`` exactly.
-    """
-    evals, evecs = np.linalg.eigh(sample_cov)
-    top = np.argsort(evals)[::-1][:k]
-    u = evecs[:, top]
-    delta = evals[top]
-    residual = np.diag(sample_cov) - np.einsum("ij,j,ij->i", u, delta, u)
-    d = np.clip(residual, 1e-6, None)
-    return FactorCovariance(d=d, u=u, delta=delta)
+def simulate_returns(rng: np.random.Generator, factor: FactorCovariance, expected: np.ndarray) -> np.ndarray:
+    """Simulate (N_DAYS, N_ASSETS) returns whose population covariance is ``factor``."""
+    factor_returns = rng.standard_normal((N_DAYS, N_FACTORS)) * np.sqrt(factor.delta)
+    idiosyncratic = rng.standard_normal((N_DAYS, N_ASSETS)) * np.sqrt(factor.d)
+    return expected + factor_returns @ factor.u.T + idiosyncratic
 
 
 def trace(problem: dict, covariance: object) -> tuple[object, float]:
@@ -75,10 +65,11 @@ def trace(problem: dict, covariance: object) -> tuple[object, float]:
 def main() -> None:
     """Run the experiment, print statistics, and write the frontier figure."""
     rng = np.random.default_rng(SEED)
-    returns = simulate_returns(rng)
+    factor, expected = build_model(rng)
+    returns = simulate_returns(rng, factor, expected)
 
     mean = returns.mean(axis=0)
-    sample_cov = np.cov(returns, rowvar=False)
+    dense_cov = np.diag(factor.d) + (factor.u * factor.delta) @ factor.u.T
 
     problem = {
         "mean": mean,
@@ -88,21 +79,23 @@ def main() -> None:
         "b": np.ones(1),
     }
 
-    cla, dense_time = trace(problem, sample_cov)
-    factor_cla, factor_time = trace(problem, factor_estimate(sample_cov, N_FACTORS))
+    cla, dense_time = trace(problem, dense_cov)
+    factor_cla, factor_time = trace(problem, factor)
+    if len(cla) != len(factor_cla):
+        msg = f"backends disagree: {len(cla)} vs {len(factor_cla)}"
+        raise RuntimeError(msg)
 
     frontier = cla.frontier
     returns_f = frontier.returns
     vol_f = frontier.volatility
     max_sharpe, _ = frontier.max_sharpe
-    cond = float(np.linalg.cond(sample_cov))
+    cond = float(np.linalg.cond(dense_cov))
 
     print(f"problem                 : {N_ASSETS} assets x {N_DAYS} days, {N_FACTORS}-factor model")
     print(f"covariance condition no.: {cond:,.1f}")
-    print(f"turning points (dense)  : {len(cla)}")
-    print(f"turning points (factor) : {len(factor_cla)}")
+    print(f"turning points          : {len(cla)}  (dense and factor agree)")
     print(f"dense trace  (median)   : {dense_time * 1e3:.1f} ms  ({dense_time / len(cla) * 1e3:.2f} ms/point)")
-    print(f"factor trace (median)   : {factor_time * 1e3:.1f} ms  ({factor_time / len(factor_cla) * 1e3:.2f} ms/point)")
+    print(f"factor trace (median)   : {factor_time * 1e3:.1f} ms  ({factor_time / len(cla) * 1e3:.2f} ms/point)")
     print(f"factor speedup          : {dense_time / factor_time:.2f}x")
     print(f"expected-return range   : [{returns_f.min():.4f}, {returns_f.max():.4f}]")
     print(f"volatility range        : [{vol_f.min():.4f}, {vol_f.max():.4f}]")
