@@ -128,8 +128,10 @@ common cases;
 structured solve) from incidental linear-algebra bookkeeping.
 \end{enumerate}
 We do \emph{not} claim the fastest dense large-scale solve
-(\S\ref{sec:bailey}), and we document a real degeneracy limitation on
-rank-deficient, tie-heavy inputs (\S\ref{sec:empirical}).
+(\S\ref{sec:bailey}); near-degenerate problems are handled by projecting the
+sub-tolerance round-off they produce back onto the feasible set
+(\S\ref{sec:empirical}), and a genuinely rank-deficient free block is the one
+case the algorithm declines rather than solve.
 
 This document describes the implementation in the \texttt{cvxcla} package. The core of
 the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
