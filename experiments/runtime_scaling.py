@@ -21,7 +21,7 @@ each step --- so it is reported for context, not as a clean vectorisation contro
 All implementations are timed with the same protocol --- the median of REPEATS
 repetitions --- so the comparison is apples-to-apples.
 
-Prints a table and, when matplotlib is available, writes paper/scaling.pdf
+Prints a table and, when matplotlib is available, writes docs/paper/scaling.pdf
 (log-log runtime vs n for each implementation).
 
 Usage:
@@ -190,7 +190,7 @@ def main() -> None:
         import matplotlib.pyplot as plt
         from matplotlib.ticker import NullFormatter, ScalarFormatter
     except ImportError:
-        print("matplotlib not available - skipping paper/scaling.pdf")
+        print("matplotlib not available - skipping docs/paper/scaling.pdf")
         return
 
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
@@ -221,7 +221,7 @@ def main() -> None:
     ax.grid(True, which="both", alpha=0.3)
     ax.legend(fontsize=7.5)
     fig.tight_layout()
-    out = "paper/scaling.pdf"
+    out = "docs/paper/scaling.pdf"
     fig.savefig(out)
     print(f"wrote {out}")
 

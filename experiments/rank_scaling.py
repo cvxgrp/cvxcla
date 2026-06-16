@@ -13,7 +13,7 @@ n x n free block regardless of rank), while the Woodbury solve costs
 advantage shrinks as K -> n and disappears once the low-rank part is no longer
 low rank.
 
-Prints a table and, when matplotlib is available, writes paper/rank_scaling.pdf
+Prints a table and, when matplotlib is available, writes docs/paper/rank_scaling.pdf
 (runtime vs K at fixed n).
 
 Usage:
@@ -89,7 +89,7 @@ def main() -> None:
         import matplotlib.pyplot as plt
         from matplotlib.ticker import NullFormatter, ScalarFormatter
     except ImportError:
-        print("matplotlib not available - skipping paper/rank_scaling.pdf")
+        print("matplotlib not available - skipping docs/paper/rank_scaling.pdf")
         return
 
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
@@ -106,7 +106,7 @@ def main() -> None:
     ax.grid(True, which="both", alpha=0.3)
     ax.legend(fontsize=8)
     fig.tight_layout()
-    out = "paper/rank_scaling.pdf"
+    out = "docs/paper/rank_scaling.pdf"
     fig.savefig(out)
     print(f"wrote {out}")
 

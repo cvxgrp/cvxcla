@@ -8,7 +8,7 @@ Loads the daily-return matrix produced by ``experiments/fetch_sp500.py`` and:
 2. demonstrates the degeneracy limitation: on a short estimation window
    (T < N, a rank-deficient sample covariance) the event logic fails.
 
-Writes the real-data frontier figure to ``paper/real_frontier.pdf``.
+Writes the real-data frontier figure to ``docs/paper/real_frontier.pdf``.
 
 Usage:
     uv run python experiments/fetch_sp500.py    # once, to download the data
@@ -105,7 +105,7 @@ def main() -> None:
         mpl.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
-        print("matplotlib not available - skipping paper/real_frontier.pdf")
+        print("matplotlib not available - skipping docs/paper/real_frontier.pdf")
         return
 
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
@@ -118,7 +118,7 @@ def main() -> None:
     ax.set_title(f"S&P 500 efficient frontier: {n} assets, {t_days} days ({len(cla)} turning points)", fontsize=8.5)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    out = "paper/real_frontier.pdf"
+    out = "docs/paper/real_frontier.pdf"
     fig.savefig(out)
     print(f"wrote {out}")
 
