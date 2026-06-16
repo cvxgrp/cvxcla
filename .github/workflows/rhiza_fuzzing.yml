@@ -34,7 +34,7 @@ jobs:
     # this one) that ship no .clusterfuzzlite/ config. Pin to the commit that adds
     # the skip-guard + FUZZING_ENABLED opt-in (jebel-quant/rhiza#1246) until a
     # release including it lands; the next template sync will re-pin this to a tag.
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_fuzzing.yml@6fcf7843f14ed0ebc6fd0a0dec64878827609a68  # main / #1246
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_fuzzing.yml@74cefa1bc869619f0dd4a8668497019cdbacd0b8  # main / #1246
     secrets: inherit
     permissions:
       contents: read
