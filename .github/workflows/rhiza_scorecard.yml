@@ -36,13 +36,7 @@ permissions: read-all
 
 jobs:
   scorecard:
-    # TEMPORARY: v0.19.1's reusable workflow declares top-level
-    # `permissions: read-all`, which this least-privilege caller cannot satisfy,
-    # so GitHub rejects the run ("is requesting '... read', but is only allowed
-    # '... none'"). Pin to the commit that narrows the reusable workflow's
-    # top-level permissions to match the job (jebel-quant/rhiza#1251) until a
-    # release including it lands; the next template sync will re-pin to a tag.
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_scorecard.yml@fd75f09f8f7b37f4d8d1b79d55c0122b92fe53af  # main / #1251
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_scorecard.yml@v0.19.3
     secrets: inherit
     permissions:
       security-events: write   # Upload the SARIF results to code scanning

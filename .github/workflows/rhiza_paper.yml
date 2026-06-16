@@ -3,10 +3,10 @@
 #
 # Workflow: Paper
 #
-# Purpose: Compile the LaTeX paper (paper/*.tex) to a PDF and publish it
+# Purpose: Compile the LaTeX paper (docs/paper/*.tex) to a PDF and publish it
 #          as a downloadable workflow artifact. Pushes the PDF to a paper branch.
 #
-# Trigger: On push/PR to main/master when paper/** changes, or manual dispatch.
+# Trigger: On push/PR to main/master when docs/paper/** changes, or manual dispatch.
 
 name: "(RHIZA) PAPER"
 
@@ -17,18 +17,18 @@ on:
   push:
     branches: [ main, master ]
     paths:
-      - 'paper/**'
+      - 'docs/paper/**'
       - '.github/workflows/rhiza_paper.yml'
   pull_request:
     branches: [ main, master ]
     paths:
-      - 'paper/**'
+      - 'docs/paper/**'
       - '.github/workflows/rhiza_paper.yml'
   workflow_dispatch:
 
 jobs:
   paper:
-    uses: jebel-quant/rhiza/.github/workflows/rhiza_paper.yml@v0.19.1
+    uses: jebel-quant/rhiza/.github/workflows/rhiza_paper.yml@v0.19.3
     secrets: inherit
     permissions:
       contents: write

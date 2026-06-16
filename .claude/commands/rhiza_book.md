@@ -49,5 +49,5 @@ Do the following, in order:
    a generated, gitignored artifact.
 
 If `$ARGUMENTS` is non-empty, treat it as an override hint — e.g. a custom port
-(`/book 9000`) or a request to only build without serving/opening (`/book
+(`/rhiza_book 9000`) or a request to only build without serving/opening (`/rhiza_book
 build-only`) — and adjust accordingly.
