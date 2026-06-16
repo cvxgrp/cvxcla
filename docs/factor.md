@@ -56,7 +56,7 @@ replacing the rest by their average $\bar{d}$ gives
 $$\Sigma_{\text{clean}} = \bar{d}\, I + V_k (\Lambda_k - \bar{d} I) V_k^\top,$$
 
 i.e. `FactorCovariance(d=np.full(n, d_bar), u=v_k, delta=lambda_k - d_bar)`.
-See the [factor notebook](notebooks.md) for an end-to-end example: simulated
+See the [factor notebook](notebooks/factor.html) for an end-to-end example: simulated
 returns → Marchenko–Pastur threshold → factors → exact frontier.
 
 ## Benchmark
@@ -66,7 +66,7 @@ $k = n/20$, budget constraint, run with `experiments/factor_benchmark.py`
 (Apple Silicon, single seed; the dense column wraps the same problem in a
 plain `numpy` matrix):
 
-| n | k | turning points | dense [s] | factor [s] | speedup |
+| n | k | turning points | dense (s) | factor (s) | speedup |
 |---:|---:|---:|---:|---:|---:|
 | 500 | 25 | 505 | 0.42 | 0.08 | 5x |
 | 2000 | 100 | 2051 | 31.90 | 1.34 | 24x |
