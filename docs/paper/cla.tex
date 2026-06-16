@@ -862,21 +862,63 @@ CLA. Moments are annualised; each marker is one of the $96$ turning points.}
 \label{fig:realfrontier}
 \end{figure}
 
-\paragraph{Remark on conditioning and a real degeneracy.}
+\paragraph{Remark on a real degeneracy, and what it is not.}
 The traces above run cleanly because the expected returns are well separated and
 the covariance is well conditioned. The limitation is real, though, and the same
 data exhibits it: estimating the covariance from a short $120$-day window leaves
 it rank-deficient ($\operatorname{rank} = 119 < N = 494$), and the CLA then aborts
-with a bound violation (\texttt{Weights below lower bounds}) rather than
-completing the trace. This is the degeneracy weakness of the event logic --- and
-it is not merely a conditioning artifact: linear shrinkage toward a scaled
-identity, which restores positive-definiteness, does not rescue the trace, so the
-issue is the coincident-event handling on large, near-degenerate problems. The
-Bland-style rule of \S\ref{sec:bland} hardens the common cases and the
-$\sqrt{\varepsilon_{\text{mach}}}$ slope floor of \S\ref{sec:events} prevents
-out-of-bounds drift, but very tie-heavy or rank-deficient inputs remain a
-known limitation; a well-conditioned, full-rank estimate (ample history, or a
-structured factor model) is the reliable input.
+partway through the trace rather than completing it. It is tempting to read this
+as a conditioning or rank failure, but a closer look shows it is neither.
+
+Three observations locate the true cause (Figure~\ref{fig:degeneracy}). First, at
+the point where the trace stops, the free-asset block $\Sig_{\F\F}$ is
+\emph{well} conditioned: its condition number is of order $10^2$ to $10^3$,
+nowhere near singular, and the reduced KKT solve is accurate. Second, linear
+shrinkage toward a scaled identity, which restores a positive-definite,
+well-conditioned ($\kappa \approx 90$) covariance, does \emph{not} rescue the
+trace; it still aborts. Third, completion is not monotone in the window length or
+the rank: a $100$-day window (sample rank $99 \ll N$) completes, while a
+$550$-day, \emph{full-rank} window aborts. What every abort has in common is
+small and specific: a single free weight, sitting essentially on one of its
+bounds at a degenerate vertex, is placed just outside its box, by an amount of
+order $10^{-5}$ (between roughly one and ten times the feasibility tolerance
+$\tau$), through accumulated floating-point round-off over the hundreds of
+turning points of a large trace. The cause is coincident-event handling and
+round-off, not conditioning, so covariance shrinkage alone is not the remedy.
+
+The abort is the conservative choice rather than a bug. Forcing the trace past
+the violation, by projecting the offending weight back onto its bound and
+continuing, does complete, but the resulting walk has a non-monotone $\lambda$
+and its frontier departs from a reference QP solve by up to $\sim\!10^{-3}$, three
+to five orders of magnitude worse than the $\sim\!10^{-8}$ agreement of the
+well-posed case (\S\ref{sec:exactness}). The algorithm therefore stops rather
+than emit a turning point it cannot certify feasible. The guarantee we can state
+is correspondingly precise: when the events are well separated relative to $\tau$,
+so that no turning-point weight lands within round-off of a bound it is not
+pinned to, the trace is exact (\S\ref{sec:exactness}); a well-conditioned,
+well-separated estimate (ample history, or a structured \texttt{FactorCovariance})
+meets this condition, whereas a tie-heavy or near-rank-deficient sample covariance
+may not. The Bland-style rule of \S\ref{sec:bland} and the
+$\sqrt{\varepsilon_{\text{mach}}}$ slope floor of \S\ref{sec:events} harden the
+common cases; hardening the remaining tie-heavy regime (for example with a
+lexicographic perturbation of coincident events) is left to future work. The
+experiment is reproducible from \texttt{experiments/degeneracy\_boundary.py}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{degeneracy.pdf}
+\caption{Where the CLA trace aborts on the S\&P 500 universe as the
+estimation-window length $W$ varies (log--log). Markers show the worst
+box-bound violation of the candidate turning point at which the trace stops:
+blue circles complete the full trace (violation at floating-point floor), red
+crosses abort. Every abort sits just above the feasibility tolerance $\tau$
+(dashed line), at a violation of order $10^{-5}$, while the free-block condition
+number (green, right axis) stays of order $10^2$ to $10^3$. Completion is not
+monotone in $W$: short rank-deficient windows can complete and long full-rank
+windows can abort, confirming that the failure is accumulated round-off at
+degenerate vertices, not a singular free block.}
+\label{fig:degeneracy}
+\end{figure}
 
 \section{Conclusion}
 

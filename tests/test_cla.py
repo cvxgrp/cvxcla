@@ -225,12 +225,15 @@ class TestCLAEdgeCases:
             assert np.all(tp.weights <= 1.0 + cla.tol)
 
     def test_rank_deficient_covariance_raises_degeneracy(self):
-        """A rank-deficient covariance yields a clear degeneracy diagnosis.
+        """A near-degenerate covariance yields a clear degeneracy diagnosis.
 
-        Estimating a covariance from fewer factors/observations than assets makes
-        it singular; the trace then frees more assets than its rank and the
-        free-asset block becomes singular. The algorithm must report this as a
-        degeneracy (naming the remedy) rather than emit an infeasible point.
+        On a near-rank-deficient problem the walk reaches a degenerate vertex
+        where a turning-point weight falls outside its box by more than the
+        feasibility tolerance, so the point cannot be certified feasible. The
+        algorithm reports this as a degeneracy (naming the remedy) rather than
+        emit an infeasible point. See ``test_degeneracy_is_round_off_not_singular``
+        for the evidence that, on a well-conditioned covariance, this is round-off
+        at a vertex rather than a singular free block.
         """
         rng = np.random.default_rng(2)
         factors = rng.standard_normal((20, 8))
@@ -245,6 +248,63 @@ class TestCLAEdgeCases:
                 a=np.ones((1, n)),
                 b=np.ones(1),
             )
+
+    def test_degeneracy_is_round_off_not_singular(self):
+        """The degeneracy abort is round-off at a vertex, not a singular block.
+
+        Regression guard for the corrected diagnosis (issue #686). We take a
+        near-degenerate sample covariance and shrink it to a *full-rank,
+        well-conditioned* (kappa ~ 16) positive-definite matrix -- the remedy one
+        would expect to fix a conditioning problem. The trace still aborts, and at
+        the stopping candidate the free-asset block ``Sigma_FF`` is *well*
+        conditioned (kappa ~ 10) while the box violation that triggers the stop is
+        only of order the feasibility tolerance. This pins down that the failure
+        is accumulated floating-point round-off at a degenerate vertex, not a
+        singular free block, and that covariance shrinkage alone does not remedy
+        it.
+        """
+        rng = np.random.default_rng(0)
+        n, t_days = 80, 30  # T < n -> rank-deficient sample covariance
+        returns = rng.standard_normal((t_days, n)) * 0.01 + rng.uniform(0.0, 1e-3, n)
+        sample = np.cov(returns, rowvar=False)
+        # Linear shrinkage to a scaled identity: restores full rank and good
+        # conditioning (the standard "fix" for a singular covariance).
+        intensity = 0.3
+        covariance = (1.0 - intensity) * sample + intensity * (np.trace(sample) / n) * np.eye(n)
+        assert np.linalg.matrix_rank(covariance) == n  # full rank now
+        assert np.linalg.cond(covariance) < 100.0  # and well conditioned
+        assert np.all(np.linalg.eigvalsh(covariance) > 0)  # positive definite
+
+        captured: dict[str, float] = {}
+        original_append = CLA._append
+
+        def recording_append(self, tp, tol=None):
+            free = np.flatnonzero(tp.free)
+            sub = covariance[np.ix_(free, free)]
+            below = float(np.max(self.lower_bounds - tp.weights))
+            above = float(np.max(tp.weights - self.upper_bounds))
+            captured["violation"] = max(below, above, 0.0)
+            captured["cond_ff"] = float(np.linalg.cond(sub)) if free.size else 1.0
+            return original_append(self, tp, tol)
+
+        with (
+            patch.object(CLA, "_append", recording_append),
+            pytest.raises(ValueError, match="degeneracy"),
+        ):
+            CLA(
+                mean=returns.mean(axis=0),
+                covariance=covariance,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+            )
+
+        # Despite the well-conditioned full-rank covariance, the trace still
+        # aborts; at the stop the free block is well conditioned (not singular)...
+        assert captured["cond_ff"] < 1e3
+        # ...and the violation is just past the tolerance, not gross infeasibility.
+        assert 0.0 < captured["violation"] < 1e-3
 
     def test_factor_covariance_resolves_degeneracy(self):
         """The FactorCovariance backend is PD by construction and traces cleanly.
