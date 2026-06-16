@@ -237,10 +237,10 @@ class CLA:
 
             # --- Compute new turning point ---
             new_weights = r_alpha + lam * r_beta
-            self._append(TurningPoint(lamb=lam, weights=new_weights, free=free))
+            self._emit(lam, new_weights, free)
 
         # Final point at lambda = 0
-        self._append(TurningPoint(lamb=0, weights=r_alpha, free=last.free))
+        self._emit(0.0, r_alpha, last.free)
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
@@ -296,6 +296,40 @@ class CLA:
             raise ValueError(msg)
 
         self.turning_points.append(tp)
+
+    def _emit(self, lamb: float, weights: NDArray[np.float64], free: NDArray[np.bool_]) -> None:
+        """Build and store a turning point, diagnosing covariance degeneracy.
+
+        The turning-point loop assumes a strictly convex objective, i.e. a
+        positive-definite covariance. When the covariance is rank-deficient (for
+        example a sample covariance estimated from fewer days than assets), the
+        trace eventually frees more assets than the covariance has rank; the
+        free-asset block ``Sigma_FF`` is then (near-)singular and the reduced KKT
+        solve returns an infeasible point — a weight outside its bounds or a
+        budget that no longer sums to one. Rather than surface the resulting
+        low-level constraint error, raise an actionable diagnosis that names the
+        cause and the remedy. Well-posed (positive-definite) problems never reach
+        this branch, so their behaviour is unchanged.
+
+        Raises:
+            ValueError: With a degeneracy-specific message when the turning point
+                is infeasible; otherwise propagates nothing.
+        """
+        try:
+            self._append(TurningPoint(lamb=lamb, weights=weights, free=free))
+        except ValueError as exc:
+            n_free = int(np.count_nonzero(free))
+            msg = (
+                f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
+                f"(free-set size {n_free}): the free-asset covariance block is "
+                "(near-)singular, so the reduced KKT system has no unique, "
+                "feasible solution. The algorithm requires a positive-definite "
+                "covariance. Remedies: apply covariance shrinkage (e.g. "
+                "Ledoit-Wolf) so the covariance is full rank, or use a "
+                "FactorCovariance backend (diagonal-plus-low-rank with a positive "
+                "idiosyncratic floor), which is positive definite by construction."
+            )
+            raise ValueError(msg) from exc
 
     @property
     def frontier(self) -> Frontier:
