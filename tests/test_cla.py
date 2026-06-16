@@ -9,7 +9,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from cvxcla import CLA
+from cvxcla import CLA, FactorCovariance
 from cvxcla.types import TurningPoint
 
 
@@ -223,6 +223,56 @@ class TestCLAEdgeCases:
             assert np.isclose(np.sum(tp.weights), 1.0)
             assert np.all(tp.weights >= -cla.tol)
             assert np.all(tp.weights <= 1.0 + cla.tol)
+
+    def test_rank_deficient_covariance_raises_degeneracy(self):
+        """A rank-deficient covariance yields a clear degeneracy diagnosis.
+
+        Estimating a covariance from fewer factors/observations than assets makes
+        it singular; the trace then frees more assets than its rank and the
+        free-asset block becomes singular. The algorithm must report this as a
+        degeneracy (naming the remedy) rather than emit an infeasible point.
+        """
+        rng = np.random.default_rng(2)
+        factors = rng.standard_normal((20, 8))
+        covariance = factors @ factors.T  # rank 8 < 20 assets
+        n = 20
+        with pytest.raises(ValueError, match="degeneracy"):
+            CLA(
+                mean=rng.uniform(0.0, 1.0, n),
+                covariance=covariance,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+            )
+
+    def test_factor_covariance_resolves_degeneracy(self):
+        """The FactorCovariance backend is PD by construction and traces cleanly.
+
+        The same low-rank risk structure that breaks the dense backend is handled
+        when wrapped as a FactorCovariance with a positive idiosyncratic floor --
+        the documented remedy for the degeneracy above.
+        """
+        rng = np.random.default_rng(2)
+        n, k = 20, 8
+        factors = rng.standard_normal((n, k))
+        cov = factors @ factors.T
+        evals, evecs = np.linalg.eigh(cov)
+        top = np.argsort(evals)[::-1][:k]
+        backend = FactorCovariance(
+            d=np.full(n, 0.5 * np.trace(cov) / n),
+            u=evecs[:, top],
+            delta=np.clip(evals[top], 1e-8, None),
+        )
+        cla = CLA(
+            mean=rng.uniform(0.0, 1.0, n),
+            covariance=backend,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        assert len(cla) >= 2
 
     def test_equal_returns(self):
         """Test with assets having equal expected returns."""
