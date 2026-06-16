@@ -542,7 +542,9 @@ solve ($m=1$ for the budget constraint).
 \item \textbf{Robustness on degenerate data.} The Bland-style tie-break
 (\S\ref{sec:bland}) and the $\sqrt{\varepsilon_{\text{mach}}}$ slope floor
 (\S\ref{sec:events}) make the trace deterministic and prevent both cycling and
-out-of-bounds drift.
+out-of-bounds drift, and sub-tolerance round-off at degenerate vertices is
+projected back onto the feasible set so near-rank-deficient problems still
+complete with optimal turning points (\S\ref{sec:empirical}).
 \end{itemize}
 
 \section{Relation to the Bailey--L\'opez de Prado algorithm}
@@ -592,9 +594,11 @@ $m > 1$ at negligible cost.
 events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit
 Bland-style, lowest-index tie-break (\S\ref{sec:bland}) together with a
 floating-point slope floor (\S\ref{sec:events}) to keep the trace deterministic
-and bounded; the reference implementation has no comparable anti-cycling rule.
-This hardens the common cases, though very degenerate problems remain delicate
-(\S\ref{sec:experiment}).
+and bounded; the reference implementation has no comparable anti-cycling rule. It
+also projects the sub-tolerance round-off that near-degenerate vertices produce
+back onto the feasible set, so near-rank-deficient covariances trace to
+completion with optimal turning points; only a genuinely rank-deficient free
+block is declined (\S\ref{sec:empirical}).
 \end{enumerate}
 
 These differences compound into a large runtime gap (\S\ref{sec:experiment}). It
@@ -913,61 +917,59 @@ CLA. Moments are annualised; each marker is one of the $96$ turning points.}
 \label{fig:realfrontier}
 \end{figure}
 
-\paragraph{Remark on a real degeneracy, and what it is not.}
+\paragraph{A real degeneracy, diagnosed and repaired.}
 The traces above run cleanly because the expected returns are well separated and
-the covariance is well conditioned. The limitation is real, though, and the same
-data exhibits it: estimating the covariance from a short $120$-day window leaves
-it rank-deficient ($\operatorname{rank} = 119 < N = 494$), and the CLA then aborts
-partway through the trace rather than completing it. It is tempting to read this
-as a conditioning or rank failure, but a closer look shows it is neither.
+the covariance is well conditioned. Near-degenerate inputs are more delicate, and
+earlier versions of the algorithm aborted on them. The cause is now understood,
+and it is neither a conditioning nor a rank failure in the usual sense. On a
+near-rank-deficient covariance the smallest eigenvalues span near-flat directions
+of the objective; accumulated floating-point round-off over the hundreds of
+turning points of a large trace nudges a free weight a hair (typically $10^{-5}$
+to $10^{-3}$) outside its box along one of those directions. The candidate is
+therefore optimal to solver precision but not exactly feasible, and a strict
+feasibility check rejects it.
 
-Three observations locate the true cause (Figure~\ref{fig:degeneracy}). First, at
-the point where the trace stops, the free-asset block $\Sig_{\F\F}$ is
-\emph{well} conditioned: its condition number is of order $10^2$ to $10^3$,
-nowhere near singular, and the reduced KKT solve is accurate. Second, linear
-shrinkage toward a scaled identity, which restores a positive-definite,
-well-conditioned ($\kappa \approx 90$) covariance, does \emph{not} rescue the
-trace; it still aborts. Third, completion is not monotone in the window length or
-the rank: a $100$-day window (sample rank $99 \ll N$) completes, while a
-$550$-day, \emph{full-rank} window aborts. What every abort has in common is
-small and specific: a single free weight, sitting essentially on one of its
-bounds at a degenerate vertex, is placed just outside its box, by an amount of
-order $10^{-5}$ (between roughly one and ten times the feasibility tolerance
-$\tau$), through accumulated floating-point round-off over the hundreds of
-turning points of a large trace. The cause is coincident-event handling and
-round-off, not conditioning, so covariance shrinkage alone is not the remedy.
+Because the deviation lies in the covariance's flat directions, projecting the
+candidate back onto the feasible box (and rescaling to restore the budget)
+changes the objective only at the level of the round-off itself. The
+implementation does exactly this in \texttt{\_emit}, and the trace then completes
+with turning points that remain optimal: across a controlled rank-deficiency
+sweep every completed point matches a reference QP solve (CVXPY/Clarabel,
+\S\ref{sec:exactness}) in objective to $\sim\!10^{-9}$
+(Figure~\ref{fig:degeneracy}), and the full-history frontier of
+\S\ref{sec:empirical} is unchanged to the last digit, since well-posed turning
+points are already strictly feasible and the projection is then a no-op. The
+short-window S\&P 500 covariances that previously aborted now trace to
+completion.
 
-The abort is the conservative choice rather than a bug. Forcing the trace past
-the violation, by projecting the offending weight back onto its bound and
-continuing, does complete, but the resulting walk has a non-monotone $\lambda$
-and its frontier departs from a reference QP solve by up to $\sim\!10^{-3}$, three
-to five orders of magnitude worse than the $\sim\!10^{-8}$ agreement of the
-well-posed case (\S\ref{sec:exactness}). The algorithm therefore stops rather
-than emit a turning point it cannot certify feasible. The guarantee we can state
-is correspondingly precise: when the events are well separated relative to $\tau$,
-so that no turning-point weight lands within round-off of a bound it is not
-pinned to, the trace is exact (\S\ref{sec:exactness}); a well-conditioned,
-well-separated estimate (ample history, or a structured \texttt{FactorCovariance})
-meets this condition, whereas a tie-heavy or near-rank-deficient sample covariance
-may not. The Bland-style rule of \S\ref{sec:bland} and the
-$\sqrt{\varepsilon_{\text{mach}}}$ slope floor of \S\ref{sec:events} harden the
-common cases; hardening the remaining tie-heavy regime (for example with a
-lexicographic perturbation of coincident events) is left to future work. The
+The repair is deliberately bounded. A \emph{small} box violation is round-off and
+is projected away; a \emph{gross} one (order $10^{-1}$) signals a genuinely
+rank-deficient free block, whose solve is unreliable once the free set grows past
+the covariance rank. Projecting such a point would silently return a suboptimal
+frontier, so a guard (at $10^{-2}$, an order of magnitude above the round-off
+scale and well below the broken-solve scale) refuses it and raises an actionable
+diagnosis instead. This is the precise guarantee: while the free-asset block
+stays full rank the trace completes and every turning point is optimal; when it
+does not, the algorithm declines rather than mislead. A well-conditioned,
+full-rank estimate (ample history, or a structured \texttt{FactorCovariance},
+which is positive definite by construction) stays in the first regime. The
 experiment is reproducible from \texttt{experiments/degeneracy\_boundary.py}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.72\textwidth]{degeneracy.pdf}
-\caption{Where the CLA trace aborts on the S\&P 500 universe as the
-estimation-window length $W$ varies (log--log). Markers show the worst
-box-bound violation of the candidate turning point at which the trace stops:
-blue circles complete the full trace (violation at floating-point floor), red
-crosses abort. Every abort sits just above the feasibility tolerance $\tau$
-(dashed line), at a violation of order $10^{-5}$, while the free-block condition
-number (green, right axis) stays of order $10^2$ to $10^3$. Completion is not
-monotone in $W$: short rank-deficient windows can complete and long full-rank
-windows can abort, confirming that the failure is accumulated round-off at
-degenerate vertices, not a singular free block.}
+\caption{A controlled rank-deficiency sweep at $n = 120$: the sample covariance
+is estimated from $T$ observations, so its rank is $\approx \min(T-1, n)$ and
+falls as $T$ shrinks (leftward). Each marker is the worst box violation of a
+\emph{candidate} turning point, before projection. Blue circles complete the full
+trace, and every completed frontier is optimal, matching a reference QP in
+objective to $\sim\!10^{-9}$. Red crosses abort. Completions sit below the
+projection guard (dashed, $10^{-2}$): their violations are round-off in the
+covariance's near-flat directions, repaired by projecting onto the feasible box.
+Aborts sit above it: the free block has grown past the covariance rank and its
+solve is unreliable, so the algorithm declines rather than return a suboptimal
+frontier. Completion is not perfectly monotone in $T$ because degeneracy is
+sporadic.}
 \label{fig:degeneracy}
 \end{figure}
 
