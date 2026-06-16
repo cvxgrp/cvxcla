@@ -1,173 +1,179 @@
-"""Map the degeneracy boundary of the CLA event logic (paper figure).
+"""Map the degeneracy boundary of the CLA, and show how projection resolves it.
 
-The companion paper documents a real limitation: on tie-heavy or
-near-degenerate problems the trace can stop early. This experiment characterises
-*where* that happens and *why* it is not a conditioning failure.
+The companion paper documents a real limitation on near-degenerate problems. This
+experiment characterises it and demonstrates the fix in ``cvxcla.cla._emit``.
 
-Fixing the universe at the full S&P 500 (N assets), we estimate the sample
-covariance from the last ``W`` trading days and trace the long-only frontier,
-sweeping the window length ``W``. A short window (``W`` small relative to ``N``)
-makes the sample covariance near-rank-deficient and its frontier events nearly
-coincident; a long window is well separated. For each ``W`` we record whether
-the full trace completes and, at the point where it stops, three diagnostics:
+We fix the universe at ``n`` assets and estimate the sample covariance from ``T``
+observations, sweeping ``T`` from ``T > n`` (full rank, well posed) down to
+``T << n`` (severely rank deficient). For each ``T`` we trace the long-only
+frontier and record:
 
-* the worst box-bound violation of the candidate turning point,
-* the feasibility tolerance ``tol`` it is compared against,
-* the condition number of the free-asset block ``Sigma_FF``.
+* whether the trace completes,
+* the worst conditioning of a *candidate* turning point's free-asset block (its
+  2-norm condition number, the quantity ``_emit`` guards on), and
+* the objective gap of every completed turning point against a reference QP
+  solve (so we can confirm the completed frontier is genuinely optimal, not just
+  feasible).
 
-The headline finding (see the paper): when the trace aborts, the box violation
-is only just above ``tol`` (order 1e-5) while ``Sigma_FF`` is *well*
-conditioned (order 10). The failure is therefore accumulated round-off at a
-degenerate vertex, not a singular free block.
+The story (see the paper): while the free-asset block stays numerically full
+rank its solve is reliable, and the only infeasibility is round-off in the
+covariance's near-flat directions, which ``_emit`` projects back onto the box;
+the trace completes with objective gap ~ 1e-9. Once the free set grows past the
+covariance rank the block is numerically singular (condition number ~ 1e16) and
+its solve is unreliable, so ``_emit`` declines (a guard at ``GUARD``) rather than
+return a possibly-suboptimal frontier. The conditioning is read from the
+symmetric eigenvalues, so it is deterministic and portable, unlike the magnitude
+of the box violation (the residual of a singular solve, which varies with the
+BLAS/LAPACK build).
 
 Writes docs/paper/degeneracy.pdf.
 
 Usage:
-    uv run python experiments/fetch_sp500.py        # once, to download the data
-    uv run --with pyarrow --with matplotlib python experiments/degeneracy_boundary.py
+    uv run --with cvxpy --with matplotlib python experiments/degeneracy_boundary.py
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 import cvxcla.cla as cla_module
 from cvxcla import CLA
 
-DATA = Path(__file__).parent / "data" / "sp500_pct_returns.parquet"
-WINDOWS = [80, 100, 120, 160, 220, 300, 400, 550, 750, 1000, 1213]
+N_ASSETS = 120
+WINDOWS = [240, 180, 150, 130, 120, 100, 90, 75, 60, 45, 30, 20, 15]
+SEED = 0
+GUARD = 1e12  # the singularity guard in CLA._emit: free-block cond above this is declined
 
 
 @dataclass
-class TraceResult:
-    """Outcome of one trace attempt at a given estimation-window length."""
+class SweepResult:
+    """Outcome of one trace attempt at a given number of observations T."""
 
-    window: int
+    t_obs: int
     rank: int
     completed: bool
     n_points: int
-    free_at_stop: int
-    violation: float  # worst box-bound violation of the stopping candidate
-    cond_ff: float  # condition number of Sigma_FF at the stopping candidate
+    worst_cond: float  # worst candidate free-block condition number
+    obj_gap: float  # worst objective gap of a completed turning point vs QP
 
 
-def _trace_with_diagnostics(mean: np.ndarray, cov: np.ndarray, tol: float) -> TraceResult | None:
-    """Trace the long-only frontier, recording the stopping diagnostics.
+def _max_objective_gap(cla: CLA, mean: np.ndarray, cov: np.ndarray) -> float:
+    """Worst (obj_cla - obj_qp) over turning points; ~0 means the frontier is optimal.
 
-    Wraps ``CLA._append`` for the duration of the trace to capture, for the last
-    candidate turning point reached, its worst box violation and the condition
-    number of the free block. Returns ``None`` if the data window is unusable.
+    Returns 0.0 when cvxpy is unavailable so the sweep still runs (the figure then
+    omits the optimality series).
     """
-    n = cov.shape[0]
+    try:
+        import cvxpy as cp
+    except ImportError:
+        return 0.0
+    n = len(mean)
+    gap = 0.0
+    for tp in cla.turning_points:
+        lam = tp.lamb
+        if not np.isfinite(lam) or lam <= 0:
+            continue
+        w = cp.Variable(n)
+        cp.Problem(
+            cp.Minimize(0.5 * cp.quad_form(w, cov, assume_PSD=True) - lam * (mean @ w)),
+            [cp.sum(w) == 1, w >= 0, w <= 1],
+        ).solve(solver=cp.CLARABEL)
+        if w.value is None:
+            continue
+        wc = tp.weights
+        obj_cla = 0.5 * wc @ cov @ wc - lam * mean @ wc
+        obj_qp = 0.5 * w.value @ cov @ w.value - lam * mean @ w.value
+        gap = max(gap, float(obj_cla - obj_qp))
+    return gap
+
+
+def _trace(t_obs: int) -> SweepResult:
+    """Trace the frontier for a size-``t_obs`` sample, recording the diagnostics."""
+    rng = np.random.default_rng(SEED)
+    returns = rng.standard_normal((t_obs, N_ASSETS)) * 0.01 + rng.uniform(0.0, 1e-3, N_ASSETS)
+    cov = np.cov(returns, rowvar=False)
+    mean = returns.mean(axis=0)
     kwargs = {
-        "mean": mean,
-        "lower_bounds": np.zeros(n),
-        "upper_bounds": np.ones(n),
-        "a": np.ones((1, n)),
+        "lower_bounds": np.zeros(N_ASSETS),
+        "upper_bounds": np.ones(N_ASSETS),
+        "a": np.ones((1, N_ASSETS)),
         "b": np.ones(1),
     }
-    last: dict[str, float] = {}
-    original_append = CLA._append
 
-    def recording_append(self: CLA, tp: object, tol: float | None = None) -> None:
-        free = np.flatnonzero(tp.free)  # type: ignore[attr-defined]
-        sub = cov[np.ix_(free, free)]
-        below = float(np.max(self.lower_bounds - tp.weights))  # type: ignore[attr-defined]
-        above = float(np.max(tp.weights - self.upper_bounds))  # type: ignore[attr-defined]
-        last["violation"] = max(below, above, 0.0)
-        last["cond_ff"] = float(np.linalg.cond(sub)) if free.size else 1.0
-        last["free"] = float(free.size)
-        return original_append(self, tp, tol)
+    worst = [0.0]
+    original_emit = CLA._emit
 
-    cla_module.CLA._append = recording_append
+    def recording_emit(self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray) -> None:
+        if np.any(free):
+            worst[0] = max(worst[0], float(np.linalg.cond(cov[np.ix_(free, free)])))
+        original_emit(self, lamb, weights, free)
+
+    cla_module.CLA._emit = recording_emit
     try:
-        cla = CLA(covariance=cov, tol=tol, **kwargs)
+        cla = CLA(mean=mean, covariance=cov, **kwargs)
         completed, n_points = True, len(cla)
+        obj_gap = _max_objective_gap(cla, mean, cov)
     except ValueError:
-        completed, n_points = False, 0
+        completed, n_points, obj_gap = False, 0, 0.0
     finally:
-        cla_module.CLA._append = original_append
+        cla_module.CLA._emit = original_emit
 
-    return TraceResult(
-        window=0,  # placeholder, set by caller
+    return SweepResult(
+        t_obs=t_obs,
         rank=int(np.linalg.matrix_rank(cov)),
         completed=completed,
         n_points=n_points,
-        free_at_stop=int(last.get("free", 0)),
-        violation=float(last.get("violation", 0.0)),
-        cond_ff=float(last.get("cond_ff", 1.0)),
+        worst_cond=worst[0],
+        obj_gap=obj_gap,
     )
 
 
 def main() -> None:
-    """Sweep the estimation window, print a table, and write the figure."""
-    returns = pd.read_parquet(DATA).to_numpy()
-    _, n = returns.shape
-    tol = CLA.tol  # the default feasibility tolerance (1e-5)
+    """Run the sweep, print a table, and write the figure."""
+    results = [_trace(t) for t in WINDOWS]
 
-    results: list[TraceResult] = []
-    print(f"universe N = {n}; feasibility tol = {tol:g}\n")
-    print(f"{'W':>5} {'rank':>5} {'status':>9} {'pts/free':>9} {'box viol':>11} {'cond(S_FF)':>11}")
-    for window in WINDOWS:
-        sample = returns[-window:]
-        cov = np.cov(sample, rowvar=False)
-        res = _trace_with_diagnostics(sample.mean(axis=0), cov, tol)
-        if res is None:
-            continue
-        res.window = window
-        results.append(res)
-        status = "completed" if res.completed else "aborted"
-        count = res.n_points if res.completed else res.free_at_stop
-        print(f"{window:>5} {res.rank:>5} {status:>9} {count:>9} {res.violation:>11.2e} {res.cond_ff:>11.1f}")
+    print(f"universe n = {N_ASSETS}; singularity guard (cond) = {GUARD:g}\n")
+    print(f"{'T':>5} {'rank':>5} {'status':>9} {'pts':>5} {'worst cond':>11} {'obj gap':>11}")
+    for r in results:
+        status = "completed" if r.completed else "declined"
+        print(f"{r.t_obs:>5} {r.rank:>5} {status:>9} {r.n_points:>5} {r.worst_cond:>11.2e} {r.obj_gap:>11.2e}")
 
     try:
         import matplotlib as mpl
 
         mpl.use("Agg")
         import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
     except ImportError:
         print("matplotlib not available - skipping docs/paper/degeneracy.pdf")
         return
 
-    windows = [r.window for r in results]
-    viol = [max(r.violation, 1e-12) for r in results]
-    cond = [r.cond_ff for r in results]
+    ts = [r.t_obs for r in results]
+    cond = [max(r.worst_cond, 1.0) for r in results]
     done = [r.completed for r in results]
 
     fig, ax = plt.subplots(figsize=(5.4, 3.4))
-    # Worst box-bound violation at the stopping candidate, on a log axis,
-    # coloured by whether the full trace completed.
-    for w, v, ok in zip(windows, viol, done, strict=True):
-        ax.scatter(w, v, s=34, zorder=3, color="#1f4e79" if ok else "#c00000", marker="o" if ok else "X")
-    ax.axhline(tol, ls="--", lw=1.0, color="#555555")
-    ax.text(windows[-1], tol * 1.25, "feasibility tol", ha="right", va="bottom", fontsize=7.5, color="#555555")
-    ax.axvline(n, ls=":", lw=1.0, color="#999999")
-    ax.text(n * 1.02, min(viol) * 1.5, f"$W=N={n}$", rotation=90, va="bottom", fontsize=7.5, color="#777777")
+    for t, c, ok in zip(ts, cond, done, strict=True):
+        ax.scatter(t, c, s=36, zorder=3, color="#1f4e79" if ok else "#c00000", marker="o" if ok else "X")
+    ax.axhline(GUARD, ls="--", lw=1.0, color="#555555")
+    ax.text(ts[0], GUARD * 1.6, "singularity guard", ha="right", va="bottom", fontsize=7.5, color="#555555")
+    ax.axvline(N_ASSETS, ls=":", lw=1.0, color="#999999")
+    ax.text(
+        N_ASSETS * 1.03, min(cond) * 1.5, f"$T=n={N_ASSETS}$", rotation=90, va="bottom", fontsize=7.5, color="#777777"
+    )
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel("Estimation window $W$ (trading days)")
-    ax.set_ylabel("Worst box violation at stop")
-    ax.set_title("Where the CLA trace aborts (S&P 500)", fontsize=9)
-
-    # Twin axis: condition number of the free block at the stopping candidate,
-    # to show it stays small (order 10) even when the trace aborts.
-    ax2 = ax.twinx()
-    ax2.plot(windows, cond, "-s", ms=3, lw=0.9, color="#2ca02c", alpha=0.7)
-    ax2.set_ylabel(r"cond$(\Sigma_{FF})$ at stop", color="#2ca02c")
-    ax2.tick_params(axis="y", labelcolor="#2ca02c")
-
-    from matplotlib.lines import Line2D
+    ax.set_xlabel("Observations $T$ (sample covariance rank $\\approx \\min(T-1, n)$)")
+    ax.set_ylabel("Worst candidate free-block cond. number")
+    ax.set_title(f"Full rank completes (optimal); a singular free block is declined ($n={N_ASSETS}$)", fontsize=8.5)
 
     legend = [
-        Line2D([0], [0], marker="o", color="w", markerfacecolor="#1f4e79", ms=7, label="trace completed"),
-        Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="trace aborted"),
-        Line2D([0], [0], color="#2ca02c", marker="s", ms=4, label=r"cond$(\Sigma_{FF})$"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="#1f4e79", ms=7, label="completed (optimal)"),
+        Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="declined (guard)"),
     ]
-    ax.legend(handles=legend, fontsize=7.5, loc="center right")
+    ax.legend(handles=legend, fontsize=7.5, loc="upper right")
     fig.tight_layout()
     out = "docs/paper/degeneracy.pdf"
     fig.savefig(out)

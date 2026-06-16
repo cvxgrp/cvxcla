@@ -298,45 +298,73 @@ class CLA:
         self.turning_points.append(tp)
 
     def _emit(self, lamb: float, weights: NDArray[np.float64], free: NDArray[np.bool_]) -> None:
-        """Build and store a turning point, diagnosing event-logic degeneracy.
+        """Build and store a turning point, projecting away sub-tolerance round-off.
 
         On tie-heavy or near-degenerate problems (a short, near-rank-deficient
         sample covariance, duplicated assets, or many coincident events) the walk
         can reach a degenerate vertex at which a free weight sits essentially on
         one of its bounds. Accumulated floating-point round-off over the many
-        turning points of a large trace then places that weight just outside its
-        box, by more than the feasibility tolerance ``tol``, and the point cannot
-        be certified feasible. This is not a conditioning failure: the free-asset
-        block ``Sigma_FF`` is typically still well-conditioned here (the covariance
-        may even be positive definite and well-conditioned), and forcing the trace
-        past the violation yields a non-monotone ``lambda`` and a frontier that
-        departs measurably from the true optimiser. Rather than emit an
-        uncertifiable point, stop and raise an actionable diagnosis. Well-posed
-        problems with well-separated events never reach this branch, so their
-        behaviour is unchanged.
+        turning points of a large trace then places that weight a hair outside its
+        box. The covariance there has near-flat directions (its small eigenvalues),
+        and the round-off lies in exactly those directions, so the candidate is
+        optimal to solver precision but not exactly feasible.
+
+        We distinguish two regimes by the conditioning of the free-asset block.
+        While that block stays numerically full rank its solve is reliable and any
+        box violation is round-off: we project the candidate onto the feasible box
+        and, for the canonical budget constraint, rescale to restore the budget
+        exactly. The projected point is then exactly feasible while remaining
+        optimal (its objective matches a reference QP solve to roughly ``1e-8``;
+        the weight difference is the problem's own non-uniqueness along the flat
+        directions, not suboptimality). This is a no-op for well-posed turning
+        points, which are already strictly feasible. Once the free set grows past
+        the covariance rank the block is numerically singular and its solve is
+        unreliable; whatever weights it produces (feasible or not) cannot be
+        trusted, so we refuse and raise an actionable diagnosis instead of
+        silently returning a possibly-suboptimal frontier.
+
+        The discriminator is the free block's reciprocal condition number, read
+        from its symmetric eigenvalues. Unlike the magnitude of the box violation,
+        which is the residual of a singular solve and therefore varies with the
+        BLAS/LAPACK build, the conditioning is deterministic and portable, so the
+        completed-vs-declined boundary is the same on every platform.
 
         Raises:
-            ValueError: With a degeneracy-specific message when the turning point
-                is infeasible; otherwise propagates nothing.
+            ValueError: With a degeneracy-specific message when the free-asset
+                block is numerically singular (an unreliable solve); otherwise
+                propagates nothing.
         """
-        try:
-            self._append(TurningPoint(lamb=lamb, weights=weights, free=free))
-        except ValueError as exc:
+        # A genuinely rank-deficient free block has a reciprocal condition number
+        # at round-off level (~1e-16); a well-posed or merely near-degenerate
+        # block sits many orders above it (>= ~1e-4 across the degeneracy sweep in
+        # experiments/degeneracy_boundary.py). The 1e-12 cut sits in the wide gap
+        # between the two and is the conventional numerical-singularity scale.
+        rcond_floor = 1e-12  # pragma: no mutate
+        rcond = self.covariance_operator.rcond_free(free)
+        if rcond < rcond_floor:
             n_free = int(np.count_nonzero(free))
             msg = (
                 f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
-                f"(free-set size {n_free}): a turning-point weight fell outside its "
-                "box bounds by more than the feasibility tolerance, so the point "
-                "cannot be certified feasible and the trace was stopped. This "
-                "happens on tie-heavy or near-degenerate problems (for example a "
-                "sample covariance from fewer days than assets, where events nearly "
-                "coincide); it is a coincident-event and round-off limitation, not a "
-                "conditioning failure, and covariance shrinkage alone does not "
-                "remedy it. Use a well-conditioned estimate with well-separated "
-                "expected returns (ample history), or a FactorCovariance backend "
-                "(diagonal-plus-low-rank), for which the frontier traces cleanly."
+                f"(free-set size {n_free}): the free-asset covariance block is "
+                f"numerically singular (reciprocal condition number {rcond:.2g}), "
+                "so its solve is unreliable and the turning point cannot be "
+                "trusted. The trace was stopped rather than risk silently "
+                "returning a suboptimal frontier. This happens when the free set "
+                "grows past the covariance rank (for example a sample covariance "
+                "from far fewer days than assets). Use a well-conditioned, "
+                "full-rank estimate (ample history), or a FactorCovariance backend "
+                "(diagonal-plus-low-rank), which is positive definite by construction."
             )
-            raise ValueError(msg) from exc
+            raise ValueError(msg)
+        # Full-rank regime: project onto the feasible box to clear round-off, then
+        # restore the budget for the canonical single all-ones equality constraint
+        # (the rescale factor is 1 +/- O(round-off), so it perturbs nothing material).
+        weights = np.clip(weights, self.lower_bounds, self.upper_bounds)
+        if self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
+            total = float(weights.sum())
+            if total > 0.0:
+                weights = weights * (self.b[0] / total)
+        self._append(TurningPoint(lamb=lamb, weights=weights, free=free))
 
     @property
     def frontier(self) -> Frontier:
