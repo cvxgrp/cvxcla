@@ -12,6 +12,7 @@
 \usepackage{amsmath, amssymb}
 \usepackage{bm}
 \usepackage{geometry}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{xcolor}
@@ -447,6 +448,145 @@ solve ($m=1$ for the budget constraint).
 (\S\ref{sec:events}) make the trace deterministic and prevent both cycling and
 out-of-bounds drift.
 \end{itemize}
+
+\section{Numerical experiment}
+\label{sec:experiment}
+
+To illustrate the algorithm at a realistic scale we trace the entire efficient
+frontier of a $200$-asset problem and then measure how the runtime grows with the
+number of assets. Both experiments are reproducible from fixed random seeds:
+\texttt{experiments/frontier\_200x2000.py} and
+\texttt{experiments/runtime\_scaling.py}.
+
+\subsection{Tracing a 200-asset frontier}
+
+\paragraph{Setup.}
+We simulate $T = 2000$ daily returns for $N = 200$ assets from a $K = 15$ factor
+model. As the risk model we use the factor covariance itself,
+$\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ (standard practice --- a
+structured risk model rather than the noisy sample covariance), and we estimate
+the expected returns $\mu \in \R^{200}$ by the sample mean over the $2000$ days.
+We trace the long-only, fully-invested frontier, i.e.\ \eqref{eq:qp} with the
+budget constraint $\mathbf{1}\trans w = 1$ and box bounds $0 \le w \le 1$. The
+same frontier is traced twice with two mathematically identical representations
+of this $\Sig$: the dense matrix and the structured \texttt{FactorCovariance}
+(Woodbury) backend (its condition number here is $\approx 1.0\times 10^{3}$).
+
+\paragraph{Results.}
+The algorithm returns the \emph{entire} frontier as a sequence of
+\textbf{207 turning points} (Figure~\ref{fig:frontier}); between consecutive
+points the frontier is the exact affine segment \eqref{eq:segment}, so these
+$207$ corner portfolios describe the whole efficient set with no discretisation.
+Because the dense matrix and the factor operator represent the \emph{same} $\Sig$,
+the two backends return the identical frontier ($207$ turning points either way) ---
+the Woodbury identity is exact, so it changes only the cost of each solve, never
+the result. Tracing the frontier takes a median of $\approx 38$~ms with the dense
+backend ($\approx 0.18$~ms per turning point) and $\approx 19$~ms with the factor
+backend, a $2.0\times$ speedup at this size; Table~\ref{tab:experiment} collects
+the figures. (As an aside, replacing $\Sig$ by a low-rank \emph{approximation} of
+the full sample covariance --- its leading eigenpairs plus a diagonal residual ---
+yields a near-identical frontier differing by at most one corner, which is why
+factor risk models are a practical substitute for the raw sample covariance.)
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+ & \textbf{Dense backend} & \textbf{Factor backend (Woodbury)} \\
+\midrule
+Turning points         & $207$             & $207$ \\
+Median trace time      & $\approx 38$~ms   & $\approx 19$~ms \\
+Time per turning point & $\approx 0.18$~ms & $\approx 0.09$~ms \\
+\bottomrule
+\end{tabular}
+\caption{Tracing the full $200$-asset frontier (median of $5$ repetitions). Both
+backends solve the identical covariance and return the same $207$-point frontier;
+the factor backend never materialises the $200\times 200$ matrix and is about
+twice as fast.}
+\label{tab:experiment}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{frontier.pdf}
+\caption{The efficient frontier of the $200$-asset, $2000$-day problem in
+expected-return / volatility space, computed exactly by the Critical Line
+Algorithm. Each marker is one of the $207$ turning points; the endpoints are the
+maximum-return portfolio ($\lambda=\infty$) and the global minimum-variance
+portfolio ($\lambda=0$).}
+\label{fig:frontier}
+\end{figure}
+
+\subsection{Runtime versus problem size}
+\label{sec:scaling}
+
+We next trace the full frontier for $n \in \{20, 40, 80, 160, 320, 640\}$ assets,
+each from a ground-truth $K = 10$ factor model so that the dense and factor
+backends again solve the identical $\Sig$ and return the same frontier. For
+reference we also time PyPortfolioOpt's \texttt{CLA} \citep{bailey2013}, the
+widely-used reference implementation of the critical-line algorithm, on the same
+dense problem. The number of turning points tracks $n$ closely
+($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds essentially
+the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}.
+
+Figure~\ref{fig:scaling} plots the median trace time against $n$ on log--log
+axes. A least-squares fit over the largest four sizes gives an empirical exponent
+of $\approx 2.2$ for the \texttt{cvxcla} dense backend and $\approx 1.3$ for the
+factor backend: the dense per-iteration solve scales like $O(n_\F^3)$ over $O(n)$
+iterations, while the Woodbury solve with fixed $K$ stays close to linear in $n$.
+The dense and factor backends are comparable for small universes (the Woodbury
+correction carries a fixed $K\times K$ overhead), but the factor backend pulls
+away as $n$ grows --- from rough parity at $n=40$ to a $\approx 8\times$ speedup
+at $n=640$ (Table~\ref{tab:scaling}). PyPortfolioOpt's pure-Python implementation
+scales far more steeply ($\approx n^{3.4}$): at $n=640$ it takes about
+$253$~seconds, so \texttt{cvxcla}'s dense backend is roughly $330\times$ faster
+and the factor backend roughly $2800\times$ faster. Much of that gap is
+implementation (a vectorised block-elimination over \texttt{numpy} versus
+element-wise Python loops); the factor backend adds the asymptotic Woodbury
+advantage on top.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrrr}
+\toprule
+$n$ & Turning points & PyPortfolioOpt [ms] & \texttt{cvxcla} dense [ms] & \texttt{cvxcla} factor [ms] \\
+\midrule
+$20$  & $21$  & $7.4$        & $1.3$   & $1.5$ \\
+$40$  & $42$  & $40.3$       & $3.2$   & $3.2$ \\
+$80$  & $81$  & $212.1$      & $7.2$   & $6.3$ \\
+$160$ & $159$ & $1{,}477$    & $23.5$  & $14.3$ \\
+$320$ & $322$ & $15{,}932$   & $113.8$ & $33.4$ \\
+$640$ & $641$ & $253{,}307$  & $762.7$ & $91.6$ \\
+\bottomrule
+\end{tabular}
+\caption{Frontier trace time versus number of assets $n$ ($K=10$ factors;
+\texttt{cvxcla} times are the median of $3$ repetitions, PyPortfolioOpt a single
+run). All implementations return the same $O(n)$-point frontier. Empirically the
+times scale like $\approx n^{3.4}$ (PyPortfolioOpt), $\approx n^{2.2}$
+(\texttt{cvxcla} dense) and $\approx n^{1.3}$ (\texttt{cvxcla} factor).}
+\label{tab:scaling}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{scaling.pdf}
+\caption{Frontier trace time as a function of the number of assets $n$ (log--log).
+PyPortfolioOpt's reference critical-line implementation \citep{bailey2013} scales
+like $\approx n^{3.4}$; \texttt{cvxcla}'s dense backend like $\approx n^{2.2}$;
+and its diagonal-plus-low-rank factor backend, solving the identical covariance
+through the Woodbury identity, like $\approx n^{1.3}$. At $n = 640$ the factor
+backend is roughly $2800\times$ faster than PyPortfolioOpt and $8\times$ faster
+than the dense backend.}
+\label{fig:scaling}
+\end{figure}
+
+\paragraph{Remark on conditioning.}
+These traces run cleanly because the expected returns are well separated and the
+covariance is well conditioned. On strongly degenerate inputs --- (near-)tied
+expected returns, duplicated assets, or an ill-conditioned free block --- the
+event logic can encounter many coincident ratios; the Bland-style rule of
+\S\ref{sec:bland} resolves these deterministically, but very tie-heavy problems
+remain numerically delicate.
 
 \section{Conclusion}
 
