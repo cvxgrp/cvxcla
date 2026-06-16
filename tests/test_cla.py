@@ -225,15 +225,15 @@ class TestCLAEdgeCases:
             assert np.all(tp.weights <= 1.0 + cla.tol)
 
     def test_rank_deficient_covariance_raises_degeneracy(self):
-        """A near-degenerate covariance yields a clear degeneracy diagnosis.
+        """A severely rank-deficient covariance yields a clear degeneracy diagnosis.
 
-        On a near-rank-deficient problem the walk reaches a degenerate vertex
-        where a turning-point weight falls outside its box by more than the
-        feasibility tolerance, so the point cannot be certified feasible. The
-        algorithm reports this as a degeneracy (naming the remedy) rather than
-        emit an infeasible point. See ``test_degeneracy_is_round_off_not_singular``
-        for the evidence that, on a well-conditioned covariance, this is round-off
-        at a vertex rather than a singular free block.
+        When the free set grows past the covariance rank the free-asset block is
+        singular and its solve is garbage, producing a gross (order 0.1) box
+        violation. The projection in ``_emit`` only repairs sub-1e-2 round-off, so
+        this gross violation trips the guard and the algorithm raises an actionable
+        degeneracy diagnosis (naming the remedy) rather than silently returning a
+        suboptimal frontier. Contrast ``test_near_degenerate_trace_completes_via_projection``,
+        where a merely near-degenerate (full-rank) problem completes cleanly.
         """
         rng = np.random.default_rng(2)
         factors = rng.standard_normal((20, 8))
@@ -249,62 +249,41 @@ class TestCLAEdgeCases:
                 b=np.ones(1),
             )
 
-    def test_degeneracy_is_round_off_not_singular(self):
-        """The degeneracy abort is round-off at a vertex, not a singular block.
+    def test_near_degenerate_trace_completes_via_projection(self):
+        """A near-degenerate but adequately-ranked trace completes cleanly (issue #686).
 
-        Regression guard for the corrected diagnosis (issue #686). We take a
-        near-degenerate sample covariance and shrink it to a *full-rank,
-        well-conditioned* (kappa ~ 16) positive-definite matrix -- the remedy one
-        would expect to fix a conditioning problem. The trace still aborts, and at
-        the stopping candidate the free-asset block ``Sigma_FF`` is *well*
-        conditioned (kappa ~ 10) while the box violation that triggers the stop is
-        only of order the feasibility tolerance. This pins down that the failure
-        is accumulated floating-point round-off at a degenerate vertex, not a
-        singular free block, and that covariance shrinkage alone does not remedy
-        it.
+        This case used to abort: accumulated round-off at a degenerate vertex put
+        a free weight a hair (order 1e-5) outside its box. The round-off lies in
+        the covariance's near-flat directions, so the candidate is optimal but not
+        exactly feasible; ``_emit`` projects it back onto the feasible box and
+        restores the budget, so the trace now completes. Here the covariance is
+        even full-rank and well conditioned (the violation is pure round-off, not
+        rank deficiency). We assert it completes with every turning point exactly
+        feasible and a non-increasing lambda.
         """
         rng = np.random.default_rng(0)
-        n, t_days = 80, 30  # T < n -> rank-deficient sample covariance
+        n, t_days = 80, 30  # T < n -> near-degenerate sample covariance
         returns = rng.standard_normal((t_days, n)) * 0.01 + rng.uniform(0.0, 1e-3, n)
         sample = np.cov(returns, rowvar=False)
-        # Linear shrinkage to a scaled identity: restores full rank and good
-        # conditioning (the standard "fix" for a singular covariance).
-        intensity = 0.3
+        intensity = 0.3  # shrink to a full-rank, well-conditioned matrix
         covariance = (1.0 - intensity) * sample + intensity * (np.trace(sample) / n) * np.eye(n)
-        assert np.linalg.matrix_rank(covariance) == n  # full rank now
-        assert np.linalg.cond(covariance) < 100.0  # and well conditioned
-        assert np.all(np.linalg.eigvalsh(covariance) > 0)  # positive definite
+        assert np.linalg.matrix_rank(covariance) == n
+        assert np.linalg.cond(covariance) < 100.0
 
-        captured: dict[str, float] = {}
-        original_append = CLA._append
+        cla = CLA(
+            mean=returns.mean(axis=0),
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
 
-        def recording_append(self, tp, tol=None):
-            free = np.flatnonzero(tp.free)
-            sub = covariance[np.ix_(free, free)]
-            below = float(np.max(self.lower_bounds - tp.weights))
-            above = float(np.max(tp.weights - self.upper_bounds))
-            captured["violation"] = max(below, above, 0.0)
-            captured["cond_ff"] = float(np.linalg.cond(sub)) if free.size else 1.0
-            return original_append(self, tp, tol)
-
-        with (
-            patch.object(CLA, "_append", recording_append),
-            pytest.raises(ValueError, match="degeneracy"),
-        ):
-            CLA(
-                mean=returns.mean(axis=0),
-                covariance=covariance,
-                lower_bounds=np.zeros(n),
-                upper_bounds=np.ones(n),
-                a=np.ones((1, n)),
-                b=np.ones(1),
-            )
-
-        # Despite the well-conditioned full-rank covariance, the trace still
-        # aborts; at the stop the free block is well conditioned (not singular)...
-        assert captured["cond_ff"] < 1e3
-        # ...and the violation is just past the tolerance, not gross infeasibility.
-        assert 0.0 < captured["violation"] < 1e-3
+        assert len(cla) > 2  # it traces a real frontier rather than aborting
+        for tp in cla.turning_points:
+            assert np.all(tp.weights >= -1e-9)  # exactly feasible after projection
+            assert np.all(tp.weights <= 1.0 + 1e-9)
+            assert abs(float(tp.weights.sum()) - 1.0) < 1e-9  # budget restored
 
     def test_factor_covariance_resolves_degeneracy(self):
         """The FactorCovariance backend is PD by construction and traces cleanly.
