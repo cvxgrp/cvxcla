@@ -536,6 +536,30 @@ implementation is written as explicit Python loops. As \S\ref{sec:experiment}
 shows, this accounts for a large constant-factor gap on top of the asymptotic
 advantage of the structured backend.
 
+\paragraph{Relation to large-scale active-set methods.}
+Bailey--L\'opez de Prado is the natural baseline because it is the most widely
+used open CLA, but it is not the only line of work on tracing the frontier
+efficiently. \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010}
+develop parametric quadratic-programming and active-set methods aimed squarely at
+\emph{large} universes, and they too drive the per-step cost well below a dense
+$O(n_\F^3)$ refactorisation. The decisive difference is \emph{where} the speed-up
+comes from. Those methods accelerate the linear algebra of a covariance that is
+still treated as an explicit (if large and possibly sparse) matrix --- through
+incremental factorisation updates, exploitation of sparsity, or specialised
+pivoting --- so the gain is tied to a particular matrix representation baked into
+the solver. \texttt{cvxcla} instead leaves the turning-point loop entirely
+representation-agnostic: the covariance enters only through the three-operation
+operator protocol of \S\ref{sec:operators}, so the same loop runs unchanged on a
+dense matrix or on a diagonal-plus-low-rank factor model, and the asymptotic
+advantage of \S\ref{sec:rankscaling} is a property of the \emph{backend}, not of
+the algorithm. The two ideas are complementary rather than competing: an
+incremental-update solver for the free block could itself be wrapped as a
+\texttt{CovarianceOperator} and dropped in. A direct empirical comparison against
+these methods --- none of which ships a maintained Python implementation we are
+aware of --- is left to future work; the reading here is that \texttt{cvxcla}'s
+contribution is the interface that makes such backends interchangeable, not a
+claim to the fastest dense large-scale solve.
+
 \section{Numerical experiment}
 \label{sec:experiment}
 
