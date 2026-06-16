@@ -87,9 +87,14 @@ efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
 while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
 large-scale and active-set variants.
 
-The one element here that is, to our knowledge, not standard in existing CLA
+We claim no new turning points --- the frontier is Markowitz's, and \texttt{cvxcla}
+traces exactly the same one --- but a new \emph{interface} to it: we capture the
+covariance contract as three operations (a matrix--vector product, a free-block
+solve, and a free-to-blocked cross product) so that structured risk models trace
+the identical frontier without touching the algorithm. The one element here that
+is, to our knowledge, not standard in existing CLA
 implementations --- which operate on an explicit dense covariance
-\citep{markowitz2000, bailey2013} --- is the \emph{covariance-operator
+\citep{markowitz2000, bailey2013} --- is this \emph{covariance-operator
 abstraction}. The turning-point loop touches the covariance through only three
 operations: a matrix--vector product, a solve against the free-asset block, and a
 free-to-blocked cross product. Capturing exactly this contract as a small
@@ -325,8 +330,18 @@ $\lambda^{\star}$. A naive ``pick any maximiser'' rule can cycle (the same parti
 recurring without progress). The implementation uses a \textbf{Bland-style rule}: among
 all events within the tolerance of $\lambda^{\star}$ it selects the one with the lowest
 asset index, and within an asset the lowest event-type column. This makes the choice
-deterministic and guarantees termination, resolving degeneracies one asset per
-iteration.
+deterministic and resolves degeneracies one asset per iteration.
+
+Termination follows by the standard anti-cycling argument. There are only finitely
+many free/blocked partitions (at most $2^{n}$), and each partition fixes the affine
+segment \eqref{eq:segment} and hence the interval of $\lambda$ over which it is
+optimal. The parameter $\lambda$ is non-increasing along the walk, so the only way to
+fail to terminate is to revisit a partition at the same $\lambda^{\star}$ --- a cycle.
+Bland's lowest-index selection rule rules this out exactly as it does for the simplex
+method: among the events tied at $\lambda^{\star}$ the deterministic lowest-index choice
+cannot generate a cyclic sequence of partitions. With cycles excluded and the partition
+set finite, the walk visits each partition at most once and terminates in finitely many
+steps.
 
 The asset and event type selected determine the partition update: event types
 ``free $\to$ blocked'' clear the asset's \texttt{free} flag, while ``blocked $\to$ free''
@@ -339,10 +354,11 @@ point.
 The loop runs while $\lambda > 0$. When no admissible event has a positive ratio the
 walk has reached the global minimum-variance portfolio; the algorithm appends a final
 turning point at $\lambda = 0$ with weights $\alpha$ (the constant part of the current
-segment). A hard iteration cap of $100(n+1)$ guards against non-termination: since each
-step fixes the status of at least one asset, a correct trace runs $O(n)$ times, and far
-exceeding this signals a failure (e.g.\ cycling), which is raised loudly rather than
-allowed to hang. Every stored turning point is validated to satisfy the bounds and the
+segment). Termination is guaranteed in exact arithmetic by the anti-cycling argument of
+\S\ref{sec:bland}; the hard iteration cap of $100(n+1)$ is a \emph{numerical} safety net
+rather than the guarantee itself. A correct trace empirically runs $O(n)$ times, so far
+exceeding this cap signals a floating-point failure (e.g.\ a tolerance-induced cycle),
+which is raised loudly rather than allowed to hang. Every stored turning point is validated to satisfy the bounds and the
 budget constraint before being accepted.
 
 \subsection{The complete procedure}
@@ -455,8 +471,10 @@ points; between them the closed-form segment \eqref{eq:segment} holds. No
 discretisation error is introduced.
 
 \item \textbf{Number of turning points.} Each iteration changes exactly one asset's
-status, so the number of turning points is $O(n)$ in practice; the implementation caps
-iterations at $100(n+1)$ as a safety net.
+status. Empirically the number of turning points is $O(n)$; the worst case is
+combinatorial (as for parametric active-set methods generally) but is not observed on
+the problems of \S\ref{sec:experiment}. The implementation caps iterations at
+$100(n+1)$ as a numerical safety net.
 
 \item \textbf{Per-iteration cost.} Dominated by the free-block solve: $O(n_\F^3)$ for
 the dense backend, or $O(n_\F k^2 + k^3)$ for the factor backend via Woodbury
@@ -587,13 +605,21 @@ iterations, while the Woodbury solve with fixed $K$ stays close to linear in $n$
 The dense and factor backends are comparable for small universes (the Woodbury
 correction carries a fixed $K\times K$ overhead), but the factor backend pulls
 away as $n$ grows --- from rough parity at $n=40$ to a $\approx 8\times$ speedup
-at $n=640$ (Table~\ref{tab:scaling}). PyPortfolioOpt's pure-Python implementation
+at $n=640$ (Table~\ref{tab:scaling}). This $\approx 8\times$ is the genuine
+\emph{algorithmic} gain: both backends are vectorised \texttt{numpy} solving the
+identical $\Sig$, so the only difference is the asymptotic Woodbury advantage of
+the structured solve over the dense one.
+
+For external context we also time PyPortfolioOpt, whose pure-Python implementation
 scales far more steeply ($\approx n^{3.4}$): at $n=640$ it takes about
 $253$~seconds, so \texttt{cvxcla}'s dense backend is roughly $330\times$ faster
-and the factor backend roughly $2800\times$ faster. Much of that gap is
-implementation (a vectorised block-elimination over \texttt{numpy} versus
-element-wise Python loops); the factor backend adds the asymptotic Woodbury
-advantage on top.
+and the factor backend roughly $2800\times$ faster. This larger gap should be read
+with care --- it is dominated by \emph{implementation} (a vectorised
+block-elimination over \texttt{numpy} versus element-wise Python loops), not by the
+algorithm; the $\approx 330\times$ dense-over-PyPortfolioOpt factor is essentially
+all vectorisation, and only the residual $\approx 8\times$ on top of it is the
+Woodbury contribution. Disentangling the two cleanly would require a vectorised
+explicit-inverse baseline, which we leave to future work.
 
 \begin{table}[h]
 \centering
