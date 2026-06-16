@@ -51,25 +51,26 @@ def make_problem(rng: np.random.Generator, n: int, k: int) -> tuple[np.ndarray, 
     return dense, factor, problem
 
 
-def median_trace(covariance: object, problem: dict) -> tuple[int, float]:
-    """Return (turning points, median trace seconds) over REPEATS repetitions."""
+def median_trace(covariance: object, problem: dict) -> tuple[int, float, float, float]:
+    """Return (turning points, median, min, max) trace seconds over REPEATS repetitions."""
     cla = CLA(covariance=covariance, **problem)
     times = []
     for _ in range(REPEATS):
         start = time.perf_counter()
         cla = CLA(covariance=covariance, **problem)
         times.append(time.perf_counter() - start)
-    return len(cla), float(np.median(times))
+    return len(cla), float(np.median(times)), float(np.min(times)), float(np.max(times))
 
 
 def main() -> None:
     """Run the rank sweep, print a table, and write the figure."""
     ks, dense_times, factor_times, points = [], [], [], []
+    dense_band, factor_band = [], []
     for k in RANKS:
         rng = np.random.default_rng(SEED)
         dense, factor, problem = make_problem(rng, N_ASSETS, k)
-        n_pts, t_dense = median_trace(dense, problem)
-        n_pts_f, t_factor = median_trace(factor, problem)
+        n_pts, t_dense, d_lo, d_hi = median_trace(dense, problem)
+        n_pts_f, t_factor, f_lo, f_hi = median_trace(factor, problem)
         if n_pts != n_pts_f:
             msg = f"backends disagree at K={k}: {n_pts} vs {n_pts_f}"
             raise RuntimeError(msg)
@@ -77,6 +78,8 @@ def main() -> None:
         points.append(n_pts)
         dense_times.append(t_dense)
         factor_times.append(t_factor)
+        dense_band.append((d_lo, d_hi))
+        factor_band.append((f_lo, f_hi))
         print(
             f"K={k:4d}  points={n_pts:4d}  dense={t_dense * 1e3:8.1f} ms  "
             f"factor={t_factor * 1e3:8.1f} ms  speedup={t_dense / t_factor:5.2f}x"
@@ -92,8 +95,14 @@ def main() -> None:
         print("matplotlib not available - skipping docs/paper/rank_scaling.pdf")
         return
 
+    def band(bands: list[tuple[float, float]], color: str) -> None:
+        """Shade the min--max range across repetitions for one series."""
+        ax.fill_between(ks, [b[0] for b in bands], [b[1] for b in bands], color=color, alpha=0.18, linewidth=0)
+
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
+    band(dense_band, "#c00000")
     ax.loglog(ks, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense backend")
+    band(factor_band, "#1f4e79")
     ax.loglog(ks, factor_times, "-s", ms=4, color="#1f4e79", label="cvxcla, factor backend (Woodbury)")
     ax.set_xlabel(f"Number of factors $K$ (fixed $n={N_ASSETS}$)")
     ax.set_ylabel("Frontier trace time [s]")

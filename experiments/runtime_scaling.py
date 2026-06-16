@@ -68,22 +68,27 @@ def make_problem(rng: np.random.Generator, n: int, k: int) -> tuple[np.ndarray, 
     return dense, factor, problem
 
 
-def median_trace(covariance: object, problem: dict) -> tuple[int, float]:
-    """Return (turning points, median trace seconds) over REPEATS repetitions."""
+def stats(times: list[float]) -> tuple[float, float, float]:
+    """Return (median, min, max) seconds, the centre and min--max band over repetitions."""
+    return float(np.median(times)), float(np.min(times)), float(np.max(times))
+
+
+def median_trace(covariance: object, problem: dict) -> tuple[int, float, float, float]:
+    """Return (turning points, median, min, max) trace seconds over REPEATS repetitions."""
     cla = CLA(covariance=covariance, **problem)
     times = []
     for _ in range(REPEATS):
         start = time.perf_counter()
         cla = CLA(covariance=covariance, **problem)
         times.append(time.perf_counter() - start)
-    return len(cla), float(np.median(times))
+    return (len(cla), *stats(times))
 
 
-def median_trace_inverse(dense: np.ndarray, problem: dict) -> tuple[int, float] | None:
+def median_trace_inverse(dense: np.ndarray, problem: dict) -> tuple[int, float, float, float] | None:
     """Time the vectorised explicit-inverse baseline over REPEATS repetitions.
 
-    Returns (turning points, median seconds) or None when the baseline module
-    is unavailable. Mirrors ``median_trace`` so the protocol is identical.
+    Returns (turning points, median, min, max) seconds or None when the baseline
+    module is unavailable. Mirrors ``median_trace`` so the protocol is identical.
     """
     if InverseCLA is None:
         return None
@@ -99,16 +104,16 @@ def median_trace_inverse(dense: np.ndarray, problem: dict) -> tuple[int, float] 
         start = time.perf_counter()
         inv = InverseCLA(**kw)
         times.append(time.perf_counter() - start)
-    return len(inv), float(np.median(times))
+    return (len(inv), *stats(times))
 
 
-def pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, float] | None:
+def pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, float, float, float] | None:
     """Time PyPortfolioOpt's CLA (Bailey & Lopez de Prado) if installed.
 
     Timed over REPEATS repetitions with the same protocol as the other
     implementations (median of REPEATS), so the comparison is apples-to-apples.
-    Returns (turning points, median seconds) or None when PyPortfolioOpt is
-    absent.
+    Returns (turning points, median, min, max) seconds or None when PyPortfolioOpt
+    is absent.
     """
     try:
         from pypfopt.cla import CLA as PYPFOPT_CLA
@@ -122,17 +127,18 @@ def pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, float] | No
         ppo._solve()  # compute the full critical line (all turning points)
         times.append(time.perf_counter() - start)
         n_pts = len(ppo.w)
-    return n_pts, float(np.median(times))
+    return (n_pts, *stats(times))
 
 
 def main() -> None:
     """Run the scaling sweep, print a table, and write the figure."""
     ns, dense_times, factor_times, ppo_times, inv_times, points = [], [], [], [], [], []
+    dense_band, factor_band, ppo_band, inv_band = [], [], [], []
     for n in SIZES:
         rng = np.random.default_rng(SEED)
         dense, factor, problem = make_problem(rng, n, N_FACTORS)
-        n_pts, t_dense = median_trace(dense, problem)
-        n_pts_f, t_factor = median_trace(factor, problem)
+        n_pts, t_dense, d_lo, d_hi = median_trace(dense, problem)
+        n_pts_f, t_factor, f_lo, f_hi = median_trace(factor, problem)
         if n_pts != n_pts_f:
             msg = f"backends disagree at n={n}: {n_pts} vs {n_pts_f}"
             raise RuntimeError(msg)
@@ -147,6 +153,10 @@ def main() -> None:
         factor_times.append(t_factor)
         ppo_times.append(ppo[1] if ppo else None)
         inv_times.append(inv[1] if inv else None)
+        dense_band.append((d_lo, d_hi))
+        factor_band.append((f_lo, f_hi))
+        ppo_band.append((ppo[2], ppo[3]) if ppo else None)
+        inv_band.append((inv[2], inv[3]) if inv else None)
         inv_str = f"  inverse={inv[1] * 1e3:9.1f} ms" if inv else "  inverse=n/a"
         ppo_str = f"  pypfopt={ppo[1] * 1e3:9.1f} ms (pts={ppo[0]})" if ppo else "  pypfopt=n/a"
         print(
@@ -193,17 +203,29 @@ def main() -> None:
         print("matplotlib not available - skipping docs/paper/scaling.pdf")
         return
 
+    def band(xs: list[int], bands: list[tuple[float, float] | None], color: str) -> None:
+        """Shade the min--max range across repetitions for one series."""
+        xb = [x for x, b in zip(xs, bands, strict=True) if b is not None]
+        lo = [b[0] for b in bands if b is not None]
+        hi = [b[1] for b in bands if b is not None]
+        if xb:
+            ax.fill_between(xb, lo, hi, color=color, alpha=0.18, linewidth=0)
+
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
     have_ppo = any(t is not None for t in ppo_times)
     if have_ppo:
         pn = [n for n, t in zip(ns, ppo_times, strict=True) if t is not None]
         pt = [t for t in ppo_times if t is not None]
+        band(ns, ppo_band, "#7f7f7f")
         ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA (Bailey--Lopez de Prado)")
     if any(t is not None for t in inv_times):
         vn = [n for n, t in zip(ns, inv_times, strict=True) if t is not None]
         vt = [t for t in inv_times if t is not None]
+        band(ns, inv_band, "#2ca02c")
         ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="vectorised explicit-inverse baseline")
+    band(ns, dense_band, "#c00000")
     ax.loglog(ns, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense backend")
+    band(ns, factor_band, "#1f4e79")
     ax.loglog(ns, factor_times, "-s", ms=4, color="#1f4e79", label=f"cvxcla, factor backend (Woodbury, K={N_FACTORS})")
     ax.set_xlabel("Number of assets $n$")
     ax.set_ylabel("Frontier trace time [s]")
