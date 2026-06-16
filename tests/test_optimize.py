@@ -86,6 +86,22 @@ class TestMinimize:
 
         assert result["nit"] <= 5
 
+    def test_right_expansion_hits_max_iter(self):
+        """Right-ward bracket expansion stops at max_iter when bounds are infinite.
+
+        With an unbounded interval and a function that keeps increasing to the
+        right (``f(b) > f(x0)``), the right-expansion loop would grow forever; it
+        must instead break once ``expand`` reaches ``max_iter``.
+        """
+
+        def f(x):
+            return x  # strictly increasing: f(b) > f(x0) for every b > x0
+
+        # bounds=None -> (-inf, inf); small max_iter forces the break quickly.
+        result = minimize(f, x0=0.0, bounds=None, max_iter=2)
+
+        assert np.isfinite(result["x"][0])
+
     def test_left_bound_is_minimum(self):
         """Test when minimum is at left bound."""
 

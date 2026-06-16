@@ -38,6 +38,22 @@ class TestCLA:
             "b": b,
         }
 
+    def test_iteration_cap_raises(self, simple_problem):
+        """The safety cap raises if the event loop fails to terminate.
+
+        ``_append`` is patched to keep only the first turning point, so the last
+        turning point never changes: lambda is recomputed to the same positive
+        value every iteration and the loop runs until the ``max_iterations``
+        guard fires (the ``RuntimeError`` in ``__post_init__``).
+        """
+
+        def append_only_first(self, tp, tol=None):
+            if not self.turning_points:
+                self.turning_points.append(tp)
+
+        with patch.object(CLA, "_append", append_only_first), pytest.raises(RuntimeError, match="failed to converge"):
+            CLA(**simple_problem)
+
     def test_cla_initialization(self, simple_problem):
         """Test that CLA can be initialized with valid inputs."""
         cla = CLA(**simple_problem)
