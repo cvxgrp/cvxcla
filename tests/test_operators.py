@@ -1,11 +1,13 @@
 """Tests for the covariance backends of the CLA (issue #646).
 
 This module tests the CovarianceOperator protocol and its implementations:
-DenseCovariance (the dense reference) and FactorCovariance (diagonal plus
-low rank, solved via the Woodbury identity). It verifies that the CLA
-produces identical results whether it is given a raw covariance matrix, a
-DenseCovariance backend, or a matrix-free backend, and that the factor
-backend traces the same frontier as the dense one.
+DenseCovariance (the dense reference), IncrementalDenseCovariance (the dense
+backend that maintains Sigma_FF^{-1} across turning points), and
+FactorCovariance (diagonal plus low rank, solved via the Woodbury identity).
+It verifies that the CLA produces identical results whether it is given a raw
+covariance matrix, a DenseCovariance backend, or a matrix-free backend, and
+that the incremental and factor backends trace the same frontier as the dense
+one.
 """
 
 import tracemalloc
@@ -13,7 +15,13 @@ import tracemalloc
 import numpy as np
 import pytest
 
-from cvxcla import CLA, CovarianceOperator, DenseCovariance, FactorCovariance
+from cvxcla import (
+    CLA,
+    CovarianceOperator,
+    DenseCovariance,
+    FactorCovariance,
+    IncrementalDenseCovariance,
+)
 
 
 def random_factor_model(rng, n, k):
@@ -87,6 +95,81 @@ class TestDenseCovariance:
         matrix = np.array([[1.0, 2.0], [0.0, 1.0]])
         with pytest.raises(ValueError, match="symmetric"):
             DenseCovariance(matrix)
+
+
+class TestIncrementalDenseCovariance:
+    """Tests for the dense backend that maintains Sigma_FF^{-1} across solves."""
+
+    def test_satisfies_protocol(self, random_spd):
+        """IncrementalDenseCovariance is a runtime instance of CovarianceOperator."""
+        matrix, _, _ = random_spd
+        assert isinstance(IncrementalDenseCovariance(matrix), CovarianceOperator)
+
+    def test_n_matvec_cross_match_dense(self, random_spd):
+        """n, matvec and cross delegate to and match the dense reference."""
+        matrix, free, rng = random_spd
+        cov = IncrementalDenseCovariance(matrix)
+        ref = DenseCovariance(matrix)
+        assert cov.n == ref.n
+        x = rng.standard_normal(cov.n)
+        np.testing.assert_allclose(cov.matvec(x), ref.matvec(x))
+        np.testing.assert_allclose(cov.cross(free, x), ref.cross(free, x))
+
+    def test_solve_free_incremental_matches_numpy(self, random_spd):
+        """A sequence of single-asset flips keeps the maintained inverse correct.
+
+        The first call recomputes from scratch; each later call exercises a
+        rank-one insert (asset enters) or deletion (asset leaves), including the
+        permutation back to ascending free-index order. Both vector and multi-RHS
+        right-hand sides are checked.
+        """
+        matrix, _, rng = random_spd
+        n = matrix.shape[0]
+        cov = IncrementalDenseCovariance(matrix)
+
+        free = np.zeros(n, dtype=bool)
+        free[[0, 3, 4, 7, 11]] = True
+        masks = [free.copy()]
+        cur = free.copy()
+        for flip in (2, 7, 9, 0, 5, 3, 10):  # mix of adds and removes
+            cur = cur.copy()
+            cur[flip] = not cur[flip]
+            masks.append(cur.copy())
+
+        for mask in masks:
+            idx = np.flatnonzero(mask)
+            reduced = matrix[np.ix_(idx, idx)]
+            rhs = rng.standard_normal(idx.size)
+            np.testing.assert_allclose(cov.solve_free(mask, rhs), np.linalg.solve(reduced, rhs), atol=1e-10)
+            rhs2 = rng.standard_normal((idx.size, 3))
+            np.testing.assert_allclose(cov.solve_free(mask, rhs2), np.linalg.solve(reduced, rhs2), atol=1e-10)
+
+    def test_solve_free_multi_change_refactors(self, random_spd):
+        """A change that is not a single-asset flip falls back to a fresh factorisation."""
+        matrix, _, rng = random_spd
+        n = matrix.shape[0]
+        cov = IncrementalDenseCovariance(matrix)
+
+        first = np.zeros(n, dtype=bool)
+        first[[0, 1, 2]] = True
+        cov.solve_free(first, rng.standard_normal(3))
+
+        disjoint = np.zeros(n, dtype=bool)
+        disjoint[[5, 6, 7, 8]] = True  # shares no asset with `first`
+        idx = np.flatnonzero(disjoint)
+        rhs = rng.standard_normal(idx.size)
+        np.testing.assert_allclose(
+            cov.solve_free(disjoint, rhs),
+            np.linalg.solve(matrix[np.ix_(idx, idx)], rhs),
+            atol=1e-10,
+        )
+
+    def test_rejects_non_square_and_non_symmetric(self):
+        """Validation is inherited from the dense reference."""
+        with pytest.raises(ValueError, match="square"):
+            IncrementalDenseCovariance(np.ones((2, 3)))
+        with pytest.raises(ValueError, match="symmetric"):
+            IncrementalDenseCovariance(np.array([[1.0, 2.0], [0.0, 1.0]]))
 
 
 class TestCLAWithOperator:
@@ -271,6 +354,43 @@ class TestFactorCovariance:
             FactorCovariance(d=np.ones(3), u=np.ones((3, 2)), delta=np.ones((2, 3)))
         with pytest.raises(ValueError, match="vector or"):
             FactorCovariance(d=np.ones(3), u=np.ones((3, 2)), delta=np.ones((2, 2, 2)))
+
+
+@pytest.mark.property
+class TestIncrementalMatchesDense:
+    """Property test: the incremental backend traces the same frontier as the dense one."""
+
+    @pytest.mark.parametrize(
+        ("seed", "n", "k"),
+        [
+            (1, 30, 3),
+            (2, 80, 8),
+            (8, 150, 15),
+            (4, 300, 25),
+        ],
+    )
+    def test_turning_points_match(self, seed, n, k):
+        """Lambdas, weights, and free sets agree between the incremental and dense backends."""
+        rng = np.random.default_rng(seed)
+        _, dense = random_factor_model(rng, n, k)
+
+        problem = {
+            "mean": rng.uniform(0.0, 0.1, n),
+            "lower_bounds": np.zeros(n),
+            "upper_bounds": np.minimum(1.0, rng.uniform(3.0, 8.0, n) / n),
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+
+        cla_dense = CLA(covariance=DenseCovariance(dense), **problem)
+        cla_incr = CLA(covariance=IncrementalDenseCovariance(dense), **problem)
+
+        assert len(cla_dense) > 2
+        assert len(cla_dense) == len(cla_incr)
+        for tp_dense, tp_incr in zip(cla_dense.turning_points, cla_incr.turning_points, strict=True):
+            assert tp_dense.lamb == pytest.approx(tp_incr.lamb, rel=1e-7, abs=1e-10)
+            np.testing.assert_allclose(tp_dense.weights, tp_incr.weights, atol=1e-8)
+            np.testing.assert_array_equal(tp_dense.free, tp_incr.free)
 
 
 @pytest.mark.property
