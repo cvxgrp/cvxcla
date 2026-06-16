@@ -619,3 +619,100 @@ class TestCLAMutationHardening:
             assert np.all(tp.weights >= lower - cla.tol)
             assert np.all(tp.weights <= upper + cla.tol)
             assert np.isclose(np.sum(tp.weights), 1.0)
+
+
+class TestCLAInternals:
+    """Unit tests for the extracted per-iteration helpers of the trace.
+
+    The turning-point loop of ``CLA.__post_init__`` delegates to four focused
+    helpers (``_active_set``, ``_solve_kkt``, ``_event_ratios``,
+    ``_select_next_event``). These tests exercise each in isolation on a small,
+    well-conditioned problem, asserting the contract the loop relies on.
+    """
+
+    @pytest.fixture
+    def cla(self):
+        """A small, well-conditioned long-only CLA whose helpers we probe."""
+        n = 4
+        rng = np.random.default_rng(7)
+        m = rng.standard_normal((n, n))
+        return CLA(
+            mean=np.array([0.10, 0.12, 0.15, 0.20]),
+            covariance=m @ m.T + n * np.eye(n),
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+
+    def test_active_set_partitions_and_pins_bounds(self, cla):
+        """at_upper/at_lower/free_in partition the assets; fixed weights sit on bounds."""
+        last = cla.turning_points[0]
+        at_upper, at_lower, free_in, fixed = cla._active_set(last)
+
+        # A blocked asset is either at its upper or lower bound, never both;
+        # free_in is exactly the complement of the union.
+        assert not np.any(at_upper & at_lower)
+        np.testing.assert_array_equal(free_in, ~(at_upper | at_lower))
+        np.testing.assert_allclose(fixed[at_upper], cla.upper_bounds[at_upper])
+        np.testing.assert_allclose(fixed[at_lower], cla.lower_bounds[at_lower])
+        assert np.all(fixed[free_in] == 0.0)  # in-set entries are not pinned
+
+    def test_active_set_all_blocked_raises(self, cla):
+        """An all-blocked active set makes the reduced system singular and is rejected."""
+        weights = np.zeros(cla.mean.size)
+        weights[0] = 1.0  # sum to 1 so TurningPoint validation passes
+        all_blocked = TurningPoint(lamb=0.0, weights=weights, free=np.zeros(cla.mean.size, dtype=bool))
+        with pytest.raises(RuntimeError, match="All variables cannot be blocked"):
+            cla._active_set(all_blocked)
+
+    def test_solve_kkt_is_feasible_and_optimal_segment(self, cla):
+        """The KKT solve returns an affine segment satisfying the equality constraints.
+
+        ``r_alpha`` must satisfy ``A r_alpha = b`` and ``r_beta`` must lie in the
+        null space of ``A`` (``A r_beta = 0``), so every point ``r_alpha + lam
+        r_beta`` along the segment stays budget-feasible.
+        """
+        _, _, free_in, fixed = cla._active_set(cla.turning_points[0])
+        r_alpha, r_beta, gamma, delta = cla._solve_kkt(free_in, fixed)
+
+        np.testing.assert_allclose(cla.a @ r_alpha, cla.b, atol=1e-10)
+        np.testing.assert_allclose(cla.a @ r_beta, np.zeros(cla.a.shape[0]), atol=1e-10)
+        assert gamma.shape == cla.mean.shape
+        assert delta.shape == cla.mean.shape
+
+    def test_event_ratios_shape_and_inactive_entries(self, cla):
+        """The event matrix is (n, 4) and respects which events each asset can fire."""
+        at_upper, at_lower, free_in, fixed = cla._active_set(cla.turning_points[0])
+        r_alpha, r_beta, gamma, delta = cla._solve_kkt(free_in, fixed)
+        l_mat = cla._event_ratios(r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower)
+
+        assert l_mat.shape == (cla.mean.size, 4)
+        # A free asset has no "leave a bound" event (columns 2, 3); a blocked
+        # asset has no "move to a bound" event (columns 0, 1).
+        assert np.all(l_mat[free_in][:, 2:] == -np.inf)
+        assert np.all(l_mat[~free_in][:, :2] == -np.inf)
+
+    def test_select_next_event_bland_lowest_index_tiebreak(self, cla):
+        """Among ratios tied within tol, the lowest (asset, event) index wins."""
+        l_mat = np.full((cla.mean.size, 4), -np.inf)
+        l_mat[3, 1] = 0.5
+        l_mat[1, 0] = 0.5 + cla.tol / 2  # tied with [3, 1] to within tol
+        event = cla._select_next_event(l_mat, lam=np.inf)
+        assert event is not None
+        secchg, dirchg, _ = event
+        assert (secchg, dirchg) == (1, 0)
+
+    def test_select_next_event_no_valid_event_returns_none(self, cla):
+        """When every ratio lies above the current lam window, the trace stops."""
+        l_mat = np.full((cla.mean.size, 4), -np.inf)
+        l_mat[0, 0] = 5.0  # above the window -> filtered out
+        assert cla._select_next_event(l_mat, lam=1.0) is None
+
+    def test_select_next_event_does_not_mutate_input(self, cla):
+        """Selection works on a copy, leaving the caller's matrix untouched."""
+        l_mat = np.full((cla.mean.size, 4), -np.inf)
+        l_mat[0, 0] = 5.0
+        before = l_mat.copy()
+        cla._select_next_event(l_mat, lam=1.0)
+        np.testing.assert_array_equal(l_mat, before)
