@@ -420,3 +420,46 @@ class TestMaxSharpeNeighbourSelection:
         max_sr, _ = frontier.max_sharpe
         expected = self._global_max_sharpe(frontier, mean, covariance)
         assert np.isclose(max_sr, expected, atol=1e-3)
+
+
+class TestPlotFigure:
+    """Pin the figure configuration produced by Frontier.plot()."""
+
+    @pytest.fixture
+    def frontier(self):
+        """A small frontier with distinct variance/volatility values."""
+        mean = np.array([0.10, 0.15, 0.20])
+        covariance = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.01], [0.0, 0.01, 0.16]])
+        points = [
+            FrontierPoint(weights=np.array([0.2, 0.3, 0.5])),
+            FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
+        ]
+        return Frontier(mean=mean, covariance=covariance, frontier=points)
+
+    def test_plot_defaults(self, frontier):
+        """Default plot: variance x-axis, markers on, correct titles, trace, and data."""
+        pytest.importorskip("plotly")
+        fig = frontier.plot()
+
+        assert fig.layout.xaxis.title.text == "Expected variance"
+        assert fig.layout.yaxis.title.text == "Expected Return"
+        trace = fig.data[0]
+        assert trace.name == "Efficient Frontier"
+        assert trace.mode == "lines+markers"
+        assert np.allclose(np.asarray(trace.x), frontier.variance)
+        assert np.allclose(np.asarray(trace.y), frontier.returns)
+
+    def test_plot_volatility_axis(self, frontier):
+        """volatility=True switches the x-axis title and data to volatility."""
+        pytest.importorskip("plotly")
+        fig = frontier.plot(volatility=True)
+
+        assert fig.layout.xaxis.title.text == "Expected volatility"
+        assert np.allclose(np.asarray(fig.data[0].x), frontier.volatility)
+
+    def test_plot_without_markers(self, frontier):
+        """markers=False produces a lines-only trace."""
+        pytest.importorskip("plotly")
+        fig = frontier.plot(markers=False)
+
+        assert fig.data[0].mode == "lines"
