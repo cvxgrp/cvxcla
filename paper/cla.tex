@@ -43,7 +43,8 @@
 \large A parametric active-set method for the entire mean--variance efficient frontier,
 as implemented in \texttt{cvxcla}}
 
-\author{cvxcla --- Stanford University Convex Optimization Group}
+\author{Thomas Schmelzer\\[2pt]
+\normalsize Jebel Quant Research, Abu Dhabi}
 \date{\today}
 
 \begin{document}
@@ -79,7 +80,12 @@ portfolios whose risk--return image is the \emph{efficient frontier}. The Critic
 Line Algorithm (CLA), introduced by \citet{markowitz1956} and developed in
 \citet{markowitz1959}, computes this frontier \emph{exactly and in full}: it returns a
 finite list of \emph{turning points} between which the frontier is described in closed
-form, so no discretisation or repeated re-optimisation is required.
+form, so no discretisation or repeated re-optimisation is required. It belongs to a
+broad family of parametric quadratic-programming and active-set methods for the
+efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
+\citet{markowitz2000} give the canonical description and a reference implementation,
+while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
+large-scale and active-set variants.
 
 This document describes the implementation in the \texttt{cvxcla} package. The core of
 the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
@@ -396,8 +402,9 @@ backend.
 \Sig \;=\; \operatorname{diag}(d) \;+\; U\,\Delta\,U\trans,
 \qquad d\in\R^{n}_{>0},\; U\in\R^{n\times k},\; \Delta\in\R^{k\times k},
 \end{equation}
-the form taken by factor models and by random-matrix-theory-cleaned covariances
-(constant-residual-eigenvalue / eigenvalue clipping). The free-block solve never forms
+the form taken by factor models \citep{sharpe1963} and by random-matrix-theory-cleaned
+covariances (constant-residual-eigenvalue / eigenvalue clipping). The free-block solve
+never forms
 $\Sig_{\F\F}$; instead it uses the Woodbury identity
 \begin{equation}
 \label{eq:woodbury}
@@ -452,66 +459,47 @@ out-of-bounds drift.
 \section{Numerical experiment}
 \label{sec:experiment}
 
-To illustrate the algorithm at a realistic scale we trace the entire efficient
-frontier of a $200$-asset problem and then measure how the runtime grows with the
-number of assets. Both experiments are reproducible from fixed random seeds:
-\texttt{experiments/frontier\_200x2000.py} and
+To illustrate the algorithm we first trace the entire efficient frontier of a
+small problem --- small enough that its piecewise-linear corner structure is
+plainly visible --- and then measure how the runtime grows with the number of
+assets. Both experiments are reproducible from fixed random seeds:
+\texttt{experiments/frontier\_20x50.py} and
 \texttt{experiments/runtime\_scaling.py}.
 
-\subsection{Tracing a 200-asset frontier}
+\subsection{Illustration: a 20-asset frontier}
 
 \paragraph{Setup.}
-We simulate $T = 2000$ daily returns for $N = 200$ assets from a $K = 15$ factor
+We simulate $T = 50$ daily returns for $N = 20$ assets from a $K = 5$ factor
 model. As the risk model we use the factor covariance itself,
 $\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ (standard practice --- a
 structured risk model rather than the noisy sample covariance), and we estimate
-the expected returns $\mu \in \R^{200}$ by the sample mean over the $2000$ days.
+the expected returns $\mu \in \R^{20}$ by the sample mean over the $50$ days.
 We trace the long-only, fully-invested frontier, i.e.\ \eqref{eq:qp} with the
-budget constraint $\mathbf{1}\trans w = 1$ and box bounds $0 \le w \le 1$. The
-same frontier is traced twice with two mathematically identical representations
-of this $\Sig$: the dense matrix and the structured \texttt{FactorCovariance}
-(Woodbury) backend (its condition number here is $\approx 1.0\times 10^{3}$).
+budget constraint $\mathbf{1}\trans w = 1$ and box bounds $0 \le w \le 1$.
 
 \paragraph{Results.}
 The algorithm returns the \emph{entire} frontier as a sequence of
-\textbf{207 turning points} (Figure~\ref{fig:frontier}); between consecutive
+\textbf{21 turning points} (Figure~\ref{fig:frontier}); between consecutive
 points the frontier is the exact affine segment \eqref{eq:segment}, so these
-$207$ corner portfolios describe the whole efficient set with no discretisation.
-Because the dense matrix and the factor operator represent the \emph{same} $\Sig$,
-the two backends return the identical frontier ($207$ turning points either way) ---
-the Woodbury identity is exact, so it changes only the cost of each solve, never
-the result. Tracing the frontier takes a median of $\approx 38$~ms with the dense
-backend ($\approx 0.18$~ms per turning point) and $\approx 19$~ms with the factor
-backend, a $2.0\times$ speedup at this size; Table~\ref{tab:experiment} collects
-the figures. (As an aside, replacing $\Sig$ by a low-rank \emph{approximation} of
-the full sample covariance --- its leading eigenpairs plus a diagonal residual ---
-yields a near-identical frontier differing by at most one corner, which is why
-factor risk models are a practical substitute for the raw sample covariance.)
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lrr}
-\toprule
- & \textbf{Dense backend} & \textbf{Factor backend (Woodbury)} \\
-\midrule
-Turning points         & $207$             & $207$ \\
-Median trace time      & $\approx 38$~ms   & $\approx 19$~ms \\
-Time per turning point & $\approx 0.18$~ms & $\approx 0.09$~ms \\
-\bottomrule
-\end{tabular}
-\caption{Tracing the full $200$-asset frontier (median of $5$ repetitions). Both
-backends solve the identical covariance and return the same $207$-point frontier;
-the factor backend never materialises the $200\times 200$ matrix and is about
-twice as fast.}
-\label{tab:experiment}
-\end{table}
+$21$ corner portfolios describe the whole efficient set with no discretisation.
+The piecewise-linear corners are clearly visible towards the low-variance end of
+the curve. Tracing this small problem takes on the order of a millisecond.
+Because the dense matrix and the structured \texttt{FactorCovariance} (Woodbury)
+backend represent the \emph{same} $\Sig$, the two backends return the identical
+$21$-point frontier --- the Woodbury identity is exact, so it changes only the
+cost of each solve, never the result; its runtime advantage as the universe grows
+is the subject of \S\ref{sec:scaling}. (As an aside, replacing $\Sig$ by a
+low-rank \emph{approximation} of the full sample covariance --- its leading
+eigenpairs plus a diagonal residual --- yields a near-identical frontier differing
+by at most one corner, which is why factor risk models are a practical substitute
+for the raw sample covariance.)
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.72\textwidth]{frontier.pdf}
-\caption{The efficient frontier of the $200$-asset, $2000$-day problem in
+\caption{The efficient frontier of the $20$-asset, $50$-day problem in
 expected-return / volatility space, computed exactly by the Critical Line
-Algorithm. Each marker is one of the $207$ turning points; the endpoints are the
+Algorithm. Each marker is one of the $21$ turning points; the endpoints are the
 maximum-return portfolio ($\lambda=\infty$) and the global minimum-variance
 portfolio ($\lambda=0$).}
 \label{fig:frontier}
@@ -599,6 +587,13 @@ against degeneracy and floating-point noise, and abstracts the covariance behind
 small operator protocol so that structured risk models obtain the same exact frontier
 at a fraction of the dense cost.
 
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
+
+The author thanks Stephen Boyd and Philipp Schiele. The first versions of the
+solver were implemented while the author stayed for a sabbatical at Boyd's group
+at Stanford University.
+
 \begin{thebibliography}{9}
 
 \bibitem[Markowitz(1952)]{markowitz1952}
@@ -626,6 +621,38 @@ D.~H. Bailey and M.~L\'opez de Prado.
 \newblock An open-source implementation of the critical-line algorithm for portfolio
 optimization.
 \newblock \emph{Algorithms}, 6(1):169--196, 2013.
+
+\bibitem[Wolfe(1959)]{wolfe1959}
+P.~Wolfe.
+\newblock The simplex method for quadratic programming.
+\newblock \emph{Econometrica}, 27(3):382--398, 1959.
+
+\bibitem[Sharpe(1963)]{sharpe1963}
+W.~F. Sharpe.
+\newblock A simplified model for portfolio analysis.
+\newblock \emph{Management Science}, 9(2):277--293, 1963.
+
+\bibitem[Perold(1984)]{perold1984}
+A.~F. Perold.
+\newblock Large-scale portfolio optimization.
+\newblock \emph{Management Science}, 30(10):1143--1160, 1984.
+
+\bibitem[Markowitz and Todd(2000)]{markowitz2000}
+H.~M. Markowitz and G.~P. Todd.
+\newblock \emph{Mean-Variance Analysis in Portfolio Choice and Capital Markets}.
+\newblock Frank J. Fabozzi Associates, New Hope, PA, 2000.
+
+\bibitem[Stein et~al.(2008)]{stein2008}
+M.~Stein, J.~Branke, and H.~Schmeck.
+\newblock Efficient implementation of an active set algorithm for large-scale
+portfolio selection.
+\newblock \emph{Computers \& Operations Research}, 35(12):3945--3961, 2008.
+
+\bibitem[Hirschberger et~al.(2010)]{hirschberger2010}
+M.~Hirschberger, Y.~Qi, and R.~E. Steuer.
+\newblock Large-scale MV efficient frontier computation via a procedure of
+parametric quadratic programming.
+\newblock \emph{European Journal of Operational Research}, 204(3):581--588, 2010.
 
 \end{thebibliography}
 
