@@ -937,41 +937,51 @@ changes the objective only at the level of the round-off itself. The
 implementation does exactly this in \texttt{\_emit}, and the trace then completes
 with turning points that remain optimal: across a controlled rank-deficiency
 sweep every completed point matches a reference QP solve (CVXPY/Clarabel,
-\S\ref{sec:exactness}) in objective to $\sim\!10^{-9}$
+\S\ref{sec:exactness}) in objective to $\sim\!10^{-8}$
 (Figure~\ref{fig:degeneracy}), and the full-history frontier of
 \S\ref{sec:empirical} is unchanged to the last digit, since well-posed turning
 points are already strictly feasible and the projection is then a no-op. The
 short-window S\&P 500 covariances that previously aborted now trace to
 completion.
 
-The repair is deliberately bounded. A \emph{small} box violation is round-off and
-is projected away; a \emph{gross} one (order $10^{-1}$) signals a genuinely
-rank-deficient free block, whose solve is unreliable once the free set grows past
-the covariance rank. Projecting such a point would silently return a suboptimal
-frontier, so a guard (at $10^{-2}$, an order of magnitude above the round-off
-scale and well below the broken-solve scale) refuses it and raises an actionable
-diagnosis instead. This is the precise guarantee: while the free-asset block
-stays full rank the trace completes and every turning point is optimal; when it
-does not, the algorithm declines rather than mislead. A well-conditioned,
-full-rank estimate (ample history, or a structured \texttt{FactorCovariance},
-which is positive definite by construction) stays in the first regime. The
-experiment is reproducible from \texttt{experiments/degeneracy\_boundary.py}.
+The repair is deliberately bounded, and the two regimes are told apart by the
+\emph{conditioning} of the free-asset block, not by the size of the violation it
+happens to produce. While that block stays numerically full rank its solve is
+reliable and any infeasibility is round-off, which is projected away; once the
+free set grows past the covariance rank the block is numerically singular and its
+solve is unreliable, so projecting whatever it returns could silently yield a
+suboptimal frontier. A guard therefore declines as soon as the free block's
+reciprocal condition number falls below $10^{-12}$ (the conventional
+numerical-singularity scale), raising an actionable diagnosis instead. We key the
+guard on conditioning rather than on the box violation because the violation is
+the residual of a singular solve and its magnitude varies with the BLAS/LAPACK
+build, whereas the conditioning is read from the block's symmetric eigenvalues
+and is identical on every platform. This is the precise guarantee: while the
+free-asset block stays full rank the trace completes and every turning point is
+optimal; when it does not, the algorithm declines rather than mislead. A
+well-conditioned, full-rank estimate (ample history, or a structured
+\texttt{FactorCovariance}, which is positive definite by construction) stays in
+the first regime. The experiment is reproducible from
+\texttt{experiments/degeneracy\_boundary.py}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.72\textwidth]{degeneracy.pdf}
 \caption{A controlled rank-deficiency sweep at $n = 120$: the sample covariance
 is estimated from $T$ observations, so its rank is $\approx \min(T-1, n)$ and
-falls as $T$ shrinks (leftward). Each marker is the worst box violation of a
-\emph{candidate} turning point, before projection. Blue circles complete the full
-trace, and every completed frontier is optimal, matching a reference QP in
-objective to $\sim\!10^{-9}$. Red crosses abort. Completions sit below the
-projection guard (dashed, $10^{-2}$): their violations are round-off in the
-covariance's near-flat directions, repaired by projecting onto the feasible box.
-Aborts sit above it: the free block has grown past the covariance rank and its
-solve is unreliable, so the algorithm declines rather than return a suboptimal
-frontier. Completion is not perfectly monotone in $T$ because degeneracy is
-sporadic.}
+falls as $T$ shrinks (leftward). Each marker is the worst conditioning (2-norm
+condition number) of a \emph{candidate} turning point's free-asset block. Blue
+circles complete the full trace, and every completed frontier is optimal,
+matching a reference QP in objective to $\sim\!10^{-8}$. Red crosses are declined.
+Completions sit far below the singularity guard (dashed, condition number
+$10^{12}$): their free blocks stay numerically full rank (condition number
+$\lesssim 10^{3}$), so the only infeasibility is round-off in the covariance's
+near-flat directions, repaired by projecting onto the feasible box. Declines sit
+far above it (condition number $\sim\!10^{16}$): the free set has grown past the
+covariance rank, the block is numerically singular and its solve is unreliable,
+so the algorithm declines rather than risk a suboptimal frontier. The boundary is
+monotone in $T$, and the wide gap between the two regimes leaves the guard
+threshold uncritical.}
 \label{fig:degeneracy}
 \end{figure}
 

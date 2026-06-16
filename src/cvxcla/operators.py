@@ -39,6 +39,24 @@ import numpy as np
 from numpy.typing import NDArray
 
 
+def _rcond_symmetric(block: NDArray[np.float64]) -> float:
+    """Reciprocal 2-norm condition number of a symmetric (PSD) ``block``.
+
+    Returns a value in ``[0, 1]``: ``1`` is perfectly conditioned and ``0`` is
+    numerically singular. The condition number is read off the symmetric
+    eigenvalues (``lambda_min / lambda_max``), so the result is deterministic
+    and independent of the BLAS/LAPACK build, unlike the residual of a solve
+    against a singular block. An empty block is treated as well conditioned.
+    """
+    if block.shape[0] == 0:
+        return 1.0
+    eigenvalues = np.linalg.eigvalsh(block)
+    lam_max = float(eigenvalues[-1])
+    if lam_max <= 0.0:
+        return 0.0
+    return max(float(eigenvalues[0]), 0.0) / lam_max
+
+
 @runtime_checkable
 class CovarianceOperator(Protocol):
     """Operations the Critical Line Algorithm needs from a covariance matrix.
@@ -88,6 +106,22 @@ class CovarianceOperator(Protocol):
 
         Returns:
             Vector of shape ``(n_free,)``.
+        """
+        ...  # pragma: no cover
+
+    def rcond_free(self, free: NDArray[np.bool_]) -> float:
+        """Reciprocal condition number of the free block ``Sigma[free][:, free]``.
+
+        Returns a value in ``[0, 1]`` (``1`` well conditioned, ``0`` singular).
+        The CLA uses this to detect a rank-deficient free block, whose solve is
+        unreliable, directly and portably, rather than inferring it from the
+        (backend-dependent) magnitude of the resulting box violation.
+
+        Args:
+            free: Boolean mask of shape ``(n,)`` selecting the free assets.
+
+        Returns:
+            The reciprocal 2-norm condition number of the free block.
         """
         ...  # pragma: no cover
 
@@ -170,6 +204,10 @@ class DenseCovariance:
         blocked = ~free
         return self.matrix[np.ix_(free, blocked)] @ x[blocked]
 
+    def rcond_free(self, free: NDArray[np.bool_]) -> float:
+        """Reciprocal condition number of the free block; see the protocol."""
+        return _rcond_symmetric(self.matrix[np.ix_(free, free)])
+
 
 class IncrementalDenseCovariance:
     """Dense backend that maintains ``Sigma_FF^{-1}`` across turning points.
@@ -238,6 +276,10 @@ class IncrementalDenseCovariance:
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product (delegates to dense)."""
         return self._dense.cross(free, x)
+
+    def rcond_free(self, free: NDArray[np.bool_]) -> float:
+        """Reciprocal condition number of the free block (delegates to dense)."""
+        return self._dense.rcond_free(free)
 
     def solve_free(self, free: NDArray[np.bool_], rhs: NDArray[np.float64]) -> NDArray[np.float64]:
         """Solve ``Sigma[free][:, free] @ y = rhs`` using the maintained inverse.
@@ -481,3 +523,37 @@ class FactorCovariance:
         """
         blocked = ~free
         return self.u[free] @ (self._delta_matrix @ (self.u[blocked].T @ x[blocked]))
+
+    def rcond_free(self, free: NDArray[np.bool_]) -> float:
+        """Lower bound on the free block's reciprocal condition number.
+
+        The free block ``Sigma_FF = diag(d_F) + U_F @ Delta @ U_F^T`` is
+        positive definite by construction (the positive idiosyncratic floor
+        ``d`` keeps it full rank), which is exactly why this backend is the
+        documented remedy for rank deficiency. Rather than form the
+        ``n_F x n_F`` block, we bound the conditioning from the structure via
+        Weyl's inequalities:
+
+        * ``lambda_min(Sigma_FF) >= min(d_F)`` (the low-rank part is PSD), and
+        * ``lambda_max(Sigma_FF) <= max(d_F) + ||U_F||_2^2 * lambda_max(Delta)``.
+
+        Their ratio is a guaranteed *lower* bound on the true reciprocal
+        condition number, computed in ``O(n_F k^2 + k^3)`` without ever
+        materialising an ``n x n`` matrix. For a well-floored factor model it
+        sits far above the CLA's singularity threshold, so the guard never
+        trips; a pathologically tiny floor correctly drives it toward zero.
+
+        Args:
+            free: Boolean mask of shape ``(n,)`` selecting the free assets.
+
+        Returns:
+            A lower bound on the reciprocal 2-norm condition number, in ``[0, 1]``.
+        """
+        if not np.any(free):
+            return 1.0
+        d_free = self.d[free]
+        u_free = self.u[free]
+        u_spectral_norm = float(np.linalg.svd(u_free, compute_uv=False)[0])
+        delta_max = float(np.linalg.eigvalsh(self._delta_matrix)[-1])
+        lam_max_upper = float(np.max(d_free)) + u_spectral_norm**2 * max(delta_max, 0.0)
+        return float(np.min(d_free)) / lam_max_upper

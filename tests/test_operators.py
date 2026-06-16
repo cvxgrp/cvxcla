@@ -85,6 +85,32 @@ class TestDenseCovariance:
         expected = matrix[np.ix_(free, ~free)] @ x[~free]
         np.testing.assert_allclose(cov.cross(free, x), expected)
 
+    def test_rcond_free_matches_numpy(self, random_spd):
+        """rcond_free is the free block's reciprocal 2-norm condition number."""
+        matrix, free, _ = random_spd
+        cov = DenseCovariance(matrix)
+        block = matrix[np.ix_(free, free)]
+        assert cov.rcond_free(free) == pytest.approx(1.0 / np.linalg.cond(block))
+
+    def test_rcond_free_singular_block_is_zero(self):
+        """A rank-deficient free block reports a reciprocal condition number of ~0."""
+        # Two identical assets make the 2x2 free block exactly singular.
+        matrix = np.array([[1.0, 1.0, 0.0], [1.0, 1.0, 0.0], [0.0, 0.0, 2.0]])
+        cov = DenseCovariance(matrix)
+        free = np.array([True, True, False])
+        assert cov.rcond_free(free) < 1e-12
+
+    def test_rcond_free_empty_block_is_one(self, random_spd):
+        """An empty free set is treated as perfectly conditioned."""
+        matrix, _, _ = random_spd
+        cov = DenseCovariance(matrix)
+        assert cov.rcond_free(np.zeros(matrix.shape[0], dtype=bool)) == 1.0
+
+    def test_rcond_free_zero_block_is_zero(self):
+        """A zero (degenerate) free block has a non-positive top eigenvalue and maps to 0."""
+        cov = DenseCovariance(np.zeros((2, 2)))
+        assert cov.rcond_free(np.array([True, True])) == 0.0
+
     def test_rejects_non_square(self):
         """A non-square matrix is rejected."""
         with pytest.raises(ValueError, match="square"):
@@ -204,6 +230,12 @@ class TestIncrementalDenseCovariance:
             np.linalg.solve(matrix[:1, :1], rhs),
         )
 
+    def test_rcond_free_matches_dense(self, random_spd):
+        """rcond_free delegates to and matches the dense reference."""
+        matrix, free, _ = random_spd
+        cov = IncrementalDenseCovariance(matrix)
+        assert cov.rcond_free(free) == DenseCovariance(matrix).rcond_free(free)
+
     def test_rejects_non_square_and_non_symmetric(self):
         """Validation is inherited from the dense reference."""
         with pytest.raises(ValueError, match="square"):
@@ -270,6 +302,11 @@ class TestCLAWithOperator:
 
             def cross(self, free, x):
                 return self._matrix[np.ix_(free, ~free)] @ x[~free]
+
+            def rcond_free(self, free):
+                block = self._matrix[np.ix_(free, free)]
+                eigenvalues = np.linalg.eigvalsh(block)
+                return float(eigenvalues[0] / eigenvalues[-1])
 
         backend = MatrixFreeCovariance(problem["covariance"])
         assert isinstance(backend, CovarianceOperator)
@@ -339,6 +376,23 @@ class TestFactorCovariance:
         x = rng.standard_normal(factor.n)
         expected = dense[np.ix_(free, ~free)] @ x[~free]
         np.testing.assert_allclose(factor.cross(free, x), expected)
+
+    def test_rcond_free_lower_bounds_true_value(self, model):
+        """rcond_free is a positive, valid lower bound on the true reciprocal cond.
+
+        The factor block is positive definite by construction, so the bound is
+        strictly positive (it never spuriously trips the singularity guard), and
+        Weyl's inequalities make it no larger than the exact value.
+        """
+        factor, dense, free, _ = model
+        bound = factor.rcond_free(free)
+        true_rcond = 1.0 / np.linalg.cond(dense[np.ix_(free, free)])
+        assert 0.0 < bound <= true_rcond + 1e-15
+
+    def test_rcond_free_empty_block_is_one(self, model):
+        """An empty free set is treated as perfectly conditioned."""
+        factor, _, _, _ = model
+        assert factor.rcond_free(np.zeros(factor.n, dtype=bool)) == 1.0
 
     def test_full_delta_matrix(self):
         """A full symmetric (k, k) delta is supported."""

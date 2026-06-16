@@ -9,19 +9,22 @@ observations, sweeping ``T`` from ``T > n`` (full rank, well posed) down to
 frontier and record:
 
 * whether the trace completes,
-* the worst box-bound violation of a *candidate* turning point (before the
-  projection in ``_emit`` repairs it), and
+* the worst conditioning of a *candidate* turning point's free-asset block (its
+  2-norm condition number, the quantity ``_emit`` guards on), and
 * the objective gap of every completed turning point against a reference QP
   solve (so we can confirm the completed frontier is genuinely optimal, not just
   feasible).
 
-The story (see the paper): a near-rank-deficient covariance has near-flat
-directions; round-off pushes a candidate weight a hair (<= ~1e-2) outside its
-box along one of them, so the candidate is optimal but not exactly feasible.
-``_emit`` projects it back onto the box and the trace completes with objective
-gap ~ 1e-9. Only when the free set grows past the covariance rank does the solve
-become unreliable, emitting a gross (O(0.1)) violation; the projection then
-refuses (a guard at ``GUARD``) rather than return a suboptimal frontier.
+The story (see the paper): while the free-asset block stays numerically full
+rank its solve is reliable, and the only infeasibility is round-off in the
+covariance's near-flat directions, which ``_emit`` projects back onto the box;
+the trace completes with objective gap ~ 1e-9. Once the free set grows past the
+covariance rank the block is numerically singular (condition number ~ 1e16) and
+its solve is unreliable, so ``_emit`` declines (a guard at ``GUARD``) rather than
+return a possibly-suboptimal frontier. The conditioning is read from the
+symmetric eigenvalues, so it is deterministic and portable, unlike the magnitude
+of the box violation (the residual of a singular solve, which varies with the
+BLAS/LAPACK build).
 
 Writes docs/paper/degeneracy.pdf.
 
@@ -41,7 +44,7 @@ from cvxcla import CLA
 N_ASSETS = 120
 WINDOWS = [240, 180, 150, 130, 120, 100, 90, 75, 60, 45, 30, 20, 15]
 SEED = 0
-GUARD = 1e-2  # the gross-violation guard in CLA._emit (round-off vs broken solve)
+GUARD = 1e12  # the singularity guard in CLA._emit: free-block cond above this is declined
 
 
 @dataclass
@@ -52,7 +55,7 @@ class SweepResult:
     rank: int
     completed: bool
     n_points: int
-    raw_violation: float  # worst candidate box violation before projection
+    worst_cond: float  # worst candidate free-block condition number
     obj_gap: float  # worst objective gap of a completed turning point vs QP
 
 
@@ -103,9 +106,8 @@ def _trace(t_obs: int) -> SweepResult:
     original_emit = CLA._emit
 
     def recording_emit(self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray) -> None:
-        below = float(np.max(self.lower_bounds - weights))
-        above = float(np.max(weights - self.upper_bounds))
-        worst[0] = max(worst[0], below, above, 0.0)
+        if np.any(free):
+            worst[0] = max(worst[0], float(np.linalg.cond(cov[np.ix_(free, free)])))
         original_emit(self, lamb, weights, free)
 
     cla_module.CLA._emit = recording_emit
@@ -123,7 +125,7 @@ def _trace(t_obs: int) -> SweepResult:
         rank=int(np.linalg.matrix_rank(cov)),
         completed=completed,
         n_points=n_points,
-        raw_violation=worst[0],
+        worst_cond=worst[0],
         obj_gap=obj_gap,
     )
 
@@ -132,11 +134,11 @@ def main() -> None:
     """Run the sweep, print a table, and write the figure."""
     results = [_trace(t) for t in WINDOWS]
 
-    print(f"universe n = {N_ASSETS}; projection guard = {GUARD:g}\n")
-    print(f"{'T':>5} {'rank':>5} {'status':>9} {'pts':>5} {'raw viol':>11} {'obj gap':>11}")
+    print(f"universe n = {N_ASSETS}; singularity guard (cond) = {GUARD:g}\n")
+    print(f"{'T':>5} {'rank':>5} {'status':>9} {'pts':>5} {'worst cond':>11} {'obj gap':>11}")
     for r in results:
-        status = "completed" if r.completed else "aborted"
-        print(f"{r.t_obs:>5} {r.rank:>5} {status:>9} {r.n_points:>5} {r.raw_violation:>11.2e} {r.obj_gap:>11.2e}")
+        status = "completed" if r.completed else "declined"
+        print(f"{r.t_obs:>5} {r.rank:>5} {status:>9} {r.n_points:>5} {r.worst_cond:>11.2e} {r.obj_gap:>11.2e}")
 
     try:
         import matplotlib as mpl
@@ -149,29 +151,29 @@ def main() -> None:
         return
 
     ts = [r.t_obs for r in results]
-    viol = [max(r.raw_violation, 1e-12) for r in results]
+    cond = [max(r.worst_cond, 1.0) for r in results]
     done = [r.completed for r in results]
 
     fig, ax = plt.subplots(figsize=(5.4, 3.4))
-    for t, v, ok in zip(ts, viol, done, strict=True):
-        ax.scatter(t, v, s=36, zorder=3, color="#1f4e79" if ok else "#c00000", marker="o" if ok else "X")
+    for t, c, ok in zip(ts, cond, done, strict=True):
+        ax.scatter(t, c, s=36, zorder=3, color="#1f4e79" if ok else "#c00000", marker="o" if ok else "X")
     ax.axhline(GUARD, ls="--", lw=1.0, color="#555555")
-    ax.text(ts[0], GUARD * 1.3, "projection guard", ha="right", va="bottom", fontsize=7.5, color="#555555")
+    ax.text(ts[0], GUARD * 1.6, "singularity guard", ha="right", va="bottom", fontsize=7.5, color="#555555")
     ax.axvline(N_ASSETS, ls=":", lw=1.0, color="#999999")
     ax.text(
-        N_ASSETS * 1.03, min(viol) * 1.5, f"$T=n={N_ASSETS}$", rotation=90, va="bottom", fontsize=7.5, color="#777777"
+        N_ASSETS * 1.03, min(cond) * 1.5, f"$T=n={N_ASSETS}$", rotation=90, va="bottom", fontsize=7.5, color="#777777"
     )
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Observations $T$ (sample covariance rank $\\approx \\min(T-1, n)$)")
-    ax.set_ylabel("Worst candidate box violation")
-    ax.set_title(f"Projection repairs round-off; the guard refuses rank deficiency ($n={N_ASSETS}$)", fontsize=8.5)
+    ax.set_ylabel("Worst candidate free-block cond. number")
+    ax.set_title(f"Full rank completes (optimal); a singular free block is declined ($n={N_ASSETS}$)", fontsize=8.5)
 
     legend = [
         Line2D([0], [0], marker="o", color="w", markerfacecolor="#1f4e79", ms=7, label="completed (optimal)"),
-        Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="aborted (guard)"),
+        Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="declined (guard)"),
     ]
-    ax.legend(handles=legend, fontsize=7.5, loc="lower left")
+    ax.legend(handles=legend, fontsize=7.5, loc="upper right")
     fig.tight_layout()
     out = "docs/paper/degeneracy.pdf"
     fig.savefig(out)

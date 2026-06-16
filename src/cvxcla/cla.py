@@ -309,54 +309,56 @@ class CLA:
         and the round-off lies in exactly those directions, so the candidate is
         optimal to solver precision but not exactly feasible.
 
-        We distinguish two regimes by the size of the box violation. A *small*
-        violation is round-off: we project the candidate onto the feasible box and,
-        for the canonical budget constraint, rescale to restore the budget exactly.
-        The projected point is then exactly feasible while remaining optimal (its
-        objective matches a reference QP solve to roughly ``1e-8``; the weight
-        difference is the problem's own non-uniqueness along the flat directions,
-        not suboptimality). This is a no-op for well-posed turning points, which
-        are already strictly feasible. A *gross* violation, by contrast, signals a
-        genuinely rank-deficient free block (the free set has grown past the
-        covariance rank) whose solve is unreliable; projecting it would silently
-        return a suboptimal frontier, so we refuse and raise an actionable
-        diagnosis instead.
+        We distinguish two regimes by the conditioning of the free-asset block.
+        While that block stays numerically full rank its solve is reliable and any
+        box violation is round-off: we project the candidate onto the feasible box
+        and, for the canonical budget constraint, rescale to restore the budget
+        exactly. The projected point is then exactly feasible while remaining
+        optimal (its objective matches a reference QP solve to roughly ``1e-8``;
+        the weight difference is the problem's own non-uniqueness along the flat
+        directions, not suboptimality). This is a no-op for well-posed turning
+        points, which are already strictly feasible. Once the free set grows past
+        the covariance rank the block is numerically singular and its solve is
+        unreliable; whatever weights it produces (feasible or not) cannot be
+        trusted, so we refuse and raise an actionable diagnosis instead of
+        silently returning a possibly-suboptimal frontier.
+
+        The discriminator is the free block's reciprocal condition number, read
+        from its symmetric eigenvalues. Unlike the magnitude of the box violation,
+        which is the residual of a singular solve and therefore varies with the
+        BLAS/LAPACK build, the conditioning is deterministic and portable, so the
+        completed-vs-declined boundary is the same on every platform.
 
         Raises:
-            ValueError: With a degeneracy-specific message when the candidate is
-                grossly infeasible (an unreliable free-block solve); otherwise
+            ValueError: With a degeneracy-specific message when the free-asset
+                block is numerically singular (an unreliable solve); otherwise
                 propagates nothing.
         """
-        # Separate round-off from a broken solve. Empirically, near-degenerate but
-        # adequately-ranked problems (short sample windows, tie-heavy events) emit
-        # violations <= ~1e-3 that project to optimal points, whereas a genuinely
-        # rank-deficient free block emits O(0.1) violations from a garbage solve.
-        # The 1e-2 cut sits an order of magnitude above the former and well below
-        # the latter (see experiments/degeneracy_boundary.py).
-        feasibility_tol = 1e-2  # pragma: no mutate
-        violation = max(
-            float(np.max(self.lower_bounds - weights)),
-            float(np.max(weights - self.upper_bounds)),
-            0.0,
-        )
-        if violation > feasibility_tol:
+        # A genuinely rank-deficient free block has a reciprocal condition number
+        # at round-off level (~1e-16); a well-posed or merely near-degenerate
+        # block sits many orders above it (>= ~1e-4 across the degeneracy sweep in
+        # experiments/degeneracy_boundary.py). The 1e-12 cut sits in the wide gap
+        # between the two and is the conventional numerical-singularity scale.
+        rcond_floor = 1e-12  # pragma: no mutate
+        rcond = self.covariance_operator.rcond_free(free)
+        if rcond < rcond_floor:
             n_free = int(np.count_nonzero(free))
             msg = (
                 f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
-                f"(free-set size {n_free}): a turning-point weight fell grossly "
-                f"outside its box bounds (by {violation:.2g}), so the free-asset "
-                "covariance block is rank-deficient and its solve is unreliable. "
-                "Projecting it would silently return a suboptimal frontier, so the "
-                "trace was stopped. This happens when the free set grows past the "
-                "covariance rank (for example a sample covariance from far fewer "
-                "days than assets). Use a well-conditioned, full-rank estimate "
-                "(ample history), or a FactorCovariance backend "
+                f"(free-set size {n_free}): the free-asset covariance block is "
+                f"numerically singular (reciprocal condition number {rcond:.2g}), "
+                "so its solve is unreliable and the turning point cannot be "
+                "trusted. The trace was stopped rather than risk silently "
+                "returning a suboptimal frontier. This happens when the free set "
+                "grows past the covariance rank (for example a sample covariance "
+                "from far fewer days than assets). Use a well-conditioned, "
+                "full-rank estimate (ample history), or a FactorCovariance backend "
                 "(diagonal-plus-low-rank), which is positive definite by construction."
             )
             raise ValueError(msg)
-        # Round-off regime: project onto the feasible box, then restore the budget
-        # for the canonical single all-ones equality constraint (the rescale factor
-        # is 1 +/- O(round-off), so it perturbs nothing material).
+        # Full-rank regime: project onto the feasible box to clear round-off, then
+        # restore the budget for the canonical single all-ones equality constraint
+        # (the rescale factor is 1 +/- O(round-off), so it perturbs nothing material).
         weights = np.clip(weights, self.lower_bounds, self.upper_bounds)
         if self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
             total = float(weights.sum())

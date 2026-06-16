@@ -228,18 +228,20 @@ class TestCLAEdgeCases:
         """A severely rank-deficient covariance yields a clear degeneracy diagnosis.
 
         When the free set grows past the covariance rank the free-asset block is
-        singular and its solve is garbage, producing a gross (order 0.1) box
-        violation. The projection in ``_emit`` only repairs sub-1e-2 round-off, so
-        this gross violation trips the guard and the algorithm raises an actionable
-        degeneracy diagnosis (naming the remedy) rather than silently returning a
-        suboptimal frontier. Contrast ``test_near_degenerate_trace_completes_via_projection``,
-        where a merely near-degenerate (full-rank) problem completes cleanly.
+        numerically singular and its solve is unreliable. ``_emit`` detects this
+        from the block's reciprocal condition number (a deterministic, portable
+        signal, unlike the magnitude of the resulting box violation, which is the
+        residual of a singular solve and varies with the BLAS/LAPACK build), so it
+        raises an actionable degeneracy diagnosis (naming the remedy) rather than
+        silently returning a possibly-suboptimal frontier. Contrast
+        ``test_near_degenerate_trace_completes_via_projection``, where a merely
+        near-degenerate (full-rank) problem completes cleanly.
         """
         rng = np.random.default_rng(2)
         factors = rng.standard_normal((20, 8))
         covariance = factors @ factors.T  # rank 8 < 20 assets
         n = 20
-        with pytest.raises(ValueError, match="degeneracy"):
+        with pytest.raises(ValueError, match="numerically singular"):
             CLA(
                 mean=rng.uniform(0.0, 1.0, n),
                 covariance=covariance,
