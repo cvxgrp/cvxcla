@@ -43,7 +43,8 @@
 \large A parametric active-set method for the entire mean--variance efficient frontier,
 as implemented in \texttt{cvxcla}}
 
-\author{cvxcla --- Stanford University Convex Optimization Group}
+\author{Thomas Schmelzer\\[2pt]
+\normalsize Jebel Quant Research, Abu Dhabi}
 \date{\today}
 
 \begin{document}
@@ -79,7 +80,12 @@ portfolios whose risk--return image is the \emph{efficient frontier}. The Critic
 Line Algorithm (CLA), introduced by \citet{markowitz1956} and developed in
 \citet{markowitz1959}, computes this frontier \emph{exactly and in full}: it returns a
 finite list of \emph{turning points} between which the frontier is described in closed
-form, so no discretisation or repeated re-optimisation is required.
+form, so no discretisation or repeated re-optimisation is required. It belongs to a
+broad family of parametric quadratic-programming and active-set methods for the
+efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
+\citet{markowitz2000} give the canonical description and a reference implementation,
+while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
+large-scale and active-set variants.
 
 This document describes the implementation in the \texttt{cvxcla} package. The core of
 the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
@@ -396,8 +402,9 @@ backend.
 \Sig \;=\; \operatorname{diag}(d) \;+\; U\,\Delta\,U\trans,
 \qquad d\in\R^{n}_{>0},\; U\in\R^{n\times k},\; \Delta\in\R^{k\times k},
 \end{equation}
-the form taken by factor models and by random-matrix-theory-cleaned covariances
-(constant-residual-eigenvalue / eigenvalue clipping). The free-block solve never forms
+the form taken by factor models \citep{sharpe1963} and by random-matrix-theory-cleaned
+covariances (constant-residual-eigenvalue / eigenvalue clipping). The free-block solve
+never forms
 $\Sig_{\F\F}$; instead it uses the Woodbury identity
 \begin{equation}
 \label{eq:woodbury}
@@ -580,6 +587,13 @@ against degeneracy and floating-point noise, and abstracts the covariance behind
 small operator protocol so that structured risk models obtain the same exact frontier
 at a fraction of the dense cost.
 
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
+
+The author thanks Stephen Boyd and Philipp Schiele. The first versions of the
+solver were implemented while the author stayed for a sabbatical at Boyd's group
+at Stanford University.
+
 \begin{thebibliography}{9}
 
 \bibitem[Markowitz(1952)]{markowitz1952}
@@ -607,6 +621,38 @@ D.~H. Bailey and M.~L\'opez de Prado.
 \newblock An open-source implementation of the critical-line algorithm for portfolio
 optimization.
 \newblock \emph{Algorithms}, 6(1):169--196, 2013.
+
+\bibitem[Wolfe(1959)]{wolfe1959}
+P.~Wolfe.
+\newblock The simplex method for quadratic programming.
+\newblock \emph{Econometrica}, 27(3):382--398, 1959.
+
+\bibitem[Sharpe(1963)]{sharpe1963}
+W.~F. Sharpe.
+\newblock A simplified model for portfolio analysis.
+\newblock \emph{Management Science}, 9(2):277--293, 1963.
+
+\bibitem[Perold(1984)]{perold1984}
+A.~F. Perold.
+\newblock Large-scale portfolio optimization.
+\newblock \emph{Management Science}, 30(10):1143--1160, 1984.
+
+\bibitem[Markowitz and Todd(2000)]{markowitz2000}
+H.~M. Markowitz and G.~P. Todd.
+\newblock \emph{Mean-Variance Analysis in Portfolio Choice and Capital Markets}.
+\newblock Frank J. Fabozzi Associates, New Hope, PA, 2000.
+
+\bibitem[Stein et~al.(2008)]{stein2008}
+M.~Stein, J.~Branke, and H.~Schmeck.
+\newblock Efficient implementation of an active set algorithm for large-scale
+portfolio selection.
+\newblock \emph{Computers \& Operations Research}, 35(12):3945--3961, 2008.
+
+\bibitem[Hirschberger et~al.(2010)]{hirschberger2010}
+M.~Hirschberger, Y.~Qi, and R.~E. Steuer.
+\newblock Large-scale MV efficient frontier computation via a procedure of
+parametric quadratic programming.
+\newblock \emph{European Journal of Operational Research}, 204(3):581--588, 2010.
 
 \end{thebibliography}
 
