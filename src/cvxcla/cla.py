@@ -102,10 +102,7 @@ class CLA:
                           system of equations singular.
 
         """
-        m = self.a.shape[0]
         ns = len(self.mean)
-        cov = self.covariance_operator
-        tol = self.tol
 
         # Compute and store the first turning point
         self._append(self._first_turning_point())
@@ -126,121 +123,202 @@ class CLA:
                 raise RuntimeError(msg)  # pragma: no mutate
             last = self.turning_points[-1]
 
-            # --- Identify active set ---
-            blocked = ~last.free
-            if np.all(blocked):
-                msg = "All variables cannot be blocked"
-                raise RuntimeError(msg)
+            at_upper, at_lower, free_in, fixed_weights = self._active_set(last)
+            r_alpha, r_beta, gamma, delta = self._solve_kkt(free_in, fixed_weights)
+            l_mat = self._event_ratios(r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower)
 
-            at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= tol)  # pragma: no mutate
-            at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= tol)  # pragma: no mutate
-
-            _out = at_upper | at_lower
-            _in = ~_out
-
-            fixed_weights = np.zeros(ns)
-            fixed_weights[at_upper] = self.upper_bounds[at_upper]
-            fixed_weights[at_lower] = self.lower_bounds[at_lower]
-
-            # --- Solve the reduced KKT system by block elimination ---
-            # [Sigma_FF  A_F.T] [x ]   [r1]      with r1, r2 the RHS for the
-            # [A_F       0    ] [nu] = [r2]      alpha (weights) and beta system
-            a_free = self.a[:, _in]
-
-            # Free-block solves: Sigma_FF^{-1} [A_F.T | r1_alpha | r1_beta]
-            rhs_free = np.column_stack(
-                [
-                    a_free.T,
-                    -cov.cross(_in, fixed_weights),
-                    self.mean[_in],
-                ]
-            )
-            solved = cov.solve_free(_in, rhs_free)
-            y = solved[:, :m]  # Sigma_FF^{-1} A_F.T
-            z_alpha = solved[:, m]
-            z_beta = solved[:, m + 1]
-
-            # Schur complement A_F Sigma_FF^{-1} A_F.T and multipliers
-            schur = a_free @ y
-            r2_alpha = self.b - self.a[:, _out] @ fixed_weights[_out]
-            nu = np.linalg.solve(schur, np.column_stack([a_free @ z_alpha - r2_alpha, a_free @ z_beta]))
-            nu_alpha, nu_beta = nu[:, 0], nu[:, 1]
-
-            # Back-substitute the free weights
-            r_alpha = fixed_weights.copy()
-            r_alpha[_in] = z_alpha - y @ nu_alpha
-            r_beta = np.zeros(ns)
-            r_beta[_in] = z_beta - y @ nu_beta
-
-            # --- Compute Lagrange multipliers and directional derivatives ---
-            gamma = cov.matvec(r_alpha) + self.a.T @ nu_alpha
-            delta = cov.matvec(r_beta) + self.a.T @ nu_beta - self.mean
-
-            # --- Compute event ratios ---
-            # A free weight moves along w(lam) = r_alpha + lam * r_beta, so even
-            # a tiny slope crosses a bound given a long enough lam range.
-            # Filtering slopes at self.tol misses such crossings and lets
-            # weights drift out of bounds; only slopes at floating-point noise
-            # level are excluded: below sqrt(machine epsilon) a slope is
-            # indistinguishable from solve noise, and the huge ratios it would
-            # produce only amplify rounding errors. Spurious ratios above the
-            # current lam are removed by the lam window below.
-            eps = np.sqrt(np.finfo(np.float64).eps)
-            # 4 columns = the 4 event types; extra unused columns are harmless.
-            l_mat = np.full((ns, 4), -np.inf)  # pragma: no mutate
-
-            # Precompute each event mask exactly once. The <,> vs <=,>= choice at
-            # the eps boundary is numerically irrelevant — a slope/derivative
-            # landing exactly on +/-sqrt(machine-eps) never occurs with real
-            # data — so those boundary comparisons are marked no-mutate.
-            beta_down = _in & (r_beta < -eps)  # pragma: no mutate
-            beta_up = _in & (r_beta > +eps)  # pragma: no mutate
-            delta_down = at_upper & (delta < -eps)  # pragma: no mutate
-            delta_up = at_lower & (delta > +eps)  # pragma: no mutate
-
-            # Columns 0,1 are "moves to a bound" (free->blocked) and 2,3 are
-            # "leaves a bound" (blocked->free); the next-free update below only
-            # tests dirchg >= 2, so swapping a column *within* a group (0<->1 or
-            # 2<->3) is behaviourally identical and marked no-mutate. Crossing
-            # the 1<->2 group boundary IS exercised by the frontier tests.
-            l_mat[beta_down, 0] = (  # pragma: no mutate
-                self.upper_bounds[beta_down] - r_alpha[beta_down]
-            ) / r_beta[beta_down]
-            l_mat[beta_up, 1] = (self.lower_bounds[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
-            l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]  # pragma: no mutate
-            l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
-
-            # --- Determine next event ---
-            # The current segment w(lam) = r_alpha + lam * r_beta is only valid
-            # for lam at or below the current value: the frontier is traced with
-            # non-increasing lam, so ratios above it are spurious crossings
-            # outside the segment and must not be selected. Ties at the current
-            # lam are kept; degenerate problems resolve them one per iteration.
-            l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
-
-            lam_max = np.max(l_mat)
-            if lam_max < 0:  # pragma: no mutate
+            event = self._select_next_event(l_mat, lam)
+            if event is None:
                 break
+            secchg, dirchg, lam = event
 
-            # Bland-style anti-cycling rule: on degenerate problems (tied means,
-            # duplicated assets) several events coincide at the same ratio. Among
-            # all events within tol of the best ratio we pick the lowest asset
-            # index (and, within an asset, the lowest event type), so the choice
-            # is deterministic and cannot cycle.
-            tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
-            secchg, dirchg = tied[0]
-            lam = l_mat[secchg, dirchg]
-
-            # --- Update free set ---
+            # Flip the activity of the asset whose event fired: a "leaves a bound"
+            # event (dirchg in {2, 3}) makes it free, a "moves to a bound" event
+            # (dirchg in {0, 1}) blocks it.
             free = last.free.copy()
-            free[secchg] = dirchg >= 2  # boundary → IN if dirchg in {2, 3}
-
-            # --- Compute new turning point ---
-            new_weights = r_alpha + lam * r_beta
-            self._emit(lam, new_weights, free)
+            free[secchg] = dirchg >= 2
+            self._emit(lam, r_alpha + lam * r_beta, free)
 
         # Final point at lambda = 0
         self._emit(0.0, r_alpha, last.free)
+
+    def _active_set(
+        self, last: TurningPoint
+    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_], NDArray[np.bool_], NDArray[np.float64]]:
+        """Identify the active set at ``last`` and the weights pinned to bounds.
+
+        A blocked asset sitting (to tolerance) on a bound is held fixed there and
+        excluded from the reduced KKT solve; every other asset is *in*. Returns
+        the upper-bound mask, the lower-bound mask, the in-set mask, and the
+        full-length vector of weights fixed at their bounds.
+
+        Args:
+            last: The most recent turning point, whose free set and weights define
+                the active set.
+
+        Returns:
+            ``(at_upper, at_lower, free_in, fixed_weights)``.
+
+        Raises:
+            RuntimeError: If every asset is blocked, which makes the reduced
+                system singular.
+        """
+        blocked = ~last.free
+        if np.all(blocked):
+            msg = "All variables cannot be blocked"
+            raise RuntimeError(msg)
+
+        at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= self.tol)  # pragma: no mutate
+        at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= self.tol)  # pragma: no mutate
+        free_in = ~(at_upper | at_lower)
+
+        fixed_weights = np.zeros(len(self.mean))
+        fixed_weights[at_upper] = self.upper_bounds[at_upper]
+        fixed_weights[at_lower] = self.lower_bounds[at_lower]
+        return at_upper, at_lower, free_in, fixed_weights
+
+    def _solve_kkt(
+        self, free_in: NDArray[np.bool_], fixed_weights: NDArray[np.float64]
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+        """Solve the reduced KKT system for the current critical-line segment.
+
+        Block elimination: a multi-right-hand-side solve against the free
+        covariance block ``Sigma_FF`` (via the backend, so structured covariances
+        never materialise an ``n x n`` matrix) feeds an ``m x m`` Schur complement
+        ``A_F Sigma_FF^{-1} A_F.T`` that handles the equality constraints.
+
+        Args:
+            free_in: Boolean mask of the assets in the reduced solve.
+            fixed_weights: Full-length weights of the assets held at their bounds.
+
+        Returns:
+            ``(r_alpha, r_beta, gamma, delta)``: the affine segment
+            ``w(lam) = r_alpha + lam * r_beta`` and the multiplier gradients
+            ``gamma`` and ``delta`` that drive the leave-a-bound events.
+        """
+        m = self.a.shape[0]
+        ns = len(self.mean)
+        cov = self.covariance_operator
+        out = ~free_in
+        a_free = self.a[:, free_in]
+
+        # [Sigma_FF  A_F.T] [x ]   [r1]   solved for the alpha (weights) and beta
+        # [A_F       0    ] [nu] = [r2]   systems via Sigma_FF^{-1} [A_F.T | r1_a | r1_b]
+        rhs_free = np.column_stack([a_free.T, -cov.cross(free_in, fixed_weights), self.mean[free_in]])
+        solved = cov.solve_free(free_in, rhs_free)
+        y = solved[:, :m]  # Sigma_FF^{-1} A_F.T
+        z_alpha = solved[:, m]
+        z_beta = solved[:, m + 1]
+
+        # Schur complement A_F Sigma_FF^{-1} A_F.T and equality multipliers
+        schur = a_free @ y
+        r2_alpha = self.b - self.a[:, out] @ fixed_weights[out]
+        nu = np.linalg.solve(schur, np.column_stack([a_free @ z_alpha - r2_alpha, a_free @ z_beta]))
+        nu_alpha, nu_beta = nu[:, 0], nu[:, 1]
+
+        # Back-substitute the free weights
+        r_alpha = fixed_weights.copy()
+        r_alpha[free_in] = z_alpha - y @ nu_alpha
+        r_beta = np.zeros(ns)
+        r_beta[free_in] = z_beta - y @ nu_beta
+
+        gamma = cov.matvec(r_alpha) + self.a.T @ nu_alpha
+        delta = cov.matvec(r_beta) + self.a.T @ nu_beta - self.mean
+        return r_alpha, r_beta, gamma, delta
+
+    def _event_ratios(
+        self,
+        r_alpha: NDArray[np.float64],
+        r_beta: NDArray[np.float64],
+        gamma: NDArray[np.float64],
+        delta: NDArray[np.float64],
+        free_in: NDArray[np.bool_],
+        at_upper: NDArray[np.bool_],
+        at_lower: NDArray[np.bool_],
+    ) -> NDArray[np.float64]:
+        """Critical lambda for every candidate event, as an ``(n, 4)`` matrix.
+
+        Along the segment ``w(lam) = r_alpha + lam * r_beta`` a free weight can
+        reach a box bound (columns 0/1, "moves to a bound") and a blocked weight's
+        multiplier can change sign so it re-enters the free set (columns 2/3,
+        "leaves a bound"). Entries with no event are ``-inf``.
+
+        A free weight moves with even a tiny slope, so given a long enough lam
+        range it still crosses a bound; filtering slopes at ``self.tol`` would
+        miss such crossings and let weights drift out of bounds. Only slopes at
+        floating-point noise level are excluded: below ``sqrt(machine epsilon)`` a
+        slope is indistinguishable from solve noise, and the huge ratios it would
+        produce only amplify rounding errors.
+
+        Args:
+            r_alpha: Segment intercept ``w(0)``.
+            r_beta: Segment slope ``dw/dlam``.
+            gamma: Multiplier gradient for the alpha system.
+            delta: Multiplier gradient for the beta system.
+            free_in: Mask of assets in the reduced solve.
+            at_upper: Mask of assets blocked at their upper bound.
+            at_lower: Mask of assets blocked at their lower bound.
+
+        Returns:
+            The ``(n, 4)`` matrix of critical lambdas.
+        """
+        ns = len(self.mean)
+        eps = np.sqrt(np.finfo(np.float64).eps)
+        # 4 columns = the 4 event types; extra unused columns are harmless.
+        l_mat = np.full((ns, 4), -np.inf)  # pragma: no mutate
+
+        # Precompute each event mask exactly once. The <,> vs <=,>= choice at
+        # the eps boundary is numerically irrelevant — a slope/derivative
+        # landing exactly on +/-sqrt(machine-eps) never occurs with real
+        # data — so those boundary comparisons are marked no-mutate.
+        beta_down = free_in & (r_beta < -eps)  # pragma: no mutate
+        beta_up = free_in & (r_beta > +eps)  # pragma: no mutate
+        delta_down = at_upper & (delta < -eps)  # pragma: no mutate
+        delta_up = at_lower & (delta > +eps)  # pragma: no mutate
+
+        # Columns 0,1 are "moves to a bound" (free->blocked) and 2,3 are
+        # "leaves a bound" (blocked->free); the next-free update only tests
+        # dirchg >= 2, so swapping a column *within* a group (0<->1 or 2<->3) is
+        # behaviourally identical and marked no-mutate. Crossing the 1<->2 group
+        # boundary IS exercised by the frontier tests.
+        l_mat[beta_down, 0] = (  # pragma: no mutate
+            self.upper_bounds[beta_down] - r_alpha[beta_down]
+        ) / r_beta[beta_down]
+        l_mat[beta_up, 1] = (self.lower_bounds[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
+        l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]  # pragma: no mutate
+        l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
+        return l_mat
+
+    def _select_next_event(self, l_mat: NDArray[np.float64], lam: float) -> tuple[int, int, float] | None:
+        """Pick the next turning point from the event matrix, or ``None`` to stop.
+
+        The current segment is valid only for lam at or below the current value
+        (the frontier is traced with non-increasing lam), so ratios above it are
+        spurious crossings outside the segment and are discarded; if none remain
+        the trace is complete. Among events tied (within ``tol``) for the largest
+        valid ratio, a Bland-style lowest-(asset index, event type) rule makes the
+        choice deterministic and prevents cycling on degenerate problems (tied
+        means, duplicated assets).
+
+        Args:
+            l_mat: The ``(n, 4)`` matrix of candidate critical lambdas.
+            lam: The current (upper) lambda bound on valid events.
+
+        Returns:
+            ``(secchg, dirchg, lam_next)`` for the chosen event, or ``None`` if no
+            valid event remains.
+        """
+        tol = self.tol
+        l_mat = l_mat.copy()  # do not mutate the caller's matrix
+        l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
+
+        lam_max = np.max(l_mat)
+        if lam_max < 0:  # pragma: no mutate
+            return None
+
+        tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
+        secchg, dirchg = tied[0]
+        return int(secchg), int(dirchg), float(l_mat[secchg, dirchg])
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
