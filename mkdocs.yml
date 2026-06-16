@@ -15,5 +15,9 @@ theme:
 nav:
   - Home: index.md
   - Factor backend: factor.md
-  - Notebooks: notebooks.md
-  - Reports: reports.md
+  - Notebooks:
+    - CLA: notebooks/cla.html
+    - Factor: notebooks/factor.html
+  - Reports:
+    - Test Report: reports/html-report/report.html
+    - Coverage Report: reports/html-coverage/index.html
