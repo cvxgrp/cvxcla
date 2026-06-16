@@ -41,9 +41,9 @@ def _covariance_matvec(
     covariance: NDArray[np.float64] | CovarianceOperator, x: NDArray[np.float64]
 ) -> NDArray[np.float64]:
     """Compute ``Sigma @ x`` for a dense matrix or a ``CovarianceOperator`` backend."""
-    if isinstance(covariance, np.ndarray):
-        return covariance @ x
-    return covariance.matvec(x)
+    if isinstance(covariance, CovarianceOperator):
+        return covariance.matvec(x)
+    return covariance @ x
 
 
 @dataclass(frozen=True)
