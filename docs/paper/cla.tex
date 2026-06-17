@@ -985,6 +985,106 @@ threshold uncritical.}
 \label{fig:degeneracy}
 \end{figure}
 
+\section{Connection to homotopy methods: least angle regression and the LASSO}
+\label{sec:lars}
+
+The CLA is one instance of a broader idea that recurs across optimisation and
+statistics: when the optimiser of a convex problem is followed as a single scalar
+parameter varies, the solution path is frequently piecewise linear, and it can be
+traced exactly by stepping from one breakpoint to the next while maintaining an
+active set. The same structure drives least angle regression (LARS) and the LASSO
+homotopy in statistical learning \citep{tibshirani1996, osborne2000, efron2004}.
+Making the correspondence explicit places the CLA in a family it is seldom
+presented alongside, and separates the features that are essential to the method
+from those particular to the portfolio setting.
+
+The LASSO solves, for a response $y$ and design matrix $X$,
+\[
+\min_{\beta}\ \tfrac12\,\|y - X\beta\|_2^2 \;+\; \lambda\,\|\beta\|_1,
+\]
+and its minimiser $\beta(\lambda)$ is a continuous, piecewise-linear function of the
+penalty $\lambda$ \citep{efron2004, rosset2007}. As $\lambda$ decreases from the
+value at which $\beta = 0$ towards $0$, the path proceeds in straight segments; at
+each breakpoint the active set (the support of $\beta$) changes, either because an
+inactive variable whose correlation with the current residual reaches $\lambda$
+enters, or because an active coefficient reaches zero and leaves. LARS computes
+these breakpoints and segment directions directly, exactly as the CLA computes
+turning points and the affine segments \eqref{eq:segment} between them.
+
+The two algorithms line up term for term (Table~\ref{tab:lars}).
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+Ingredient & Critical Line Algorithm & LARS / LASSO homotopy \\
+\midrule
+Swept parameter & risk aversion $\lambda:\infty\!\to\!0$ & penalty $\lambda:\infty\!\to\!0$ \\
+Solution path   & $w(\lambda)=\alpha+\lambda\beta$ (pw.\ linear) & $\beta(\lambda)$ (pw.\ linear) \\
+Active set      & free set $\F$ (weights off the bounds) & support (nonzero $\beta_j$) \\
+Linear solve    & reduced KKT over $\Sig_{\F\F}$ & least squares over $X_{\mathcal A}$ \\
+Enter event     & blocked multiplier changes sign & residual correlation reaches $\lambda$ \\
+Leave event     & free weight reaches a box bound & active coefficient reaches zero \\
+Step length     & smallest positive ratio to next event & smallest positive step to next breakpoint \\
+Degeneracy      & Bland lowest-index tie-break (\S\ref{sec:bland}) & tie-break among simultaneous hits \\
+\bottomrule
+\end{tabular}
+\caption{The Critical Line Algorithm and the LARS/LASSO homotopy as two instances
+of the same parametric active-set scheme. The role played by the covariance $\Sig$
+and the mean $\mu$ in the reduced KKT solve \eqref{eq:saddle} is played by the Gram
+matrix $X\trans X$ and the vector $X\trans y$ in the regression path.}
+\label{tab:lars}
+\end{table}
+
+The correspondence is not a coincidence. \citet{rosset2007} characterise when a
+regularised solution path is piecewise linear: a quadratic (or piecewise-quadratic)
+loss together with a polyhedral, i.e.\ piecewise-linear, constraint or penalty
+suffices. Both problems meet the criterion. The CLA minimises a quadratic objective
+\eqref{eq:qp} over a polyhedral feasible set (box bounds and linear equalities); the
+LASSO minimises a quadratic loss under a polyhedral ($\ell_1$) penalty. In each case
+the KKT conditions are affine in the parameter, the system matrix is constant while
+the active set is fixed, and the active set can change only at the discrete
+parameter values that the homotopy steps between. The ``smallest positive ratio to
+the next event'' rule of \S\ref{sec:events} is the same step-length computation that
+advances the LARS path, and both inherit it, for the same anti-cycling reasons, from
+the simplex method (\S\ref{sec:bland}).
+
+Three differences are worth stating precisely, since they are exactly what
+distinguishes the portfolio problem.
+
+\paragraph{What induces the active set.} In the CLA the active set is carved out by
+\emph{explicit} polyhedral constraints: an asset is blocked when it sits on a box
+bound, and the events are free weights reaching those bounds, or blocked multipliers
+releasing them. In the LASSO the active set is \emph{induced} by the $\ell_1$
+penalty through its subgradient: sparsity is an emergent property of the geometry,
+not a constraint the modeller writes down. The same polyhedral mechanism runs in
+opposite directions, one imposing the faces and the other discovering them.
+
+\paragraph{Entering and leaving.} Forward LARS only ever \emph{adds} variables to
+the active set; the LASSO modification restores the ability to drop one when its
+coefficient crosses zero. The CLA needs both moves throughout, as assets become free
+and blocked while $\lambda$ decreases, so it corresponds to the full LASSO homotopy
+rather than to forward LARS.
+
+\paragraph{The data enter only through linear algebra.} The Gram matrix $X\trans X$
+that defines the LARS direction is played here by the covariance $\Sig$ in the
+reduced KKT solve \eqref{eq:saddle}, and $X\trans y$ by the expected-return vector
+$\mu$. Seen this way, the covariance-operator abstraction of \S\ref{sec:operators} is
+the statement that the path-tracing logic touches $\Sig$ only through a few
+linear-algebraic operations, just as the LARS recursion touches $X$ only through
+Gram-matrix solves; a structured $\Sig$ (a factor model) is the portfolio analogue
+of a structured or kernelised design.
+
+The bridge is more than analogy. \citet{brodie2009} add a gross-exposure constraint
+$\|w\|_1 \le c$ to the Markowitz problem and show that the result \emph{is} a LASSO,
+with $c$ promoting sparse, stable portfolios. For the long-only, fully-invested
+problem this constraint is silent, since the budget already fixes $\|w\|_1 =
+\mathbf{1}\trans w = 1$, which is why the plain CLA traces a frontier rather than a
+sparsity path. Once short positions are admitted under a gross-exposure cap,
+however, the parametric program the CLA traces and the LASSO path coincide: the two
+are then not merely structurally similar but two homotopies over the same parametric
+quadratic program.
+
 \section{Conclusion}
 
 The Critical Line Algorithm computes the complete mean--variance efficient frontier by
@@ -1073,6 +1173,31 @@ M.~Hirschberger, Y.~Qi, and R.~E. Steuer.
 \newblock Large-scale MV efficient frontier computation via a procedure of
 parametric quadratic programming.
 \newblock \emph{European Journal of Operational Research}, 204(3):581--588, 2010.
+
+\bibitem[Tibshirani(1996)]{tibshirani1996}
+R.~Tibshirani.
+\newblock Regression shrinkage and selection via the lasso.
+\newblock \emph{Journal of the Royal Statistical Society, Series B}, 58(1):267--288, 1996.
+
+\bibitem[Osborne et~al.(2000)]{osborne2000}
+M.~R. Osborne, B.~Presnell, and B.~A. Turlach.
+\newblock A new approach to variable selection in least squares problems.
+\newblock \emph{IMA Journal of Numerical Analysis}, 20(3):389--403, 2000.
+
+\bibitem[Efron et~al.(2004)]{efron2004}
+B.~Efron, T.~Hastie, I.~Johnstone, and R.~Tibshirani.
+\newblock Least angle regression.
+\newblock \emph{The Annals of Statistics}, 32(2):407--499, 2004.
+
+\bibitem[Rosset and Zhu(2007)]{rosset2007}
+S.~Rosset and J.~Zhu.
+\newblock Piecewise linear regularized solution paths.
+\newblock \emph{The Annals of Statistics}, 35(3):1012--1030, 2007.
+
+\bibitem[Brodie et~al.(2009)]{brodie2009}
+J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.
+\newblock Sparse and stable Markowitz portfolios.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 106(30):12267--12272, 2009.
 
 \end{thebibliography}
 
