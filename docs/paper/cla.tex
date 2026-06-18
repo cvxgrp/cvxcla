@@ -689,7 +689,14 @@ $m > 1$ at negligible cost. The turning-point loop is general in $A$ throughout;
 only constraint-specific step is the maximum-return vertex that seeds it, found by the
 greedy fill for an all-ones budget and by a linear program (HiGHS, via
 \texttt{scipy}) for a general $A$ (\S\ref{sec:first}). This covers leverage,
-dollar-neutral long/short books, and multi-row neutralities (sector, factor).
+dollar-neutral long/short books, and multi-row neutralities (sector, factor). One
+caveat mirrors the degeneracy guarantee of \S\ref{sec:empirical}: the general-$A$
+path assumes a well-conditioned first vertex, where the free set has the $m$ assets
+the equalities require. At a \emph{degenerate} vertex (a basic asset pinned exactly
+on a box bound, so the free set is too small to span the constraints) the reduced
+$A_\F$ loses row rank and the Schur complement is singular; that case is not yet
+handled and is left to future work alongside the tie-heavy hardening of
+\S\ref{sec:empirical}.
 
 \item \textbf{Degeneracy handling.} On tie-heavy or degenerate inputs several
 events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit
