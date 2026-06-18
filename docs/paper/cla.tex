@@ -79,12 +79,16 @@ low rank) avoid ever materialising a dense $n\times n$ matrix.
 
 \section{Introduction}
 
-The mean--variance portfolio selection problem of \citet{markowitz1952} asks for the
-allocation of capital across $n$ assets that minimises risk for a given level of
-expected return. Sweeping the return level produces a one-parameter family of optimal
-portfolios whose risk--return image is the \emph{efficient frontier}. The Critical
-Line Algorithm (CLA), introduced by \citet{markowitz1956} and developed in
-\citet{markowitz1959}, computes this frontier \emph{exactly and in full}: it returns a
+The mean--variance portfolio selection problem was introduced by \citet{markowitz1952}
+in doctoral work completed at the University of Chicago at the age of~24; Markowitz
+later recounted that Milton Friedman, on his dissertation committee, questioned whether
+the result was economics at all. The problem asks for the allocation of capital across
+$n$ assets that minimises risk for a given level of expected return. Sweeping the
+return level produces a one-parameter family of optimal portfolios whose risk--return
+image is the \emph{efficient frontier}. Four years later, at RAND, Markowitz gave the
+problem its constructive solution: the Critical Line Algorithm (CLA), introduced by
+\citet{markowitz1956} and developed in full in his 1959 monograph
+\citep{markowitz1959}. The CLA computes this frontier \emph{exactly and in full}: it returns a
 finite list of \emph{turning points} between which the frontier is described in closed
 form, so no discretisation or repeated re-optimisation is required. It belongs to a
 broad family of parametric quadratic-programming and active-set methods for the
@@ -92,6 +96,15 @@ efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
 \citet{markowitz2000} give the canonical description and a reference implementation,
 while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
 large-scale and active-set variants.
+
+When Markowitz designed the CLA, the structured covariance models that dominate modern
+portfolio construction did not yet exist; classical implementations therefore assume a
+dense matrix. Structure arrived with the single-index model of \citet{sharpe1963},
+developed at Markowitz's suggestion to tame the estimation and computational burden of
+a full covariance by writing it as a diagonal matrix plus a single rank-one term.
+Modern multi-factor risk models generalise this diagonal-plus-low-rank form, and it is
+precisely this structure that the operator abstraction of this paper exploits: the
+covariance the classical CLA treats as dense is, in practice, almost never dense.
 
 We claim no new turning points (the frontier is Markowitz's, and \texttt{cvxcla}
 traces exactly the same one) but a new \emph{interface} to it: we capture the
