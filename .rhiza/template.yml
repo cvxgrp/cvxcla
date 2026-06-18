@@ -5,5 +5,7 @@ profiles:
   - github-project
 
 templates:
-  - legal
   - github-paper
+
+exclude:
+  - .github/workflows/rhiza_release.yml

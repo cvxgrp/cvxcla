@@ -11,7 +11,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
 ]
-# Private :: Do Not Upload (prevents rhiza_release.yml from publishing to PyPI)
 
 dependencies = [
     "numpy>=2.0.0",
