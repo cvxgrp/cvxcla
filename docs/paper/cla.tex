@@ -761,7 +761,11 @@ reference we also time the \texttt{CLA} of PyPortfolioOpt \citep{pyportfolioopt}
 a widely-used implementation of the critical-line algorithm of
 \citet{bailey2013}, on the same dense problem. The number of turning points tracks $n$ closely
 ($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds essentially
-the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}.
+the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}. The two
+implementations also agree numerically: their minimum-variance portfolios (the
+$\lambda = 0$ endpoint, which is unique for a positive-definite $\Sig$) match to
+machine precision, differing by at most $\sim\!10^{-16}$ in any weight across these
+problems.
 
 Figure~\ref{fig:scaling} plots the median trace time against $n$ on log--log
 axes. A least-squares fit over the largest four sizes gives an empirical exponent
