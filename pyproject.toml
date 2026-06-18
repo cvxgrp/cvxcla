@@ -4,12 +4,12 @@ version = "1.7.0"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
 ]
 # Private :: Do Not Upload (prevents rhiza_release.yml from publishing to PyPI)
 

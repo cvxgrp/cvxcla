@@ -1,16 +1,3 @@
-#    Copyright 2023 Stanford University Convex Optimization Group
-#
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
 """Covariance backend abstraction for the Critical Line Algorithm.
 
 The turning-point loop of the CLA touches the covariance matrix through a
@@ -58,19 +45,29 @@ def _rcond_symmetric(block: NDArray[np.float64]) -> float:
 
 
 @runtime_checkable
-class CovarianceOperator(Protocol):
-    """Operations the Critical Line Algorithm needs from a covariance matrix.
+class QuadraticForm(Protocol):
+    """Operations a parametric active-set path tracer needs from its Hessian.
 
-    Any object implementing this protocol can serve as the covariance backend
-    of the CLA. The reference implementation is ``DenseCovariance``, which
-    wraps an explicit matrix; structured backends (e.g. diagonal-plus-low-rank
-    via the Woodbury identity) implement the same contract without ever
-    materialising an ``n x n`` matrix.
+    The turning-point loop touches the symmetric positive (semi-)definite matrix
+    ``H`` of the quadratic objective through a small number of operations: full
+    matrix-vector products, solves against the *free* (active) principal block,
+    and cross-products between free and blocked coordinates. In the Critical Line
+    Algorithm ``H`` is the covariance ``Sigma``; in a LASSO / LARS path it is the
+    Gram matrix ``X.T @ X``. Any object implementing this protocol can serve as
+    that backend.
+
+    The reference implementation is ``DenseCovariance``, which wraps an explicit
+    matrix; structured backends (e.g. diagonal-plus-low-rank via the Woodbury
+    identity) implement the same contract without ever materialising an
+    ``n x n`` matrix.
+
+    ``CovarianceOperator`` is kept as a backward-compatible alias of this
+    protocol (see the bottom of this module).
     """
 
     @property
     def n(self) -> int:
-        """Number of assets (the dimension of the covariance)."""
+        """Number of variables (the dimension of the quadratic form)."""
         ...  # pragma: no cover
 
     def matvec(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -557,3 +554,10 @@ class FactorCovariance:
         delta_max = float(np.linalg.eigvalsh(self._delta_matrix)[-1])
         lam_max_upper = float(np.max(d_free)) + u_spectral_norm**2 * max(delta_max, 0.0)
         return float(np.min(d_free)) / lam_max_upper
+
+
+# Backward-compatible alias. The protocol was introduced as ``CovarianceOperator``
+# for the portfolio (covariance) setting; it is the Hessian contract for any
+# parametric active-set path, so the canonical name is now ``QuadraticForm``.
+# Existing imports of ``CovarianceOperator`` keep working unchanged.
+CovarianceOperator = QuadraticForm
