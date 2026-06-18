@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from cvxcla import CLA, FactorCovariance
+from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
 
 
@@ -624,10 +625,10 @@ class TestCLAMutationHardening:
 class TestCLAInternals:
     """Unit tests for the extracted per-iteration helpers of the trace.
 
-    The turning-point loop of ``CLA.__post_init__`` delegates to four focused
-    helpers (``_active_set``, ``_solve_kkt``, ``_event_ratios``,
-    ``_select_next_event``). These tests exercise each in isolation on a small,
-    well-conditioned problem, asserting the contract the loop relies on.
+    The turning-point loop (``cvxcla.pathtracer.trace``) delegates to three
+    focused CLA helpers (``_active_set``, ``_solve_kkt``, ``_event_ratios``) plus
+    the generic ``select_next_event``. These tests exercise each in isolation on a
+    small, well-conditioned problem, asserting the contract the loop relies on.
     """
 
     @pytest.fixture
@@ -698,7 +699,7 @@ class TestCLAInternals:
         l_mat = np.full((cla.mean.size, 4), -np.inf)
         l_mat[3, 1] = 0.5
         l_mat[1, 0] = 0.5 + cla.tol / 2  # tied with [3, 1] to within tol
-        event = cla._select_next_event(l_mat, lam=np.inf)
+        event = select_next_event(l_mat, lam=np.inf, tol=cla.tol)
         assert event is not None
         secchg, dirchg, _ = event
         assert (secchg, dirchg) == (1, 0)
@@ -707,12 +708,12 @@ class TestCLAInternals:
         """When every ratio lies above the current lam window, the trace stops."""
         l_mat = np.full((cla.mean.size, 4), -np.inf)
         l_mat[0, 0] = 5.0  # above the window -> filtered out
-        assert cla._select_next_event(l_mat, lam=1.0) is None
+        assert select_next_event(l_mat, lam=1.0, tol=cla.tol) is None
 
     def test_select_next_event_does_not_mutate_input(self, cla):
         """Selection works on a copy, leaving the caller's matrix untouched."""
         l_mat = np.full((cla.mean.size, 4), -np.inf)
         l_mat[0, 0] = 5.0
         before = l_mat.copy()
-        cla._select_next_event(l_mat, lam=1.0)
+        select_next_event(l_mat, lam=1.0, tol=cla.tol)
         np.testing.assert_array_equal(l_mat, before)

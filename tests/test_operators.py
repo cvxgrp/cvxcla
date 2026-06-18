@@ -20,6 +20,7 @@ from cvxcla import (
     CovarianceOperator,
     DenseCovariance,
     FactorCovariance,
+    GramCovariance,
     IncrementalDenseCovariance,
 )
 
@@ -578,3 +579,153 @@ class TestFactorLargeScale:
         assert len(cla) > 2
         dense_sigma_bytes = 8 * n * n
         assert peak < 0.03 * dense_sigma_bytes
+
+
+def _dense_from_returns(returns, ridge=0.0):
+    """The dense covariance a GramCovariance(returns, ridge) must reproduce."""
+    sigma = np.cov(returns, rowvar=False)
+    if ridge:
+        sigma = sigma + ridge * np.eye(returns.shape[1])
+    return DenseCovariance(sigma)
+
+
+class TestGramCovariance:
+    """Tests for the data-matrix (Gram) backend.
+
+    GramCovariance(returns, ridge) must behave exactly like
+    DenseCovariance(np.cov(returns, rowvar=False) + ridge I), while never forming
+    the n x n matrix. We check every protocol operation against that dense
+    reference across the long-sample (T >= n) and short-sample (T < n) regimes.
+    """
+
+    def test_is_quadratic_form_instance(self):
+        """GramCovariance satisfies the QuadraticForm (alias CovarianceOperator) protocol."""
+        gram = GramCovariance(np.random.default_rng(0).standard_normal((20, 4)))
+        assert isinstance(gram, CovarianceOperator)
+        assert gram.n == 4
+
+    def test_matches_numpy_cov(self):
+        """The (centered, ddof=1) covariance equals np.cov, not the raw second moment."""
+        returns = np.random.default_rng(1).standard_normal((40, 5))
+        gram = GramCovariance(returns)
+        sigma = np.cov(returns, rowvar=False)
+        v = np.arange(1.0, 6.0)
+        np.testing.assert_allclose(gram.matvec(v), sigma @ v)
+        # the raw (uncentered) second moment differs unless the data is mean-zero
+        raw = returns.T @ returns / (returns.shape[0] - 1)
+        assert not np.allclose(sigma, raw)
+
+    @pytest.mark.parametrize(("t", "n", "ridge"), [(40, 5, 0.0), (40, 5, 0.3), (4, 8, 0.5)])
+    def test_operations_match_dense(self, t, n, ridge):
+        """Every operation (matvec / cross / solve_free / rcond_free) agrees with the dense reference.
+
+        Covers the long-sample dense solve (T >= n), the ridged dense solve, and
+        the short-sample Woodbury solve (T < n, n_free > T).
+        """
+        rng = np.random.default_rng(int(t * 100 + n))
+        returns = rng.standard_normal((t, n))
+        gram = GramCovariance(returns, ridge=ridge)
+        dense = _dense_from_returns(returns, ridge=ridge)
+
+        free = np.array([i % 2 == 0 for i in range(n)])
+        free[0] = True  # ensure a non-empty, mixed mask
+
+        x = rng.standard_normal(n)
+        np.testing.assert_allclose(gram.matvec(x), dense.matvec(x), atol=1e-10)
+        np.testing.assert_allclose(gram.cross(free, x), dense.cross(free, x), atol=1e-10)
+
+        # single- and multi-RHS solves against the free block
+        rhs = rng.standard_normal(int(free.sum()))
+        if ridge > 0.0 or int(free.sum()) <= t:  # solvable block
+            np.testing.assert_allclose(gram.solve_free(free, rhs), dense.solve_free(free, rhs), atol=1e-8)
+            rhs2 = rng.standard_normal((int(free.sum()), 3))
+            np.testing.assert_allclose(gram.solve_free(free, rhs2), dense.solve_free(free, rhs2), atol=1e-8)
+
+        np.testing.assert_allclose(gram.rcond_free(free), dense.rcond_free(free), rtol=1e-6, atol=1e-12)
+
+    def test_woodbury_path_for_all_free_short_sample(self):
+        """With T < n_free and a ridge, the all-free solve uses Woodbury yet matches dense."""
+        rng = np.random.default_rng(7)
+        returns = rng.standard_normal((5, 12))
+        gram = GramCovariance(returns, ridge=0.2)
+        dense = _dense_from_returns(returns, ridge=0.2)
+        free = np.ones(12, dtype=bool)
+        rhs = rng.standard_normal(12)
+        np.testing.assert_allclose(gram.solve_free(free, rhs), dense.solve_free(free, rhs), atol=1e-8)
+
+    def test_rcond_empty_free_is_one(self):
+        """An empty free set is treated as perfectly conditioned."""
+        gram = GramCovariance(np.random.default_rng(0).standard_normal((10, 3)))
+        assert gram.rcond_free(np.zeros(3, dtype=bool)) == 1.0
+
+    def test_rcond_singular_free_block_is_zero(self):
+        """A constant (zero-variance) free column has a singular block: rcond = 0."""
+        returns = np.random.default_rng(0).standard_normal((6, 3))
+        returns[:, 0] = 2.5  # constant column -> centered to zero
+        gram = GramCovariance(returns)  # no ridge
+        assert gram.rcond_free(np.array([True, False, False])) == 0.0
+
+    def test_rank_deficient_free_block_drives_rcond_to_zero(self):
+        """Without a ridge, a free set larger than the data rank is singular (rcond ~ 0)."""
+        returns = np.random.default_rng(0).standard_normal((4, 8))
+        gram = GramCovariance(returns)  # rank <= T-1 = 3 < 8
+        assert gram.rcond_free(np.ones(8, dtype=bool)) < 1e-12
+
+    def test_cla_matches_dense_backend(self):
+        """The CLA traces the same frontier from the data matrix as from np.cov."""
+        rng = np.random.default_rng(3)
+        t, n = 60, 6  # long sample -> full-rank, well-posed
+        returns = rng.standard_normal((t, n))
+        mean = rng.uniform(0.0, 1.0, n)
+        kwargs = {
+            "mean": mean,
+            "lower_bounds": np.zeros(n),
+            "upper_bounds": np.ones(n),
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+        cla_gram = CLA(covariance=GramCovariance(returns), **kwargs)
+        cla_dense = CLA(covariance=DenseCovariance(np.cov(returns, rowvar=False)), **kwargs)
+
+        assert len(cla_gram) == len(cla_dense)
+        for tp_g, tp_d in zip(cla_gram.turning_points, cla_dense.turning_points, strict=True):
+            np.testing.assert_allclose(tp_g.weights, tp_d.weights, atol=1e-6)
+
+    def test_rejects_non_2d_returns(self):
+        """A 1d returns array is rejected."""
+        with pytest.raises(ValueError, match=r"must be a \(T, n\) matrix"):
+            GramCovariance(np.ones(5))
+
+    def test_rejects_too_few_observations(self):
+        """A single observation cannot define a sample covariance."""
+        with pytest.raises(ValueError, match="T >= 2"):
+            GramCovariance(np.ones((1, 3)))
+
+    def test_rejects_negative_ridge(self):
+        """A negative ridge is rejected."""
+        with pytest.raises(ValueError, match="ridge must be non-negative"):
+            GramCovariance(np.random.default_rng(0).standard_normal((10, 3)), ridge=-0.1)
+
+    def test_solve_is_matrix_free_in_n(self):
+        """A short-sample free-block solve never allocates an n x n matrix.
+
+        With ``T << n`` and a ridge, ``solve_free`` over the whole universe goes
+        through the Woodbury identity in ``T``-space, so its peak allocation
+        scales with ``T n`` (the data), not ``n^2`` (a dense block). This is the
+        memory advantage that motivates the backend.
+        """
+        rng = np.random.default_rng(0)
+        n, t = 800, 30
+        gram = GramCovariance(rng.standard_normal((t, n)), ridge=1e-2)
+        free = np.ones(n, dtype=bool)
+        rhs = rng.standard_normal(n)
+        _ = gram._centered  # warm the cached data matrix; measure only the solve
+
+        tracemalloc.start()
+        gram.solve_free(free, rhs)
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        # The solve allocates a few copies of the (T, n) data, never an n x n block.
+        assert peak < 4 * 8 * t * n
+        assert peak < 0.2 * 8 * n * n  # far below a single dense n x n matrix

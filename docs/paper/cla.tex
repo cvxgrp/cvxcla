@@ -39,6 +39,12 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 
+% --- repository links ---------------------------------------------------
+% \srcfile{url-path}{display}: a clickable link to a file in the repository.
+% The url-path uses literal underscores; the display escapes them for \texttt.
+\newcommand{\repourl}{https://github.com/cvxgrp/cvxcla}
+\newcommand{\srcfile}[2]{\href{\repourl/blob/main/#1}{\texttt{#2}}}
+
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
 \large A parametric active-set method for the entire mean--variance efficient frontier,
 as implemented in \texttt{cvxcla}}
@@ -87,23 +93,25 @@ efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
 while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
 large-scale and active-set variants.
 
-We claim no new turning points --- the frontier is Markowitz's, and \texttt{cvxcla}
-traces exactly the same one --- but a new \emph{interface} to it: we capture the
+We claim no new turning points (the frontier is Markowitz's, and \texttt{cvxcla}
+traces exactly the same one) but a new \emph{interface} to it: we capture the
 covariance contract as three operations (a matrix--vector product, a free-block
 solve, and a free-to-blocked cross product) so that structured risk models trace
 the identical frontier without touching the algorithm. The one element here that
 is, to our knowledge, not standard in existing CLA
-implementations --- which operate on an explicit dense covariance
-\citep{markowitz2000, bailey2013} --- is this \emph{covariance-operator
+implementations (which operate on an explicit dense covariance
+\citep{markowitz2000, bailey2013}) is this \emph{covariance-operator
 abstraction}. The turning-point loop touches the covariance through only three
 operations: a matrix--vector product, a solve against the free-asset block, and a
 free-to-blocked cross product. Capturing exactly this contract as a small
 protocol decouples the algorithm from the covariance representation, so a
-structured risk model --- e.g.\ a diagonal-plus-low-rank factor covariance solved
-through the Woodbury identity --- drops in as a backend and traces the
-\emph{same exact frontier} at a fraction of the cost, without a single change to
-the turning-point loop. This is the paper's main engineering contribution; the
-experiments of \S\ref{sec:experiment} quantify the resulting speed-up.
+structured risk model (e.g.\ a diagonal-plus-low-rank factor covariance solved
+through the Woodbury identity) drops in as a backend and traces the
+\emph{same exact frontier} at lower memory in every case, and at a fraction of the
+time when its rank is genuinely low (few factors over many assets), without a
+single change to the turning-point loop. This is the paper's main engineering
+contribution; the experiments of \S\ref{sec:experiment} quantify both the memory
+saving and the regime-dependent speed-up.
 
 \paragraph{Contributions.}
 This is a \emph{systems} contribution: we claim no new turning points (the
@@ -133,10 +141,12 @@ sub-tolerance round-off they produce back onto the feasible set
 (\S\ref{sec:empirical}), and a genuinely rank-deficient free block is the one
 case the algorithm declines rather than solve.
 
-This document describes the implementation in the \texttt{cvxcla} package. The core of
-the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
-supported by \texttt{first.py} (the starting portfolio), \texttt{operators.py} (the
-covariance backend), and \texttt{types.py} (the turning-point and frontier data
+This document describes the implementation in the \texttt{cvxcla}
+package.\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} The core of
+the implementation is the class \texttt{CLA} in \srcfile{src/cvxcla/cla.py}{src/cvxcla/cla.py}; it is
+supported by \srcfile{src/cvxcla/first.py}{first.py} (the starting portfolio),
+\srcfile{src/cvxcla/operators.py}{operators.py} (the
+covariance backend), and \srcfile{src/cvxcla/types.py}{types.py} (the turning-point and frontier data
 structures). The notation below follows the code: $\mu$ is the vector of expected
 returns, $\Sig$ the covariance, $A,b$ the linear equality constraints, and $\lb,\ub$ the
 box bounds on the weights.
@@ -208,7 +218,7 @@ the partition $(\F,\B)$ must change, i.e.\ an endpoint of such an interval.
 The walk starts at $\lambda = +\infty$, where variance is irrelevant and \eqref{eq:qp}
 degenerates into ``earn the most expected return that the bounds and budget allow.''
 This portfolio is computed in closed form by \texttt{init\_algo}
-(\texttt{src/cvxcla/first.py}):
+(\srcfile{src/cvxcla/first.py}{src/cvxcla/first.py}):
 
 \begin{enumerate}
 \item Initialise every weight at its lower bound, $w \gets \lb$.
@@ -216,7 +226,7 @@ This portfolio is computed in closed form by \texttt{init\_algo}
 \item Walk down that order, raising each asset's weight from $\lb_i$ towards $\ub_i$,
       accumulating capital, until the budget $\sum_i w_i = 1$ is reached (within a
       floating-point tolerance). The last asset touched is only \emph{partially}
-      filled --- it absorbs the residual $1 - \sum_i w_i$ --- and is the single
+      filled (it absorbs the residual $1 - \sum_i w_i$) and is the single
       \emph{free} asset of the first turning point. All others are blocked, either at
       their lower bound (not yet reached) or upper bound (fully filled).
 \end{enumerate}
@@ -352,8 +362,8 @@ $\lambda^{\star} < 0$ the frontier is complete.
 \subsection{Anti-cycling on degenerate problems}
 \label{sec:bland}
 
-On degenerate problems --- tied expected returns, duplicated assets, or several
-constraints active at once --- multiple events can occur at the same ratio
+On degenerate problems (tied expected returns, duplicated assets, or several
+constraints active at once) multiple events can occur at the same ratio
 $\lambda^{\star}$. A naive ``pick any maximiser'' rule can cycle (the same partitions
 recurring without progress). The implementation uses a \textbf{Bland-style rule}: among
 all events within the tolerance of $\lambda^{\star}$ it selects the one with the lowest
@@ -364,7 +374,7 @@ Termination follows by the standard anti-cycling argument. There are only finite
 many free/blocked partitions (at most $2^{n}$), and each partition fixes the affine
 segment \eqref{eq:segment} and hence the interval of $\lambda$ over which it is
 optimal. The parameter $\lambda$ is non-increasing along the walk, so the only way to
-fail to terminate is to revisit a partition at the same $\lambda^{\star}$ --- a cycle.
+fail to terminate is to revisit a partition at the same $\lambda^{\star}$: a cycle.
 Bland's lowest-index selection rule rules this out exactly as it does for the simplex
 method: among the events tied at $\lambda^{\star}$ the deterministic lowest-index choice
 cannot generate a cyclic sequence of partitions. With cycles excluded and the partition
@@ -438,9 +448,11 @@ The turning-point loop touches the covariance matrix through only three operatio
 a full matrix--vector product $\Sig x$ (\texttt{matvec}); a solve against the free block,
 $\Sig_{\F\F}\inv R$ for a multi-column right-hand side $R$ (\texttt{solve\_free}); and a
 free-to-blocked cross product $\Sig_{\F\B}\,x_\B$ (\texttt{cross}). The package captures
-exactly this contract in the \texttt{CovarianceOperator} protocol
-(\texttt{src/cvxcla/operators.py}), so the algorithm never assumes an explicit matrix.
-Three backends implement it.
+exactly this contract in the \texttt{QuadraticForm} protocol
+(\srcfile{src/cvxcla/operators.py}{src/cvxcla/operators.py}; \texttt{CovarianceOperator} remains as an alias),
+so the algorithm never assumes an explicit matrix. The name is deliberately not
+tied to covariance: the same contract is the Hessian of any quadratic objective, a
+point we return to in \S\ref{sec:lars}. Four backends implement it.
 
 \subsection{Dense covariance}
 
@@ -477,7 +489,7 @@ step; a non-positive or non-finite Schur pivot, or any free-set change that is n
 a single-asset flip, triggers a full refactorisation as a guard. For
 well-conditioned, positive-definite problems the two backends agree to solver
 precision, but on ill-conditioned or near-degenerate inputs the plain
-\texttt{DenseCovariance} --- or the factor backend below --- is the safer choice.
+\texttt{DenseCovariance}, or the factor backend below, is the safer choice.
 This backend is therefore offered as an opt-in fast path, not the default, and the
 win is dense-only: the factor backend never forms $\Sig_{\F\F}$ at all, so there is
 no inverse to maintain.
@@ -501,7 +513,7 @@ $\Sig_{\F\F}$; instead it uses the Woodbury identity
 W \;=\; \Delta\inv + U_\F\trans D_\F\inv U_\F \;\in\;\R^{k\times k},
 \end{equation}
 so a solve costs $O(n_\F k^2 + k^3)$ rather than $O(n_\F^3)$, and no $n\times n$ matrix
-is ever allocated --- memory and per-solve cost scale as $O(nk)$ instead of $O(n^2)$.
+is ever allocated: memory and per-solve cost scale as $O(nk)$ instead of $O(n^2)$.
 The cross product \eqref{eq:factor} contributes only through its low-rank part, since
 the diagonal has no off-diagonal block:
 \(
@@ -510,15 +522,50 @@ the diagonal has no off-diagonal block:
 Because the CLA accesses the covariance solely through the protocol, switching from a
 dense matrix to a factor model requires no change to the turning-point loop.
 
+\subsection{Data-matrix (Gram) covariance}
+\label{sec:gram}
+
+A sample covariance is itself a Gram matrix. If $X_c\in\R^{T\times n}$ is the
+column-centred matrix of $T$ return observations, then
+\begin{equation}
+\label{eq:gram}
+\Sig \;=\; \frac{1}{T-1}\,X_c\trans X_c,
+\end{equation}
+and \texttt{GramCovariance} implements the protocol straight from $X_c$, never
+forming the $n\times n$ matrix: \texttt{matvec} is the pair of thin products
+$X_c\trans(X_c x)/(T-1)$, \texttt{cross} restricts those products to the free and
+blocked columns, and \texttt{solve\_free} works on $X_{c\F}$ alone. Memory is
+$O(Tn)$ rather than $O(n^2)$.
+
+The catch is rank: $X_c\trans X_c$ has rank at most $T-1$. When there are at least as
+many observations as assets ($T\ge n$, with $X_c$ of full column rank) $\Sig$ is
+positive definite and this backend is the dense reference at lower memory. In the
+short-sample regime $T<n$ (a covariance estimated from far fewer periods than
+assets) $\Sig$ is singular, and the free block becomes unsolvable once the free set
+outgrows the data rank: exactly the degeneracy the algorithm detects through
+\texttt{rcond\_free}. An optional ridge $\delta I$ restores positive definiteness,
+and the free-block solve is then the Woodbury identity \eqref{eq:woodbury} carried
+out in the $T$-dimensional observation space (cost $O(n_\F T^2 + T^3)$). This is
+precisely a factor model \eqref{eq:factor} whose factors are the observations
+themselves ($U=X_c\trans$, $k=T$).
+
+This is a memory benefit, not an unconditional speed-up. When $T\ge n$ and the dense
+covariance fits in memory, \texttt{DenseCovariance} is faster per turning point: it
+slices a precomputed $\Sig_{\F\F}$, whereas the Gram backend re-forms
+$X_{c\F}\trans X_{c\F}$ at each solve. The same caveat governs the factor backend
+(\S\ref{sec:rankscaling}): a structured solve pays only while the rank, or here the
+observation count $T$, stays well below $n$; at full rank the structured route is
+slower than the plain dense matrix.
+
 \section{The efficient frontier object}
 \label{sec:frontier}
 
 The list of turning points is wrapped in a \texttt{Frontier} object
-(\texttt{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
+(\srcfile{src/cvxcla/types.py}{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
 exposes its expected return $\mu\trans w$ and variance $w\trans\Sig w$. Between adjacent
 turning points the frontier in \emph{weight} space is the straight segment
 \eqref{eq:segment}, so the object can \texttt{interpolate} any number of intermediate
-portfolios by convex combination. Derived quantities --- volatility, Sharpe ratio --- are
+portfolios by convex combination. Derived quantities (volatility, Sharpe ratio) are
 computed pointwise. The maximum-Sharpe portfolio is found by a one-dimensional search
 over the convex combination of the two turning points bracketing the discrete Sharpe
 maximum, exploiting the same piecewise-linear weight structure.
@@ -584,7 +631,7 @@ single multi-right-hand-side solve against $\Sig_{\F\F}$ feeds an $m \times m$
 Schur complement \eqref{eq:schur} that handles the equality constraints, and the
 event search over all candidates is vectorised rather than looped. The $\alpha$
 and $\beta$ systems reuse the same factorisation, and the covariance enters only
-as a black-box solve --- which is what makes the backend abstraction possible.
+as a black-box solve, which is what makes the backend abstraction possible.
 
 \item \textbf{Constraint generality.} The reference implementation targets box
 bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
@@ -605,7 +652,7 @@ block is declined (\S\ref{sec:empirical}).
 
 These differences compound into a large runtime gap (\S\ref{sec:experiment}). It
 would be tempting to dismiss the gap as ``just an implementation detail,'' but the
-reference implementation is not slow for lack of \texttt{numpy} --- it uses
+reference implementation is not slow for lack of \texttt{numpy}: it uses
 \texttt{numpy} for its per-step algebra. It is slow because of the structure
 above: a full free-block inverse rebuilt every step, and rebuilt once per
 candidate in the asset-entry search. \S\ref{sec:baseline} pins this down with a
@@ -619,9 +666,9 @@ develop parametric quadratic-programming and active-set methods aimed squarely a
 \emph{large} universes, and they too drive the per-step cost well below a dense
 $O(n_\F^3)$ refactorisation. The decisive difference is \emph{where} the speed-up
 comes from. Those methods accelerate the linear algebra of a covariance that is
-still treated as an explicit (if large and possibly sparse) matrix --- through
+still treated as an explicit (if large and possibly sparse) matrix (through
 incremental factorisation updates, exploitation of sparsity, or specialised
-pivoting --- so the gain is tied to a particular matrix representation baked into
+pivoting) so the gain is tied to a particular matrix representation baked into
 the solver. \texttt{cvxcla} instead leaves the turning-point loop entirely
 representation-agnostic: the covariance enters only through the three-operation
 operator protocol of \S\ref{sec:operators}, so the same loop runs unchanged on a
@@ -630,8 +677,8 @@ advantage of \S\ref{sec:rankscaling} is a property of the \emph{backend}, not of
 the algorithm. The two ideas are complementary rather than competing: an
 incremental-update solver for the free block could itself be wrapped as a
 \texttt{CovarianceOperator} and dropped in. A direct empirical comparison against
-these methods --- none of which ships a maintained Python implementation we are
-aware of --- is left to future work; the reading here is that \texttt{cvxcla}'s
+these methods (none of which ships a maintained Python implementation we are
+aware of) is left to future work; the reading here is that \texttt{cvxcla}'s
 contribution is the interface that makes such backends interchangeable, not a
 claim to the fastest dense large-scale solve.
 
@@ -639,11 +686,11 @@ claim to the fastest dense large-scale solve.
 \label{sec:experiment}
 
 To illustrate the algorithm we first trace the entire efficient frontier of a
-small problem --- small enough that its piecewise-linear corner structure is
-plainly visible --- and then measure how the runtime grows with the number of
+small problem (small enough that its piecewise-linear corner structure is
+plainly visible) and then measure how the runtime grows with the number of
 assets. Both experiments are reproducible from fixed random seeds:
-\texttt{experiments/frontier\_20x50.py} and
-\texttt{experiments/runtime\_scaling.py}.
+\srcfile{experiments/frontier_20x50.py}{experiments/frontier\_20x50.py} and
+\srcfile{experiments/runtime_scaling.py}{experiments/runtime\_scaling.py}.
 
 \paragraph{Benchmark environment.}
 The runtime study below (the scaling sweep of \S\ref{sec:scaling} and the rank
@@ -654,14 +701,19 @@ NumPy~2.4.6 linked against the Apple Accelerate BLAS, and PyPortfolioOpt~1.6.0.
 Absolute times are therefore machine-specific and BLAS-dependent; the empirical
 scaling exponents and the relative speedups between implementations, which are
 the quantities we draw conclusions from, are far more portable than the raw
-milliseconds.
+milliseconds. Each reported timing is the median of three repetitions on identical
+inputs (the bands in the figures span their range). Beyond the one-off experiment
+scripts cited above, the relative backend performance is tracked continuously by a
+committed \texttt{pytest-benchmark} suite
+(\srcfile{tests/benchmarks/test_backend_scaling.py}{tests/benchmarks/}) run in CI,
+so the comparisons here are reproducible independently of this machine.
 
 \subsection{Illustration: a 20-asset frontier}
 
 \paragraph{Setup.}
 We simulate $T = 50$ daily returns for $N = 20$ assets from a $K = 5$ factor
 model. As the risk model we use the factor covariance itself,
-$\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ (standard practice --- a
+$\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ (standard practice, a
 structured risk model rather than the noisy sample covariance), and we estimate
 the expected returns $\mu \in \R^{20}$ by the sample mean over the $50$ days.
 We trace the long-only, fully-invested frontier, i.e.\ \eqref{eq:qp} with the
@@ -676,11 +728,11 @@ The piecewise-linear corners are clearly visible towards the low-variance end of
 the curve. Tracing this small problem takes on the order of a millisecond.
 Because the dense matrix and the structured \texttt{FactorCovariance} (Woodbury)
 backend represent the \emph{same} $\Sig$, the two backends return the identical
-$21$-point frontier --- the Woodbury identity is exact, so it changes only the
+$21$-point frontier: the Woodbury identity is exact, so it changes only the
 cost of each solve, never the result; its runtime advantage as the universe grows
 is the subject of \S\ref{sec:scaling}. (As an aside, replacing $\Sig$ by a
-low-rank \emph{approximation} of the full sample covariance --- its leading
-eigenpairs plus a diagonal residual --- yields a near-identical frontier differing
+low-rank \emph{approximation} of the full sample covariance (its leading
+eigenpairs plus a diagonal residual) yields a near-identical frontier differing
 by at most one corner, which is why factor risk models are a practical substitute
 for the raw sample covariance.)
 
@@ -709,7 +761,11 @@ reference we also time the \texttt{CLA} of PyPortfolioOpt \citep{pyportfolioopt}
 a widely-used implementation of the critical-line algorithm of
 \citet{bailey2013}, on the same dense problem. The number of turning points tracks $n$ closely
 ($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds essentially
-the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}.
+the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}. The two
+implementations also agree numerically: their minimum-variance portfolios (the
+$\lambda = 0$ endpoint, which is unique for a positive-definite $\Sig$) match to
+machine precision, differing by at most $\sim\!10^{-16}$ in any weight across these
+problems.
 
 Figure~\ref{fig:scaling} plots the median trace time against $n$ on log--log
 axes. A least-squares fit over the largest four sizes gives an empirical exponent
@@ -718,7 +774,7 @@ factor backend: the dense per-iteration solve scales like $O(n_\F^3)$ over $O(n)
 iterations, while the Woodbury solve with fixed $K$ stays close to linear in $n$.
 The dense and factor backends are comparable for small universes (the Woodbury
 correction carries a fixed $K\times K$ overhead), but the factor backend pulls
-away as $n$ grows --- from rough parity at $n=40$ to a $\approx 9\times$ speedup
+away as $n$ grows: from rough parity at $n=40$ to a $\approx 9\times$ speedup
 at $n=640$ (Table~\ref{tab:scaling}). This $\approx 9\times$ is the genuine
 \emph{algorithmic} gain: both backends are vectorised \texttt{numpy} solving the
 identical $\Sig$, so the only difference is the asymptotic Woodbury advantage of
@@ -727,8 +783,8 @@ the structured solve over the dense one.
 For external context we also time PyPortfolioOpt, which scales far more steeply
 ($\approx n^{3.4}$): at $n=640$ it takes about $261$~seconds, so \texttt{cvxcla}'s
 dense backend is roughly $324\times$ faster and the factor backend roughly
-$2980\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact ---
-PyPortfolioOpt uses \texttt{numpy} for its linear algebra --- but a consequence of
+$2980\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
+PyPortfolioOpt uses \texttt{numpy} for its linear algebra) but a consequence of
 how it organises the work: it rebuilds a full free-block inverse at every step,
 and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
 \S\ref{sec:baseline} separates this structural cost from the genuinely
@@ -749,10 +805,10 @@ $640$ & $641$ & $261{,}335$  & $337.9$ & $805.8$ & $87.7$ \\
 \bottomrule
 \end{tabular}
 \caption{Frontier trace time versus number of assets $n$ ($K=10$ factors). All
-four implementations are timed with the \emph{same} protocol --- the median of
-$3$ repetitions on the same machine and inputs --- and return the same
+four implementations are timed with the \emph{same} protocol (the median of
+$3$ repetitions on the same machine and inputs) and return the same
 $O(n)$-point frontier. ``Inverse baseline'' is the incremental-inverse CLA of
-\S\ref{sec:baseline} (\texttt{experiments/inverse\_cla.py}): it shares
+\S\ref{sec:baseline} (\srcfile{experiments/inverse_cla.py}{experiments/inverse\_cla.py}): it shares
 \texttt{cvxcla}'s vectorised event logic but maintains $\Sig_{\F\F}\inv$ through
 rank-one updates instead of re-solving each step, so the gap between it and the
 dense backend isolates the linear-algebra strategy. Empirically the times scale
@@ -782,13 +838,13 @@ median of $3$ repetitions; the shaded band around each spans their min and max.}
 \label{sec:baseline}
 
 The $\approx 324\times$ gap between \texttt{cvxcla}'s dense backend and
-PyPortfolioOpt at $n=640$ invites a lazy explanation --- ``vectorised
-\texttt{numpy} versus slow Python'' --- that is wrong. PyPortfolioOpt already uses
+PyPortfolioOpt at $n=640$ invites a lazy explanation (``vectorised
+\texttt{numpy} versus slow Python'') that is wrong. PyPortfolioOpt already uses
 \texttt{numpy} (\texttt{np.linalg.inv}, \texttt{np.dot}) for its per-step linear
 algebra. It is slow because of \emph{how} it organises the work: it rebuilds a full
 inverse of the free block from scratch at every step, and in the branch that
 decides which blocked asset should re-enter it recomputes that full $O(n_\F^3)$
-inverse once for \emph{every} candidate blocked asset --- of order $n$ dense
+inverse once for \emph{every} candidate blocked asset, of order $n$ dense
 inverses per turning point. \texttt{cvxcla} instead forms the affine segment once
 per step from a single solve and evaluates all event candidates simultaneously
 (the $L$ matrix of \S\ref{sec:events}), so the gap is structural and algorithmic,
@@ -798,11 +854,11 @@ That still leaves a fair question about \texttt{cvxcla}'s own dense backend: it 
 re-solves from scratch each step, discarding the previous factorisation. Could a
 CLA that instead \emph{maintains} the free-block inverse and updates it by
 rank-one formulas do better? We test exactly this with a third implementation
-(\texttt{experiments/inverse\_cla.py}): a CLA that shares \texttt{cvxcla}'s
+(\srcfile{experiments/inverse_cla.py}{experiments/inverse\_cla.py}): a CLA that shares \texttt{cvxcla}'s
 vectorised event logic but maintains $\Sig_{\F\F}\inv$ through rank-one bordered
 (asset enters) and deletion (asset leaves) updates, $O(n_\F^2)$ per step against
 the fresh solve's $O(n_\F^3)$. It is \emph{not} a reimplementation of
-PyPortfolioOpt --- it avoids PyPortfolioOpt's per-candidate rebuild --- and it
+PyPortfolioOpt (it avoids PyPortfolioOpt's per-candidate rebuild) and it
 traces the identical turning points to machine precision (max.\ weight discrepancy
 $<10^{-13}$ across $n=20$--$160$), so the comparison against the dense backend is
 clean: only the linear-algebra strategy differs.
@@ -811,12 +867,12 @@ The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $338$~ms
 $n=640$) is about $2.4\times$ \emph{faster} than the dense backend
 ($\approx n^{2.2}$, $806$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
 predicts. \texttt{cvxcla}'s block elimination is therefore not the fastest possible
-dense strategy --- and the package ships the incremental inverse as the opt-in
+dense strategy, and the package ships the incremental inverse as the opt-in
 \texttt{IncrementalDenseCovariance} backend (\S\ref{sec:incremental}) for callers
 who want that win. It is not the \emph{default} because the fresh solve is what
 composes cleanly with the covariance operator (\S\ref{sec:operators}) and is
 numerically robust step to step: the factor backend never forms $\Sig_{\F\F}$ at
-all, so there is no inverse to maintain --- it solves through the Woodbury
+all, so there is no inverse to maintain: it solves through the Woodbury
 identity. The default dense backend gives up the modest incremental-inverse win to
 keep one turning-point loop that runs over \emph{any} backend, and the factor
 backend more than repays it: at $n=640$ it is $\approx 9.2\times$ faster than the
@@ -839,7 +895,7 @@ and Table~\ref{tab:rank} show the crossover: the factor backend is $3.1\times$
 faster at $K=20$, reaches parity near $K=160$, and is about $2\times$ \emph{slower}
 at $K = 320$, where the ``low-rank'' part is full rank and the Woodbury correction
 is pure overhead. The practical reading is that the structured backend pays off
-precisely in the regime real risk models inhabit --- a few tens of factors over
+precisely in the regime real risk models inhabit: a few tens of factors over
 hundreds or thousands of assets ($K \ll n$).
 
 \begin{table}[h]
@@ -886,27 +942,27 @@ the $27$ interior segments, re-solve the parametric quadratic program
 \eqref{eq:qp} from scratch with a general convex solver (CVXPY/Clarabel
 \citep{cvxpy}, tight tolerances) and compare its optimiser against the CLA weights
 read off the segment by linear interpolation in $\lambda$. The agreement is at
-solver precision --- median weight discrepancy $5\times 10^{-8}$, maximum
-$1.3\times 10^{-5}$ --- confirming that the affine segments coincide with the QP
-optima rather than approximating them (\texttt{experiments/validate\_exact.py}).
+solver precision (median weight discrepancy $5\times 10^{-8}$, maximum
+$1.3\times 10^{-5}$) confirming that the affine segments coincide with the QP
+optima rather than approximating them (\srcfile{experiments/validate_exact.py}{experiments/validate\_exact.py}).
 
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
 
 To close, we run the algorithm on real data. Using
-\texttt{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
+\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
 from Wikipedia and download five years of daily adjusted-close prices via
 \texttt{yfinance}, yielding $N = 494$ assets over $T = 1213$ trading days
 (2021-07-30 to 2026-05-29) after dropping thinly-traded names. From the
 full-history sample mean and covariance (condition number $\approx 1.1\times
-10^{5}$) the CLA traces the entire long-only frontier --- \textbf{96 turning
-points} --- in a median of $\approx 14$~ms (Figure~\ref{fig:realfrontier}); a
+10^{5}$) the CLA traces the entire long-only frontier (\textbf{96 turning
+points}) in a median of $\approx 14$~ms (Figure~\ref{fig:realfrontier}); a
 rank-$20$ diagonal-plus-low-rank approximation of the same covariance traces a
 near-identical frontier ($89$ turning points) in $\approx 9$~ms through the
 Woodbury backend. The annualised frontier spans expected returns of
 $0.14$--$0.89$ over volatilities of $0.10$--$0.87$, with a maximum Sharpe ratio of
-about $2.7$. This figure is measured in-sample --- the frontier is optimised over
-the same sample mean and covariance from which it is computed --- and so overstates
+about $2.7$. This figure is measured in-sample (the frontier is optimised over
+the same sample mean and covariance from which it is computed) and so overstates
 what is achievable out-of-sample; it is reported only to characterise the geometry
 of the frontier on a realistic problem, not as a claim of attainable performance.
 
@@ -962,7 +1018,7 @@ optimal; when it does not, the algorithm declines rather than mislead. A
 well-conditioned, full-rank estimate (ample history, or a structured
 \texttt{FactorCovariance}, which is positive definite by construction) stays in
 the first regime. The experiment is reproducible from
-\texttt{experiments/degeneracy\_boundary.py}.
+\srcfile{experiments/degeneracy_boundary.py}{experiments/degeneracy\_boundary.py}.
 
 \begin{figure}[h]
 \centering
@@ -997,6 +1053,23 @@ homotopy in statistical learning \citep{tibshirani1996, osborne2000, efron2004}.
 Making the correspondence explicit places the CLA in a family it is seldom
 presented alongside, and separates the features that are essential to the method
 from those particular to the portfolio setting.
+
+The most direct relative is in control rather than statistics. The CLA is a
+one-parameter \emph{multi-parametric quadratic program} (mpQP): a strictly convex
+QP whose linear term depends affinely on a parameter, and whose solution map is
+therefore piecewise affine over a polyhedral partition of the parameter space. This
+is the structure exploited by explicit model predictive control, where the optimal
+control law is precomputed as a piecewise-affine function of the state by mpQP
+path-following \citep{bemporad2002, tondel2003}. The turning points of the CLA are
+the breakpoints of that map for the single risk-aversion parameter, and the event
+logic of \S\ref{sec:events} is the one-dimensional specialisation of the
+critical-region traversal used there. What the CLA does \emph{not} attempt, and what
+the general mpQP machinery handles, is arbitrary polyhedral constraints: its active
+set partitions the \emph{variables} into free and box-blocked, never a set of
+general inequality rows, so the reduced system is always a principal submatrix of
+$\Sig$ (\S\ref{sec:operators}) rather than a bordered KKT system. That restriction
+is exactly what keeps each step a single symmetric positive-definite solve, and it
+is the portfolio structure the method exploits.
 
 The LASSO solves, for a response $y$ and design matrix $X$,
 \[
@@ -1073,7 +1146,11 @@ $\mu$. Seen this way, the covariance-operator abstraction of \S\ref{sec:operator
 the statement that the path-tracing logic touches $\Sig$ only through a few
 linear-algebraic operations, just as the LARS recursion touches $X$ only through
 Gram-matrix solves; a structured $\Sig$ (a factor model) is the portfolio analogue
-of a structured or kernelised design.
+of a structured or kernelised design. The package makes the correspondence literal:
+the \texttt{GramCovariance} backend (\S\ref{sec:gram}) builds $\Sig$ from the
+centred data matrix $X_c$ directly through \eqref{eq:gram}, so the CLA runs off
+$X_c$ exactly as LARS runs off the design matrix, and the protocol it calls is named
+\texttt{QuadraticForm} rather than after the covariance for this reason.
 
 The bridge is more than analogy. \citet{brodie2009} add a gross-exposure constraint
 $\|w\|_1 \le c$ to the Markowitz problem and show that the result \emph{is} a LASSO,
@@ -1094,7 +1171,8 @@ the free and blocked sets at each turning point. The \texttt{cvxcla} implementat
 realises each step as a single block-eliminated KKT solve, hardens the event logic
 against degeneracy and floating-point noise, and abstracts the covariance behind a
 small operator protocol so that structured risk models obtain the same exact frontier
-at a fraction of the dense cost.
+without ever forming the dense matrix, and at a fraction of its cost when their
+structure is genuinely low-rank.
 
 \section*{Acknowledgements}
 \addcontentsline{toc}{section}{Acknowledgements}
@@ -1198,6 +1276,16 @@ S.~Rosset and J.~Zhu.
 J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.
 \newblock Sparse and stable Markowitz portfolios.
 \newblock \emph{Proceedings of the National Academy of Sciences}, 106(30):12267--12272, 2009.
+
+\bibitem[Bemporad et~al.(2002)]{bemporad2002}
+A.~Bemporad, M.~Morari, V.~Dua, and E.~N. Pistikopoulos.
+\newblock The explicit linear quadratic regulator for constrained systems.
+\newblock \emph{Automatica}, 38(1):3--20, 2002.
+
+\bibitem[T\o ndel et~al.(2003)]{tondel2003}
+P.~T\o ndel, T.~A. Johansen, and A.~Bemporad.
+\newblock An algorithm for multi-parametric quadratic programming and explicit MPC solutions.
+\newblock \emph{Automatica}, 39(3):489--497, 2003.
 
 \end{thebibliography}
 

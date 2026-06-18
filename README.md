@@ -3,7 +3,7 @@
 # 📈 [cvxcla](https://www.cvxgrp.org/cvxcla) - Critical Line Algorithm for Portfolio Optimization
 
 [![PyPI version](https://img.shields.io/pypi/v/cvxcla)](https://pypi.org/project/cvxcla/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage](https://www.cvxgrp.org/cvxcla/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/reports/html-coverage/index.html)
 
@@ -277,7 +277,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE)
 file for details.
 
 ## 🔍 Related Projects

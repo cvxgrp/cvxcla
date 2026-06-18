@@ -1,16 +1,3 @@
-#    Copyright 2023 Stanford University Convex Optimization Group
-#
-#    Licensed under the Apache License, Version 2.0 (the "License");
-#    you may not use this file except in compliance with the License.
-#    You may obtain a copy of the License at
-#
-#        http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#    See the License for the specific language governing permissions and
-#    limitations under the License.
 """Markowitz implementation of the Critical Line Algorithm.
 
 This module provides the CLA class, which implements the Critical Line Algorithm
@@ -22,13 +9,33 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .first import init_algo
-from .operators import CovarianceOperator, DenseCovariance
+from .operators import DenseCovariance, QuadraticForm
+from .pathtracer import trace
 from .types import Frontier, FrontierPoint, TurningPoint
+
+
+class _Segment(NamedTuple):
+    """The affine critical-line segment valid at one turning point.
+
+    Bundles the affine path ``w(lam) = r_alpha + lam * r_beta``, the multiplier
+    gradients ``gamma``/``delta`` that drive the leave-a-bound events, and the
+    active-set masks the event scan needs. This is what ``CLA.segment`` returns
+    to the generic path tracer.
+    """
+
+    r_alpha: NDArray[np.float64]
+    r_beta: NDArray[np.float64]
+    gamma: NDArray[np.float64]
+    delta: NDArray[np.float64]
+    at_upper: NDArray[np.bool_]
+    at_lower: NDArray[np.bool_]
+    free_in: NDArray[np.bool_]
 
 
 @dataclass(frozen=True)
@@ -59,7 +66,7 @@ class CLA:
     """
 
     mean: NDArray[np.float64]
-    covariance: NDArray[np.float64] | CovarianceOperator
+    covariance: NDArray[np.float64] | QuadraticForm
     lower_bounds: NDArray[np.float64]
     upper_bounds: NDArray[np.float64]
     a: NDArray[np.float64]
@@ -69,16 +76,21 @@ class CLA:
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     @cached_property
-    def covariance_operator(self) -> CovarianceOperator:
-        """Return the covariance as a ``CovarianceOperator`` backend.
+    def covariance_operator(self) -> QuadraticForm:
+        """Return the covariance as a ``QuadraticForm`` backend.
 
         A plain ``numpy`` covariance matrix is wrapped in ``DenseCovariance``;
         an object already implementing the protocol is passed through. This is
         the single point where the input form is normalised.
         """
-        if isinstance(self.covariance, CovarianceOperator):
+        if isinstance(self.covariance, QuadraticForm):
             return self.covariance
         return DenseCovariance(self.covariance)
+
+    @property
+    def dimension(self) -> int:
+        """Number of assets ``n`` (the problem dimension for the path tracer)."""
+        return len(self.mean)
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
@@ -89,58 +101,73 @@ class CLA:
         computing the next turning point with a lower expected return until
         it reaches the minimum variance portfolio.
 
+        The actual walk is driven by the generic ``cvxcla.pathtracer.trace``
+        loop; this class supplies the portfolio-specific hooks (``begin``,
+        ``segment``, ``event_matrix``, ``step``, ``finish``) it calls.
+
         The reduced KKT system at each turning point is solved by block
         elimination: two multi-RHS solves against the free covariance block
         (via the covariance backend) and a small m x m Schur complement
         ``A_F @ Sigma_FF^{-1} @ A_F.T``, where m is the number of equality
-        constraints. The covariance only enters through the
-        ``CovarianceOperator`` interface, so structured backends (e.g.
-        ``FactorCovariance``) never materialise an n x n matrix.
+        constraints. The covariance only enters through the ``QuadraticForm``
+        interface, so structured backends (e.g. ``FactorCovariance``) never
+        materialise an n x n matrix.
 
         Raises:
             RuntimeError: If all variables are blocked, which would make the
                           system of equations singular.
 
         """
-        ns = len(self.mean)
+        trace(self)
 
-        # Compute and store the first turning point
-        self._append(self._first_turning_point())
+    def begin(self) -> tuple[float, TurningPoint]:
+        """Record the first turning point and start the trace at ``lambda = inf``.
 
-        lam = np.inf
+        Returns:
+            ``(inf, first_turning_point)``: the starting lambda bound and the
+            initial state for the path tracer.
+        """
+        first = self._first_turning_point()
+        self._append(first)
+        return np.inf, first
 
-        # Safety bound: each iteration fixes the activity of at least one asset,
-        # so a correct trace runs O(ns) times. Far exceeding this means the event
-        # loop failed to terminate (e.g. cycling); fail loudly instead of hanging.
-        # The bound is far above any valid frontier length.
-        max_iterations = 100 * (ns + 1)  # pragma: no mutate
-        iterations = 0  # pragma: no mutate
+    def segment(self, state: TurningPoint) -> _Segment:
+        """Solve the reduced KKT system for the critical-line segment at ``state``."""
+        at_upper, at_lower, free_in, fixed_weights = self._active_set(state)
+        r_alpha, r_beta, gamma, delta = self._solve_kkt(free_in, fixed_weights)
+        return _Segment(r_alpha, r_beta, gamma, delta, at_upper, at_lower, free_in)
 
-        while lam > 0:  # pragma: no mutate
-            iterations += 1  # pragma: no mutate
-            if iterations > max_iterations:  # pragma: no mutate
-                msg = "CLA failed to converge: too many iterations"  # pragma: no mutate
-                raise RuntimeError(msg)  # pragma: no mutate
-            last = self.turning_points[-1]
+    def event_matrix(self, state: TurningPoint, segment: _Segment) -> NDArray[np.float64]:  # noqa: ARG002
+        """Return the ``(n, 4)`` matrix of candidate critical lambdas for ``segment``.
 
-            at_upper, at_lower, free_in, fixed_weights = self._active_set(last)
-            r_alpha, r_beta, gamma, delta = self._solve_kkt(free_in, fixed_weights)
-            l_mat = self._event_ratios(r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower)
+        ``state`` is part of the uniform ``ParametricProblem`` signature; the CLA
+        does not need it here because ``segment`` already bundles the active-set
+        masks derived from it.
+        """
+        return self._event_ratios(
+            segment.r_alpha,
+            segment.r_beta,
+            segment.gamma,
+            segment.delta,
+            segment.free_in,
+            segment.at_upper,
+            segment.at_lower,
+        )
 
-            event = self._select_next_event(l_mat, lam)
-            if event is None:
-                break
-            secchg, dirchg, lam = event
+    def step(self, state: TurningPoint, segment: _Segment, sec: int, direction: int, lam: float) -> TurningPoint:
+        """Emit the turning point at ``lam`` after flipping asset ``sec``'s activity.
 
-            # Flip the activity of the asset whose event fired: a "leaves a bound"
-            # event (dirchg in {2, 3}) makes it free, a "moves to a bound" event
-            # (dirchg in {0, 1}) blocks it.
-            free = last.free.copy()
-            free[secchg] = dirchg >= 2
-            self._emit(lam, r_alpha + lam * r_beta, free)
+        A "leaves a bound" event (``direction`` in {2, 3}) makes the asset free; a
+        "moves to a bound" event (``direction`` in {0, 1}) blocks it.
+        """
+        free = state.free.copy()
+        free[sec] = direction >= 2
+        self._emit(lam, segment.r_alpha + lam * segment.r_beta, free)
+        return self.turning_points[-1]
 
-        # Final point at lambda = 0
-        self._emit(0.0, r_alpha, last.free)
+    def finish(self, state: TurningPoint, segment: _Segment) -> None:
+        """Emit the minimum-variance endpoint at ``lambda = 0``."""
+        self._emit(0.0, segment.r_alpha, state.free)
 
     def _active_set(
         self, last: TurningPoint
@@ -288,37 +315,6 @@ class CLA:
         l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]  # pragma: no mutate
         l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
         return l_mat
-
-    def _select_next_event(self, l_mat: NDArray[np.float64], lam: float) -> tuple[int, int, float] | None:
-        """Pick the next turning point from the event matrix, or ``None`` to stop.
-
-        The current segment is valid only for lam at or below the current value
-        (the frontier is traced with non-increasing lam), so ratios above it are
-        spurious crossings outside the segment and are discarded; if none remain
-        the trace is complete. Among events tied (within ``tol``) for the largest
-        valid ratio, a Bland-style lowest-(asset index, event type) rule makes the
-        choice deterministic and prevents cycling on degenerate problems (tied
-        means, duplicated assets).
-
-        Args:
-            l_mat: The ``(n, 4)`` matrix of candidate critical lambdas.
-            lam: The current (upper) lambda bound on valid events.
-
-        Returns:
-            ``(secchg, dirchg, lam_next)`` for the chosen event, or ``None`` if no
-            valid event remains.
-        """
-        tol = self.tol
-        l_mat = l_mat.copy()  # do not mutate the caller's matrix
-        l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
-
-        lam_max = np.max(l_mat)
-        if lam_max < 0:  # pragma: no mutate
-            return None
-
-        tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
-        secchg, dirchg = tied[0]
-        return int(secchg), int(dirchg), float(l_mat[secchg, dirchg])
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
