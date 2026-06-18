@@ -73,6 +73,15 @@ numerically identical result (the minimum-variance portfolio agrees with
 benefit to the short-sample regime, where an optional ridge restores positive
 definiteness and the solve is performed in the low-dimensional observation space.
 
+Real mandates also impose linear equality constraints beyond the budget: dollar-neutral
+long/short books, sector- or factor-neutral portfolios, or a target gross total.
+`cvxcla` traces the exact frontier under any such $A w = b$. The turning-point engine is
+already general in $A$; only the maximum-return starting vertex is constraint-specific,
+found by a closed-form greedy fill for the all-ones budget and, for a general $A$, by a
+small linear program solved with HiGHS [@huangfu2018] via SciPy [@virtanen2020]. The
+covariance is never formed in either case, so the matrix-free advantage carries over to
+constrained mandates unchanged.
+
 Beyond the implementation, `cvxcla` makes explicit that the CLA is one instance of a
 broader family of parametric active-set path-tracers. It is the one-parameter
 specialisation of multi-parametric quadratic programming and explicit model
