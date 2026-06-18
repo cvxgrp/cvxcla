@@ -7,9 +7,5 @@ profiles:
 templates:
   - github-paper
 
-# Community-health files are kept at the repository root (where GitHub and JOSS
-# look for them), so stop syncing the template copies into .rhiza/.
 exclude:
-  - .rhiza/CODE_OF_CONDUCT.md
-  - .rhiza/CONTRIBUTING.md
   - .github/workflows/rhiza_release.yml
