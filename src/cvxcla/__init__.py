@@ -17,6 +17,7 @@ from .operators import (
     CovarianceOperator,
     DenseCovariance,
     FactorCovariance,
+    GramCovariance,
     IncrementalDenseCovariance,
     QuadraticForm,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "CovarianceOperator",
     "DenseCovariance",
     "FactorCovariance",
+    "GramCovariance",
     "IncrementalDenseCovariance",
     "Lasso",
     "ParametricProblem",
