@@ -539,6 +539,68 @@ class TestDegenerateProblems:
         assert first.weights[first.free].item() > cla.tol
         self._assert_valid_frontier(cla, upper[0])
 
+    def test_tie_heavy_equicorrelation_completes(self):
+        """A large, highly tied problem traces to completion (issues #648, #708).
+
+        Equicorrelated covariance with means tied in blocks and a tight cap forces
+        many assets to their bound at once. Round-off then nudges several free
+        weights a hair past the box at well-conditioned vertices. The old
+        clip-then-rescale projection re-violated the cap (rescaling to restore the
+        budget pushed the capped weights back over their bound) and aborted with a
+        spurious "Weights above upper bounds". The capped-simplex projection
+        respects box and budget together, so the trace now completes cleanly.
+        """
+        n, rho = 200, 0.99
+        rng = np.random.default_rng(1)
+        covariance = (1.0 - rho) * np.eye(n) + rho * np.ones((n, n))
+        mean = np.repeat(rng.standard_normal(n // 10), 10)
+        cap = 2.0 / n
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, cap),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        assert len(cla) > 2  # a real frontier, not an immediate stop
+        self._assert_valid_frontier(cla, cap)
+
+    def test_project_feasible_respects_box_under_heavy_capping(self):
+        """The projection never returns a point outside the box (issue #708).
+
+        Constructs a budget-feasible (sum == 1) but box-violating candidate of the
+        kind a degenerate vertex produces: several weights a hair over a tight cap,
+        the rest compensating below. A plain clip-then-rescale would re-inflate the
+        capped weights past the cap; the capped-simplex projection must not.
+        """
+        n = 10
+        cap = 0.15
+        cla = CLA(
+            mean=np.linspace(0.1, 0.2, n),
+            covariance=np.eye(n) * 0.04,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, cap),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+
+        over = cap + 1e-4
+        weights = np.full(n, over)
+        weights[6:] = (1.0 - 6 * over) / (n - 6)  # restore sum == 1 below the cap
+        assert np.isclose(weights.sum(), 1.0)
+        assert weights.max() > cap  # genuinely box-infeasible
+
+        projected = cla._project_feasible(weights)
+        assert np.all(projected >= -1e-12)
+        assert np.all(projected <= cap + 1e-12)
+        assert np.isclose(projected.sum(), 1.0)
+
+        # already-feasible candidates pass through untouched (exact no-op)
+        feasible = np.full(n, 0.1)
+        assert np.array_equal(cla._project_feasible(feasible), feasible)
+
 
 class TestAppendTolerance:
     """Tests for the tol argument of _append (https://github.com/cvxgrp/cvxcla/issues/651)."""
