@@ -438,9 +438,11 @@ The turning-point loop touches the covariance matrix through only three operatio
 a full matrix--vector product $\Sig x$ (\texttt{matvec}); a solve against the free block,
 $\Sig_{\F\F}\inv R$ for a multi-column right-hand side $R$ (\texttt{solve\_free}); and a
 free-to-blocked cross product $\Sig_{\F\B}\,x_\B$ (\texttt{cross}). The package captures
-exactly this contract in the \texttt{CovarianceOperator} protocol
-(\texttt{src/cvxcla/operators.py}), so the algorithm never assumes an explicit matrix.
-Three backends implement it.
+exactly this contract in the \texttt{QuadraticForm} protocol
+(\texttt{src/cvxcla/operators.py}; \texttt{CovarianceOperator} remains as an alias),
+so the algorithm never assumes an explicit matrix. The name is deliberately not
+tied to covariance: the same contract is the Hessian of any quadratic objective, a
+point we return to in \S\ref{sec:lars}. Four backends implement it.
 
 \subsection{Dense covariance}
 
@@ -509,6 +511,41 @@ the diagonal has no off-diagonal block:
 \)
 Because the CLA accesses the covariance solely through the protocol, switching from a
 dense matrix to a factor model requires no change to the turning-point loop.
+
+\subsection{Data-matrix (Gram) covariance}
+\label{sec:gram}
+
+A sample covariance is itself a Gram matrix. If $X_c\in\R^{T\times n}$ is the
+column-centred matrix of $T$ return observations, then
+\begin{equation}
+\label{eq:gram}
+\Sig \;=\; \frac{1}{T-1}\,X_c\trans X_c,
+\end{equation}
+and \texttt{GramCovariance} implements the protocol straight from $X_c$, never
+forming the $n\times n$ matrix: \texttt{matvec} is the pair of thin products
+$X_c\trans(X_c x)/(T-1)$, \texttt{cross} restricts those products to the free and
+blocked columns, and \texttt{solve\_free} works on $X_{c\F}$ alone. Memory is
+$O(Tn)$ rather than $O(n^2)$.
+
+The catch is rank: $X_c\trans X_c$ has rank at most $T-1$. When there are at least as
+many observations as assets ($T\ge n$, with $X_c$ of full column rank) $\Sig$ is
+positive definite and this backend is the dense reference at lower memory. In the
+short-sample regime $T<n$ (a covariance estimated from far fewer periods than
+assets) $\Sig$ is singular, and the free block becomes unsolvable once the free set
+outgrows the data rank: exactly the degeneracy the algorithm detects through
+\texttt{rcond\_free}. An optional ridge $\delta I$ restores positive definiteness,
+and the free-block solve is then the Woodbury identity \eqref{eq:woodbury} carried
+out in the $T$-dimensional observation space (cost $O(n_\F T^2 + T^3)$). This is
+precisely a factor model \eqref{eq:factor} whose factors are the observations
+themselves ($U=X_c\trans$, $k=T$).
+
+This is a memory benefit, not an unconditional speed-up. When $T\ge n$ and the dense
+covariance fits in memory, \texttt{DenseCovariance} is faster per turning point: it
+slices a precomputed $\Sig_{\F\F}$, whereas the Gram backend re-forms
+$X_{c\F}\trans X_{c\F}$ at each solve. The same caveat governs the factor backend
+(\S\ref{sec:rankscaling}): a structured solve pays only while the rank, or here the
+observation count $T$, stays well below $n$; at full rank the structured route is
+slower than the plain dense matrix.
 
 \section{The efficient frontier object}
 \label{sec:frontier}
@@ -1073,7 +1110,11 @@ $\mu$. Seen this way, the covariance-operator abstraction of \S\ref{sec:operator
 the statement that the path-tracing logic touches $\Sig$ only through a few
 linear-algebraic operations, just as the LARS recursion touches $X$ only through
 Gram-matrix solves; a structured $\Sig$ (a factor model) is the portfolio analogue
-of a structured or kernelised design.
+of a structured or kernelised design. The package makes the correspondence literal:
+the \texttt{GramCovariance} backend (\S\ref{sec:gram}) builds $\Sig$ from the
+centred data matrix $X_c$ directly through \eqref{eq:gram}, so the CLA runs off
+$X_c$ exactly as LARS runs off the design matrix, and the protocol it calls is named
+\texttt{QuadraticForm} rather than after the covariance for this reason.
 
 The bridge is more than analogy. \citet{brodie2009} add a gross-exposure constraint
 $\|w\|_1 \le c$ to the Markowitz problem and show that the result \emph{is} a LASSO,
