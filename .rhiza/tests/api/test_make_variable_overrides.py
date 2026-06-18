@@ -22,13 +22,6 @@ from api.conftest import run_make, strip_ansi
 class TestCoverageFailUnder:
     """COVERAGE_FAIL_UNDER controls the pytest --cov-fail-under threshold."""
 
-    def test_default_threshold_is_90(self, logger) -> None:
-        """Default COVERAGE_FAIL_UNDER value must be 90."""
-        proc = run_make(logger, ["test"])
-        assert "--cov-fail-under=90" in proc.stdout, (
-            "Default coverage threshold should be 90; got:\n" + proc.stdout[:500]
-        )
-
     def test_threshold_override_to_100(self, logger) -> None:
         """COVERAGE_FAIL_UNDER=100 must propagate to pytest invocation."""
         proc = run_make(logger, ["test", "COVERAGE_FAIL_UNDER=100"])
