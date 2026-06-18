@@ -107,9 +107,11 @@ free-to-blocked cross product. Capturing exactly this contract as a small
 protocol decouples the algorithm from the covariance representation, so a
 structured risk model (e.g.\ a diagonal-plus-low-rank factor covariance solved
 through the Woodbury identity) drops in as a backend and traces the
-\emph{same exact frontier} at a fraction of the cost, without a single change to
-the turning-point loop. This is the paper's main engineering contribution; the
-experiments of \S\ref{sec:experiment} quantify the resulting speed-up.
+\emph{same exact frontier} at lower memory in every case, and at a fraction of the
+time when its rank is genuinely low (few factors over many assets), without a
+single change to the turning-point loop. This is the paper's main engineering
+contribution; the experiments of \S\ref{sec:experiment} quantify both the memory
+saving and the regime-dependent speed-up.
 
 \paragraph{Contributions.}
 This is a \emph{systems} contribution: we claim no new turning points (the
@@ -699,7 +701,12 @@ NumPy~2.4.6 linked against the Apple Accelerate BLAS, and PyPortfolioOpt~1.6.0.
 Absolute times are therefore machine-specific and BLAS-dependent; the empirical
 scaling exponents and the relative speedups between implementations, which are
 the quantities we draw conclusions from, are far more portable than the raw
-milliseconds.
+milliseconds. Each reported timing is the median of three repetitions on identical
+inputs (the bands in the figures span their range). Beyond the one-off experiment
+scripts cited above, the relative backend performance is tracked continuously by a
+committed \texttt{pytest-benchmark} suite
+(\srcfile{tests/benchmarks/test_backend_scaling.py}{tests/benchmarks/}) run in CI,
+so the comparisons here are reproducible independently of this machine.
 
 \subsection{Illustration: a 20-asset frontier}
 
@@ -1160,7 +1167,8 @@ the free and blocked sets at each turning point. The \texttt{cvxcla} implementat
 realises each step as a single block-eliminated KKT solve, hardens the event logic
 against degeneracy and floating-point noise, and abstracts the covariance behind a
 small operator protocol so that structured risk models obtain the same exact frontier
-at a fraction of the dense cost.
+without ever forming the dense matrix, and at a fraction of its cost when their
+structure is genuinely low-rank.
 
 \section*{Acknowledgements}
 \addcontentsline{toc}{section}{Acknowledgements}
