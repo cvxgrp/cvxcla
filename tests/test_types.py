@@ -24,11 +24,17 @@ class TestFrontierPoint:
         assert np.allclose(np.sum(point.weights), 1.0)
         assert np.array_equal(point.weights, weights)
 
-    def test_frontier_point_invalid_weights(self):
-        """Test that invalid weights (not summing to 1) raise a ValueError."""
-        weights = np.array([0.3, 0.3, 0.3])  # Sum = 0.9, not 1.0
-        with pytest.raises(ValueError, match=r"^Weights do not sum to 1$"):
-            FrontierPoint(weights=weights)
+    def test_frontier_point_allows_non_unit_sum(self):
+        """Weights need not sum to 1: FrontierPoint supports general A w = b.
+
+        The fully-invested invariant used to live here; it was removed so that
+        leveraged, dollar-neutral, and multi-equality portfolios (whose weights
+        do not sum to 1) are representable. Validation against the actual
+        constraint A w = b now happens in ``CLA._append``.
+        """
+        weights = np.array([0.3, 0.3, 0.3])  # sum = 0.9
+        point = FrontierPoint(weights=weights)
+        assert np.array_equal(point.weights, weights)
 
     def test_mean_computation(self):
         """Test computation of expected return."""
