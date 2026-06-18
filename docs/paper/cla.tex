@@ -158,7 +158,8 @@ literal.
 \item \textbf{An open, tested, benchmarked implementation.} Hardened event logic, a
 Bland-style lowest-index tie-break (\S\ref{sec:bland}) and a floating-point slope
 floor (\S\ref{sec:events}), keeps the trace deterministic and prevents cycling and
-out-of-bounds drift; reproducible benchmarks (\S\ref{sec:experiment}) isolate the
+out-of-bounds drift on the degenerate cases we test; reproducible benchmarks
+(\S\ref{sec:experiment}) isolate the
 genuinely algorithmic speed-up (the structured solve) from incidental
 linear-algebra bookkeeping.
 \end{enumerate}
@@ -617,10 +618,14 @@ solve ($m=1$ for the budget constraint).
 
 \item \textbf{Robustness on degenerate data.} The Bland-style tie-break
 (\S\ref{sec:bland}) and the $\sqrt{\varepsilon_{\text{mach}}}$ slope floor
-(\S\ref{sec:events}) make the trace deterministic and prevent both cycling and
-out-of-bounds drift, and sub-tolerance round-off at degenerate vertices is
-projected back onto the feasible set so near-rank-deficient problems still
-complete with optimal turning points (\S\ref{sec:empirical}).
+(\S\ref{sec:events}) make the trace deterministic and prevent cycling and
+out-of-bounds drift on the degenerate problems we test (tied means, capped
+weights, slow bound crossings), and sub-tolerance round-off at degenerate vertices
+is projected back onto the feasible set so near-rank-deficient problems still
+complete with optimal turning points (\S\ref{sec:empirical}). The tie-break is not
+proven to defuse every degeneracy: worst-case event multiplicity, like the
+worst-case turning-point count, is combinatorial, so sufficiently tie-heavy or
+large instances can still defeat the floating-point event logic.
 \end{itemize}
 
 \section{Relation to the Bailey--L\'opez de Prado algorithm}
@@ -703,9 +708,17 @@ dense matrix or on a diagonal-plus-low-rank factor model, and the asymptotic
 advantage of \S\ref{sec:rankscaling} is a property of the \emph{backend}, not of
 the algorithm. The two ideas are complementary rather than competing: an
 incremental-update solver for the free block could itself be wrapped as a
-\texttt{CovarianceOperator} and dropped in. A direct empirical comparison against
-these methods (none of which ships a maintained Python implementation we are
-aware of) is left to future work; the reading here is that \texttt{cvxcla}'s
+\texttt{CovarianceOperator} and dropped in. A direct empirical comparison is left
+to future work, for a concrete reason: no maintained, installable fast large-scale
+CLA exists to benchmark against. The closest is the Fortran implementation of
+\citet{niedermayer2010} (with MATLAB and Python bindings), which reports speedups
+of several orders of magnitude over earlier CLA codes but is effectively
+unmaintained and not buildable on current toolchains without nontrivial effort;
+\citet{hirschberger2010}'s ``CIOS'' is self-contained Java research code; and a
+general parametric active-set QP solver such as qpOASES would have to be driven
+along $\lambda$ with warm starts rather than tracing the frontier natively.
+Reviving the Niedermayer code, or a $\lambda$-swept qpOASES, is the natural
+baseline for such a comparison. The reading here is that \texttt{cvxcla}'s
 contribution is the interface that makes such backends interchangeable, not a
 claim to the fastest dense large-scale solve.
 
@@ -1039,9 +1052,15 @@ numerical-singularity scale), raising an actionable diagnosis instead. We key th
 guard on conditioning rather than on the box violation because the violation is
 the residual of a singular solve and its magnitude varies with the BLAS/LAPACK
 build, whereas the conditioning is read from the block's symmetric eigenvalues
-and is identical on every platform. This is the precise guarantee: while the
-free-asset block stays full rank the trace completes and every turning point is
-optimal; when it does not, the algorithm declines rather than mislead. A
+and is identical on every platform. This is the precise guarantee \emph{for rank
+and conditioning degeneracy}: while the free-asset block stays full rank the trace
+completes and every turning point is optimal; when it does not, the algorithm
+declines rather than mislead. It speaks to the linear algebra, not to event ties:
+the distinct, combinatorial degeneracy of many events coincident at one
+$\lambda^{\star}$ is handled by the Bland-style tie-break of \S\ref{sec:bland},
+which is robust on the degenerate problems we test but, like the worst-case
+turning-point count, is not proven to cover every adversarial tie-heavy or very
+large instance. A
 well-conditioned, full-rank estimate (ample history, or a structured
 \texttt{FactorCovariance}, which is positive definite by construction) stays in
 the first regime. The experiment is reproducible from
