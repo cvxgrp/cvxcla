@@ -694,9 +694,10 @@ caveat mirrors the degeneracy guarantee of \S\ref{sec:empirical}: the general-$A
 path assumes a well-conditioned first vertex, where the free set has the $m$ assets
 the equalities require. At a \emph{degenerate} vertex (a basic asset pinned exactly
 on a box bound, so the free set is too small to span the constraints) the reduced
-$A_\F$ loses row rank and the Schur complement is singular; that case is not yet
-handled and is left to future work alongside the tie-heavy hardening of
-\S\ref{sec:empirical}.
+$A_\F$ loses row rank and the Schur complement is singular. That vertex is
+\emph{declined} at the first turning point with an actionable diagnosis rather than
+mis-solved; tracing through it (rather than declining) is left to future work
+alongside the tie-heavy hardening of \S\ref{sec:empirical}.
 
 \item \textbf{Degeneracy handling.} On tie-heavy or degenerate inputs several
 events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit

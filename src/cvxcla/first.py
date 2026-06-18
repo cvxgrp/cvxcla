@@ -107,7 +107,11 @@ def first_vertex_lp(
 
     Raises:
         ValueError: If the linear program is infeasible or unbounded (the
-            constraints admit no maximum-return vertex).
+            constraints admit no maximum-return vertex), or if that vertex is
+            degenerate: a basic asset sits exactly on a box bound, so the free set
+            does not span the ``m`` equality constraints and the reduced KKT system
+            would be singular. That case is declined here rather than left to
+            surface as an opaque singular-matrix error later in the trace.
     """
     # maximize mean @ w  ==  minimize -mean @ w, subject to A w = b and the box.
     result = linprog(
@@ -123,6 +127,23 @@ def first_vertex_lp(
 
     weights = np.asarray(result.x, dtype=np.float64)
     free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
+
+    # The free set must span the m equality constraints, i.e. A restricted to the
+    # free assets must have full row rank, or the reduced KKT solve is singular. A
+    # degenerate maximum-return vertex (a basic asset pinned on a bound) violates
+    # this; decline it with an actionable diagnosis instead of letting it surface
+    # as an opaque "Singular matrix" error downstream.
+    m = a.shape[0]
+    if np.linalg.matrix_rank(a[:, free]) < m:
+        msg = (
+            f"The maximum-return vertex is degenerate (free-set size {int(np.count_nonzero(free))}, "
+            f"equality constraints {m}): a basic asset sits exactly on a box bound, so the free set "
+            "does not span the equality constraints and the reduced KKT system is singular. Tracing a "
+            "frontier from a degenerate first vertex of a general A w = b system is not yet supported; "
+            "perturb the bounds or the constraint so the maximum-return vertex is non-degenerate."
+        )
+        raise ValueError(msg)
+
     return TurningPoint(free=free, weights=weights)
 
 

@@ -901,6 +901,29 @@ class TestGeneralEqualityConstraints:
                 b=np.array([10.0, 0.5]),
             )
 
+    def test_degenerate_first_vertex_declined_with_diagnosis(self):
+        """A degenerate general-A max-return vertex is declined with a clear error.
+
+        With a = [budget; e_0] (so w_0 is pinned by the second row), the
+        maximum-return vertex pins a basic asset on a box bound: the free set does
+        not span the two equalities and the reduced KKT system is singular. This
+        must be declined at the first vertex with an actionable message, not left
+        to surface as an opaque "Singular matrix" error later in the trace.
+        """
+        n = 8
+        mean, cov = self._problem(n, 6)
+        a = np.vstack([np.ones(n), np.eye(n)[0]])
+        b = np.array([1.0, 0.2])
+        with pytest.raises(ValueError, match="maximum-return vertex is degenerate"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.full(n, 0.4),
+                a=a,
+                b=b,
+            )
+
     def test_project_feasible_general_constraint(self):
         """The general (multi-row) projection restores box feasibility on A w = b.
 
