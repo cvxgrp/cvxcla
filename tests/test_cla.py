@@ -426,8 +426,8 @@ class TestCLAErrors:
         with pytest.raises(ValueError, match=r"^Weights above upper bounds$"):
             cla._append(tp)
 
-    def test_append_weights_do_not_sum_to_one(self):
-        """Test that _append raises ValueError when weights don't sum to 1."""
+    def test_append_violates_equality_constraint(self):
+        """_append raises when weights violate the equality constraint A w = b."""
         mean = np.array([0.1, 0.15, 0.2])
         covariance = np.eye(3) * 0.04
         lower_bounds = np.zeros(3)
@@ -437,11 +437,10 @@ class TestCLAErrors:
 
         cla = CLA(mean=mean, covariance=covariance, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b)
 
-        # Use a duck-typed object to bypass TurningPoint's own sum-to-1 validation
         class FakeTP:
-            weights = np.array([0.2, 0.2, 0.2])  # sums to 0.6, not 1
+            weights = np.array([0.2, 0.2, 0.2])  # A w = 0.6, not 1
 
-        with pytest.raises(ValueError, match=r"^Weights do not sum to 1$"):
+        with pytest.raises(ValueError, match=r"^Weights violate the equality constraint A w = b$"):
             cla._append(FakeTP())
 
 
@@ -779,3 +778,175 @@ class TestCLAInternals:
         before = l_mat.copy()
         select_next_event(l_mat, lam=1.0, tol=cla.tol)
         np.testing.assert_array_equal(l_mat, before)
+
+
+class TestGeneralEqualityConstraints:
+    """General ``A w = b``: leverage, dollar-neutral, weighted, and multi-row.
+
+    The turning-point KKT solve is general in ``A``; these tests exercise the
+    general first vertex (the greedy fill for an all-ones row, the HiGHS LP for a
+    weighted or multi-row ``A``), the ``A w = b`` validation in ``_append``, and
+    the general feasibility projection.
+    """
+
+    @staticmethod
+    def _problem(n, seed):
+        """Return a random mean vector and a positive-definite covariance."""
+        rng = np.random.default_rng(seed)
+        lm = rng.standard_normal((n, n))
+        return rng.standard_normal(n), lm @ lm.T + 0.1 * np.eye(n)
+
+    def _assert_feasible_monotone(self, cla, a, b, lower, upper):
+        """Assert every turning point is box/equality feasible and lambda decreases."""
+        weights = np.array([tp.weights for tp in cla.turning_points])
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert np.all(weights >= lower - cla.tol)
+        assert np.all(weights <= upper + cla.tol)
+        assert np.allclose(weights @ a.T, b, atol=1e-6)
+        assert np.all(np.diff(lambdas) <= cla.tol)
+
+    def _assert_optimal(self, cla, mean, cov, a, b, lower, upper):
+        """At sampled interior lambdas, the CLA point is no worse than a QP solve."""
+        from scipy.optimize import minimize
+
+        tps = cla.turning_points
+        lambdas = [tp.lamb for tp in tps]
+        weights = np.array([tp.weights for tp in tps])
+        x0 = tps[0].weights  # the max-return vertex is feasible
+        for frac in (0.3, 0.6, 0.85):
+            i = int(frac * (len(tps) - 1))
+            lam = lambdas[i]
+            if not np.isfinite(lam) or lam <= 0:
+                continue
+            res = minimize(
+                lambda w, lam=lam: 0.5 * w @ cov @ w - lam * mean @ w,
+                x0=x0,
+                jac=lambda w, lam=lam: cov @ w - lam * mean,
+                method="SLSQP",
+                bounds=list(zip(lower, upper, strict=True)),
+                constraints=[{"type": "eq", "fun": lambda w: a @ w - b, "jac": lambda w: a}],
+                options={"ftol": 1e-12, "maxiter": 500},
+            )
+
+            def obj(w, lam=lam):
+                return 0.5 * w @ cov @ w - lam * mean @ w
+
+            assert obj(weights[i]) <= obj(res.x) + 1e-5
+
+    def test_leverage_all_ones_total_two(self):
+        """All-ones row with b != 1 (leveraged total) traces via the greedy."""
+        n = 12
+        mean, cov = self._problem(n, 0)
+        lower, upper = np.zeros(n), np.full(n, 0.5)
+        a, b = np.ones((1, n)), np.array([2.0])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
+
+    def test_dollar_neutral_long_short(self):
+        """All-ones row with b = 0 and short positions (negative lower bounds)."""
+        n = 12
+        mean, cov = self._problem(n, 1)
+        lower, upper = np.full(n, -0.3), np.full(n, 0.3)
+        a, b = np.ones((1, n)), np.array([0.0])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
+
+    def test_weighted_single_equality(self):
+        """A single non-all-ones equality row uses the HiGHS LP first vertex."""
+        n = 12
+        mean, cov = self._problem(n, 2)
+        lower, upper = np.zeros(n), np.ones(n)
+        a = np.random.default_rng(99).uniform(0.5, 2.0, (1, n))
+        b = np.array([1.0])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
+
+    def test_budget_plus_sector_neutral(self):
+        """Two equality rows: a budget plus a sector-exposure target."""
+        n = 12
+        mean, cov = self._problem(n, 3)
+        lower, upper = np.zeros(n), np.ones(n)
+        a = np.vstack([np.ones(n), np.r_[np.ones(n // 2), np.zeros(n - n // 2)]])
+        b = np.array([1.0, 0.5])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
+
+    def test_budget_plus_factor_neutral(self):
+        """Three equality rows: a budget plus two factor-neutrality constraints."""
+        n = 14
+        mean, cov = self._problem(n, 4)
+        lower, upper = np.full(n, -0.5), np.full(n, 0.5)
+        a = np.vstack([np.ones(n), np.random.default_rng(7).standard_normal((2, n))])
+        b = np.array([1.0, 0.0, 0.0])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
+
+    def test_infeasible_general_constraint_raises(self):
+        """An unsatisfiable equality system is reported, not silently mis-solved."""
+        n = 5
+        mean, cov = self._problem(n, 5)
+        # sum(w) = 10 is infeasible under 0 <= w <= 1 (max achievable is 5)
+        with pytest.raises(ValueError, match="maximum-return vertex"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.vstack([np.ones(n), np.eye(n)[0]]),
+                b=np.array([10.0, 0.5]),
+            )
+
+    def test_degenerate_first_vertex_declined_with_diagnosis(self):
+        """A degenerate general-A max-return vertex is declined with a clear error.
+
+        With a = [budget; e_0] (so w_0 is pinned by the second row), the
+        maximum-return vertex pins a basic asset on a box bound: the free set does
+        not span the two equalities and the reduced KKT system is singular. This
+        must be declined at the first vertex with an actionable message, not left
+        to surface as an opaque "Singular matrix" error later in the trace.
+        """
+        n = 8
+        mean, cov = self._problem(n, 6)
+        a = np.vstack([np.ones(n), np.eye(n)[0]])
+        b = np.array([1.0, 0.2])
+        with pytest.raises(ValueError, match="maximum-return vertex is degenerate"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.full(n, 0.4),
+                a=a,
+                b=b,
+            )
+
+    def test_project_feasible_general_constraint(self):
+        """The general (multi-row) projection restores box feasibility on A w = b.
+
+        A candidate that satisfies A w = b but violates the box must be projected
+        back inside the box while staying on the equality set (the alternating
+        box / affine projection used for a general A).
+        """
+        n = 12
+        mean, cov = self._problem(n, 3)
+        half = np.r_[np.ones(n // 2), np.zeros(n - n // 2)]
+        a = np.vstack([np.ones(n), half])
+        b = np.array([1.0, 0.5])  # sum(w) = 1 and sum(first half) = 0.5
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=np.zeros(n), upper_bounds=np.ones(n), a=a, b=b)
+
+        # start from the uniform feasible point, then push one weight below 0 while
+        # preserving both equalities (offset within the first half)
+        w = np.full(n, 1.0 / n)
+        w[0] += 0.15
+        w[1] -= 0.15
+        assert np.allclose(a @ w, b, atol=1e-12)
+        assert w.min() < 0.0  # box-infeasible
+
+        projected = cla._project_feasible(w)
+        assert np.all(projected >= -1e-9)
+        assert np.all(projected <= 1.0 + 1e-9)
+        assert np.allclose(a @ projected, b, atol=1e-7)

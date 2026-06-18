@@ -47,21 +47,6 @@ class FrontierPoint:
 
     weights: NDArray[np.float64]
 
-    def __post_init__(self) -> None:
-        """Validate that the weights sum to 1.
-
-        This method is automatically called after initialization to ensure that
-        the portfolio weights sum to 1, which is required for a valid portfolio.
-
-        Raises:
-            ValueError: If the sum of weights is not close to 1.
-
-        """
-        # check that the sum is close to 1
-        if not np.isclose(np.sum(self.weights), 1.0):
-            msg = "Weights do not sum to 1"
-            raise ValueError(msg)
-
     def mean(self, mean: NDArray[np.float64]) -> float:
         """Compute the expected return of the portfolio.
 

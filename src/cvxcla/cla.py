@@ -14,7 +14,7 @@ from typing import NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
-from .first import init_algo
+from .first import first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import trace
 from .types import Frontier, FrontierPoint, TurningPoint
@@ -57,17 +57,17 @@ class CLA:
             (see ``cvxcla.operators``).
         lower_bounds: Vector of lower bounds for asset weights.
         upper_bounds: Vector of upper bounds for asset weights.
-        a: Equality-constraint matrix. The supported constraint is the
-            fully-invested budget ``sum(w) = 1``: ``a`` is the single all-ones
-            row and ``b`` is ``[1]``. The per-turning-point KKT solve is written
-            for a general ``m``-row ``A`` (through the Schur complement), but the
-            first turning point (:func:`cvxcla.first.init_algo`) and the
-            fully-invested ``sum(w) = 1`` invariant of
-            :class:`cvxcla.types.FrontierPoint` assume the budget constraint, so
-            other equality systems (a different total, weighted coefficients, or
-            ``m > 1`` rows) are not supported end to end.
-        b: Equality-constraint right-hand side; ``[1]`` for the fully-invested
-            budget.
+        a: Equality-constraint matrix ``A`` of ``A w = b`` (``m x n``). The
+            canonical case is the single all-ones budget row (``sum(w) = b``),
+            but an arbitrary equality system is supported: weighted single rows
+            and ``m > 1`` rows (e.g. budget plus sector- or factor-neutrality).
+            The all-ones budget (any right-hand side, including ``0`` for
+            dollar-neutral) uses the greedy first vertex of
+            :func:`cvxcla.first.init_algo`; a general ``A`` uses the
+            linear-programming first vertex of
+            :func:`cvxcla.first.first_vertex_lp`.
+        b: Equality-constraint right-hand side ``b`` (length ``m``); ``[1]`` for
+            the fully-invested budget, ``[0]`` for dollar-neutral, and so on.
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
         logger: Logger instance for logging information and errors.
@@ -337,19 +337,30 @@ class CLA:
     def _first_turning_point(self) -> TurningPoint:
         """Calculate the first turning point on the efficient frontier.
 
-        This method uses the init_algo function to find the first turning point
-        based on the mean returns and the bounds on asset weights.
+        The first turning point is the maximum-return vertex of the feasible
+        polytope. For the all-ones budget constraint (any right-hand side) it is
+        found by the greedy fill of ``init_algo``; for a general equality system
+        ``A w = b`` it is found by solving the linear program in ``first_vertex_lp``.
 
         Returns:
             A TurningPoint object representing the first point on the efficient frontier.
 
         """
-        first = init_algo(
+        if self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
+            return init_algo(
+                mean=self.mean,
+                lower_bounds=self.lower_bounds,
+                upper_bounds=self.upper_bounds,
+                total=float(self.b[0]),
+            )
+        return first_vertex_lp(
             mean=self.mean,
             lower_bounds=self.lower_bounds,
             upper_bounds=self.upper_bounds,
+            a=self.a,
+            b=self.b,
+            tol=self.tol,
         )
-        return first
 
     def _append(self, tp: TurningPoint, tol: float | None = None) -> None:
         """Append a turning point to the list of turning points.
@@ -374,8 +385,8 @@ class CLA:
         if not np.all(tp.weights <= (self.upper_bounds + tol)):  # pragma: no mutate
             msg = "Weights above upper bounds"
             raise ValueError(msg)
-        if not np.allclose(np.sum(tp.weights), 1.0):
-            msg = "Weights do not sum to 1"
+        if not np.allclose(self.a @ tp.weights, self.b, atol=1e-7):
+            msg = "Weights violate the equality constraint A w = b"
             raise ValueError(msg)
 
         self.turning_points.append(tp)
@@ -448,25 +459,32 @@ class CLA:
     def _project_feasible(self, weights: NDArray[np.float64]) -> NDArray[np.float64]:
         """Project ``weights`` onto the feasible region, clearing round-off.
 
-        This is the Euclidean projection onto the capped simplex
-        ``{w : lower <= w <= upper, sum(w) = b}`` for the budget constraint the
-        algorithm traces, computed by water-filling a single shift ``theta`` so
-        that ``sum(clip(w - theta, lower, upper)) = b``.
+        On tie-heavy or near-degenerate problems accumulated round-off can place a
+        candidate a hair outside its box at a well-conditioned vertex. Projecting it
+        back onto ``{w : lower <= w <= upper, A w = b}`` clears that round-off and
+        lets the trace continue. The projection is a strict no-op for well-posed,
+        already-feasible turning points (the common case), so it does not perturb
+        the exact frontier.
 
-        A plain clip-then-rescale is deliberately *not* used: rescaling the clipped
-        weights to restore the budget can push capped weights back over their bound
-        when many assets are capped at once (heavy ties under a tight cap),
-        re-introducing the very infeasibility the projection is meant to clear and
-        aborting the trace with a spurious "weights above upper bounds" error. The
-        capped-simplex projection respects both the box and the budget
-        simultaneously, and is a strict no-op for well-posed, already-feasible
-        turning points (the common case), so it does not perturb the exact frontier.
+        For the all-ones budget constraint this is the Euclidean projection onto the
+        capped simplex, computed by water-filling a single shift ``theta`` so that
+        ``sum(clip(w - theta, lower, upper)) = b``. A plain clip-then-rescale is
+        deliberately *not* used: rescaling the clipped weights to restore the budget
+        can push capped weights back over their bound when many assets are capped at
+        once (heavy ties under a tight cap), re-introducing the very infeasibility
+        the projection is meant to clear.
+
+        For a general equality system ``A w = b`` the projection alternates between
+        the box (a clip) and the affine set ``{A w = b}`` (a least-squares step).
+        Since the candidate already satisfies ``A w = b`` (the reduced KKT solve
+        enforces it) and the box violation is round-off, a few iterations converge
+        to a point feasible to both.
 
         Args:
             weights: The candidate weight vector to project.
 
         Returns:
-            The projected weight vector, feasible to the box and the budget.
+            The projected weight vector, feasible to the box and the equality.
         """
         lower, upper = self.lower_bounds, self.upper_bounds
         # Well-posed turning points are already strictly feasible: return them
@@ -474,20 +492,29 @@ class CLA:
         if np.all(weights >= lower) and np.all(weights <= upper):
             return weights
 
-        # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect for
-        # the theta that hits the budget. The bracket clips to all-upper (sum at
-        # least the budget) at theta_lo and all-lower (at most the budget) at
-        # theta_hi, so a root is guaranteed for any feasible problem.
-        budget = float(self.b[0])
-        theta_lo = float((weights - upper).min()) - 1.0
-        theta_hi = float((weights - lower).max()) + 1.0
+        if self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
+            # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect
+            # for the theta that hits the budget. The bracket clips to all-upper
+            # (sum at least the budget) at theta_lo and all-lower (at most the
+            # budget) at theta_hi, so a root is guaranteed for any feasible problem.
+            budget = float(self.b[0])
+            theta_lo = float((weights - upper).min()) - 1.0
+            theta_hi = float((weights - lower).max()) + 1.0
+            for _ in range(100):
+                theta = 0.5 * (theta_lo + theta_hi)
+                if float(np.clip(weights - theta, lower, upper).sum()) > budget:
+                    theta_lo = theta
+                else:
+                    theta_hi = theta
+            return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
+
+        # General A: alternating projection onto the box and the affine {A w = b}.
+        gram = self.a @ self.a.T
+        projected = weights
         for _ in range(100):
-            theta = 0.5 * (theta_lo + theta_hi)
-            if float(np.clip(weights - theta, lower, upper).sum()) > budget:
-                theta_lo = theta
-            else:
-                theta_hi = theta
-        return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
+            projected = np.clip(projected, lower, upper)
+            projected = projected - self.a.T @ np.linalg.solve(gram, self.a @ projected - self.b)
+        return np.clip(projected, lower, upper)
 
     @property
     def frontier(self) -> Frontier:
