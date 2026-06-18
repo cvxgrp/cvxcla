@@ -39,3 +39,88 @@ jobs:
         with:
           packages-dir: dist/
           skip-existing: true
+
+  # Archive the released source distribution on Zenodo and mint a citable DOI
+  # (a JOSS prerequisite). One-time setup:
+  #   1. Create a personal access token at https://zenodo.org/account/settings/applications
+  #      with the "deposit:write" and "deposit:actions" scopes, and store it as the
+  #      repository secret ZENODO_TOKEN. Without it this job is a no-op.
+  #   2. After the FIRST published release, set the repository variable
+  #      ZENODO_CONCEPT_RECID to the concept record id Zenodo assigns, so every later
+  #      release is registered as a new version of the same record (one shared DOI).
+  # Metadata (title, authors, ORCIDs, license, keywords) is read from .zenodo.json.
+  archive-zenodo:
+    name: Archive the release on Zenodo
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest tag
+        id: latest_tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName')
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout at latest tag
+        uses: actions/checkout@v6.0.3
+        with:
+          ref: ${{ steps.latest_tag.outputs.tag }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.6.0
+        with:
+          version: "0.10.7"
+
+      - name: Build source distribution
+        run: uvx hatch build
+
+      - name: Upload to Zenodo and mint a DOI
+        env:
+          ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
+          ZENODO_CONCEPT_RECID: ${{ vars.ZENODO_CONCEPT_RECID }}
+          VERSION: ${{ steps.latest_tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ZENODO_TOKEN}" ]; then
+            echo "ZENODO_TOKEN secret is not set; skipping Zenodo archival."
+            exit 0
+          fi
+
+          api="https://zenodo.org/api"
+          auth="Authorization: Bearer ${ZENODO_TOKEN}"
+          file=$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)
+          echo "Archiving $(basename "${file}") (version ${VERSION}) on Zenodo."
+
+          # New version under an existing concept record if known, else a fresh record.
+          if [ -n "${ZENODO_CONCEPT_RECID}" ]; then
+            draft=$(curl -fsS -H "${auth}" -X POST \
+              "${api}/deposit/depositions/${ZENODO_CONCEPT_RECID}/actions/newversion" \
+              | jq -r '.links.latest_draft')
+            deposition=$(curl -fsS -H "${auth}" "${draft}")
+          else
+            deposition=$(curl -fsS -H "${auth}" -H "Content-Type: application/json" \
+              -X POST -d '{}' "${api}/deposit/depositions")
+          fi
+          dep_id=$(echo "${deposition}" | jq -r '.id')
+          bucket=$(echo "${deposition}" | jq -r '.links.bucket')
+
+          # A new version copies the previous files; drop them so only this artifact remains.
+          for fid in $(echo "${deposition}" | jq -r '.files[]?.id // empty'); do
+            curl -fsS -H "${auth}" -X DELETE "${api}/deposit/depositions/${dep_id}/files/${fid}"
+          done
+
+          # Upload the source distribution to the bucket.
+          curl -fsS -H "${auth}" --upload-file "${file}" \
+            "${bucket}/$(basename "${file}")" > /dev/null
+
+          # Apply metadata from .zenodo.json, stamping the release version.
+          jq --arg v "${VERSION#v}" '{metadata: (. + {version: $v})}' .zenodo.json > metadata.json
+          curl -fsS -H "${auth}" -H "Content-Type: application/json" -X PUT \
+            -d @metadata.json "${api}/deposit/depositions/${dep_id}" > /dev/null
+
+          # Publish and report the minted DOI.
+          doi=$(curl -fsS -H "${auth}" -X POST \
+            "${api}/deposit/depositions/${dep_id}/actions/publish" | jq -r '.doi')
+          echo "Published on Zenodo with DOI: ${doi}"
+          echo "Zenodo DOI: ${doi}" >> "${GITHUB_STEP_SUMMARY}"

@@ -1,0 +1,26 @@
+{
+  "title": "cvxcla: A matrix-free Critical Line Algorithm for the mean-variance efficient frontier",
+  "description": "Python implementation of Markowitz's Critical Line Algorithm, computing the entire mean-variance efficient frontier exactly through a matrix-free covariance-operator abstraction with structured backends (dense, incremental-inverse, diagonal-plus-low-rank factor, and data-matrix Gram), and supporting general linear equality constraints.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Schmelzer, Thomas",
+      "orcid": "0009-0009-9771-3501",
+      "affiliation": "Jebel Quant Research, Abu Dhabi, United Arab Emirates"
+    },
+    {
+      "name": "Schiele, Philipp",
+      "orcid": "0000-0002-0101-0388",
+      "affiliation": "Stanford University, Stanford, CA, United States"
+    }
+  ],
+  "keywords": [
+    "portfolio optimization",
+    "critical line algorithm",
+    "quadratic programming",
+    "efficient frontier",
+    "Python"
+  ]
+}
