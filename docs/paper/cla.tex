@@ -43,7 +43,11 @@
 % \srcfile{url-path}{display}: a clickable link to a file in the repository.
 % The url-path uses literal underscores; the display escapes them for \texttt.
 \newcommand{\repourl}{https://github.com/cvxgrp/cvxcla}
-\newcommand{\srcfile}[2]{\href{\repourl/blob/main/#1}{\texttt{#2}}}
+% Pin source links to an immutable commit, not the moving \texttt{main} branch, so
+% they do not rot as the code is refactored. Bump \srcref to the tagged/archived
+% release (the Zenodo-archived commit) at submission time.
+\newcommand{\srcref}{3319f5b55ea6fac737c0860e0f5733f8661ad6ab}
+\newcommand{\srcfile}[2]{\href{\repourl/blob/\srcref/#1}{\texttt{#2}}}
 
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
 \large A parametric active-set method for the entire mean--variance efficient frontier,
