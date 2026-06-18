@@ -39,6 +39,12 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 
+% --- repository links ---------------------------------------------------
+% \srcfile{url-path}{display}: a clickable link to a file in the repository.
+% The url-path uses literal underscores; the display escapes them for \texttt.
+\newcommand{\repourl}{https://github.com/cvxgrp/cvxcla}
+\newcommand{\srcfile}[2]{\href{\repourl/blob/main/#1}{\texttt{#2}}}
+
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
 \large A parametric active-set method for the entire mean--variance efficient frontier,
 as implemented in \texttt{cvxcla}}
@@ -133,10 +139,12 @@ sub-tolerance round-off they produce back onto the feasible set
 (\S\ref{sec:empirical}), and a genuinely rank-deficient free block is the one
 case the algorithm declines rather than solve.
 
-This document describes the implementation in the \texttt{cvxcla} package. The core of
-the implementation is the class \texttt{CLA} in \texttt{src/cvxcla/cla.py}; it is
-supported by \texttt{first.py} (the starting portfolio), \texttt{operators.py} (the
-covariance backend), and \texttt{types.py} (the turning-point and frontier data
+This document describes the implementation in the \texttt{cvxcla}
+package.\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} The core of
+the implementation is the class \texttt{CLA} in \srcfile{src/cvxcla/cla.py}{src/cvxcla/cla.py}; it is
+supported by \srcfile{src/cvxcla/first.py}{first.py} (the starting portfolio),
+\srcfile{src/cvxcla/operators.py}{operators.py} (the
+covariance backend), and \srcfile{src/cvxcla/types.py}{types.py} (the turning-point and frontier data
 structures). The notation below follows the code: $\mu$ is the vector of expected
 returns, $\Sig$ the covariance, $A,b$ the linear equality constraints, and $\lb,\ub$ the
 box bounds on the weights.
@@ -208,7 +216,7 @@ the partition $(\F,\B)$ must change, i.e.\ an endpoint of such an interval.
 The walk starts at $\lambda = +\infty$, where variance is irrelevant and \eqref{eq:qp}
 degenerates into ``earn the most expected return that the bounds and budget allow.''
 This portfolio is computed in closed form by \texttt{init\_algo}
-(\texttt{src/cvxcla/first.py}):
+(\srcfile{src/cvxcla/first.py}{src/cvxcla/first.py}):
 
 \begin{enumerate}
 \item Initialise every weight at its lower bound, $w \gets \lb$.
@@ -439,7 +447,7 @@ a full matrix--vector product $\Sig x$ (\texttt{matvec}); a solve against the fr
 $\Sig_{\F\F}\inv R$ for a multi-column right-hand side $R$ (\texttt{solve\_free}); and a
 free-to-blocked cross product $\Sig_{\F\B}\,x_\B$ (\texttt{cross}). The package captures
 exactly this contract in the \texttt{QuadraticForm} protocol
-(\texttt{src/cvxcla/operators.py}; \texttt{CovarianceOperator} remains as an alias),
+(\srcfile{src/cvxcla/operators.py}{src/cvxcla/operators.py}; \texttt{CovarianceOperator} remains as an alias),
 so the algorithm never assumes an explicit matrix. The name is deliberately not
 tied to covariance: the same contract is the Hessian of any quadratic objective, a
 point we return to in \S\ref{sec:lars}. Four backends implement it.
@@ -551,7 +559,7 @@ slower than the plain dense matrix.
 \label{sec:frontier}
 
 The list of turning points is wrapped in a \texttt{Frontier} object
-(\texttt{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
+(\srcfile{src/cvxcla/types.py}{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
 exposes its expected return $\mu\trans w$ and variance $w\trans\Sig w$. Between adjacent
 turning points the frontier in \emph{weight} space is the straight segment
 \eqref{eq:segment}, so the object can \texttt{interpolate} any number of intermediate
@@ -679,8 +687,8 @@ To illustrate the algorithm we first trace the entire efficient frontier of a
 small problem --- small enough that its piecewise-linear corner structure is
 plainly visible --- and then measure how the runtime grows with the number of
 assets. Both experiments are reproducible from fixed random seeds:
-\texttt{experiments/frontier\_20x50.py} and
-\texttt{experiments/runtime\_scaling.py}.
+\srcfile{experiments/frontier_20x50.py}{experiments/frontier\_20x50.py} and
+\srcfile{experiments/runtime_scaling.py}{experiments/runtime\_scaling.py}.
 
 \paragraph{Benchmark environment.}
 The runtime study below (the scaling sweep of \S\ref{sec:scaling} and the rank
@@ -789,7 +797,7 @@ $640$ & $641$ & $261{,}335$  & $337.9$ & $805.8$ & $87.7$ \\
 four implementations are timed with the \emph{same} protocol --- the median of
 $3$ repetitions on the same machine and inputs --- and return the same
 $O(n)$-point frontier. ``Inverse baseline'' is the incremental-inverse CLA of
-\S\ref{sec:baseline} (\texttt{experiments/inverse\_cla.py}): it shares
+\S\ref{sec:baseline} (\srcfile{experiments/inverse_cla.py}{experiments/inverse\_cla.py}): it shares
 \texttt{cvxcla}'s vectorised event logic but maintains $\Sig_{\F\F}\inv$ through
 rank-one updates instead of re-solving each step, so the gap between it and the
 dense backend isolates the linear-algebra strategy. Empirically the times scale
@@ -835,7 +843,7 @@ That still leaves a fair question about \texttt{cvxcla}'s own dense backend: it 
 re-solves from scratch each step, discarding the previous factorisation. Could a
 CLA that instead \emph{maintains} the free-block inverse and updates it by
 rank-one formulas do better? We test exactly this with a third implementation
-(\texttt{experiments/inverse\_cla.py}): a CLA that shares \texttt{cvxcla}'s
+(\srcfile{experiments/inverse_cla.py}{experiments/inverse\_cla.py}): a CLA that shares \texttt{cvxcla}'s
 vectorised event logic but maintains $\Sig_{\F\F}\inv$ through rank-one bordered
 (asset enters) and deletion (asset leaves) updates, $O(n_\F^2)$ per step against
 the fresh solve's $O(n_\F^3)$. It is \emph{not} a reimplementation of
@@ -925,13 +933,13 @@ the $27$ interior segments, re-solve the parametric quadratic program
 read off the segment by linear interpolation in $\lambda$. The agreement is at
 solver precision --- median weight discrepancy $5\times 10^{-8}$, maximum
 $1.3\times 10^{-5}$ --- confirming that the affine segments coincide with the QP
-optima rather than approximating them (\texttt{experiments/validate\_exact.py}).
+optima rather than approximating them (\srcfile{experiments/validate_exact.py}{experiments/validate\_exact.py}).
 
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
 
 To close, we run the algorithm on real data. Using
-\texttt{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
+\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
 from Wikipedia and download five years of daily adjusted-close prices via
 \texttt{yfinance}, yielding $N = 494$ assets over $T = 1213$ trading days
 (2021-07-30 to 2026-05-29) after dropping thinly-traded names. From the
@@ -999,7 +1007,7 @@ optimal; when it does not, the algorithm declines rather than mislead. A
 well-conditioned, full-rank estimate (ample history, or a structured
 \texttt{FactorCovariance}, which is positive definite by construction) stays in
 the first regime. The experiment is reproducible from
-\texttt{experiments/degeneracy\_boundary.py}.
+\srcfile{experiments/degeneracy_boundary.py}{experiments/degeneracy\_boundary.py}.
 
 \begin{figure}[h]
 \centering
