@@ -8,10 +8,10 @@ tags:
   - efficient frontier
 authors:
   - name: Thomas Schmelzer
-    orcid: 0000-0000-0000-0000  # TODO: insert ORCID before submission
+    orcid: 0009-0009-9771-3501
     affiliation: 1
   - name: Philipp Schiele
-    orcid: 0000-0000-0000-0000  # TODO: insert ORCID before submission
+    orcid: 0000-0002-0101-0388
     affiliation: 2
 affiliations:
   - name: Jebel Quant Research, Abu Dhabi, United Arab Emirates
