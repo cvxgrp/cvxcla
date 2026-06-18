@@ -705,3 +705,27 @@ class TestGramCovariance:
         """A negative ridge is rejected."""
         with pytest.raises(ValueError, match="ridge must be non-negative"):
             GramCovariance(np.random.default_rng(0).standard_normal((10, 3)), ridge=-0.1)
+
+    def test_solve_is_matrix_free_in_n(self):
+        """A short-sample free-block solve never allocates an n x n matrix.
+
+        With ``T << n`` and a ridge, ``solve_free`` over the whole universe goes
+        through the Woodbury identity in ``T``-space, so its peak allocation
+        scales with ``T n`` (the data), not ``n^2`` (a dense block). This is the
+        memory advantage that motivates the backend.
+        """
+        rng = np.random.default_rng(0)
+        n, t = 800, 30
+        gram = GramCovariance(rng.standard_normal((t, n)), ridge=1e-2)
+        free = np.ones(n, dtype=bool)
+        rhs = rng.standard_normal(n)
+        _ = gram._centered  # warm the cached data matrix; measure only the solve
+
+        tracemalloc.start()
+        gram.solve_free(free, rhs)
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        # The solve allocates a few copies of the (T, n) data, never an n x n block.
+        assert peak < 4 * 8 * t * n
+        assert peak < 0.2 * 8 * n * n  # far below a single dense n x n matrix
