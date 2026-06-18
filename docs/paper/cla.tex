@@ -61,22 +61,27 @@ as implemented in \texttt{cvxcla}}
 \maketitle
 
 \begin{abstract}
-We describe the Critical Line Algorithm (CLA) of Markowitz as implemented in the
-\texttt{cvxcla} package. The CLA computes the \emph{entire} mean--variance
-efficient frontier of a long-only (or box-constrained) portfolio problem exactly,
-rather than sampling it point by point. It exploits the fact that the efficient
-frontier is piecewise linear in the weight space: between two consecutive
-\emph{turning points} the optimal weights are an affine function $w(\lambda) =
-\alpha + \lambda\beta$ of a single scalar parameter $\lambda$ that trades expected
-return against variance. The algorithm starts at the maximum-return portfolio
-($\lambda=\infty$) and walks the frontier down to the minimum-variance portfolio
-($\lambda=0$), changing the status of exactly one asset at each turning point.
-Each step amounts to a single solve of a reduced Karush--Kuhn--Tucker (KKT) system,
-handled here by block elimination through a small Schur complement. We document the
-problem formulation, the optimality conditions, the event logic that detects
-turning points, the anti-cycling rule used on degenerate problems, and the
-covariance-operator abstraction that lets structured risk models (diagonal plus
-low rank) avoid ever materialising a dense $n\times n$ matrix.
+\texttt{cvxcla} is an open implementation of the Critical Line Algorithm (CLA) of
+Markowitz, which computes the \emph{entire} mean--variance efficient frontier of a
+long-only (or box-constrained) portfolio problem exactly, rather than sampling it
+point by point. The frontier is piecewise linear in weight space: between two
+consecutive \emph{turning points} the optimal weights are an affine function
+$w(\lambda) = \alpha + \lambda\beta$ of a single scalar parameter $\lambda$ that
+trades expected return against variance, and the algorithm walks from the
+maximum-return portfolio ($\lambda=\infty$) to the minimum-variance portfolio
+($\lambda=0$), changing the status of exactly one asset at each turning point, each
+step a single block-eliminated Karush--Kuhn--Tucker solve. The frontier is
+Markowitz's; the contribution here is threefold. First, an \emph{operator
+interface}: the turning-point loop reaches the covariance only through a few
+linear-algebraic operations, so capturing that contract as a small protocol
+decouples the algorithm from the covariance representation and lets structured risk
+models (diagonal plus low rank) trace the same exact frontier without ever
+materialising a dense $n\times n$ matrix, at a fraction of the cost when their
+structure is genuinely low-rank. Second, a \emph{unification}: the CLA is the
+one-parameter specialisation of multi-parametric quadratic programming and shares
+its mechanics with the LARS/LASSO homotopy of statistical learning. Third, an
+\emph{open, tested, and benchmarked implementation}, with event logic hardened
+against degeneracy and floating-point noise.
 \end{abstract}
 
 \tableofcontents
@@ -131,26 +136,31 @@ contribution; the experiments of \S\ref{sec:experiment} quantify both the memory
 saving and the regime-dependent speed-up.
 
 \paragraph{Contributions.}
-This is a \emph{systems} contribution: we claim no new turning points (the
-frontier is Markowitz's), but a reusable interface to it and a hardened,
-open, tested, and benchmarked implementation. Concretely:
+The turning points are Markowitz's; the contribution here is one of
+\emph{interface, unification, and a reusable implementation}, organised under three
+headings:
 \begin{enumerate}\setlength{\itemsep}{2pt}
-\item a \textbf{covariance-operator abstraction} (\S\ref{sec:operators}) that
-reduces the covariance contract to three operations (a matrix--vector product,
-a free-block solve, and a free-to-blocked cross product), decoupling the
-turning-point loop from the covariance representation; to our knowledge this
-abstraction is not standard in existing CLA implementations;
-\item a \textbf{diagonal-plus-low-rank factor backend} (\S\ref{sec:operators})
+\item \textbf{An operator interface.} A covariance-operator abstraction
+(\S\ref{sec:operators}) reduces the covariance contract to three operations (a
+matrix--vector product, a free-block solve, and a free-to-blocked cross product),
+decoupling the turning-point loop from the covariance representation; to our
+knowledge this abstraction is not standard in existing CLA implementations. It is
+instantiated by a diagonal-plus-low-rank factor backend (\S\ref{sec:operators})
 that solves the free block through the Woodbury identity, never materialising an
 $n\times n$ matrix, and traces the identical frontier with sub-quadratic empirical
-scaling (\S\ref{sec:rankscaling});
-\item \textbf{hardened event logic}, namely a Bland-style lowest-index tie-break
-(\S\ref{sec:bland}) and a floating-point slope floor (\S\ref{sec:events}), that
-keeps the trace deterministic and prevents cycling and out-of-bounds drift on the
-common cases;
-\item an \textbf{open, tested implementation with reproducible benchmarks}
-(\S\ref{sec:experiment}) that isolate the genuinely algorithmic speed-up (the
-structured solve) from incidental linear-algebra bookkeeping.
+scaling (\S\ref{sec:rankscaling}).
+\item \textbf{A unification.} We make explicit that the CLA is one instance of a
+broader parametric active-set family: the one-parameter specialisation of
+multi-parametric quadratic programming and explicit model predictive control, and
+the mean--variance counterpart of the LARS/LASSO homotopy of statistical learning
+(\S\ref{sec:lars}), a correspondence the \texttt{GramCovariance} backend makes
+literal.
+\item \textbf{An open, tested, benchmarked implementation.} Hardened event logic, a
+Bland-style lowest-index tie-break (\S\ref{sec:bland}) and a floating-point slope
+floor (\S\ref{sec:events}), keeps the trace deterministic and prevents cycling and
+out-of-bounds drift; reproducible benchmarks (\S\ref{sec:experiment}) isolate the
+genuinely algorithmic speed-up (the structured solve) from incidental
+linear-algebra bookkeeping.
 \end{enumerate}
 We do \emph{not} claim the fastest dense large-scale solve
 (\S\ref{sec:bailey}); near-degenerate problems are handled by projecting the
@@ -158,9 +168,9 @@ sub-tolerance round-off they produce back onto the feasible set
 (\S\ref{sec:empirical}), and a genuinely rank-deficient free block is the one
 case the algorithm declines rather than solve.
 
-This document describes the implementation in the \texttt{cvxcla}
-package.\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} The core of
-the implementation is the class \texttt{CLA} in \srcfile{src/cvxcla/cla.py}{src/cvxcla/cla.py}; it is
+The accompanying \texttt{cvxcla}
+package\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} provides the
+open implementation. Its core is the class \texttt{CLA} in \srcfile{src/cvxcla/cla.py}{src/cvxcla/cla.py}; it is
 supported by \srcfile{src/cvxcla/first.py}{first.py} (the starting portfolio),
 \srcfile{src/cvxcla/operators.py}{operators.py} (the
 covariance backend), and \srcfile{src/cvxcla/types.py}{types.py} (the turning-point and frontier data
@@ -1189,7 +1199,11 @@ realises each step as a single block-eliminated KKT solve, hardens the event log
 against degeneracy and floating-point noise, and abstracts the covariance behind a
 small operator protocol so that structured risk models obtain the same exact frontier
 without ever forming the dense matrix, and at a fraction of its cost when their
-structure is genuinely low-rank.
+structure is genuinely low-rank. The same parametric active-set mechanism places the
+CLA alongside multi-parametric quadratic programming and the LARS/LASSO homotopy: the
+operator interface is what lets one path-tracing engine serve both the portfolio
+frontier and, with the covariance replaced by a Gram matrix, a LASSO regularisation
+path.
 
 \section*{Acknowledgements}
 \addcontentsline{toc}{section}{Acknowledgements}
