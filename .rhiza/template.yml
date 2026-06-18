@@ -5,7 +5,6 @@ profiles:
   - github-project
 
 templates:
-  - legal
   - github-paper
 
 # Community-health files are kept at the repository root (where GitHub and JOSS
@@ -13,3 +12,4 @@ templates:
 exclude:
   - .rhiza/CODE_OF_CONDUCT.md
   - .rhiza/CONTRIBUTING.md
+  - .github/workflows/rhiza_release.yml
