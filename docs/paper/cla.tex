@@ -199,7 +199,10 @@ lower and upper bounds. The implementation traces the frontier through the
 where $\lambda \ge 0$ is a scalar that weights expected return against variance. The
 canonical instance has a single equality constraint, the budget constraint
 $\mathbf{1}\trans w = 1$ (so $A = \mathbf{1}\trans$ and $b = 1$), but
-\eqref{eq:qp} and the implementation allow any $m$ linear equalities.
+\eqref{eq:qp} and the implementation admit any $m$ linear equalities: the budget is the
+single all-ones row, and a general $A$ (weighted, or $m > 1$ rows) is handled by a
+linear-programming first turning point (\S\ref{sec:first}) followed by the same
+turning-point loop.
 
 As $\lambda$ decreases from $+\infty$ to $0$, the optimiser of \eqref{eq:qp} moves from
 the maximum expected-return portfolio (subject to the constraints) to the global
@@ -265,7 +268,20 @@ is returned as a \texttt{TurningPoint} with $\lambda = \infty$, a weight vector,
 boolean \texttt{free} mask. The tolerance $1-10^{-12}$ on the budget test matters: the
 increment $1 - \sum_i w_i$ can only reach $1$ up to rounding, and without the slack the
 loop would skip past the genuinely interior asset and mark the next (zero-weight) asset
-as free.
+as free. The same greedy fill serves any single all-ones budget row $\mathbf{1}\trans w
+= b$ (it fills to $b$ rather than to $1$), so a leveraged total ($b > 1$) or a
+dollar-neutral book ($b = 0$, with short positions admitted by a negative $\lb$) start
+from the same construction.
+
+For a general equality system $A w = b$ (weighted coefficients, or $m > 1$ rows such
+as a budget together with sector- or factor-neutrality) the greedy fill no longer
+applies, and the maximum-return vertex is instead the solution of the linear program
+$\max_w \mu\trans w$ subject to $A w = b$ and $\lb \le w \le \ub$. \texttt{cvxcla}
+solves it with the HiGHS simplex through \texttt{scipy.optimize.linprog}, which returns
+a vertex; the free set is read off as the assets strictly inside their bounds. Only the
+first turning point uses the linear program; the turning-point loop that follows is
+unchanged (\S\ref{sec:operators}), since it is already written for a general $A$
+(\S\ref{sec:bailey}).
 
 \section{The turning-point iteration}
 
@@ -669,7 +685,11 @@ as a black-box solve, which is what makes the backend abstraction possible.
 bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
 an arbitrary set of $m$ linear equality constraints $A w = b$; the budget is just
 the case $A = \mathbf{1}\trans$, $b = 1$, and the Schur complement scales to
-$m > 1$ at negligible cost.
+$m > 1$ at negligible cost. The turning-point loop is general in $A$ throughout; the
+only constraint-specific step is the maximum-return vertex that seeds it, found by the
+greedy fill for an all-ones budget and by a linear program (HiGHS, via
+\texttt{scipy}) for a general $A$ (\S\ref{sec:first}). This covers leverage,
+dollar-neutral long/short books, and multi-row neutralities (sector, factor).
 
 \item \textbf{Degeneracy handling.} On tie-heavy or degenerate inputs several
 events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit
