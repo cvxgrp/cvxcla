@@ -1399,7 +1399,7 @@ blocked, and the events are a free weight reaching a bound or a blocked multipli
 releasing it. A row of $G w \le h$ is a per-row inequality: it is active (held at
 $g_i\trans w = h_i$) or slack, and the events are a slack row's residual reaching
 zero, so it activates, or an active row's multiplier reaching zero, so it releases.
-Both kinds of event are the same ``smallest positive ratio to the next breakpoint''
+Both kinds of event are the same ``smallest positive step to the next breakpoint''
 along the affine segment; the row events are simply scanned over the $p$ rows of $G$
 in addition to the $n$ box coordinates (\S\ref{sec:events}).
 
@@ -1449,7 +1449,7 @@ Active set      & free set $\F$ (weights off the bounds) & support (nonzero $\be
 Linear solve    & reduced KKT over $\Sig_{\F\F}$ & least squares over $X_{\mathcal A}$ \\
 Enter event     & blocked multiplier changes sign & residual correlation reaches $\lambda$ \\
 Leave event     & free weight reaches a box bound & active coefficient reaches zero \\
-Step length     & smallest positive ratio to next event & smallest positive step to next breakpoint \\
+Step length     & \multicolumn{2}{l}{smallest positive step to the next breakpoint} \\
 Degeneracy      & Bland lowest-index tie-break (\S\ref{sec:bland}) & tie-break among simultaneous hits \\
 \bottomrule
 \end{tabular}
@@ -1469,8 +1469,8 @@ linear inequalities); the
 LASSO minimises a quadratic loss under a polyhedral ($\ell_1$) penalty. In each case
 the KKT conditions are affine in the parameter, the system matrix is constant while
 the active set is fixed, and the active set can change only at the discrete
-parameter values that the homotopy steps between. The ``smallest positive ratio to
-the next event'' rule of \S\ref{sec:events} is the same step-length computation that
+parameter values that the homotopy steps between. The ``smallest positive step to
+the next breakpoint'' rule of \S\ref{sec:events} is the same step-length computation that
 advances the LARS path, and both inherit it, for the same anti-cycling reasons, from
 the simplex method (\S\ref{sec:bland}).
 
