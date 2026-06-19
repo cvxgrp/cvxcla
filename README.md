@@ -92,7 +92,6 @@ approximation needed.
 - Factor covariance backend: exact frontiers for diagonal-plus-low-rank
   covariances (factor models, RMT-cleaned matrices) in O(nk) memory via the
   Woodbury identity
-- Multiple implementations based on different approaches from the literature
 - Visualization of the efficient frontier using Plotly
 - Computation of the maximum Sharpe ratio portfolio
 - Fully tested and documented codebase
