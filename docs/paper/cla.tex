@@ -1109,7 +1109,7 @@ and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
 \centering
 \begin{tabular}{rrrrrr}
 \toprule
-$n$ & Turning points & PyPortfolioOpt [ms] & Inverse baseline [ms] & \texttt{cvxcla} dense [ms] & \texttt{cvxcla} factor [ms] \\
+$n$ & Turning points & PyPortfolioOpt & Inverse baseline & Dense & Factor \\
 \midrule
 $20$  & $21$  & $10.6$       & $0.7$   & $1.3$   & $1.4$ \\
 $40$  & $42$  & $41.0$       & $1.9$   & $3.3$   & $3.1$ \\
@@ -1119,9 +1119,10 @@ $320$ & $322$ & $16{,}789$   & $49.9$  & $111.3$ & $33.5$ \\
 $640$ & $641$ & $261{,}335$  & $337.9$ & $805.8$ & $87.7$ \\
 \bottomrule
 \end{tabular}
-\caption{Frontier trace time versus number of assets $n$ ($K=10$ factors). All
-four implementations are timed with the \emph{same} protocol (the median of
-$3$ repetitions on the same machine and inputs) and return the same
+\caption{Frontier trace time (milliseconds) versus number of assets $n$ ($K=10$
+factors). The ``Dense'' and ``Factor'' columns are the two \texttt{cvxcla}
+backends. All four implementations are timed with the \emph{same} protocol (the
+median of $3$ repetitions on the same machine and inputs) and return the same
 $O(n)$-point frontier. ``Inverse baseline'' is the incremental-inverse CLA of
 \S\ref{sec:baseline} (\srcfile{experiments/inverse_cla.py}{experiments/inverse\_cla.py}): it shares
 \texttt{cvxcla}'s vectorised event logic but maintains $\Sig_{\F\F}\inv$ through
