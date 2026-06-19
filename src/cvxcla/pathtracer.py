@@ -130,8 +130,12 @@ def trace(problem: ParametricProblem) -> None:
     lam, state = problem.begin()
 
     # Safety bound: far above any valid path length; exceeding it means the event
-    # loop failed to terminate, so we fail loudly rather than hang.
-    max_iterations = 100 * (problem.dimension + 1)  # pragma: no mutate
+    # loop failed to terminate, so we fail loudly rather than hang. Each step fixes
+    # the activity of one coordinate -- a box bound (n of them) or an inequality row
+    # (p of them) -- so the bound scales with the total n + p, not n alone; a problem
+    # that exposes only ``dimension`` (no inequality rows) falls back to n.
+    path_coords = getattr(problem, "event_dimension", problem.dimension)  # pragma: no mutate
+    max_iterations = 100 * (path_coords + 1)  # pragma: no mutate
     iterations = 0  # pragma: no mutate
 
     while True:  # pragma: no mutate
