@@ -96,8 +96,9 @@ trades expected return against variance, and the algorithm walks from the
 maximum-return portfolio ($\lambda=\infty$) to the minimum-variance portfolio
 ($\lambda=0$), changing the status of exactly one variable or one active constraint
 at each turning point, each step a single block-eliminated
-Karush--Kuhn--Tucker solve. The frontier is
-Markowitz's; the contribution here is threefold. First, an \emph{operator
+Karush--Kuhn--Tucker solve.
+
+The frontier is Markowitz's; the contribution here is threefold. First, an \emph{operator
 interface}: the turning-point loop reaches the covariance only through a few
 linear-algebraic operations, so capturing that contract as a small protocol
 decouples the algorithm from the covariance representation and lets structured risk
@@ -107,13 +108,18 @@ structure is genuinely low-rank. Second, a \emph{unification}: the CLA is the
 one-parameter specialisation of multi-parametric quadratic programming and shares
 its mechanics with the LARS/LASSO homotopy of statistical learning. Third, an
 \emph{open, tested, and benchmarked implementation}, with event logic hardened
-against degeneracy and floating-point noise. This hardening is bounded, not total:
-near-degenerate problems complete by projecting sub-tolerance round-off back onto
-the feasible set, but a numerically rank-deficient free block, and a degenerate
-maximum-return vertex under a general equality system, are declined with a
-diagnosis rather than mis-solved, and the lowest-index tie-break, robust on the
-degenerate cases we test, is not proven to cover every adversarial tie-heavy
-instance.
+against degeneracy and floating-point noise.
+
+This hardening is bounded, not total: near-degenerate problems are repaired by
+projecting sub-tolerance round-off back onto the feasible set, while genuinely
+rank-deficient or degenerate instances are declined with an actionable diagnosis
+rather than mis-solved (the boundaries, including the unproven worst case of the
+lowest-index tie-break, are stated precisely in the body). The benchmarks should be
+read in this light: to the best of our
+knowledge no maintained, installable large-scale CLA implementation is available
+to compare against, so the runtime comparison is against PyPortfolioOpt (the most
+widely-used open CLA) together with internal controls, not a tuned large-scale
+competitor.
 \end{abstract}
 
 \tableofcontents
@@ -348,7 +354,12 @@ as a budget together with sector- or factor-neutrality) the greedy fill no longe
 applies, and the maximum-return vertex is instead the solution of the linear program
 $\max_w \mu\trans w$ subject to $A w = b$ and $\lb \le w \le \ub$. \texttt{cvxcla}
 solves it with the HiGHS simplex through \texttt{scipy.optimize.linprog}, which returns
-a vertex; the free set is read off as the assets strictly inside their bounds. Only the
+a vertex; the free set is read off as the assets strictly inside their bounds. When the
+maximum-return face is degenerate (several vertices attain the same $\mu\trans w$) the
+simplex returns one of them, fixing only the $\lambda=\infty$ starting vertex: for a
+positive-definite $\Sig$ the optimiser of \eqref{eq:qp} is unique at every $\lambda>0$,
+so the traced frontier below the endpoint does not depend on which maximum-return vertex
+is chosen. Only the
 first turning point uses the linear program; the turning-point loop that follows is
 unchanged (\S\ref{sec:operators}), since it is already written for a general $A$
 (\S\ref{sec:bailey}).
@@ -483,7 +494,11 @@ against $\sqrt{\varepsilon_{\text{mach}}}$, not the user tolerance. A free weigh
 \emph{tiny but nonzero} slope still crosses a bound given a long enough $\lambda$ range,
 so filtering at the coarser tolerance would let weights drift out of bounds; only slopes
 at floating-point noise level (below $\sqrt{\varepsilon_{\text{mach}}}$) are discarded,
-since the enormous ratios they would produce merely amplify rounding error.
+since the enormous ratios they would produce merely amplify rounding error. The
+exact level is not delicate: genuine slopes sit orders of magnitude above
+$\sqrt{\varepsilon_{\text{mach}}}$ and round-off noise orders below, so no slope lands
+near the threshold and the trace is insensitive to its precise value, exactly as the
+wide regime gap leaves the conditioning guard of \S\ref{sec:empirical} uncritical.
 
 \item \textbf{$\lambda$ window.} The segment is valid only for $\lambda$ at or below the
 current value, because the frontier is traced with non-increasing $\lambda$. Candidate
@@ -529,7 +544,7 @@ The loop runs while $\lambda > 0$. When no admissible event has a positive ratio
 walk has reached the global minimum-variance portfolio; the algorithm appends a final
 turning point at $\lambda = 0$ with weights $\alpha$ (the constant part of the current
 segment). Termination is guaranteed in exact arithmetic by the anti-cycling argument of
-\S\ref{sec:bland}; the hard iteration cap of $100(n+1)$ is a \emph{numerical} safety net
+\S\ref{sec:bland}; the hard iteration cap of $100(n+p+1)$ is a \emph{numerical} safety net
 rather than the guarantee itself. A correct trace empirically runs $O(n)$ times, so far
 exceeding this cap signals a floating-point failure (e.g.\ a tolerance-induced cycle),
 which is raised loudly rather than allowed to hang. Every stored turning point is
@@ -769,7 +784,12 @@ and $c_0,c_1,c_2$ are the coefficients of $w(t)\trans\Sig\,w(t)$). Its derivativ
 a \emph{linear} numerator, the quadratic terms cancelling, so each segment has a
 single stationary point $t^\star = (a_0 c_1 - 2 a_1 c_0)/(a_1 c_1 - 2 a_0 c_2)$; the
 maximiser is the best of $t^\star$ (when it lies in $[0,1]$) and the two segment
-endpoints, taken over the two segments bracketing the discrete Sharpe maximum. The
+endpoints, taken over the two segments bracketing the discrete Sharpe maximum. Two
+segments suffice because the Sharpe ratio is unimodal along the frontier: the
+efficient frontier is concave and increasing in the $(\sigma,\,\mu\trans w)$ plane,
+so the ray slope $\mu\trans w/\sigma$ rises to the tangency portfolio and falls
+thereafter; its values at the turning points are therefore unimodal, and the turning
+point of largest discrete Sharpe ratio brackets the continuous maximum. The
 frontier object therefore returns the maximum-Sharpe portfolio exactly, not to a
 search tolerance.
 
@@ -788,7 +808,8 @@ typical $O(n)$ breakpoint count of the LARS path \citep{efron2004}; the worst ca
 combinatorial (as for parametric active-set and mpQP methods generally
 \citep{bemporad2002}) but is not observed on
 the problems of \S\ref{sec:experiment}. The implementation caps iterations at
-$100(n+1)$ as a numerical safety net.
+$100(n+p+1)$ (one factor over the $n$ box bounds and $p$ inequality rows whose
+activity each turning point fixes) as a numerical safety net.
 
 \item \textbf{Per-iteration cost.} Dominated by the free-block solve: $O(n_\F^3)$ for
 the dense backend, or $O(n_\F k^2 + k^3)$ for the factor backend via Woodbury
@@ -836,19 +857,16 @@ of the asymptotic speed-up in \S\ref{sec:rankscaling}.
 \item \textbf{Linear algebra.} Where the reference algorithm forms an explicit
 inverse of the free block from scratch at each step (and, in the branch that
 decides which blocked asset re-enters, recomputes that full inverse once for every
-candidate), \texttt{cvxcla} solves the reduced KKT system by block elimination: a
-single multi-right-hand-side solve against $\Sig_{\F\F}$ feeds an $m \times m$
-Schur complement \eqref{eq:schur} that handles the equality constraints, and the
-event search over all candidates is vectorised rather than looped. The $\alpha$
-and $\beta$ systems reuse the same factorisation, and the covariance enters only
-as a black-box solve, which is what makes the backend abstraction possible. More
-fundamentally, Bailey--L\'opez de Prado never assemble a KKT system at all: they
-invert $\Sig_{\F\F}$ explicitly and substitute the inverse into closed-form
-Lagrange expressions for $\lambda$, $\gamma$, and $w_\F$ that are specialised to
-the single budget row. Casting each step instead as a reduced KKT saddle-point
-solve, with the equality constraints carried by the $m \times m$ Schur complement
-\eqref{eq:schur}, is precisely what lets \texttt{cvxcla} take an arbitrary $A$
-(next point) where their closed-form algebra admits only one.
+candidate), \texttt{cvxcla} casts each step as the reduced KKT saddle-point solve
+of \S\ref{sec:blockelim}: a single block-eliminated solve against $\Sig_{\F\F}$
+feeding an $m \times m$ Schur complement, with the event search over all
+candidates vectorised rather than looped. More fundamentally, Bailey--L\'opez de
+Prado never assemble a KKT system at all: they substitute an explicit
+$\Sig_{\F\F}\inv$ into closed-form Lagrange expressions for $\lambda$, $\gamma$,
+and $w_\F$ specialised to the single budget row. The saddle-point formulation is
+what lets \texttt{cvxcla} reach the covariance as a black-box solve (the backend
+abstraction) and take an arbitrary $A$ (next point) where their closed-form
+algebra admits only one.
 
 \item \textbf{Constraint generality.} The reference implementation targets box
 bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
@@ -925,8 +943,9 @@ claim to the fastest dense large-scale solve.
 \paragraph{Relation to portfolio-optimization software.}
 Set against the broader ecosystem of portfolio-optimization packages, the
 distinction is less speed than \emph{what is computed}. General toolkits, in Python
-\texttt{cvxportfolio} \citep{cvxportfolio}, Riskfolio-Lib \citep{riskfolio} and
-scikit-portfolio, and in R \texttt{fPortfolio} \citep{fportfolio} and the
+Riskfolio-Lib \citep{riskfolio} and
+scikit-portfolio,\footnote{\url{https://github.com/scikit-portfolio/scikit-portfolio}}
+and in R \texttt{fPortfolio} \citep{fportfolio} and the
 disciplined-convex layer \texttt{CVXR} \citep{cvxr}, construct a portfolio by
 solving a (mean--variance or richer) optimisation at a \emph{single} risk target,
 typically by handing a quadratic or conic program to a general solver; recovering
@@ -935,8 +954,7 @@ grid resolution controls. \texttt{cvxcla}, like the CLA itself and like
 PyPortfolioOpt's \texttt{CLA} \citep{pyportfolioopt}, instead returns the
 \emph{entire} frontier exactly as a finite set of turning points, with no grid.
 Among the exact-CLA tools, PyPortfolioOpt is the natural head-to-head
-(\S\ref{sec:experiment}) but, as noted there, is a teaching-oriented reference
-rather than a tuned solver. What is genuinely particular to \texttt{cvxcla} is
+(\S\ref{sec:experiment}) but, as noted there, is not a performance-tuned solver. What is genuinely particular to \texttt{cvxcla} is
 orthogonal to all of these: the operator interface and the structured factor and
 Gram backends (\S\ref{sec:operators}), which run the same exact-frontier trace
 directly on a covariance representation the general toolkits do not exploit.
@@ -1038,11 +1056,62 @@ print("identical frontier:", np.allclose(w_dense, w_factor))
 identical frontier: True
 \end{lstlisting}
 
-General linear constraints are passed the same way: a weighted or multi-row $A,b$
-for sector or factor neutrality, and $G,h$ for group or sector exposure caps (a
-$\ge$ floor is the negated row), exactly the program \eqref{eq:qp}. Every figure
+General linear constraints are passed the same way, exactly the program
+\eqref{eq:qp}: a weighted or multi-row $A,b$ for sector or factor neutrality, and
+$G,h$ for group or sector exposure caps (a $\ge$ floor is the negated row). The
+builder accumulates rows, so a neutrality block sits alongside the budget while the
+box bounds remain the cheaper per-variable active set of \S\ref{sec:events}.
+Listing~\ref{lst:equality} adds a sector-neutrality row to the budget (a two-row
+$A$), so the first turning point is the linear program of \S\ref{sec:first} rather
+than the greedy fill, and the traced frontier holds the sector exposure at its
+target throughout.
+
+\begin{lstlisting}[style=pyin,caption={A multi-row equality $A,b$: budget plus a
+sector-neutrality row. Reuses \texttt{mean}, \texttt{Sigma} from
+Listing~\ref{lst:basic}.},label={lst:equality}]
+sector = np.arange(n) % 3                  # split the universe into 3 sectors
+in_sector0 = (sector == 0).astype(float)
+
+cla = (
+    CLA.problem(mean, Sigma)
+       .long_only()                        # 0 <= w <= 1
+       .budget()                           # sum(w) = 1
+       .equality(in_sector0, 0.30)         # hold 30% in sector 0: A now has 2 rows
+       .trace()
+)
+print("equality rows:", cla.a.shape[0])
+print("sector-0 weight:", round(float(in_sector0 @ cla.frontier.max_sharpe[1]), 2))
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+equality rows: 2
+sector-0 weight: 0.3
+\end{lstlisting}
+
+A coupling inequality is added the same way. Listing~\ref{lst:inequality} caps each
+sector's exposure with a block $G w \le h$; the high-return end would overweight a
+sector, so the cap is \emph{active} at every turning point of this frontier.
+
+\begin{lstlisting}[style=pyin,caption={An inequality block $G w \le h$: a
+per-sector exposure cap, active along the whole trace.},label={lst:inequality}]
+G = np.array([(sector == s).astype(float) for s in range(3)])  # one row per sector
+h = np.full(3, 0.45)                                           # each sector <= 45%
+
+cla = CLA.problem(mean, Sigma).long_only().budget().inequality(G, h).trace()
+binding = sum(int(np.any(np.abs(G @ tp.weights - h) <= 1e-7))
+              for tp in cla.turning_points)
+print("turning points:", len(cla.turning_points), "| binding-cap points:", binding)
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+turning points: 6 | binding-cap points: 6
+\end{lstlisting}
+
+Both trace the exact constrained frontier, not an approximation:
+\S\ref{sec:exactness} validates each against a per-$\lambda$ general QP solve,
+including the regime where the inequality caps bind. Every figure
 and table in the remainder of this paper is regenerated by a single replication
-script, \srcfile{experiments/reproduce_paper.py}{experiments/reproduce\_paper.py},
+script, \srcfile{experiments/reproduce_paper.py}{reproduce\_paper.py},
 which runs each experiment in turn off the committed inputs (no network access)
 and reports which artefact it produces; the individual scripts it calls are cited
 at the relevant figures and tables below.
@@ -1125,12 +1194,19 @@ backends again solve the identical $\Sig$ and return the same frontier. For
 reference we also time the \texttt{CLA} of PyPortfolioOpt \citep{pyportfolioopt},
 a widely-used implementation of the critical-line algorithm of
 \citet{bailey2013}, on the same dense problem. We time it because it is the most
-familiar open CLA, not because it is a tuned competitor: it is a teaching-oriented
-reference implementation, so the gap below measures the cost of how the per-step
-work is organised (\S\ref{sec:baseline}), not \texttt{cvxcla} against a
-performance-optimised solver. The number of turning points tracks $n$ closely
-($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds essentially
-the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}. The two
+familiar open CLA, not because it is a tuned competitor; the gap below therefore
+measures the cost of how its per-step work is organised (\S\ref{sec:baseline}), not
+\texttt{cvxcla} against a performance-optimised solver. The number of turning points tracks $n$ closely
+($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds nearly the same
+set: $19, 42, 81, 158, 322, 641$), confirming the $O(n)$ count of
+\S\ref{sec:experiment}. The small count differences are not noise but a completeness
+gap: PyPortfolioOpt's turning points are a strict \emph{subset} of \texttt{cvxcla}'s
+(every PyPortfolioOpt corner is matched), and \texttt{cvxcla} finds one or two
+\emph{additional} genuine corners that PyPortfolioOpt omits (the omitted weights
+differ from PyPortfolioOpt's nearest reported corner by up to $\sim\!2\times10^{-2}$,
+well above round-off). Since \texttt{cvxcla}'s frontier is independently validated
+exact (\S\ref{sec:exactness}), these are corners PyPortfolioOpt misses, a (minor)
+correctness difference, not merely a speed one. The two
 implementations also agree numerically: their minimum-variance portfolios (the
 $\lambda = 0$ endpoint, which is unique for a positive-definite $\Sig$) match to
 machine precision, differing by at most $\sim\!10^{-16}$ in any weight across these
@@ -1150,9 +1226,9 @@ identical $\Sig$, so the only difference is the asymptotic Woodbury advantage of
 the structured solve over the dense one.
 
 For external context we also time PyPortfolioOpt, which scales far more steeply
-($\approx n^{3.4}$): at $n=640$ it takes about $249$~seconds, so \texttt{cvxcla}'s
-dense backend is roughly $312\times$ faster and the factor backend roughly
-$2390\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
+($\approx n^{3.4}$): at $n=640$ it takes about $255$~seconds, so \texttt{cvxcla}'s
+dense backend is roughly $322\times$ faster and the factor backend roughly
+$2460\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
 PyPortfolioOpt uses \texttt{numpy} for its linear algebra) but a consequence of
 how it organises the work: it rebuilds a full free-block inverse at every step,
 and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
@@ -1165,12 +1241,12 @@ and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
 \toprule
 $n$ & Turning points & PyPortfolioOpt & Inverse baseline & Dense & Factor \\
 \midrule
-$20$  & $21$  & $7.2$        & $0.7$   & $1.3$   & $1.5$ \\
-$40$  & $42$  & $40.7$       & $1.9$   & $3.5$   & $3.4$ \\
-$80$  & $81$  & $210.5$      & $4.7$   & $7.8$   & $6.8$ \\
-$160$ & $159$ & $1{,}458$    & $12.6$  & $26.1$  & $15.1$ \\
-$320$ & $322$ & $16{,}635$   & $52.2$  & $116.5$ & $36.4$ \\
-$640$ & $641$ & $249{,}106$  & $324.3$ & $799.6$ & $104.4$ \\
+$20$  & $21$  & $7.1$        & $0.7$   & $1.2$   & $1.6$ \\
+$40$  & $42$  & $39.9$       & $2.0$   & $3.5$   & $3.5$ \\
+$80$  & $81$  & $207.9$      & $4.8$   & $7.7$   & $6.9$ \\
+$160$ & $159$ & $1{,}470$    & $12.7$  & $26.1$  & $14.8$ \\
+$320$ & $322$ & $16{,}632$   & $50.1$  & $122.7$ & $36.5$ \\
+$640$ & $641$ & $254{,}726$  & $328.6$ & $792.0$ & $103.6$ \\
 \bottomrule
 \end{tabular}
 \caption{Frontier trace time (milliseconds) versus number of assets $n$ ($K=10$
@@ -1197,11 +1273,11 @@ Python, scales like $\approx n^{3.4}$; the vectorised explicit-inverse baseline 
 \S\ref{sec:baseline} like $\approx n^{2.0}$; \texttt{cvxcla}'s dense backend like
 $\approx n^{2.2}$; and its diagonal-plus-low-rank factor backend, solving the
 identical covariance through the Woodbury identity, like $\approx n^{1.3}$. At
-$n = 640$ the factor backend is roughly $2390\times$ faster than PyPortfolioOpt and
+$n = 640$ the factor backend is roughly $2460\times$ faster than PyPortfolioOpt and
 $7.7\times$ faster than the dense backend. The incremental-inverse baseline and the
-dense backend lie close together, far below PyPortfolioOpt; that PyPortfolioOpt gap
-reflects how this teaching-oriented reference implementation organises its per-step
-work, not the underlying critical-line algorithm (\S\ref{sec:baseline}). The orange
+dense backend lie close together, far below PyPortfolioOpt; that gap reflects how
+PyPortfolioOpt organises its per-step work, not the underlying critical-line
+algorithm (\S\ref{sec:baseline}). The orange
 curve reconstructs the frontier with Clarabel \citep{clarabel} as $n$ QP solves over
 a $\lambda$-grid; it is drawn here only for context and is discussed in
 \S\ref{sec:clarabel}, not in this section. Markers are the median of $3$
@@ -1212,7 +1288,7 @@ repetitions; the shaded band around each spans their min and max.}
 \subsection{What the runtime gap is, and is not}
 \label{sec:baseline}
 
-The $\approx 312\times$ gap between \texttt{cvxcla}'s dense backend and
+The $\approx 322\times$ gap between \texttt{cvxcla}'s dense backend and
 PyPortfolioOpt at $n=640$ invites a lazy explanation (``vectorised
 \texttt{numpy} versus slow Python'') that is wrong. PyPortfolioOpt already uses
 \texttt{numpy} (\texttt{np.linalg.inv}, \texttt{np.dot}) for its per-step linear
@@ -1238,9 +1314,9 @@ traces the identical turning points to machine precision (max.\ weight discrepan
 $<10^{-13}$ across $n=20$--$160$), so the comparison against the dense backend is
 clean: only the linear-algebra strategy differs.
 
-The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $324$~ms at
-$n=640$) is about $2.5\times$ \emph{faster} than the dense backend
-($\approx n^{2.2}$, $800$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
+The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $329$~ms at
+$n=640$) is about $2.4\times$ \emph{faster} than the dense backend
+($\approx n^{2.2}$, $792$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
 predicts. \texttt{cvxcla}'s block elimination is therefore not the fastest possible
 dense strategy, and the package ships the incremental inverse as the opt-in
 \texttt{IncrementalDenseCovariance} backend (\S\ref{sec:incremental}) for callers
@@ -1251,7 +1327,7 @@ all, so there is no inverse to maintain: it solves through the Woodbury
 identity. The default dense backend gives up the modest incremental-inverse win to
 keep one turning-point loop that runs over \emph{any} backend, and the factor
 backend more than repays it: at $n=640$ it is $\approx 7.7\times$ faster than the
-dense backend and $\approx 3.1\times$ faster than the incremental-inverse baseline,
+dense backend and $\approx 3.2\times$ faster than the incremental-inverse baseline,
 the only one of the four implementations with a genuinely sub-quadratic exponent
 ($\approx n^{1.3}$). The structured solve, not the linear-algebra bookkeeping, is
 the real algorithmic advance.
@@ -1324,6 +1400,21 @@ The midpoint is a representative interior point of each segment; because the seg
 is affine in $\lambda$, agreement at one interior point certifies the whole open
 segment, and its endpoints are the turning points, which are themselves validated to
 satisfy the bounds and the constraints (\S\ref{sec:events}) as they are recorded.
+
+The same check extends to general linear constraints, the regime the headline
+examples do not exercise. On a deterministic $30$-asset factor market we trace two
+constrained frontiers and re-solve every segment midpoint as a general QP carrying
+the same constraints
+(\srcfile{experiments/validate_constraints.py}{validate\_constraints.py}):
+first a budget together with a characteristic-neutrality row (a two-row equality
+system, $34$ turning points, so the maximum-return vertex is the linear program of
+\S\ref{sec:first} rather than the greedy fill), and second a budget with per-sector
+exposure caps $G w \le h$ ($31$ turning points, with an inequality row \emph{active}
+at $30$ of them, so the bordered solve of \S\ref{sec:lars} is genuinely exercised).
+In both the affine segments match the QP optimiser to solver precision (maximum
+weight discrepancy $\approx 6\times 10^{-10}$), confirming that the inequality and
+multi-row-equality machinery traces the exact constrained frontier, not merely a
+feasible approximation.
 
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
@@ -1432,6 +1523,23 @@ monotone in $T$, and the wide gap between the two regimes leaves the guard
 threshold uncritical.}
 \label{fig:degeneracy}
 \end{figure}
+
+\paragraph{The combinatorial axis: a tie-heavy stress test.}
+The guarantee above is for rank and conditioning; the orthogonal, combinatorial axis
+is event ties, handled by the Bland-style rule of \S\ref{sec:bland}. We characterise
+it empirically rather than leave it asserted
+(\srcfile{experiments/tie_degeneracy.py}{tie\_degeneracy.py}): across four
+deliberately degenerate families and $128$ instances ($n$ up to $240$), exactly-tied
+means and exact asset duplicates both trace to completion ($64/64$) -- the duplicates
+included because the tie-break never frees both copies of a pair, so the singular
+covariance never reaches the free block; a constraint-heavy family of $p\approx n/3$
+group caps also completes ($32/32$) with as many as $53$ inequality rows active at a
+single turning point; and an over-constrained family of $p=n$ overlapping caps is
+\emph{declined} at the maximum-return vertex ($32/32$), the documented
+degenerate-vertex boundary, rather than mis-solved. No instance reached the iteration
+cap, and every completed trace used at most $1.3\%$ of it. This is empirical
+reassurance on the combinatorial axis, not the worst-case proof the rank/conditioning
+guard provides, and constructing an adversarial cycling instance remains open.
 
 \subsection{A general-solver baseline: a QP swept over \texorpdfstring{$\lambda$}{lambda}}
 \label{sec:clarabel}
@@ -1719,12 +1827,6 @@ optimization.
 A.~Bemporad, M.~Morari, V.~Dua, and E.~N. Pistikopoulos.
 \newblock The explicit linear quadratic regulator for constrained systems.
 \newblock \emph{Automatica}, 38(1):3--20, 2002.
-
-\bibitem[Boyd et~al.(2017)]{cvxportfolio}
-S.~Boyd, E.~Busseti, S.~Diamond, R.~N. Kahn, K.~Koh, P.~Nystrup, and J.~Speth.
-\newblock Multi-period trading via convex optimization.
-\newblock \emph{Foundations and Trends in Optimization}, 3(1):1--76, 2017.
-\newblock Software: \texttt{cvxportfolio}.
 
 \bibitem[Brodie et~al.(2009)]{brodie2009}
 J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.

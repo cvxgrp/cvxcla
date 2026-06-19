@@ -276,7 +276,7 @@ def main() -> None:
         pn = [n for n, t in zip(ns, ppo_times, strict=True) if t is not None]
         pt = [t for t in ppo_times if t is not None]
         band(ns, ppo_band, "#7f7f7f")
-        ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA (Bailey--Lopez de Prado)")
+        ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA (Bailey–López de Prado)")  # noqa: RUF001
     if any(t is not None for t in clar_times):
         # General-solver baseline: drawn here for context, discussed in the paper's
         # Clarabel-baseline section (a QP swept over lambda), not the scaling text.
