@@ -3,9 +3,15 @@
 Pulls the current S&P 500 ticker list from Wikipedia, downloads ~5 years of
 adjusted-close prices through yfinance, cleans thinly-traded / late-listed names,
 and saves the daily percentage-return matrix to
-``experiments/data/sp500_pct_returns.parquet``. The CLA real-data experiment
-(``experiments/frontier_real.py``) reads that file, so the network fetch only
-needs to run once.
+``experiments/data/sp500_pct_returns.parquet``.
+
+This is a *provenance* script, not part of the reproducible path: a frozen
+snapshot is already committed to the repository, and the paper's experiments
+(``frontier_real.py``, ``validate_exact.py``) read that committed file directly.
+Run this only to refresh the snapshot from live sources, which will produce a
+*different* dataset (constituents and prices drift over time). The committed
+snapshot is N=494 assets x T=1213 days (2021-07-30 to 2026-05-29),
+SHA-256 b5faa5222555f28d77bad5404565297bb25bbe92b0b813f416cd2bebac79937e.
 
 Usage:
     uv run python experiments/fetch_sp500.py
