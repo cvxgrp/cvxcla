@@ -749,7 +749,10 @@ turning points the frontier in \emph{weight} space is the straight segment
 portfolios by convex combination. Derived quantities (volatility, Sharpe ratio) are
 computed pointwise. The maximum-Sharpe portfolio is found by a one-dimensional search
 over the convex combination of the two turning points bracketing the discrete Sharpe
-maximum, exploiting the same piecewise-linear weight structure.
+maximum, exploiting the same piecewise-linear weight structure. A per-segment closed
+form exists, since on an affine weight segment the Sharpe ratio is an affine function
+over the square root of a quadratic; the bounded one-dimensional search is used for
+simplicity and is exact to tolerance.
 
 \section{Complexity and properties}
 
@@ -760,8 +763,11 @@ discretisation error is introduced.
 
 \item \textbf{Number of turning points.} Each iteration changes exactly one
 coordinate's status: a variable entering or leaving the free set, or an inequality
-row activating or releasing. Empirically the number of turning points is $O(n)$; the worst case is
-combinatorial (as for parametric active-set methods generally) but is not observed on
+row activating or releasing. On non-degenerate problems a coordinate re-enters the
+free set only finitely often, so the count is empirically $O(n)$, mirroring the
+typical $O(n)$ breakpoint count of the LARS path \citep{efron2004}; the worst case is
+combinatorial (as for parametric active-set and mpQP methods generally
+\citep{bemporad2002}) but is not observed on
 the problems of \S\ref{sec:experiment}. The implementation caps iterations at
 $100(n+1)$ as a numerical safety net.
 
@@ -777,10 +783,9 @@ inequality rows ($m=1$, $\Sset=\varnothing$ for the plain budget constraint).
 out-of-bounds drift on the degenerate problems we test (tied means, capped
 weights, slow bound crossings), and sub-tolerance round-off at degenerate vertices
 is projected back onto the feasible set so near-rank-deficient problems still
-complete with optimal turning points (\S\ref{sec:empirical}). The tie-break is not
-proven to defuse every degeneracy: worst-case event multiplicity, like the
-worst-case turning-point count, is combinatorial, so sufficiently tie-heavy or
-large instances can still defeat the floating-point event logic.
+complete with optimal turning points (\S\ref{sec:empirical}). The tie-break is robust
+on the degenerate problems we test but is not proven to defuse every degeneracy;
+\S\ref{sec:empirical} states this boundary precisely.
 \end{itemize}
 
 \section{Relation to the Bailey--L\'opez de Prado implementation}
@@ -958,6 +963,36 @@ print("weights:", np.round(w, 3))
 turning points: 7
 max Sharpe: 2.4037
 weights: [0.    0.    0.704 0.296 0.    0.   ]
+\end{lstlisting}
+
+The constructor takes the problem in its raw matrix form, which is explicit but
+verbose for the common cases. The same problem can be assembled through a fluent
+builder, \texttt{CLA.problem(\ldots)}, whose named steps each map onto one
+constructor argument: \texttt{.long\_only()} sets the box bounds $0\le w\le\ub$,
+\texttt{.budget()} adds the fully-invested row $\sum_i w_i = 1$, and the terminal
+\texttt{.trace()} builds the \texttt{CLA} and runs the walk. The builder is pure
+sugar: it adds no modelling power and accepts only the same polyhedral pieces, so
+it returns the identical object and frontier (Listing~\ref{lst:builder}).
+\texttt{.bounds(lower, upper)}, \texttt{.equality(A, b)}, and
+\texttt{.inequality(G, h)} add the general bounds and constraints discussed below.
+
+\begin{lstlisting}[style=pyin,caption={The same problem assembled through the
+fluent builder; \texttt{.trace()} returns the identical \texttt{CLA}.},label={lst:builder}]
+from cvxcla import CLA
+
+cla = (
+    CLA.problem(mean, Sigma)   # same mean and covariance as above
+       .long_only()            # box bounds 0 <= w <= 1
+       .budget()               # fully invested: sum(w) = 1
+       .trace()                # build the CLA and trace the frontier
+)
+print("turning points:", len(cla.turning_points))
+print("max Sharpe:", round(cla.frontier.max_sharpe[0], 4))
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+turning points: 7
+max Sharpe: 2.4037
 \end{lstlisting}
 
 Switching to a structured backend changes only the covariance argument: the
@@ -1261,6 +1296,10 @@ read off the segment by linear interpolation in $\lambda$. The agreement is at
 solver precision (median weight discrepancy $5\times 10^{-8}$, maximum
 $1.3\times 10^{-5}$) confirming that the affine segments coincide with the QP
 optima rather than approximating them (\srcfile{experiments/validate_exact.py}{experiments/validate\_exact.py}).
+The midpoint is a representative interior point of each segment; because the segment
+is affine in $\lambda$, agreement at one interior point certifies the whole open
+segment, and its endpoints are the turning points, which are themselves validated to
+satisfy the bounds and the constraints (\S\ref{sec:events}) as they are recorded.
 
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
@@ -1558,6 +1597,62 @@ however, the parametric program the CLA traces and the LASSO path coincide: the 
 are then not merely structurally similar but two homotopies over the same parametric
 quadratic program.
 
+\subsection{A LASSO path through the same engine}
+\label{sec:lassodemo}
+
+The correspondence is not only conceptual: the package makes it executable. The
+class \texttt{Lasso} (\srcfile{src/cvxcla/lasso.py}{src/cvxcla/lasso.py}) is driven by the
+\emph{same} \texttt{cvxcla.pathtracer.trace} loop and the same Bland event
+selection as the \texttt{CLA}; only the segment solve and the meaning of an event
+differ. It supplies the Gram matrix $X\trans X$ (as a \texttt{DenseCovariance}, the
+backend named \texttt{QuadraticForm} precisely because it is not specific to a
+covariance) and the linear data $X\trans y$, and traces the entire LASSO
+regularisation path from $\lambda_{\max}=\lVert X\trans y\rVert_\infty$ (where
+$\beta=0$) down to the least-squares fit at $\lambda=0$. As a check that this is the
+\emph{same} homotopy the reference statistical-learning solvers trace, we compare it
+breakpoint by breakpoint against scikit-learn's \texttt{lars\_path}
+\citep{scikitlearn} on a standardised $60\times 12$ regression
+(Listing~\ref{lst:lasso}); the two paths coincide to solver precision (maximum
+coefficient discrepancy $\approx 3\times 10^{-15}$ over all $13$ breakpoints,
+Figure~\ref{fig:lasso}). The experiment is reproducible from
+\srcfile{experiments/lasso_path.py}{experiments/lasso\_path.py}.
+
+\begin{lstlisting}[style=pyin,caption={The CLA path tracer drives a LASSO through
+\texttt{cvxcla.Lasso}, matched against scikit-learn's \texttt{lars\_path}.},label={lst:lasso}]
+import numpy as np
+from cvxcla import Lasso
+from sklearn.linear_model import lars_path
+
+# standardised design X (m x n), centred response y (see experiments/lasso_path.py)
+lasso = Lasso(x=X, y=y)                       # the same trace() loop as the CLA
+alphas, _active, coefs = lars_path(X, y, method="lasso")
+
+# scikit-learn reports alphas in the 1/(2m) loss convention; lam = m * alpha
+m = X.shape[0]
+diffs = [np.max(np.abs(lasso.solution(m * a) - coefs[:, i]))
+         for i, a in enumerate(alphas)]
+print("breakpoints (cvxcla, sklearn):", len(lasso.path), len(alphas))
+print("max |beta_cvxcla - beta_sklearn|:", f"{max(diffs):.1e}")
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+breakpoints (cvxcla, sklearn): 13 13
+max |beta_cvxcla - beta_sklearn|: 3.2e-15
+\end{lstlisting}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{lasso_path.pdf}
+\caption{The LASSO regularisation path of a standardised $60\times 12$ regression,
+traced by \texttt{cvxcla.Lasso} through the same parametric active-set engine as the
+efficient frontier. Each line is one coefficient $\beta_j(\lambda)$ as the penalty
+$\lambda$ decreases from $\lambda_{\max}$ (right) to $0$ (left); the markers are the
+breakpoints reported independently by scikit-learn's \texttt{lars\_path}. The two
+implementations agree to solver precision ($\approx 3\times 10^{-15}$), confirming
+that the CLA engine and the LARS/LASSO homotopy trace the identical path.}
+\label{fig:lasso}
+\end{figure}
+
 \section{Conclusion}
 
 The Critical Line Algorithm computes the complete mean--variance efficient frontier by
@@ -1714,6 +1809,13 @@ B.~Efron, T.~Hastie, I.~Johnstone, and R.~Tibshirani.
 S.~Rosset and J.~Zhu.
 \newblock Piecewise linear regularized solution paths.
 \newblock \emph{The Annals of Statistics}, 35(3):1012--1030, 2007.
+
+\bibitem[Pedregosa et~al.(2011)]{scikitlearn}
+F.~Pedregosa, G.~Varoquaux, A.~Gramfort, V.~Michel, B.~Thirion, O.~Grisel,
+M.~Blondel, P.~Prettenhofer, R.~Weiss, V.~Dubourg, J.~Vanderplas, A.~Passos,
+D.~Cournapeau, M.~Brucher, M.~Perrot, and E.~Duchesnay.
+\newblock Scikit-learn: Machine learning in {P}ython.
+\newblock \emph{Journal of Machine Learning Research}, 12:2825--2830, 2011.
 
 \bibitem[Brodie et~al.(2009)]{brodie2009}
 J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.

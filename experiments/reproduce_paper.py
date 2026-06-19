@@ -14,6 +14,7 @@ validate_exact                      Section 10.5 exactness numbers
 frontier_real                       Figure 4  (real_frontier.pdf)
 degeneracy_boundary                 Figure 5  (degeneracy.pdf)
 clarabel_baseline                   Figure 6  (clarabel_baseline.pdf) + Section 10 baseline
+lasso_path                          Figure 7  (lasso_path.pdf) + Section 11 LASSO check
 ==================================  ==========================================
 
 The S&P 500 input is the frozen snapshot committed at
@@ -24,14 +25,14 @@ the repository root so those relative paths resolve.
 Beyond ``cvxcla`` itself the experiments need a few third-party packages:
 ``matplotlib`` (all figures), ``pandas``/``pyarrow`` (the S&P 500 data),
 ``cvxpy`` (the QP cross-checks in ``validate_exact`` and ``degeneracy_boundary``),
-``PyPortfolioOpt`` (the external baseline in ``runtime_scaling``), and ``clarabel``
-(the general-solver baseline in ``clarabel_baseline``). A step whose dependency is
-missing is reported and skipped rather than aborting the whole run.
+``PyPortfolioOpt`` (the external baseline in ``runtime_scaling``), and
+``scikit-learn`` (the LARS/LASSO cross-check in ``lasso_path``). A step whose
+dependency is missing is reported and skipped rather than aborting the whole run.
 
 Usage::
 
     uv run --with matplotlib --with pandas --with pyarrow --with cvxpy \\
-        --with pyportfolioopt python experiments/reproduce_paper.py
+        --with pyportfolioopt --with scikit-learn python experiments/reproduce_paper.py
 
 Note that ``runtime_scaling`` traces universes up to n=640 and times
 PyPortfolioOpt, which takes several minutes; pass ``--quick`` to skip the two
@@ -53,6 +54,7 @@ STEPS: list[tuple[str, str, bool]] = [
     ("frontier_real", "Figure 4 (real_frontier.pdf)", False),
     ("degeneracy_boundary", "Figure 5 (degeneracy.pdf)", False),
     ("clarabel_baseline", "Figure 6 (clarabel_baseline.pdf)", True),
+    ("lasso_path", "Figure 7 (lasso_path.pdf) + Section 11 LASSO check", False),
 ]
 
 
