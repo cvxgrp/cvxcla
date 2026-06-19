@@ -1143,7 +1143,14 @@ set partitions the \emph{variables} into free and box-blocked, never a set of
 general inequality rows, so the reduced system is always a principal submatrix of
 $\Sig$ (\S\ref{sec:operators}) rather than a bordered KKT system. That restriction
 is exactly what keeps each step a single symmetric positive-definite solve, and it
-is the portfolio structure the method exploits.
+is the portfolio structure the method exploits. The natural reflex of turning an
+inequality $A w \ge b$ into an equality $A w - s = b$ with a slack $s \ge 0$ does
+not recover this structure: the slack carries no curvature in the objective, so the
+augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only positive \emph{semi}-definite,
+and the reduced solve is singular whenever a slack is free (which is precisely when
+its inequality is inactive). Admitting general inequalities therefore requires the
+bordered KKT system above and an event for each row activating or releasing, not a
+change of variables.
 
 The LASSO solves, for a response $y$ and design matrix $X$,
 \[
