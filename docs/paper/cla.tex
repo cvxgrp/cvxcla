@@ -965,6 +965,36 @@ max Sharpe: 2.4037
 weights: [0.    0.    0.704 0.296 0.    0.   ]
 \end{lstlisting}
 
+The constructor takes the problem in its raw matrix form, which is explicit but
+verbose for the common cases. The same problem can be assembled through a fluent
+builder, \texttt{CLA.problem(\ldots)}, whose named steps each map onto one
+constructor argument: \texttt{.long\_only()} sets the box bounds $0\le w\le\ub$,
+\texttt{.budget()} adds the fully-invested row $\sum_i w_i = 1$, and the terminal
+\texttt{.trace()} builds the \texttt{CLA} and runs the walk. The builder is pure
+sugar: it adds no modelling power and accepts only the same polyhedral pieces, so
+it returns the identical object and frontier (Listing~\ref{lst:builder}).
+\texttt{.bounds(lower, upper)}, \texttt{.equality(A, b)}, and
+\texttt{.inequality(G, h)} add the general bounds and constraints discussed below.
+
+\begin{lstlisting}[style=pyin,caption={The same problem assembled through the
+fluent builder; \texttt{.trace()} returns the identical \texttt{CLA}.},label={lst:builder}]
+from cvxcla import CLA
+
+cla = (
+    CLA.problem(mean, Sigma)   # same mean and covariance as above
+       .long_only()            # box bounds 0 <= w <= 1
+       .budget()               # fully invested: sum(w) = 1
+       .trace()                # build the CLA and trace the frontier
+)
+print("turning points:", len(cla.turning_points))
+print("max Sharpe:", round(cla.frontier.max_sharpe[0], 4))
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+turning points: 7
+max Sharpe: 2.4037
+\end{lstlisting}
+
 Switching to a structured backend changes only the covariance argument: the
 turning-point loop is untouched, and because the factor backend represents the
 \emph{same} $\Sig$ it returns the identical frontier (\S\ref{sec:operators}),

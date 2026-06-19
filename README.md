@@ -86,6 +86,8 @@ approximation needed.
 ## ✨ Features
 
 - Efficient computation of the entire efficient frontier
+- Fluent builder API — `CLA.problem(mean, cov).long_only().budget().trace()` — as a
+  readable alternative to the explicit constructor
 - Box bounds on every weight, plus general linear **equality** constraints
   `Aw = b` (budget, dollar-neutral, sector/factor neutrality) and general linear
   **inequality** constraints `Gw ≤ h` (group or sector exposure caps)
@@ -176,6 +178,21 @@ print(f"First 3 weights: {max_sharpe_weights[:3]}")
 Maximum Sharpe ratio: 2.946979
 First 3 weights: [0.         0.         0.08509841]
 ```
+
+The same problem reads more declaratively through the fluent builder, reached via
+`CLA.problem(...)`. Each step maps onto one constructor argument, and the terminal
+`.trace()` returns the identical `CLA`:
+
+```python
+# Same fully-invested, long-only problem as above, assembled fluently.
+built = CLA.problem(mean, covariance).long_only().budget().trace()
+
+# Pure sugar over the constructor: it returns the identical frontier.
+assert built.frontier.max_sharpe[0] == cla.frontier.max_sharpe[0]
+```
+
+`.bounds`, `.equality`, and `.inequality` add general bounds and constraints, as in
+the examples below.
 
 For visualization, you can plot the efficient frontier:
 
