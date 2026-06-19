@@ -21,7 +21,6 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .operators import CovarianceOperator
-from .optimize import minimize
 
 
 def _covariance_matvec(
@@ -182,64 +181,90 @@ class Frontier:
     def max_sharpe(self) -> tuple[float, np.ndarray]:
         """Maximal Sharpe ratio on the frontier.
 
+        The maximiser lies on one of the two affine segments adjacent to the
+        turning point of largest discrete Sharpe ratio. On each segment the Sharpe
+        ratio has a closed-form maximiser (see :meth:`_segment_max_sharpe`), so the
+        result is exact rather than the product of a numerical line search.
+
         Returns:
             Tuple of maximal Sharpe ratio and the weights to achieve it
 
         """
-
-        def neg_sharpe(alpha: float, *args: np.ndarray) -> float:
-            """Return the negative Sharpe ratio for a convex combination of two weight vectors."""
-            w_left, w_right = args[0], args[1]
-            # convex combination of left and right weights
-            weight = alpha * w_left + (1 - alpha) * w_right
-            # compute the variance
-            var = float(weight.T @ _covariance_matvec(self.covariance, weight))
-            returns = float(self.mean.T @ weight)
-            return float(-returns / np.sqrt(var))
-
+        weights = self.weights
         sharpe_ratios = self.sharpe_ratio
 
-        # in which point is the maximal Sharpe ratio?
-        sr_position_max = int(np.argmax(self.sharpe_ratio))
-
-        # min only there for security...
+        # The discrete maximum brackets the continuous one: the optimum sits on a
+        # segment touching the turning point of largest Sharpe ratio.
+        sr_position_max = int(np.argmax(sharpe_ratios))
         right = min(sr_position_max + 1, len(self) - 1)
         left = max(0, sr_position_max - 1)
 
-        # Look to the left and look to the right
-
+        # Look to the left and to the right of the discrete maximum.
         if right > sr_position_max:
-            out = minimize(
-                neg_sharpe,
-                0.5,
-                args=(self.weights[sr_position_max], self.weights[right]),
-                bounds=((0, 1),),
-            )
-            var = out["x"][0]
-            w_right = var * self.weights[sr_position_max] + (1 - var) * self.weights[right]
-            sharpe_ratio_right = -out["fun"]
+            sharpe_ratio_right, w_right = self._segment_max_sharpe(weights[sr_position_max], weights[right])
         else:
-            w_right = self.weights[sr_position_max]
+            w_right = weights[sr_position_max]
             sharpe_ratio_right = sharpe_ratios[sr_position_max]
 
         if left < sr_position_max:
-            out = minimize(
-                neg_sharpe,
-                0.5,
-                args=(self.weights[left], self.weights[sr_position_max]),
-                bounds=((0, 1),),
-            )
-            var = out["x"][0]
-            w_left = var * self.weights[left] + (1 - var) * self.weights[sr_position_max]
-            sharpe_ratio_left = -out["fun"]
+            sharpe_ratio_left, w_left = self._segment_max_sharpe(weights[left], weights[sr_position_max])
         else:
-            w_left = self.weights[sr_position_max]
+            w_left = weights[sr_position_max]
             sharpe_ratio_left = sharpe_ratios[sr_position_max]
 
         if sharpe_ratio_left > sharpe_ratio_right:
             return sharpe_ratio_left, w_left
 
         return sharpe_ratio_right, w_right
+
+    def _segment_max_sharpe(self, w0: np.ndarray, w1: np.ndarray) -> tuple[float, np.ndarray]:
+        """Closed-form maximum Sharpe ratio on the affine segment between two points.
+
+        Parametrise the segment as ``w(t) = (1 - t) w0 + t w1`` for ``t`` in
+        ``[0, 1]``. The expected return is affine and the variance quadratic in
+        ``t``, so the Sharpe ratio is::
+
+            S(t) = (a0 + a1 t) / sqrt(c0 + c1 t + c2 t**2)
+
+        Its derivative has a *linear* numerator (the ``t**2`` terms cancel), so
+        there is a single stationary point
+        ``t* = (a0 c1 - 2 a1 c0) / (a1 c1 - 2 a0 c2)``. The maximiser over the
+        segment is therefore whichever of ``{0, 1, clamp(t*)}`` yields the largest
+        Sharpe ratio, evaluated in closed form rather than by a bounded line search.
+
+        Args:
+            w0: Weights at the ``t = 0`` end of the segment.
+            w1: Weights at the ``t = 1`` end of the segment.
+
+        Returns:
+            Tuple of the maximal Sharpe ratio on the segment and its weights.
+
+        """
+        delta = w1 - w0
+        sigma_w0 = _covariance_matvec(self.covariance, w0)
+        sigma_delta = _covariance_matvec(self.covariance, delta)
+        a0 = float(self.mean @ w0)
+        a1 = float(self.mean @ delta)
+        c0 = float(w0 @ sigma_w0)
+        c1 = 2.0 * float(w0 @ sigma_delta)
+        c2 = float(delta @ sigma_delta)
+
+        def sharpe_at(t: float) -> tuple[float, np.ndarray]:
+            """Sharpe ratio and weights at position ``t`` along the segment."""
+            weight = w0 + t * delta
+            sharpe = (a0 + a1 * t) / np.sqrt(c0 + c1 * t + c2 * t * t)
+            return float(sharpe), weight
+
+        # Candidate positions: the two endpoints and the interior stationary point
+        # (only when it falls strictly inside the segment).
+        candidates = [0.0, 1.0]
+        denominator = a1 * c1 - 2.0 * a0 * c2
+        if denominator != 0.0:
+            t_star = (a0 * c1 - 2.0 * a1 * c0) / denominator
+            if 0.0 < t_star < 1.0:
+                candidates.append(t_star)
+
+        return max((sharpe_at(t) for t in candidates), key=lambda item: item[0])
 
     def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
         """Plot the efficient frontier.

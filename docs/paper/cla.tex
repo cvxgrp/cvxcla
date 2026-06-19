@@ -70,7 +70,7 @@
 % Pin source links to an immutable commit, not the moving \texttt{main} branch, so
 % they do not rot as the code is refactored. Bump \srcref to the tagged/archived
 % release (the Zenodo-archived commit) at submission time.
-\newcommand{\srcref}{3319f5b55ea6fac737c0860e0f5733f8661ad6ab}
+\newcommand{\srcref}{v1.8.0}
 \newcommand{\srcfile}[2]{\href{\repourl/blob/\srcref/#1}{\texttt{#2}}}
 
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
@@ -754,17 +754,24 @@ term) break the linear-in-$\lambda$ structure and lie outside the method.
 \label{sec:frontier}
 
 The list of turning points is wrapped in a \texttt{Frontier} object
-(\srcfile{src/cvxcla/types.py}{src/cvxcla/types.py}). Each \texttt{FrontierPoint} carries a weight vector and
+(\srcfile{src/cvxcla/types.py}{types.py}). Each \texttt{FrontierPoint} carries a weight vector and
 exposes its expected return $\mu\trans w$ and variance $w\trans\Sig w$. Between adjacent
 turning points the frontier in \emph{weight} space is the straight segment
 \eqref{eq:segment}, so the object can \texttt{interpolate} any number of intermediate
 portfolios by convex combination. Derived quantities (volatility, Sharpe ratio) are
-computed pointwise. The maximum-Sharpe portfolio is found by a one-dimensional search
-over the convex combination of the two turning points bracketing the discrete Sharpe
-maximum, exploiting the same piecewise-linear weight structure. A per-segment closed
-form exists, since on an affine weight segment the Sharpe ratio is an affine function
-over the square root of a quadratic; the bounded one-dimensional search is used for
-simplicity and is exact to tolerance.
+computed pointwise. The maximum-Sharpe portfolio is computed in closed form,
+exploiting the same piecewise-linear weight structure. On an affine weight segment
+$w(t) = (1-t)\,w_0 + t\,w_1$, $t\in[0,1]$, the expected return is affine and the
+variance quadratic in $t$, so the Sharpe ratio
+$S(t) = (a_0 + a_1 t)/\sqrt{c_0 + c_1 t + c_2 t^2}$ is an affine function over the
+square root of a quadratic (here $a_0 = \mu\trans w_0$, $a_1 = \mu\trans(w_1-w_0)$,
+and $c_0,c_1,c_2$ are the coefficients of $w(t)\trans\Sig\,w(t)$). Its derivative has
+a \emph{linear} numerator, the quadratic terms cancelling, so each segment has a
+single stationary point $t^\star = (a_0 c_1 - 2 a_1 c_0)/(a_1 c_1 - 2 a_0 c_2)$; the
+maximiser is the best of $t^\star$ (when it lies in $[0,1]$) and the two segment
+endpoints, taken over the two segments bracketing the discrete Sharpe maximum. The
+frontier object therefore returns the maximum-Sharpe portfolio exactly, not to a
+search tolerance.
 
 \section{Complexity and properties}
 
@@ -811,8 +818,8 @@ as the only prior documented implementation was the Markowitz--Todd VBA-Excel co
 of \citet{markowitz2000}. Our
 implementation in fact shares several of its design choices: the same greedy
 first turning point (\S\ref{sec:first}), the explicit minimum-variance endpoint
-at $\lambda = 0$, and a one-dimensional search between bracketing turning points
-for the maximum-Sharpe portfolio (\S\ref{sec:frontier}). It traces the same
+at $\lambda = 0$, and locating the maximum-Sharpe portfolio between bracketing
+turning points (\S\ref{sec:frontier}, in closed form here). It traces the same
 turning points as the method described here, since the underlying mathematics is
 Markowitz's, but differs in four ways that matter in practice.
 
@@ -1136,16 +1143,16 @@ factor backend: the dense per-iteration solve scales like $O(n_\F^3)$ over $O(n)
 iterations, while the Woodbury solve with fixed $K$ stays close to linear in $n$.
 The dense and factor backends are comparable for small universes (the Woodbury
 correction carries a fixed $K\times K$ overhead), but the factor backend pulls
-away as $n$ grows: from rough parity at $n=40$ to a $\approx 9\times$ speedup
-at $n=640$ (Table~\ref{tab:scaling}). This $\approx 9\times$ is the genuine
+away as $n$ grows: from rough parity at $n=40$ to a $\approx 7.7\times$ speedup
+at $n=640$ (Table~\ref{tab:scaling}). This $\approx 7.7\times$ is the genuine
 \emph{algorithmic} gain: both backends are vectorised \texttt{numpy} solving the
 identical $\Sig$, so the only difference is the asymptotic Woodbury advantage of
 the structured solve over the dense one.
 
 For external context we also time PyPortfolioOpt, which scales far more steeply
-($\approx n^{3.4}$): at $n=640$ it takes about $261$~seconds, so \texttt{cvxcla}'s
-dense backend is roughly $324\times$ faster and the factor backend roughly
-$2980\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
+($\approx n^{3.4}$): at $n=640$ it takes about $249$~seconds, so \texttt{cvxcla}'s
+dense backend is roughly $312\times$ faster and the factor backend roughly
+$2390\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
 PyPortfolioOpt uses \texttt{numpy} for its linear algebra) but a consequence of
 how it organises the work: it rebuilds a full free-block inverse at every step,
 and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
@@ -1158,12 +1165,12 @@ and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
 \toprule
 $n$ & Turning points & PyPortfolioOpt & Inverse baseline & Dense & Factor \\
 \midrule
-$20$  & $21$  & $10.6$       & $0.7$   & $1.3$   & $1.4$ \\
-$40$  & $42$  & $41.0$       & $1.9$   & $3.3$   & $3.1$ \\
-$80$  & $81$  & $216.6$      & $4.8$   & $7.8$   & $6.5$ \\
-$160$ & $159$ & $1{,}550$    & $13.6$  & $23.4$  & $13.9$ \\
-$320$ & $322$ & $16{,}789$   & $49.9$  & $111.3$ & $33.5$ \\
-$640$ & $641$ & $261{,}335$  & $337.9$ & $805.8$ & $87.7$ \\
+$20$  & $21$  & $7.2$        & $0.7$   & $1.3$   & $1.5$ \\
+$40$  & $42$  & $40.7$       & $1.9$   & $3.5$   & $3.4$ \\
+$80$  & $81$  & $210.5$      & $4.7$   & $7.8$   & $6.8$ \\
+$160$ & $159$ & $1{,}458$    & $12.6$  & $26.1$  & $15.1$ \\
+$320$ & $322$ & $16{,}635$   & $52.2$  & $116.5$ & $36.4$ \\
+$640$ & $641$ & $249{,}106$  & $324.3$ & $799.6$ & $104.4$ \\
 \bottomrule
 \end{tabular}
 \caption{Frontier trace time (milliseconds) versus number of assets $n$ ($K=10$
@@ -1190,17 +1197,22 @@ Python, scales like $\approx n^{3.4}$; the vectorised explicit-inverse baseline 
 \S\ref{sec:baseline} like $\approx n^{2.0}$; \texttt{cvxcla}'s dense backend like
 $\approx n^{2.2}$; and its diagonal-plus-low-rank factor backend, solving the
 identical covariance through the Woodbury identity, like $\approx n^{1.3}$. At
-$n = 640$ the factor backend is roughly $2980\times$ faster than PyPortfolioOpt and
-$9\times$ faster than the dense backend. The incremental-inverse baseline and the
-dense backend lie close together, far below PyPortfolioOpt. Markers are the
-median of $3$ repetitions; the shaded band around each spans their min and max.}
+$n = 640$ the factor backend is roughly $2390\times$ faster than PyPortfolioOpt and
+$7.7\times$ faster than the dense backend. The incremental-inverse baseline and the
+dense backend lie close together, far below PyPortfolioOpt; that PyPortfolioOpt gap
+reflects how this teaching-oriented reference implementation organises its per-step
+work, not the underlying critical-line algorithm (\S\ref{sec:baseline}). The orange
+curve reconstructs the frontier with Clarabel \citep{clarabel} as $n$ QP solves over
+a $\lambda$-grid; it is drawn here only for context and is discussed in
+\S\ref{sec:clarabel}, not in this section. Markers are the median of $3$
+repetitions; the shaded band around each spans their min and max.}
 \label{fig:scaling}
 \end{figure}
 
 \subsection{What the runtime gap is, and is not}
 \label{sec:baseline}
 
-The $\approx 324\times$ gap between \texttt{cvxcla}'s dense backend and
+The $\approx 312\times$ gap between \texttt{cvxcla}'s dense backend and
 PyPortfolioOpt at $n=640$ invites a lazy explanation (``vectorised
 \texttt{numpy} versus slow Python'') that is wrong. PyPortfolioOpt already uses
 \texttt{numpy} (\texttt{np.linalg.inv}, \texttt{np.dot}) for its per-step linear
@@ -1226,9 +1238,9 @@ traces the identical turning points to machine precision (max.\ weight discrepan
 $<10^{-13}$ across $n=20$--$160$), so the comparison against the dense backend is
 clean: only the linear-algebra strategy differs.
 
-The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $338$~ms at
-$n=640$) is about $2.4\times$ \emph{faster} than the dense backend
-($\approx n^{2.2}$, $806$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
+The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $324$~ms at
+$n=640$) is about $2.5\times$ \emph{faster} than the dense backend
+($\approx n^{2.2}$, $800$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
 predicts. \texttt{cvxcla}'s block elimination is therefore not the fastest possible
 dense strategy, and the package ships the incremental inverse as the opt-in
 \texttt{IncrementalDenseCovariance} backend (\S\ref{sec:incremental}) for callers
@@ -1238,8 +1250,8 @@ numerically robust step to step: the factor backend never forms $\Sig_{\F\F}$ at
 all, so there is no inverse to maintain: it solves through the Woodbury
 identity. The default dense backend gives up the modest incremental-inverse win to
 keep one turning-point loop that runs over \emph{any} backend, and the factor
-backend more than repays it: at $n=640$ it is $\approx 9.2\times$ faster than the
-dense backend and $\approx 3.9\times$ faster than the incremental-inverse baseline,
+backend more than repays it: at $n=640$ it is $\approx 7.7\times$ faster than the
+dense backend and $\approx 3.1\times$ faster than the incremental-inverse baseline,
 the only one of the four implementations with a genuinely sub-quadratic exponent
 ($\approx n^{1.3}$). The structured solve, not the linear-algebra bookkeeping, is
 the real algorithmic advance.
@@ -1697,6 +1709,60 @@ at Stanford University.
 
 \begin{thebibliography}{9}
 
+\bibitem[Bailey and L\'opez de Prado(2013)]{bailey2013}
+D.~H. Bailey and M.~L\'opez de Prado.
+\newblock An open-source implementation of the critical-line algorithm for portfolio
+optimization.
+\newblock \emph{Algorithms}, 6(1):169--196, 2013.
+
+\bibitem[Bemporad et~al.(2002)]{bemporad2002}
+A.~Bemporad, M.~Morari, V.~Dua, and E.~N. Pistikopoulos.
+\newblock The explicit linear quadratic regulator for constrained systems.
+\newblock \emph{Automatica}, 38(1):3--20, 2002.
+
+\bibitem[Boyd et~al.(2017)]{cvxportfolio}
+S.~Boyd, E.~Busseti, S.~Diamond, R.~N. Kahn, K.~Koh, P.~Nystrup, and J.~Speth.
+\newblock Multi-period trading via convex optimization.
+\newblock \emph{Foundations and Trends in Optimization}, 3(1):1--76, 2017.
+\newblock Software: \texttt{cvxportfolio}.
+
+\bibitem[Brodie et~al.(2009)]{brodie2009}
+J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.
+\newblock Sparse and stable Markowitz portfolios.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 106(30):12267--12272, 2009.
+
+\bibitem[Cajas(2021)]{riskfolio}
+D.~Cajas.
+\newblock {Riskfolio-Lib}: portfolio optimization and quantitative strategic
+asset allocation in {Python}.
+\newblock \url{https://github.com/dcajasn/Riskfolio-Lib}, 2021.
+
+\bibitem[Diamond and Boyd(2016)]{cvxpy}
+S.~Diamond and S.~Boyd.
+\newblock {CVXPY}: a {Python}-embedded modeling language for convex optimization.
+\newblock \emph{Journal of Machine Learning Research}, 17(83):1--5, 2016.
+
+\bibitem[Efron et~al.(2004)]{efron2004}
+B.~Efron, T.~Hastie, I.~Johnstone, and R.~Tibshirani.
+\newblock Least angle regression.
+\newblock \emph{The Annals of Statistics}, 32(2):407--499, 2004.
+
+\bibitem[Fu et~al.(2020)]{cvxr}
+A.~Fu, B.~Narasimhan, and S.~Boyd.
+\newblock {CVXR}: an {R} package for disciplined convex optimization.
+\newblock \emph{Journal of Statistical Software}, 94(14):1--34, 2020.
+
+\bibitem[Goulart and Chen(2024)]{clarabel}
+P.~J. Goulart and Y.~Chen.
+\newblock Clarabel: An interior-point solver for conic programs with quadratic objectives.
+\newblock arXiv:2405.12762, 2024.
+
+\bibitem[Hirschberger et~al.(2010)]{hirschberger2010}
+M.~Hirschberger, Y.~Qi, and R.~E. Steuer.
+\newblock Large-scale MV efficient frontier computation via a procedure of
+parametric quadratic programming.
+\newblock \emph{European Journal of Operational Research}, 204(3):581--588, 2010.
+
 \bibitem[Markowitz(1952)]{markowitz1952}
 H.~M. Markowitz.
 \newblock Portfolio selection.
@@ -1712,6 +1778,11 @@ H.~M. Markowitz.
 \newblock \emph{Portfolio Selection: Efficient Diversification of Investments}.
 \newblock John Wiley \& Sons, New York, 1959.
 
+\bibitem[Markowitz and Todd(2000)]{markowitz2000}
+H.~M. Markowitz and G.~P. Todd.
+\newblock \emph{Mean-Variance Analysis in Portfolio Choice and Capital Markets}.
+\newblock Frank J. Fabozzi Associates, New Hope, PA, 2000.
+
 \bibitem[Markowitz et~al.(2021)]{markowitz2021}
 H.~Markowitz, D.~Starer, H.~Fram, and S.~Gerber.
 \newblock Avoiding the downside: A practical review of the critical line
@@ -1720,107 +1791,21 @@ algorithm for mean--semivariance portfolio optimization.
 Scientific, 2021.
 \newblock \url{https://doi.org/10.1142/9789811222634_0017}.
 
-\bibitem[Niedermayer and Niedermayer(2010)]{niedermayer2010}
-A.~Niedermayer and D.~Niedermayer.
-\newblock Applying Markowitz's critical line algorithm.
-\newblock In \emph{Handbook of Portfolio Construction}, pages 383--400. Springer, 2010.
-
-\bibitem[Bailey and L\'opez de Prado(2013)]{bailey2013}
-D.~H. Bailey and M.~L\'opez de Prado.
-\newblock An open-source implementation of the critical-line algorithm for portfolio
-optimization.
-\newblock \emph{Algorithms}, 6(1):169--196, 2013.
-
 \bibitem[Martin(2021)]{pyportfolioopt}
 R.~A. Martin.
 \newblock {PyPortfolioOpt}: portfolio optimization in {Python}.
 \newblock \emph{Journal of Open Source Software}, 6(61):3066, 2021.
 \newblock \url{https://doi.org/10.21105/joss.03066}.
 
-\bibitem[Diamond and Boyd(2016)]{cvxpy}
-S.~Diamond and S.~Boyd.
-\newblock {CVXPY}: a {Python}-embedded modeling language for convex optimization.
-\newblock \emph{Journal of Machine Learning Research}, 17(83):1--5, 2016.
-
-\bibitem[Goulart and Chen(2024)]{clarabel}
-P.~J. Goulart and Y.~Chen.
-\newblock Clarabel: An interior-point solver for conic programs with quadratic objectives.
-\newblock arXiv:2405.12762, 2024.
-
-\bibitem[Boyd et~al.(2017)]{cvxportfolio}
-S.~Boyd, E.~Busseti, S.~Diamond, R.~N. Kahn, K.~Koh, P.~Nystrup, and J.~Speth.
-\newblock Multi-period trading via convex optimization.
-\newblock \emph{Foundations and Trends in Optimization}, 3(1):1--76, 2017.
-\newblock Software: \texttt{cvxportfolio}.
-
-\bibitem[Fu et~al.(2020)]{cvxr}
-A.~Fu, B.~Narasimhan, and S.~Boyd.
-\newblock {CVXR}: an {R} package for disciplined convex optimization.
-\newblock \emph{Journal of Statistical Software}, 94(14):1--34, 2020.
-
-\bibitem[W\"urtz et~al.(2009)]{fportfolio}
-D.~W\"urtz, Y.~Chalabi, W.~Chen, and A.~Ellis.
-\newblock \emph{Portfolio Optimization with R/Rmetrics}.
-\newblock Rmetrics Association and Finance Online, 2009.
-\newblock {R} package \texttt{fPortfolio}.
-
-\bibitem[Cajas(2021)]{riskfolio}
-D.~Cajas.
-\newblock {Riskfolio-Lib}: portfolio optimization and quantitative strategic
-asset allocation in {Python}.
-\newblock \url{https://github.com/dcajasn/Riskfolio-Lib}, 2021.
-
-\bibitem[Wolfe(1959)]{wolfe1959}
-P.~Wolfe.
-\newblock The simplex method for quadratic programming.
-\newblock \emph{Econometrica}, 27(3):382--398, 1959.
-
-\bibitem[Sharpe(1963)]{sharpe1963}
-W.~F. Sharpe.
-\newblock A simplified model for portfolio analysis.
-\newblock \emph{Management Science}, 9(2):277--293, 1963.
-
-\bibitem[Perold(1984)]{perold1984}
-A.~F. Perold.
-\newblock Large-scale portfolio optimization.
-\newblock \emph{Management Science}, 30(10):1143--1160, 1984.
-
-\bibitem[Markowitz and Todd(2000)]{markowitz2000}
-H.~M. Markowitz and G.~P. Todd.
-\newblock \emph{Mean-Variance Analysis in Portfolio Choice and Capital Markets}.
-\newblock Frank J. Fabozzi Associates, New Hope, PA, 2000.
-
-\bibitem[Stein et~al.(2008)]{stein2008}
-M.~Stein, J.~Branke, and H.~Schmeck.
-\newblock Efficient implementation of an active set algorithm for large-scale
-portfolio selection.
-\newblock \emph{Computers \& Operations Research}, 35(12):3945--3961, 2008.
-
-\bibitem[Hirschberger et~al.(2010)]{hirschberger2010}
-M.~Hirschberger, Y.~Qi, and R.~E. Steuer.
-\newblock Large-scale MV efficient frontier computation via a procedure of
-parametric quadratic programming.
-\newblock \emph{European Journal of Operational Research}, 204(3):581--588, 2010.
-
-\bibitem[Tibshirani(1996)]{tibshirani1996}
-R.~Tibshirani.
-\newblock Regression shrinkage and selection via the lasso.
-\newblock \emph{Journal of the Royal Statistical Society, Series B}, 58(1):267--288, 1996.
+\bibitem[Niedermayer and Niedermayer(2010)]{niedermayer2010}
+A.~Niedermayer and D.~Niedermayer.
+\newblock Applying Markowitz's critical line algorithm.
+\newblock In \emph{Handbook of Portfolio Construction}, pages 383--400. Springer, 2010.
 
 \bibitem[Osborne et~al.(2000)]{osborne2000}
 M.~R. Osborne, B.~Presnell, and B.~A. Turlach.
 \newblock A new approach to variable selection in least squares problems.
 \newblock \emph{IMA Journal of Numerical Analysis}, 20(3):389--403, 2000.
-
-\bibitem[Efron et~al.(2004)]{efron2004}
-B.~Efron, T.~Hastie, I.~Johnstone, and R.~Tibshirani.
-\newblock Least angle regression.
-\newblock \emph{The Annals of Statistics}, 32(2):407--499, 2004.
-
-\bibitem[Rosset and Zhu(2007)]{rosset2007}
-S.~Rosset and J.~Zhu.
-\newblock Piecewise linear regularized solution paths.
-\newblock \emph{The Annals of Statistics}, 35(3):1012--1030, 2007.
 
 \bibitem[Pedregosa et~al.(2011)]{scikitlearn}
 F.~Pedregosa, G.~Varoquaux, A.~Gramfort, V.~Michel, B.~Thirion, O.~Grisel,
@@ -1829,20 +1814,47 @@ D.~Cournapeau, M.~Brucher, M.~Perrot, and E.~Duchesnay.
 \newblock Scikit-learn: Machine learning in {P}ython.
 \newblock \emph{Journal of Machine Learning Research}, 12:2825--2830, 2011.
 
-\bibitem[Brodie et~al.(2009)]{brodie2009}
-J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.
-\newblock Sparse and stable Markowitz portfolios.
-\newblock \emph{Proceedings of the National Academy of Sciences}, 106(30):12267--12272, 2009.
+\bibitem[Perold(1984)]{perold1984}
+A.~F. Perold.
+\newblock Large-scale portfolio optimization.
+\newblock \emph{Management Science}, 30(10):1143--1160, 1984.
 
-\bibitem[Bemporad et~al.(2002)]{bemporad2002}
-A.~Bemporad, M.~Morari, V.~Dua, and E.~N. Pistikopoulos.
-\newblock The explicit linear quadratic regulator for constrained systems.
-\newblock \emph{Automatica}, 38(1):3--20, 2002.
+\bibitem[Rosset and Zhu(2007)]{rosset2007}
+S.~Rosset and J.~Zhu.
+\newblock Piecewise linear regularized solution paths.
+\newblock \emph{The Annals of Statistics}, 35(3):1012--1030, 2007.
+
+\bibitem[Sharpe(1963)]{sharpe1963}
+W.~F. Sharpe.
+\newblock A simplified model for portfolio analysis.
+\newblock \emph{Management Science}, 9(2):277--293, 1963.
+
+\bibitem[Stein et~al.(2008)]{stein2008}
+M.~Stein, J.~Branke, and H.~Schmeck.
+\newblock Efficient implementation of an active set algorithm for large-scale
+portfolio selection.
+\newblock \emph{Computers \& Operations Research}, 35(12):3945--3961, 2008.
+
+\bibitem[Tibshirani(1996)]{tibshirani1996}
+R.~Tibshirani.
+\newblock Regression shrinkage and selection via the lasso.
+\newblock \emph{Journal of the Royal Statistical Society, Series B}, 58(1):267--288, 1996.
 
 \bibitem[T\o ndel et~al.(2003)]{tondel2003}
 P.~T\o ndel, T.~A. Johansen, and A.~Bemporad.
 \newblock An algorithm for multi-parametric quadratic programming and explicit MPC solutions.
 \newblock \emph{Automatica}, 39(3):489--497, 2003.
+
+\bibitem[Wolfe(1959)]{wolfe1959}
+P.~Wolfe.
+\newblock The simplex method for quadratic programming.
+\newblock \emph{Econometrica}, 27(3):382--398, 1959.
+
+\bibitem[W\"urtz et~al.(2009)]{fportfolio}
+D.~W\"urtz, Y.~Chalabi, W.~Chen, and A.~Ellis.
+\newblock \emph{Portfolio Optimization with R/Rmetrics}.
+\newblock Rmetrics Association and Finance Online, 2009.
+\newblock {R} package \texttt{fPortfolio}.
 
 \end{thebibliography}
 
