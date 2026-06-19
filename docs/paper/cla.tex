@@ -1094,11 +1094,18 @@ optima rather than approximating them (\srcfile{experiments/validate_exact.py}{e
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
 
-To close, we run the algorithm on real data. Using
-\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
-from Wikipedia and download five years of daily adjusted-close prices via
-\texttt{yfinance}, yielding $N = 494$ assets over $T = 1213$ trading days
-(2021-07-30 to 2026-05-29) after dropping thinly-traded names. From the
+To close, we run the algorithm on real data. The experiment runs off a frozen
+snapshot shipped with the package,
+\srcfile{experiments/data/sp500_pct_returns.parquet}{experiments/data/sp500\_pct\_returns.parquet}
+($N = 494$ assets over $T = 1213$ trading days, 2021-07-30 to 2026-05-29;
+SHA-256 \texttt{b5faa522\ldots9937e}), so the figures below reproduce
+deterministically and offline, with no dependence on a live data feed. The
+snapshot was produced once by
+\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py}, which pulls the
+then-current S\&P 500 constituents from Wikipedia, downloads five years of daily
+adjusted-close prices via \texttt{yfinance}, and drops thinly-traded names; that
+script is retained for provenance and refresh only and is not part of the
+reproducible path. From the
 full-history sample mean and covariance (condition number $\approx 1.1\times
 10^{5}$) the CLA traces the entire long-only frontier (\textbf{96 turning
 points}) in a median of $\approx 14$~ms (Figure~\ref{fig:realfrontier}); a
