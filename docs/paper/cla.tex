@@ -850,6 +850,25 @@ baseline for such a comparison. The reading here is that \texttt{cvxcla}'s
 contribution is the interface that makes such backends interchangeable, not a
 claim to the fastest dense large-scale solve.
 
+\paragraph{Relation to portfolio-optimization software.}
+Set against the broader ecosystem of portfolio-optimization packages, the
+distinction is less speed than \emph{what is computed}. General toolkits, in Python
+\texttt{cvxportfolio} \citep{cvxportfolio}, Riskfolio-Lib \citep{riskfolio} and
+scikit-portfolio, and in R \texttt{fPortfolio} \citep{fportfolio} and the
+disciplined-convex layer \texttt{CVXR} \citep{cvxr}, construct a portfolio by
+solving a (mean--variance or richer) optimisation at a \emph{single} risk target,
+typically by handing a quadratic or conic program to a general solver; recovering
+the frontier then means re-solving on a grid of targets, an approximation that the
+grid resolution controls. \texttt{cvxcla}, like the CLA itself and like
+PyPortfolioOpt's \texttt{CLA} \citep{pyportfolioopt}, instead returns the
+\emph{entire} frontier exactly as a finite set of turning points, with no grid.
+Among the exact-CLA tools, PyPortfolioOpt is the natural head-to-head
+(\S\ref{sec:experiment}) but, as noted there, is a teaching-oriented reference
+rather than a tuned solver. What is genuinely particular to \texttt{cvxcla} is
+orthogonal to all of these: the operator interface and the structured factor and
+Gram backends (\S\ref{sec:operators}), which run the same exact-frontier trace
+directly on a covariance representation the general toolkits do not exploit.
+
 \section{Using the package}
 \label{sec:usage}
 
@@ -1003,7 +1022,11 @@ each from a ground-truth $K = 10$ factor model so that the dense and factor
 backends again solve the identical $\Sig$ and return the same frontier. For
 reference we also time the \texttt{CLA} of PyPortfolioOpt \citep{pyportfolioopt},
 a widely-used implementation of the critical-line algorithm of
-\citet{bailey2013}, on the same dense problem. The number of turning points tracks $n$ closely
+\citet{bailey2013}, on the same dense problem. We time it because it is the most
+familiar open CLA, not because it is a tuned competitor: it is a teaching-oriented
+reference implementation, so the gap below measures the cost of how the per-step
+work is organised (\S\ref{sec:baseline}), not \texttt{cvxcla} against a
+performance-optimised solver. The number of turning points tracks $n$ closely
 ($21, 42, 81, 159, 322, 641$ respectively, and PyPortfolioOpt finds essentially
 the same set), confirming the $O(n)$ count of \S\ref{sec:experiment}. The two
 implementations also agree numerically: their minimum-variance portfolios (the
@@ -1519,6 +1542,29 @@ R.~A. Martin.
 S.~Diamond and S.~Boyd.
 \newblock {CVXPY}: a {Python}-embedded modeling language for convex optimization.
 \newblock \emph{Journal of Machine Learning Research}, 17(83):1--5, 2016.
+
+\bibitem[Boyd et~al.(2017)]{cvxportfolio}
+S.~Boyd, E.~Busseti, S.~Diamond, R.~N. Kahn, K.~Koh, P.~Nystrup, and J.~Speth.
+\newblock Multi-period trading via convex optimization.
+\newblock \emph{Foundations and Trends in Optimization}, 3(1):1--76, 2017.
+\newblock Software: \texttt{cvxportfolio}.
+
+\bibitem[Fu et~al.(2020)]{cvxr}
+A.~Fu, B.~Narasimhan, and S.~Boyd.
+\newblock {CVXR}: an {R} package for disciplined convex optimization.
+\newblock \emph{Journal of Statistical Software}, 94(14):1--34, 2020.
+
+\bibitem[W\"urtz et~al.(2009)]{fportfolio}
+D.~W\"urtz, Y.~Chalabi, W.~Chen, and A.~Ellis.
+\newblock \emph{Portfolio Optimization with R/Rmetrics}.
+\newblock Rmetrics Association and Finance Online, 2009.
+\newblock {R} package \texttt{fPortfolio}.
+
+\bibitem[Cajas(2021)]{riskfolio}
+D.~Cajas.
+\newblock {Riskfolio-Lib}: portfolio optimization and quantitative strategic
+asset allocation in {Python}.
+\newblock \url{https://github.com/dcajasn/Riskfolio-Lib}, 2021.
 
 \bibitem[Wolfe(1959)]{wolfe1959}
 P.~Wolfe.
