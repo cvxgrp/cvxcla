@@ -18,8 +18,11 @@ trace the frontier with the CLA, then at the midpoint lambda of every segment we
 and report the maximum weight discrepancy. Agreement to solver tolerance
 confirms the CLA segments are the true optimisers, not an approximation.
 
+The return matrix is a frozen snapshot committed at
+``experiments/data/sp500_pct_returns.parquet``, so this check reproduces offline;
+``experiments/fetch_sp500.py`` is only for refreshing that snapshot.
+
 Usage:
-    uv run python experiments/fetch_sp500.py    # once, to download the data
     uv run python experiments/validate_exact.py
 """
 

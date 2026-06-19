@@ -1,6 +1,7 @@
 """Empirical CLA experiment on real S&P 500 returns.
 
-Loads the daily-return matrix produced by ``experiments/fetch_sp500.py`` and:
+Loads the frozen daily-return matrix committed at
+``experiments/data/sp500_pct_returns.parquet`` and:
 
 1. traces the entire long-only efficient frontier of the full universe from the
    full-history sample covariance (the dense backend), and times a rank-K
@@ -10,8 +11,11 @@ Loads the daily-return matrix produced by ``experiments/fetch_sp500.py`` and:
 
 Writes the real-data frontier figure to ``docs/paper/real_frontier.pdf``.
 
+The return matrix is a frozen snapshot committed to the repository, so this
+experiment reproduces deterministically and offline. ``experiments/fetch_sp500.py``
+is only needed to refresh that snapshot from live sources, not to run this script.
+
 Usage:
-    uv run python experiments/fetch_sp500.py    # once, to download the data
     uv run python experiments/frontier_real.py
 """
 
