@@ -107,7 +107,13 @@ structure is genuinely low-rank. Second, a \emph{unification}: the CLA is the
 one-parameter specialisation of multi-parametric quadratic programming and shares
 its mechanics with the LARS/LASSO homotopy of statistical learning. Third, an
 \emph{open, tested, and benchmarked implementation}, with event logic hardened
-against degeneracy and floating-point noise.
+against degeneracy and floating-point noise. This hardening is bounded, not total:
+near-degenerate problems complete by projecting sub-tolerance round-off back onto
+the feasible set, but a numerically rank-deficient free block, and a degenerate
+maximum-return vertex under a general equality system, are declined with a
+diagnosis rather than mis-solved, and the lowest-index tie-break, robust on the
+degenerate cases we test, is not proven to cover every adversarial tie-heavy
+instance.
 \end{abstract}
 
 \tableofcontents
@@ -199,8 +205,14 @@ row (\S\ref{sec:lars}), so this generality costs the box-only problem nothing.
 We do \emph{not} claim the fastest dense large-scale solve
 (\S\ref{sec:bailey}); near-degenerate problems are handled by projecting the
 sub-tolerance round-off they produce back onto the feasible set
-(\S\ref{sec:empirical}), and a genuinely rank-deficient free block is the one
-case the algorithm declines rather than solve.
+(\S\ref{sec:empirical}), while two cases are declined with an actionable diagnosis
+rather than mis-solved: a numerically rank-deficient free block
+(\S\ref{sec:empirical}), and a degenerate maximum-return vertex under a general
+equality system, where the free set is too small to span the constraints
+(\S\ref{sec:bailey}). The lowest-index tie-break (\S\ref{sec:bland}) keeps the
+trace deterministic on the degenerate problems we test but is not proven to defuse
+every adversarial tie-heavy or very large instance; tracing through these declined
+cases is left to future work.
 
 The accompanying \texttt{cvxcla}
 package\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} provides the
