@@ -9,10 +9,13 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from .builder import ProblemBuilder
 
 from .first import first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
@@ -111,6 +114,26 @@ class CLA:
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5  # pragma: no mutate
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
+
+    @classmethod
+    def problem(cls, mean: NDArray[np.float64], covariance: NDArray[np.float64] | QuadraticForm) -> "ProblemBuilder":
+        """Start a fluent :class:`cvxcla.builder.ProblemBuilder` for this problem.
+
+        A readability convenience over the explicit constructor: chain
+        ``.long_only()``/``.budget()``/``.equality()``/``.inequality()`` and finish
+        with ``.trace()``. The builder maps one-to-one onto the constructor
+        arguments and adds no modelling power.
+
+        Args:
+            mean: Vector of expected returns of length ``n``.
+            covariance: Covariance matrix or ``QuadraticForm`` backend.
+
+        Returns:
+            A ``ProblemBuilder`` ready to accept constraints.
+        """
+        from .builder import ProblemBuilder
+
+        return ProblemBuilder(mean, covariance)
 
     @cached_property
     def covariance_operator(self) -> QuadraticForm:
