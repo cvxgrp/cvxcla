@@ -19,6 +19,13 @@ from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
+# A genuinely rank-deficient free block has a reciprocal condition number at
+# round-off level (~1e-16); a well-posed or merely near-degenerate block sits
+# many orders above it (>= ~1e-4 across the degeneracy sweep in
+# experiments/degeneracy_boundary.py). The 1e-12 cut sits in the wide gap between
+# the two and is the conventional numerical-singularity scale.
+_RCOND_FLOOR = 1e-12  # pragma: no mutate
+
 
 class _Segment(NamedTuple):
     """The affine critical-line segment valid at one turning point.
@@ -141,6 +148,29 @@ class CLA:
     def dimension(self) -> int:
         """Number of assets ``n`` (the problem dimension for the path tracer)."""
         return len(self.mean)
+
+    @cached_property
+    def _free_blocks_well_conditioned(self) -> bool:
+        """Whether every free-block solve along the trace is numerically safe.
+
+        Decided once, up front. By Cauchy's interlacing theorem every principal
+        submatrix of the symmetric PSD covariance is at least as well conditioned
+        as the whole matrix -- deleting rows/columns cannot decrease the smallest
+        eigenvalue nor increase the largest -- so the reciprocal condition number
+        of any free block is ``>=`` that of the full covariance. Hence if the full
+        covariance clears the singularity floor, no free block encountered along
+        the trace can be singular, and the per-turning-point conditioning guard in
+        :meth:`_emit` is provably never triggered. We then skip it, paying one
+        ``rcond`` evaluation here instead of one at every turning point (the latter
+        is a full eigendecomposition of the free block, as costly as the KKT solve,
+        so it otherwise dominates the trace).
+
+        When the full covariance is itself near-singular (for example a sample
+        covariance from fewer observations than assets) this is ``False`` and the
+        per-step guard in :meth:`_emit` runs unchanged, preserving the degeneracy
+        diagnosis exactly.
+        """
+        return self.covariance_operator.rcond_free(np.ones(self.dimension, dtype=bool)) >= _RCOND_FLOOR
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
@@ -585,33 +615,39 @@ class CLA:
         BLAS/LAPACK build, the conditioning is deterministic and portable, so the
         completed-vs-declined boundary is the same on every platform.
 
+        The per-turning-point conditioning check is skipped entirely when the full
+        covariance is well conditioned: by interlacing no free block can then be
+        singular, so the check is provably redundant (see
+        :attr:`_free_blocks_well_conditioned`). It runs only when the full
+        covariance is itself near-singular, which is exactly the regime that can
+        produce an untrustworthy free-block solve.
+
         Raises:
             ValueError: With a degeneracy-specific message when the free-asset
                 block is numerically singular (an unreliable solve); otherwise
                 propagates nothing.
         """
-        # A genuinely rank-deficient free block has a reciprocal condition number
-        # at round-off level (~1e-16); a well-posed or merely near-degenerate
-        # block sits many orders above it (>= ~1e-4 across the degeneracy sweep in
-        # experiments/degeneracy_boundary.py). The 1e-12 cut sits in the wide gap
-        # between the two and is the conventional numerical-singularity scale.
-        rcond_floor = 1e-12  # pragma: no mutate
-        rcond = self.covariance_operator.rcond_free(free)
-        if rcond < rcond_floor:
-            n_free = int(np.count_nonzero(free))
-            msg = (
-                f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
-                f"(free-set size {n_free}): the free-asset covariance block is "
-                f"numerically singular (reciprocal condition number {rcond:.2g}), "
-                "so its solve is unreliable and the turning point cannot be "
-                "trusted. The trace was stopped rather than risk silently "
-                "returning a suboptimal frontier. This happens when the free set "
-                "grows past the covariance rank (for example a sample covariance "
-                "from far fewer days than assets). Use a well-conditioned, "
-                "full-rank estimate (ample history), or a FactorCovariance backend "
-                "(diagonal-plus-low-rank), which is positive definite by construction."
-            )
-            raise ValueError(msg)
+        # When the full covariance clears the floor, interlacing guarantees every
+        # free block does too, so the per-step guard can never fire -- skip it and
+        # the costly per-step rcond. Only a near-singular full covariance needs the
+        # check, and there it runs exactly as before.
+        if not self._free_blocks_well_conditioned:
+            rcond = self.covariance_operator.rcond_free(free)
+            if rcond < _RCOND_FLOOR:
+                n_free = int(np.count_nonzero(free))
+                msg = (
+                    f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
+                    f"(free-set size {n_free}): the free-asset covariance block is "
+                    f"numerically singular (reciprocal condition number {rcond:.2g}), "
+                    "so its solve is unreliable and the turning point cannot be "
+                    "trusted. The trace was stopped rather than risk silently "
+                    "returning a suboptimal frontier. This happens when the free set "
+                    "grows past the covariance rank (for example a sample covariance "
+                    "from far fewer days than assets). Use a well-conditioned, "
+                    "full-rank estimate (ample history), or a FactorCovariance backend "
+                    "(diagonal-plus-low-rank), which is positive definite by construction."
+                )
+                raise ValueError(msg)
         # Full-rank regime: the box violation is sub-tolerance round-off in the
         # covariance's flat directions, so project the candidate back onto the
         # feasible set and let the trace continue.
