@@ -13,7 +13,8 @@ rank_scaling                        Figure 3  (rank_scaling.pdf) + Table 2
 validate_exact                      Section 10.5 exactness numbers
 frontier_real                       Figure 4  (real_frontier.pdf)
 degeneracy_boundary                 Figure 5  (degeneracy.pdf)
-lasso_path                          Figure 6  (lasso_path.pdf) + Section 11 LASSO check
+clarabel_baseline                   Figure 6  (clarabel_baseline.pdf) + Section 10 baseline
+lasso_path                          Figure 7  (lasso_path.pdf) + Section 11 LASSO check
 ==================================  ==========================================
 
 The S&P 500 input is the frozen snapshot committed at
@@ -52,7 +53,8 @@ STEPS: list[tuple[str, str, bool]] = [
     ("validate_exact", "Section 10.5 exactness numbers", False),
     ("frontier_real", "Figure 4 (real_frontier.pdf)", False),
     ("degeneracy_boundary", "Figure 5 (degeneracy.pdf)", False),
-    ("lasso_path", "Figure 6 (lasso_path.pdf) + Section 11 LASSO check", False),
+    ("clarabel_baseline", "Figure 6 (clarabel_baseline.pdf)", True),
+    ("lasso_path", "Figure 7 (lasso_path.pdf) + Section 11 LASSO check", False),
 ]
 
 
