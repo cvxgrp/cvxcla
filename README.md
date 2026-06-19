@@ -248,45 +248,6 @@ covariance = FactorCovariance(
 See the [factor backend documentation](https://www.cvxgrp.org/cvxcla/factor/)
 for the protocol, the math, and benchmarks against the dense path.
 
-## 📚 Literature and Implementations
-
-The package includes implementations based on several key papers:
-
-### 📝 Niedermayer and Niedermayer
-
-They suggested a method to avoid the expensive inversion
-of the covariance matrix in [Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm).
-Our testing shows that in Python, this approach is not significantly
-faster than explicit matrix inversion using LAPACK via `numpy.linalg.inv`.
-
-### 📝 Bailey and Lopez de Prado
-
-We initially started with their code published
-in [An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
-We've made several improvements:
-
-- Using boolean numpy arrays to indicate whether a weight is free or blocked
-- Rewriting the computation of the first turning point
-- Isolating the computation of λ and weight updates to make them testable
-- Using modern and immutable dataclasses throughout
-
-Our updated implementation is included in the tests but not part of cvxcla package.
-We use it to verify our results and include it for educational purposes.
-
-### 📝 Markowitz et al
-
-In
-[Avoiding the Downside: A Practical Review of the Critical Line Algorithm for Mean-Semivariance Portfolio Optimization](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf),
-Markowitz and researchers from Hudson Bay Capital Management and Constantia Capital
-present a step-by-step tutorial.
-
-We address a problem they overlooked: after finding the first starting point,
-all variables might be blocked. We enforce that one variable
-labeled as free (even if it sits on a boundary) to avoid a singular matrix.
-
-Rather than using their sparse matrix construction, we bisect the
-weights into free and blocked parts and use a linear solver for the free part only.
-
 ## 🧪 Testing
 
 Run the test suite with:
