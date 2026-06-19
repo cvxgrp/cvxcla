@@ -43,10 +43,12 @@ The Markowitz problem is a quadratic program parametrized by a return target λ:
 
 ```
 min  wᵀΣw - λ · μᵀw
-s.t. Aw = b,  lb ≤ w ≤ ub
+s.t. Aw = b,  Gw ≤ h,  lb ≤ w ≤ ub
 ```
 
-As λ sweeps from ∞ (maximize return) down to 0 (minimize variance), the solution
+where `Aw = b` are linear equalities (the budget, sector/factor neutrality, …) and
+`Gw ≤ h` are linear inequalities (group or sector exposure caps; a `≥` floor is the
+negated row). As λ sweeps from ∞ (maximize return) down to 0 (minimize variance), the solution
 traces the entire efficient frontier. The key insight is that **between consecutive
 events, the optimal weights are a linear function of λ**:
 
@@ -68,16 +70,25 @@ three steps:
    - a **free** asset hits its bound (leaves the free set), or
    - a **blocked** asset's KKT multiplier changes sign (enters the free set).
 
-3. **Update** the active set (exactly one asset changes status) and repeat until λ ≤ 0.
+   General inequality rows `Gw ≤ h` add the row analogue of these two events: an
+   inactive row becomes binding when its slack reaches zero, and an active row is
+   released when its multiplier reaches zero. An active row is carried through the
+   same block-eliminated solve as an extra equality row, so the structure is
+   preserved.
 
-Because only one asset changes per step and each step requires only a single linear
-solve, the algorithm traces the full frontier cheaply and exactly — no approximation
-needed.
+3. **Update** the active set (exactly one asset or constraint row changes status) and
+   repeat until λ ≤ 0.
+
+Because only one coordinate changes per step and each step requires only a single
+linear solve, the algorithm traces the full frontier cheaply and exactly — no
+approximation needed.
 
 ## ✨ Features
 
 - Efficient computation of the entire efficient frontier
-- Support for linear constraints and bounds on portfolio weights
+- Box bounds on every weight, plus general linear **equality** constraints
+  `Aw = b` (budget, dollar-neutral, sector/factor neutrality) and general linear
+  **inequality** constraints `Gw ≤ h` (group or sector exposure caps)
 - Factor covariance backend: exact frontiers for diagonal-plus-low-rank
   covariances (factor models, RMT-cleaned matrices) in O(nk) memory via the
   Woodbury identity
@@ -174,6 +185,46 @@ For visualization, you can plot the efficient frontier:
 fig = frontier.plot(volatility=True)
 fig.show()
 ```
+
+### Group and sector constraints
+
+Pass `g` and `h` to add general inequality rows `Gw ≤ h` on top of the box bounds and
+the budget. For example, to cap the combined weight of the first three assets (a
+sector) at 40%:
+
+```python
+import numpy as np
+from cvxcla import CLA
+
+n = 10
+rng = np.random.default_rng(42)
+mean = rng.standard_normal(n)
+factor = rng.standard_normal((n, n))
+covariance = factor @ factor.T  # symmetric positive definite
+
+# sum of the first three weights ≤ 0.40
+g = np.zeros((1, n))
+g[0, :3] = 1.0
+h = np.array([0.40])
+
+cla = CLA(
+    mean=mean,
+    covariance=covariance,
+    lower_bounds=np.zeros(n),
+    upper_bounds=np.full(n, 0.35),
+    a=np.ones((1, n)),  # fully invested
+    b=np.ones(1),
+    g=g,                # inequality matrix  G  (p x n)
+    h=h,                # inequality vector  h  (p,)
+)
+
+# every turning point now satisfies the sector cap
+assert all(tp.weights[:3].sum() <= 0.40 + cla.tol for tp in cla.turning_points)
+```
+
+`g`/`h` default to `None`, so omitting them recovers the equality-only problem
+unchanged. Stack multiple rows in `g` for several caps at once, and express a `≥`
+floor by negating a row (`-Gw ≤ -h`).
 
 ### Factor models at scale
 
