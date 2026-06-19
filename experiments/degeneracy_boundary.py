@@ -105,10 +105,10 @@ def _trace(t_obs: int) -> SweepResult:
     worst = [0.0]
     original_emit = CLA._emit
 
-    def recording_emit(self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray) -> None:
+    def recording_emit(self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray, active_ineq: np.ndarray) -> None:
         if np.any(free):
             worst[0] = max(worst[0], float(np.linalg.cond(cov[np.ix_(free, free)])))
-        original_emit(self, lamb, weights, free)
+        original_emit(self, lamb, weights, free, active_ineq)
 
     cla_module.CLA._emit = recording_emit
     try:

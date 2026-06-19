@@ -32,6 +32,7 @@
 \newcommand{\Sig}{\Sigma}
 \newcommand{\F}{\mathcal{F}}        % free set
 \newcommand{\B}{\mathcal{B}}        % blocked set
+\newcommand{\Sset}{\mathcal{S}}     % active inequality-row set
 \newcommand{\lb}{\ell}              % lower bound
 \newcommand{\ub}{u}                 % upper bound
 \newcommand{\trans}{^{\mathsf{T}}}
@@ -185,24 +186,31 @@ box bounds on the weights.
 
 Let $w\in\R^n$ be the vector of portfolio weights, $\mu\in\R^n$ the expected returns,
 $\Sig\in\R^{n\times n}$ the (symmetric, positive semidefinite) covariance matrix,
-$A\in\R^{m\times n}$ and $b\in\R^m$ the equality constraints, and $\lb,\ub\in\R^n$ the
-lower and upper bounds. The implementation traces the frontier through the
-\emph{return-parametrised} quadratic program
+$A\in\R^{m\times n}$ and $b\in\R^m$ the equality constraints, $G\in\R^{p\times n}$ and
+$h\in\R^p$ the inequality constraints, and $\lb,\ub\in\R^n$ the lower and upper bounds.
+The implementation traces the frontier through the \emph{return-parametrised}
+quadratic program
 \begin{equation}
 \label{eq:qp}
 \begin{aligned}
 \min_{w\in\R^n}\quad & \tfrac12\, w\trans \Sig\, w \;-\; \lambda\,\mu\trans w \\
 \text{subject to}\quad & A w = b, \\
+& G w \le h, \\
 & \lb \le w \le \ub,
 \end{aligned}
 \end{equation}
 where $\lambda \ge 0$ is a scalar that weights expected return against variance. The
 canonical instance has a single equality constraint, the budget constraint
-$\mathbf{1}\trans w = 1$ (so $A = \mathbf{1}\trans$ and $b = 1$), but
-\eqref{eq:qp} and the implementation admit any $m$ linear equalities: the budget is the
-single all-ones row, and a general $A$ (weighted, or $m > 1$ rows) is handled by a
-linear-programming first turning point (\S\ref{sec:first}) followed by the same
-turning-point loop.
+$\mathbf{1}\trans w = 1$ (so $A = \mathbf{1}\trans$ and $b = 1$), and no inequality
+rows, but \eqref{eq:qp} and the implementation admit any $m$ linear equalities and any
+$p$ linear inequalities: the budget is the single all-ones row, a general $A$
+(weighted, or $m > 1$ rows) is handled by a linear-programming first turning point
+(\S\ref{sec:first}), and a general $G$ (a group- or sector-exposure cap, say) is
+handled by the bordered turning-point loop of \S\ref{sec:lars}. A $\ge$ constraint is
+expressed by negating its row, so $G w \le h$ loses no generality. The box bounds
+$\lb \le w \le \ub$ are themselves $2n$ inequalities, but per-variable ones, and the
+method treats them separately and more cheaply (\S\ref{sec:events}); $G w \le h$ is for
+the rows that couple several assets at once.
 
 As $\lambda$ decreases from $+\infty$ to $0$, the optimiser of \eqref{eq:qp} moves from
 the maximum expected-return portfolio (subject to the constraints) to the global
@@ -214,18 +222,29 @@ frontier.
 At a fixed $\lambda$ the program \eqref{eq:qp} is convex, so the Karush--Kuhn--Tucker
 (KKT) conditions are necessary and sufficient. Partition the assets into a
 \emph{free} set $\F$ (weights strictly inside their bounds) and a \emph{blocked} set
-$\B = \F^{c}$ (weights pinned at a bound, $w_i \in \{\lb_i,\ub_i\}$). For the free
-assets the stationarity condition holds with no bound multiplier:
+$\B = \F^{c}$ (weights pinned at a bound, $w_i \in \{\lb_i,\ub_i\}$), and let
+$\Sset \subseteq \{1,\dots,p\}$ index the \emph{active} inequality rows, those held at
+equality $G_{\Sset}\, w = h_{\Sset}$ (the remaining rows are slack and carry a zero
+multiplier by complementarity). For the free assets the stationarity condition holds
+with no bound multiplier:
 \begin{equation}
 \label{eq:kkt}
-\Sig_{\F\F}\, w_\F + \Sig_{\F\B}\, w_\B + A_\F\trans \nu \;=\; \lambda\, \mu_\F,
+\Sig_{\F\F}\, w_\F + \Sig_{\F\B}\, w_\B + A_\F\trans \nu + G_{\Sset\F}\trans \eta
+  \;=\; \lambda\, \mu_\F,
 \qquad
 A_\F\, w_\F + A_\B\, w_\B \;=\; b,
+\qquad
+G_{\Sset\F}\, w_\F + G_{\Sset\B}\, w_\B \;=\; h_{\Sset},
 \end{equation}
-where $\nu\in\R^m$ is the multiplier of the equality constraints and the subscripts
-select the free/blocked rows and columns. The blocked weights $w_\B$ are known (they
-sit on $\lb$ or $\ub$), so \eqref{eq:kkt} is a linear system in the unknowns
-$(w_\F,\nu)$.
+where $\nu\in\R^m$ is the multiplier of the equality constraints, $\eta\in\R^{|\Sset|}$
+the (nonnegative) multiplier of the active inequality rows, and the subscripts select
+the free/blocked rows and columns. The blocked weights $w_\B$ are known (they sit on
+$\lb$ or $\ub$), so \eqref{eq:kkt} is a linear system in the unknowns
+$(w_\F,\nu,\eta)$. An active inequality row enters this system exactly as an equality
+row does: stacking $C = [\,A;\,G_{\Sset}\,]$ recovers the equality-only form with $A$
+replaced by $C$, which is precisely what lets the same reduced solve serve both
+(\S\ref{sec:lars}). With no active inequality rows ($\Sset = \varnothing$) the system
+collapses to the equality-only KKT.
 
 \subsection{Piecewise-linearity: the affine segment}
 
@@ -689,13 +708,16 @@ solve, with the equality constraints carried by the $m \times m$ Schur complemen
 
 \item \textbf{Constraint generality.} The reference implementation targets box
 bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
-an arbitrary set of $m$ linear equality constraints $A w = b$; the budget is just
-the case $A = \mathbf{1}\trans$, $b = 1$, and the Schur complement scales to
-$m > 1$ at negligible cost. The turning-point loop is general in $A$ throughout; the
-only constraint-specific step is the maximum-return vertex that seeds it, found by the
-greedy fill for an all-ones budget and by a linear program (HiGHS, via
-\texttt{scipy}) for a general $A$ (\S\ref{sec:first}). This covers leverage,
-dollar-neutral long/short books, and multi-row neutralities (sector, factor). One
+an arbitrary set of $m$ linear equality constraints $A w = b$ and $p$ linear
+inequality constraints $G w \le h$; the budget is just the case
+$A = \mathbf{1}\trans$, $b = 1$, $p = 0$, and the Schur complement scales to
+$m + |\Sset| > 1$ active rows at negligible cost. The turning-point loop is general
+in $A$ throughout, and an active inequality row is carried as an extra row of that
+Schur complement (\S\ref{sec:lars}); the only constraint-specific step is the
+maximum-return vertex that seeds it, found by the greedy fill for an all-ones budget
+and by a linear program (HiGHS, via \texttt{scipy}) for a general $A$ or any $G$
+(\S\ref{sec:first}). This covers leverage, dollar-neutral long/short books, multi-row
+neutralities (sector, factor), and group- or sector-exposure caps. One
 caveat mirrors the degeneracy guarantee of \S\ref{sec:empirical}: the general-$A$
 path assumes a well-conditioned first vertex, where the free set has the $m$ assets
 the equalities require. At a \emph{degenerate} vertex (a basic asset pinned exactly
@@ -1143,20 +1165,36 @@ control law is precomputed as a piecewise-affine function of the state by mpQP
 path-following \citep{bemporad2002, tondel2003}. The turning points of the CLA are
 the breakpoints of that map for the single risk-aversion parameter, and the event
 logic of \S\ref{sec:events} is the one-dimensional specialisation of the
-critical-region traversal used there. What the CLA does \emph{not} attempt, and what
-the general mpQP machinery handles, is arbitrary polyhedral constraints: its active
-set partitions the \emph{variables} into free and box-blocked, never a set of
-general inequality rows, so the reduced system is always a principal submatrix of
-$\Sig$ (\S\ref{sec:operators}) rather than a bordered KKT system. That restriction
-is exactly what keeps each step a single symmetric positive-definite solve, and it
-is the portfolio structure the method exploits. The natural reflex of turning an
-inequality $A w \ge b$ into an equality $A w - s = b$ with a slack $s \ge 0$ does
-not recover this structure: the slack carries no curvature in the objective, so the
-augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only positive \emph{semi}-definite,
-and the reduced solve is singular whenever a slack is free (which is precisely when
-its inequality is inactive). Admitting general inequalities therefore requires the
-bordered KKT system above and an event for each row activating or releasing, not a
-change of variables.
+critical-region traversal used there. The general mpQP machinery also handles
+arbitrary polyhedral constraints, and \texttt{cvxcla} admits them too, through the
+inequality rows $G w \le h$ of \eqref{eq:qp}. The mechanism is the row analogue of
+the box active set. A box bound is a per-variable inequality: an asset is free or
+blocked, and the events are a free weight reaching a bound or a blocked multiplier
+releasing it. A row of $G w \le h$ is a per-row inequality: it is active (held at
+$g_i\trans w = h_i$) or slack, and the events are a slack row's residual reaching
+zero, so it activates, or an active row's multiplier reaching zero, so it releases.
+Both kinds of event are the same ``smallest positive ratio to the next breakpoint''
+along the affine segment; the row events are simply scanned over the $p$ rows of $G$
+in addition to the $n$ box coordinates (\S\ref{sec:events}).
+
+Crucially, this does \emph{not} sacrifice the structure that the equality-only case
+enjoys. An active inequality row enters the reduced KKT system \eqref{eq:kkt} exactly
+as an equality row does: stacking $C = [\,A;\,G_{\Sset}\,]$ over the active rows
+recovers the equality-only solve with $A$ replaced by $C$, so each step is still a
+solve against the free covariance block $\Sig_{\F\F}$ (through the operator interface
+of \S\ref{sec:operators}, never an $n\times n$ matrix) feeding an
+$(m+|\Sset|)\times(m+|\Sset|)$ Schur complement. The box bounds remain a separate,
+cheaper per-variable active set rather than being folded into $G$, so the common
+box-only problem pays nothing for the generalisation.
+
+What does \emph{not} work, and is worth recording because it is the natural first
+reflex, is turning an inequality into an equality with a slack. Writing
+$g_i\trans w + s_i = h_i$ with $s_i \ge 0$ leaves the slack with no curvature in the
+objective, so the augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only positive
+\emph{semi}-definite and the reduced solve is singular whenever a slack is free
+(precisely when its inequality is inactive). Admitting general inequalities therefore
+goes through the bordered system above and a per-row event, not a change of
+variables, which is exactly what the implementation does.
 
 The LASSO solves, for a response $y$ and design matrix $X$,
 \[
@@ -1200,7 +1238,8 @@ The correspondence is not a coincidence. \citet{rosset2007} characterise when a
 regularised solution path is piecewise linear: a quadratic (or piecewise-quadratic)
 loss together with a polyhedral, i.e.\ piecewise-linear, constraint or penalty
 suffices. Both problems meet the criterion. The CLA minimises a quadratic objective
-\eqref{eq:qp} over a polyhedral feasible set (box bounds and linear equalities); the
+\eqref{eq:qp} over a polyhedral feasible set (box bounds, linear equalities, and
+linear inequalities); the
 LASSO minimises a quadratic loss under a polyhedral ($\ell_1$) penalty. In each case
 the KKT conditions are affine in the parameter, the system matrix is constant while
 the active set is fixed, and the active set can change only at the discrete
