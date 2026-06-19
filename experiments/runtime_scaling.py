@@ -21,11 +21,21 @@ each step --- so it is reported for context, not as a clean vectorisation contro
 All implementations are timed with the same protocol --- the median of REPEATS
 repetitions --- so the comparison is apples-to-apples.
 
+As a further point of reference -- the route a general convex-optimisation user
+would take rather than another critical-line implementation -- we optionally time
+reconstructing the frontier with Clarabel, the interior-point conic solver CVXPY
+selects by default, solving the return-parametrised QP at each of n lambda values
+spanning the frontier (the same native-API sweep as ``clarabel_baseline.py``). The
+Clarabel curve is drawn on the figure for context only; it is discussed in the
+paper's Clarabel-baseline section (a QP swept over lambda), not the runtime-vs-size
+text.
+
 Prints a table and, when matplotlib is available, writes docs/paper/scaling.pdf
 (log-log runtime vs n for each implementation).
 
 Usage:
-    uv run --with pyportfolioopt python experiments/runtime_scaling.py
+    uv run --with pyportfolioopt --with clarabel --with scipy --with matplotlib \
+        python experiments/runtime_scaling.py
 """
 
 from __future__ import annotations
@@ -130,10 +140,53 @@ def pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, float, floa
     return (n_pts, *stats(times))
 
 
+def clarabel_trace(dense: np.ndarray, problem: dict) -> tuple[int, float, float, float] | None:
+    """Time reconstructing the frontier with Clarabel: n QP solves over a lambda-grid.
+
+    Mirrors ``clarabel_baseline.py`` -- the interior-point conic solver CVXPY
+    selects by default, driven through its native API (no modelling layer), solving
+    the return-parametrised QP ``min 1/2 w'Sigma w - lambda mu'w`` s.t. ``1'w=1``,
+    ``0<=w<=1`` at each of n lambda values spanning the frontier's lambda-range. The
+    whole sweep is timed (median of REPEATS) against a single trace, since that is
+    the honest cost of recovering the frontier with a general solver. Returns
+    (grid points, median, min, max) seconds, or None when Clarabel/scipy are absent.
+    """
+    try:
+        import clarabel
+        from scipy import sparse
+    except ImportError:
+        return None
+    n = dense.shape[0]
+    mean = problem["mean"]
+    # lambda-range from a single cvxcla trace: the finite turning points are the
+    # frontier's lambda breakpoints, so [0, lam_max] spans the whole frontier.
+    cla = CLA(covariance=dense, **problem)
+    lam_max = max(tp.lamb for tp in cla.turning_points if np.isfinite(tp.lamb))
+    lams = np.linspace(0.0, lam_max, n)
+    p = sparse.triu(dense, format="csc")
+    a = sparse.vstack([np.ones((1, n)), sparse.eye(n), -sparse.eye(n)], format="csc")
+    b = np.concatenate([[1.0], np.ones(n), np.zeros(n)])
+    cones = [clarabel.ZeroConeT(1), clarabel.NonnegativeConeT(n), clarabel.NonnegativeConeT(n)]
+    settings = clarabel.DefaultSettings()
+    settings.verbose = False
+
+    def solve_grid() -> None:
+        """One full lambda-sweep: a fresh solver per lambda (no warm start assumed)."""
+        for lam in lams:
+            clarabel.DefaultSolver(p, -lam * mean, a, b, cones, settings).solve()
+
+    times = []
+    for _ in range(REPEATS):
+        start = time.perf_counter()
+        solve_grid()
+        times.append(time.perf_counter() - start)
+    return (len(lams), *stats(times))
+
+
 def main() -> None:
     """Run the scaling sweep, print a table, and write the figure."""
-    ns, dense_times, factor_times, ppo_times, inv_times, points = [], [], [], [], [], []
-    dense_band, factor_band, ppo_band, inv_band = [], [], [], []
+    ns, dense_times, factor_times, ppo_times, inv_times, clar_times, points = [], [], [], [], [], [], []
+    dense_band, factor_band, ppo_band, inv_band, clar_band = [], [], [], [], []
     for n in SIZES:
         rng = np.random.default_rng(SEED)
         dense, factor, problem = make_problem(rng, n, N_FACTORS)
@@ -147,21 +200,25 @@ def main() -> None:
             msg = f"inverse baseline disagrees at n={n}: {inv[0]} vs {n_pts}"
             raise RuntimeError(msg)
         ppo = pypfopt_trace(dense, problem["mean"])
+        clar = clarabel_trace(dense, problem)
         ns.append(n)
         points.append(n_pts)
         dense_times.append(t_dense)
         factor_times.append(t_factor)
         ppo_times.append(ppo[1] if ppo else None)
         inv_times.append(inv[1] if inv else None)
+        clar_times.append(clar[1] if clar else None)
         dense_band.append((d_lo, d_hi))
         factor_band.append((f_lo, f_hi))
         ppo_band.append((ppo[2], ppo[3]) if ppo else None)
         inv_band.append((inv[2], inv[3]) if inv else None)
+        clar_band.append((clar[2], clar[3]) if clar else None)
         inv_str = f"  inverse={inv[1] * 1e3:9.1f} ms" if inv else "  inverse=n/a"
         ppo_str = f"  pypfopt={ppo[1] * 1e3:9.1f} ms (pts={ppo[0]})" if ppo else "  pypfopt=n/a"
+        clar_str = f"  clarabel={clar[1] * 1e3:9.1f} ms ({clar[0]} solves)" if clar else "  clarabel=n/a"
         print(
             f"n={n:4d}  points={n_pts:4d}  dense={t_dense * 1e3:8.1f} ms  "
-            f"factor={t_factor * 1e3:8.1f} ms  speedup={t_dense / t_factor:5.2f}x{inv_str}{ppo_str}"
+            f"factor={t_factor * 1e3:8.1f} ms  speedup={t_dense / t_factor:5.2f}x{inv_str}{ppo_str}{clar_str}"
         )
 
     # The clean comparison is the incremental-inverse baseline vs the dense
@@ -192,6 +249,8 @@ def main() -> None:
         print(f"inverse empirical exponent p (time ~ n^p): {slope([t for t in inv_times if t]):.2f}")
     if all(t is not None for t in ppo_times):
         print(f"pypfopt empirical exponent p (time ~ n^p): {slope([t for t in ppo_times if t]):.2f}")
+    if all(t is not None for t in clar_times):
+        print(f"clarabel empirical exponent p (time ~ n^p): {slope([t for t in clar_times if t]):.2f}")
 
     try:
         import matplotlib as mpl
@@ -218,6 +277,13 @@ def main() -> None:
         pt = [t for t in ppo_times if t is not None]
         band(ns, ppo_band, "#7f7f7f")
         ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA (Bailey--Lopez de Prado)")
+    if any(t is not None for t in clar_times):
+        # General-solver baseline: drawn here for context, discussed in the paper's
+        # Clarabel-baseline section (a QP swept over lambda), not the scaling text.
+        cn = [n for n, t in zip(ns, clar_times, strict=True) if t is not None]
+        ct = [t for t in clar_times if t is not None]
+        band(ns, clar_band, "#ff7f0e")
+        ax.loglog(cn, ct, "-v", ms=4, color="#ff7f0e", label="Clarabel, $n$ QP solves over a $\\lambda$-grid")
     if any(t is not None for t in inv_times):
         vn = [n for n, t in zip(ns, inv_times, strict=True) if t is not None]
         vt = [t for t in inv_times if t is not None]
