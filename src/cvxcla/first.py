@@ -149,9 +149,13 @@ def first_vertex_lp(
     # matrix" error downstream.
     c = np.vstack([a, g[active_ineq]])
     mc = c.shape[0]
-    if np.linalg.matrix_rank(c[:, free]) < mc:
+    n_free = int(np.count_nonzero(free))
+    # rank(C[:, free]) <= min(mc, n_free), so fewer free assets than active rows
+    # is degenerate by itself. Testing this first also keeps matrix_rank off a
+    # zero-column block, whose empty singular-value reduction raises on numpy 2.0.
+    if n_free < mc or np.linalg.matrix_rank(c[:, free]) < mc:
         msg = (
-            f"The maximum-return vertex is degenerate (free-set size {int(np.count_nonzero(free))}, "
+            f"The maximum-return vertex is degenerate (free-set size {n_free}, "
             f"active constraints {mc}): a basic asset sits exactly on a box bound, so the free set "
             "does not span the active equality and inequality rows and the reduced KKT system is "
             "singular. Tracing a frontier from a degenerate first vertex is not yet supported; perturb "
