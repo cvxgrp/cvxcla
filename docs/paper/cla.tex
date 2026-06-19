@@ -1370,6 +1370,49 @@ threshold uncritical.}
 \label{fig:degeneracy}
 \end{figure}
 
+\subsection{A general-solver baseline: a QP swept over \texorpdfstring{$\lambda$}{lambda}}
+\label{sec:clarabel}
+
+The comparisons so far are against other critical-line implementations. The
+complementary question is how the exact trace compares to the route a general
+convex-optimisation user would actually take: hand the quadratic program
+\eqref{eq:qp} at a fixed $\lambda$ to a solver and sweep $\lambda$ to recover the
+frontier (\S\ref{sec:bailey}). We make this concrete with Clarabel
+\citep{clarabel}, the interior-point conic solver that CVXPY selects by default,
+driven through its \emph{native} Python API with no modelling layer in between, so
+the baseline carries no per-solve canonicalisation overhead and the comparison is
+as favourable to it as possible. For each universe we solve \eqref{eq:qp} at $n$
+values of $\lambda$ spanning the frontier (a grid as fine as the universe is large)
+and time the whole sweep against a single \texttt{cvxcla} trace
+(\srcfile{experiments/clarabel_baseline.py}{experiments/clarabel\_baseline.py}).
+
+Even with the modelling layer stripped away, the grid is slower at every size and
+the gap widens with $n$: from $\approx 1.7\times$ at $n=20$ to $\approx 59\times$ at
+$n=320$, where one \texttt{cvxcla} trace takes $\approx 0.12$~s and the $320$
+Clarabel solves take $\approx 7.4$~s ($\approx 23$~ms each). The sweep grows like
+$\approx n^{2.9}$ -- $n$ solves, each an interior-point QP whose own cost climbs
+with $n$ -- far steeper than the trace (Figure~\ref{fig:clarabel}). And the grid
+only \emph{samples} the frontier: each Clarabel solution matches the exact
+piecewise-linear frontier (read off \texttt{cvxcla}'s turning points by
+interpolation in $\lambda$, an independent exactness check alongside
+\S\ref{sec:exactness}) to the solver's tolerance, a maximum weight discrepancy of
+$\approx 4\times 10^{-3}$ at Clarabel's default settings, whereas the trace returns
+the frontier exactly and in full. The reading is the one of \S\ref{sec:bailey}: a
+general solver is the right tool for a \emph{single} risk target, but reconstructing
+the whole frontier by gridding is both slower and only approximate.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{clarabel_baseline.pdf}
+\caption{Time to obtain the frontier as a function of the number of assets $n$
+(log--log): a single exact \texttt{cvxcla} trace against reconstructing the frontier
+with $n$ Clarabel \citep{clarabel} QP solves over a $\lambda$-grid (the solver
+driven natively, no CVXPY layer). The grid sweep grows like $\approx n^{2.9}$ and is
+$\approx 59\times$ slower than the trace at $n=320$, and yields only an $n$-point
+sampling rather than the exact piecewise-linear frontier.}
+\label{fig:clarabel}
+\end{figure}
+
 \section{Connection to homotopy methods: least angle regression and the LASSO}
 \label{sec:lars}
 
@@ -1591,6 +1634,11 @@ R.~A. Martin.
 S.~Diamond and S.~Boyd.
 \newblock {CVXPY}: a {Python}-embedded modeling language for convex optimization.
 \newblock \emph{Journal of Machine Learning Research}, 17(83):1--5, 2016.
+
+\bibitem[Goulart and Chen(2024)]{clarabel}
+P.~J. Goulart and Y.~Chen.
+\newblock Clarabel: An interior-point solver for conic programs with quadratic objectives.
+\newblock arXiv:2405.12762, 2024.
 
 \bibitem[Boyd et~al.(2017)]{cvxportfolio}
 S.~Boyd, E.~Busseti, S.~Diamond, R.~N. Kahn, K.~Koh, P.~Nystrup, and J.~Speth.
