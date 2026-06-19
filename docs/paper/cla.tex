@@ -104,8 +104,9 @@ form, so no discretisation or repeated re-optimisation is required. It belongs t
 broad family of parametric quadratic-programming and active-set methods for the
 efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
 \citet{markowitz2000} give the canonical description and a reference implementation,
-while \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010} develop
-large-scale and active-set variants.
+and \citet{markowitz2021} a recent step-by-step review that also extends the method
+to mean--semivariance, while \citet{perold1984}, \citet{stein2008} and
+\citet{hirschberger2010} develop large-scale and active-set variants.
 
 When Markowitz designed the CLA, the structured covariance models that dominate modern
 portfolio construction did not yet exist; classical implementations therefore assume a
@@ -292,6 +293,13 @@ as free. The same greedy fill serves any single all-ones budget row $\mathbf{1}\
 dollar-neutral book ($b = 0$, with short positions admitted by a negative $\lb$) start
 from the same construction.
 
+Marking that last asset \emph{free} even when it lands exactly on a bound is
+deliberate: it guarantees the first turning point has at least one free asset, so the
+reduced KKT system is non-singular from the outset. The otherwise thorough
+step-by-step review of \citet{markowitz2021} does not address this case, in which
+every asset of the starting portfolio sits on a bound and the reduced solve would
+degenerate.
+
 For a general equality system $A w = b$ (weighted coefficients, or $m > 1$ rows such
 as a budget together with sector- or factor-neutrality) the greedy fill no longer
 applies, and the maximum-return vertex is instead the solution of the linear program
@@ -355,7 +363,11 @@ Back-substitution then gives the free part of the affine segment,
 while the blocked entries are fixed: $\alpha_\B = w_\B$ and $\beta_\B = 0$. The
 dominant cost is the multi-right-hand-side solve against the free block
 $\Sig_{\F\F}$; the Schur solve \eqref{eq:schur} is only $m\times m$, and for the
-standard budget constraint $m=1$, so it is a scalar division.
+standard budget constraint $m=1$, so it is a scalar division. Bisecting the weights
+into a free and a blocked part and solving only for the free block keeps every step
+a small dense solve of size $|\F|$, in contrast to assembling and factoring one
+large (and, in the mean--semivariance setting, sparse) KKT system over all
+variables, as the step-by-step construction of \citet{markowitz2021} does.
 
 \subsection{Reduced gradients for blocked assets}
 
@@ -1334,6 +1346,14 @@ H.~M. Markowitz.
 H.~M. Markowitz.
 \newblock \emph{Portfolio Selection: Efficient Diversification of Investments}.
 \newblock John Wiley \& Sons, New York, 1959.
+
+\bibitem[Markowitz et~al.(2021)]{markowitz2021}
+H.~Markowitz, D.~Starer, H.~Fram, and S.~Gerber.
+\newblock Avoiding the downside: A practical review of the critical line
+algorithm for mean--semivariance portfolio optimization.
+\newblock In \emph{Handbook of Applied Investment Research}, chapter~17. World
+Scientific, 2021.
+\newblock \url{https://doi.org/10.1142/9789811222634_0017}.
 
 \bibitem[Niedermayer and Niedermayer(2010)]{niedermayer2010}
 A.~Niedermayer and D.~Niedermayer.
