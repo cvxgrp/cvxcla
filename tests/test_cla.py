@@ -736,17 +736,20 @@ class TestCLAInternals:
         r_beta`` along the segment stays budget-feasible.
         """
         _, _, free_in, fixed = cla._active_set(cla.turning_points[0])
-        r_alpha, r_beta, gamma, delta = cla._solve_kkt(free_in, fixed)
+        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = cla._solve_kkt(free_in, fixed)
 
         np.testing.assert_allclose(cla.a @ r_alpha, cla.b, atol=1e-10)
         np.testing.assert_allclose(cla.a @ r_beta, np.zeros(cla.a.shape[0]), atol=1e-10)
         assert gamma.shape == cla.mean.shape
         assert delta.shape == cla.mean.shape
+        # No inequality rows on this fixture, so the multipliers are empty.
+        assert eta_alpha.shape == (0,)
+        assert eta_beta.shape == (0,)
 
     def test_event_ratios_shape_and_inactive_entries(self, cla):
         """The event matrix is (n, 4) and respects which events each asset can fire."""
         at_upper, at_lower, free_in, fixed = cla._active_set(cla.turning_points[0])
-        r_alpha, r_beta, gamma, delta = cla._solve_kkt(free_in, fixed)
+        r_alpha, r_beta, gamma, delta, _, _ = cla._solve_kkt(free_in, fixed)
         l_mat = cla._event_ratios(r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower)
 
         assert l_mat.shape == (cla.mean.size, 4)
@@ -950,3 +953,285 @@ class TestGeneralEqualityConstraints:
         assert np.all(projected >= -1e-9)
         assert np.all(projected <= 1.0 + 1e-9)
         assert np.allclose(a @ projected, b, atol=1e-7)
+
+
+class TestInequalityConstraints:
+    """General inequalities ``G w <= h`` (e.g. group- or sector-exposure caps).
+
+    An active inequality row enters the reduced KKT solve as an extra equality
+    row (the bordered system), and the events are the row analogue of the box
+    events: an inactive row's slack reaching zero activates it, an active row's
+    multiplier reaching zero releases it. These tests cover the activate and
+    release transitions, exactness against a reference QP solver (with the
+    inequality), multi-row caps, ``>=`` via negation, validation, and that the
+    equality-only problem is recovered exactly when no inequality is supplied.
+    """
+
+    @staticmethod
+    def _problem(n, seed):
+        """Return a random mean vector and a positive-definite covariance."""
+        rng = np.random.default_rng(seed)
+        lm = rng.standard_normal((n, n))
+        return rng.standard_normal(n), lm @ lm.T + 0.1 * np.eye(n)
+
+    @staticmethod
+    def _group_cap(n, cap):
+        """A single inequality row capping the first half of the assets at ``cap``."""
+        g = np.zeros((1, n))
+        g[0, : n // 2] = 1.0
+        return g, np.array([cap])
+
+    def _assert_feasible_monotone(self, cla, a, b, g, h, lower, upper):
+        """Every turning point is box/equality/inequality feasible; lambda decreases."""
+        weights = np.array([tp.weights for tp in cla.turning_points])
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert np.all(weights >= lower - cla.tol)
+        assert np.all(weights <= upper + cla.tol)
+        assert np.allclose(weights @ a.T, b, atol=1e-6)
+        assert np.all(weights @ g.T <= h + cla.tol)
+        assert np.all(np.diff(lambdas) <= cla.tol)
+
+    def _assert_optimal(self, cla, mean, cov, a, b, g, h, lower, upper):
+        """At sampled interior lambdas, the CLA point is no worse than a QP solve."""
+        from scipy.optimize import minimize
+
+        tps = cla.turning_points
+        lambdas = [tp.lamb for tp in tps]
+        weights = np.array([tp.weights for tp in tps])
+        x0 = tps[0].weights  # the max-return vertex is feasible
+        for frac in (0.2, 0.4, 0.6, 0.8):
+            i = int(frac * (len(tps) - 1))
+            lam = lambdas[i]
+            if not np.isfinite(lam) or lam <= 0:
+                continue
+            res = minimize(
+                lambda w, lam=lam: 0.5 * w @ cov @ w - lam * mean @ w,
+                x0=x0,
+                jac=lambda w, lam=lam: cov @ w - lam * mean,
+                method="SLSQP",
+                bounds=list(zip(lower, upper, strict=True)),
+                constraints=[
+                    {"type": "eq", "fun": lambda w: a @ w - b, "jac": lambda w: a},
+                    {"type": "ineq", "fun": lambda w: h - g @ w, "jac": lambda w: -g},
+                ],
+                options={"ftol": 1e-12, "maxiter": 1000},
+            )
+
+            def obj(w, lam=lam):
+                return 0.5 * w @ cov @ w - lam * mean @ w
+
+            assert obj(weights[i]) <= obj(res.x) + 1e-5
+
+    def test_cap_binds_throughout(self):
+        """A tight group cap that binds along the whole frontier (active every step)."""
+        n = 10
+        mean, cov = self._problem(n, 1)
+        lower, upper = np.zeros(n), np.full(n, 0.34)
+        g, h = self._group_cap(n, 0.5)
+        cla = CLA(
+            mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=np.ones((1, n)), b=np.ones(1), g=g, h=h
+        )
+        self._assert_feasible_monotone(cla, np.ones((1, n)), np.ones(1), g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, np.ones((1, n)), np.ones(1), g, h, lower, upper)
+        assert all(tp.active_ineq[0] for tp in cla.turning_points)
+
+    def test_enter_event(self):
+        """A cap that starts inactive at the max-return vertex and activates mid-trace."""
+        n = 10
+        mean, cov = self._problem(n, 3)
+        lower, upper = np.zeros(n), np.full(n, 0.34)
+        g, h = self._group_cap(n, 0.5)
+        a, b = np.ones((1, n)), np.ones(1)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+        active = [bool(tp.active_ineq[0]) for tp in cla.turning_points]
+        assert not active[0]  # inactive at the max-return vertex
+        assert any(active)  # an enter event activates it later
+        # the cap is tight exactly where it is recorded active
+        for tp in cla.turning_points:
+            if tp.active_ineq[0]:
+                assert np.isclose(g @ tp.weights, h, atol=1e-6)
+
+    def test_release_event(self):
+        """A cap that starts active at the max-return vertex and releases mid-trace."""
+        n = 8
+        mean, cov = self._problem(n, 0)
+        lower, upper = np.zeros(n), np.ones(n)
+        g = np.zeros((1, n))
+        g[0, :4] = 1.0
+        h = np.array([0.7])
+        a, b = np.ones((1, n)), np.ones(1)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+        active = [bool(tp.active_ineq[0]) for tp in cla.turning_points]
+        assert active[0]  # active at the max-return vertex
+        assert not active[-1]  # a release event frees it before the end
+
+    def test_redundant_row_never_binds(self):
+        """A loose cap that is never tight leaves the frontier identical to no cap."""
+        n = 10
+        mean, cov = self._problem(n, 2)
+        lower, upper = np.zeros(n), np.full(n, 0.34)
+        a, b = np.ones((1, n)), np.ones(1)
+        # The first half can sum to at most the budget (1); a cap of 1.5 never binds.
+        g, h = self._group_cap(n, 1.5)
+        with_cap = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        without = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        assert not any(tp.active_ineq[0] for tp in with_cap.turning_points)
+        w_cap = np.array([tp.weights for tp in with_cap.turning_points])
+        w_no = np.array([tp.weights for tp in without.turning_points])
+        assert w_cap.shape == w_no.shape
+        np.testing.assert_allclose(w_cap, w_no, atol=1e-9)
+
+    def test_multi_row_caps(self):
+        """Two simultaneous group caps (first half and second half)."""
+        n = 10
+        mean, cov = self._problem(n, 5)
+        lower, upper = np.zeros(n), np.full(n, 0.34)
+        a, b = np.ones((1, n)), np.ones(1)
+        g = np.zeros((2, n))
+        g[0, : n // 2] = 1.0
+        g[1, n // 2 :] = 1.0
+        h = np.array([0.6, 0.6])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+
+    def test_ge_constraint_via_negation(self):
+        """A ``>=`` floor is expressed by negating both sides into ``G w <= h``."""
+        n = 10
+        mean, cov = self._problem(n, 7)
+        lower, upper = np.zeros(n), np.full(n, 0.34)
+        a, b = np.ones((1, n)), np.ones(1)
+        # require the first half to hold at least 0.5: -sum(first half) <= -0.5
+        g = np.zeros((1, n))
+        g[0, : n // 2] = -1.0
+        h = np.array([-0.5])
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+        # the floor is met everywhere
+        for tp in cla.turning_points:
+            assert tp.weights[: n // 2].sum() >= 0.5 - cla.tol
+
+    def test_no_inequality_recovers_equality_problem(self):
+        """``g=None`` (the default) reproduces the equality-only frontier exactly."""
+        n = 8
+        mean, cov = self._problem(n, 9)
+        lower, upper = np.zeros(n), np.ones(n)
+        a, b = np.ones((1, n)), np.ones(1)
+        explicit_none = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=None, h=None)
+        default = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        w1 = np.array([tp.weights for tp in explicit_none.turning_points])
+        w2 = np.array([tp.weights for tp in default.turning_points])
+        assert w1.shape == w2.shape
+        np.testing.assert_array_equal(w1, w2)
+        assert all(tp.active_ineq.shape == (0,) for tp in default.turning_points)
+
+    def test_g_column_mismatch_raises(self):
+        """An inequality matrix with the wrong number of columns is rejected."""
+        n = 5
+        mean, cov = self._problem(n, 0)
+        with pytest.raises(ValueError, match="g must have 5 columns"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                g=np.ones((1, n + 1)),
+                h=np.ones(1),
+            )
+
+    def test_h_length_mismatch_raises(self):
+        """An inequality right-hand side whose length disagrees with ``g`` is rejected."""
+        n = 5
+        mean, cov = self._problem(n, 0)
+        with pytest.raises(ValueError, match="h must have 2 entries"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                g=np.ones((2, n)),
+                h=np.ones(3),
+            )
+
+    def test_append_rejects_inequality_violation(self):
+        """``_append`` rejects a turning point that violates ``G w <= h``."""
+        n = 4
+        mean, cov = self._problem(n, 0)
+        g = np.zeros((1, n))
+        g[0, :2] = 1.0
+        cla = CLA(
+            mean=mean,
+            covariance=cov,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, 0.4),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+            g=g,
+            h=np.array([0.5]),
+        )
+        # a budget-feasible point whose first two weights breach the 0.5 cap
+        bad = TurningPoint(weights=np.array([0.4, 0.4, 0.1, 0.1]), free=np.ones(n, dtype=bool))
+        with pytest.raises(ValueError, match="inequality constraint G w <= h"):
+            cla._append(bad, tol=0.0)
+
+    def test_project_feasible_with_active_row(self):
+        """The projection restores box feasibility while holding an active row at equality."""
+        n = 8
+        mean, cov = self._problem(n, 3)
+        g, h = self._group_cap(n, 0.5)
+        a, b = np.ones((1, n)), np.ones(1)
+        cla = CLA(
+            mean=mean, covariance=cov, lower_bounds=np.zeros(n), upper_bounds=np.full(n, 0.34), a=a, b=b, g=g, h=h
+        )
+
+        # Build a point on {sum(w)=1, sum(first half)=0.5} that breaches the box,
+        # then project with the cap row active: it must come back inside the box
+        # while preserving both the budget and the (active) cap held at equality.
+        w = np.full(n, 1.0 / n)
+        w[: n // 2] = 0.5 / (n // 2)  # first half sums to the cap
+        w[0] += 0.3
+        w[1] -= 0.3  # still on both affine sets, but now box-infeasible
+        assert w.min() < 0.0
+        active = np.array([True])
+        projected = cla._project_feasible(w, active)
+        assert np.all(projected >= -1e-9)
+        assert np.all(projected <= 0.34 + 1e-9)
+        assert np.isclose(projected.sum(), 1.0, atol=1e-7)
+        assert np.isclose(g @ projected, h, atol=1e-7)
+
+    def test_degenerate_inequality_first_vertex_declined(self):
+        """A degenerate max-return vertex with an inequality present is declined.
+
+        With a loose box and a single best asset that the cap does not touch, the
+        max-return LP puts the whole budget on that one asset: the free set is
+        empty, so it cannot span the budget row and the bordered KKT system is
+        singular. The inequality machinery must not mask this; it is declined at
+        the first vertex with the actionable diagnosis rather than surfacing as an
+        opaque singular-matrix error later in the trace.
+        """
+        n = 8
+        # asset n-1 has the strictly highest return and lies in the uncapped
+        # second half, so the LP loads the entire budget onto it.
+        mean = np.arange(n, dtype=float)
+        _, cov = self._problem(n, 6)
+        g, h = self._group_cap(n, 0.5)
+        with pytest.raises(ValueError, match="maximum-return vertex is degenerate"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                g=g,
+                h=h,
+            )

@@ -85,10 +85,18 @@ class TurningPoint(FrontierPoint):
 
     A turning point is a vector of weights, a lambda value, and a boolean vector
     indicating which assets are free. All assets that are not free are blocked.
+
+    For problems with general inequality constraints ``G w <= h`` the turning
+    point also records which inequality *rows* are active (held at equality
+    ``g_i w = h_i``) via ``active_ineq``. These are the row analogue of the box
+    active set: a free weight on a bound is a per-variable active constraint, an
+    active inequality row is a per-row one. The default is an empty mask, so
+    box-and-equality problems (and the LASSO path) are unaffected.
     """
 
     free: NDArray[np.bool_]
     lamb: float = np.inf
+    active_ineq: NDArray[np.bool_] = field(default_factory=lambda: np.zeros(0, dtype=bool))
 
     @property
     def free_indices(self) -> np.ndarray:
