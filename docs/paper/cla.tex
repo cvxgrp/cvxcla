@@ -650,10 +650,9 @@ large instances can still defeat the floating-point event logic.
 The most widely used open implementation of the CLA is that of
 \citet{bailey2013} (the algorithm behind PyPortfolioOpt's \texttt{CLA}
 \citep{pyportfolioopt}, against which we benchmark in \S\ref{sec:experiment}).
-That paper deserves credit as the reference open-source CLA: a careful,
-step-by-step exposition that, when published, filled a real gap (the only
-prior documented implementation was the Markowitz--Todd VBA-Excel code of
-\citet{markowitz2000}), and it remains the pedagogical standard. Our
+That paper is the reference open-source CLA; when published it filled a real gap,
+as the only prior documented implementation was the Markowitz--Todd VBA-Excel code
+of \citet{markowitz2000}. Our
 implementation in fact shares several of its design choices: the same greedy
 first turning point (\S\ref{sec:first}), the explicit minimum-variance endpoint
 at $\lambda = 0$, and a one-dimensional search between bracketing turning points
@@ -679,7 +678,14 @@ single multi-right-hand-side solve against $\Sig_{\F\F}$ feeds an $m \times m$
 Schur complement \eqref{eq:schur} that handles the equality constraints, and the
 event search over all candidates is vectorised rather than looped. The $\alpha$
 and $\beta$ systems reuse the same factorisation, and the covariance enters only
-as a black-box solve, which is what makes the backend abstraction possible.
+as a black-box solve, which is what makes the backend abstraction possible. More
+fundamentally, Bailey--L\'opez de Prado never assemble a KKT system at all: they
+invert $\Sig_{\F\F}$ explicitly and substitute the inverse into closed-form
+Lagrange expressions for $\lambda$, $\gamma$, and $w_\F$ that are specialised to
+the single budget row. Casting each step instead as a reduced KKT saddle-point
+solve, with the equality constraints carried by the $m \times m$ Schur complement
+\eqref{eq:schur}, is precisely what lets \texttt{cvxcla} take an arbitrary $A$
+(next point) where their closed-form algebra admits only one.
 
 \item \textbf{Constraint generality.} The reference implementation targets box
 bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
@@ -1143,7 +1149,14 @@ set partitions the \emph{variables} into free and box-blocked, never a set of
 general inequality rows, so the reduced system is always a principal submatrix of
 $\Sig$ (\S\ref{sec:operators}) rather than a bordered KKT system. That restriction
 is exactly what keeps each step a single symmetric positive-definite solve, and it
-is the portfolio structure the method exploits.
+is the portfolio structure the method exploits. The natural reflex of turning an
+inequality $A w \ge b$ into an equality $A w - s = b$ with a slack $s \ge 0$ does
+not recover this structure: the slack carries no curvature in the objective, so the
+augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only positive \emph{semi}-definite,
+and the reduced solve is singular whenever a slack is free (which is precisely when
+its inequality is inactive). Admitting general inequalities therefore requires the
+bordered KKT system above and an event for each row activating or releasing, not a
+change of variables.
 
 The LASSO solves, for a response $y$ and design matrix $X$,
 \[
