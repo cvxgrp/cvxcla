@@ -17,6 +17,29 @@
 \usepackage{booktabs}
 \usepackage{xcolor}
 \usepackage[round,authoryear]{natbib}
+\usepackage{listings}
+
+% Code input (Python) and console output styles for the usage section.
+\lstdefinestyle{pyin}{%
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!50!black},
+  commentstyle=\color{green!45!black}\itshape,
+  stringstyle=\color{purple!60!black},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!30},
+  columns=fullflexible,
+}
+\lstdefinestyle{pyout}{%
+  basicstyle=\ttfamily\small\color{black!75},
+  frame=single,
+  rulecolor=\color{black!15},
+  backgroundcolor=\color{black!3},
+  breaklines=true,
+  columns=fullflexible,
+}
 
 % The algorithm listing below is typeset with only base LaTeX (a boxed minipage
 % plus nested enumerate), so the paper builds without the algorithm/algorithmicx
@@ -64,14 +87,16 @@ as implemented in \texttt{cvxcla}}
 \begin{abstract}
 \texttt{cvxcla} is an open implementation of the Critical Line Algorithm (CLA) of
 Markowitz, which computes the \emph{entire} mean--variance efficient frontier of a
-long-only (or box-constrained) portfolio problem exactly, rather than sampling it
-point by point. The frontier is piecewise linear in weight space: between two
+portfolio problem exactly, rather than sampling it point by point, under box bounds
+together with general linear equality ($A w = b$) and inequality ($G w \le h$)
+constraints. The frontier is piecewise linear in weight space: between two
 consecutive \emph{turning points} the optimal weights are an affine function
 $w(\lambda) = \alpha + \lambda\beta$ of a single scalar parameter $\lambda$ that
 trades expected return against variance, and the algorithm walks from the
 maximum-return portfolio ($\lambda=\infty$) to the minimum-variance portfolio
-($\lambda=0$), changing the status of exactly one asset at each turning point, each
-step a single block-eliminated Karush--Kuhn--Tucker solve. The frontier is
+($\lambda=0$), changing the status of exactly one variable or one active constraint
+at each turning point, each step a single block-eliminated
+Karush--Kuhn--Tucker solve. The frontier is
 Markowitz's; the contribution here is threefold. First, an \emph{operator
 interface}: the turning-point loop reaches the covariance only through a few
 linear-algebraic operations, so capturing that contract as a small protocol
@@ -165,6 +190,12 @@ out-of-bounds drift on the degenerate cases we test; reproducible benchmarks
 genuinely algorithmic speed-up (the structured solve) from incidental
 linear-algebra bookkeeping.
 \end{enumerate}
+Underpinning all three, the turning-point loop is written for general constraints:
+box bounds together with an arbitrary linear equality system $A w = b$ and arbitrary
+linear inequalities $G w \le h$ (a budget, sector or factor neutralities, group or
+sector exposure caps), not merely the single budget row of the classical CLA. An
+active inequality row is carried through the same reduced solve as an extra equality
+row (\S\ref{sec:lars}), so this generality costs the box-only problem nothing.
 We do \emph{not} claim the fastest dense large-scale solve
 (\S\ref{sec:bailey}); near-degenerate problems are handled by projecting the
 sub-tolerance round-off they produce back onto the feasible set
@@ -390,8 +421,11 @@ in use.)
 \label{sec:events}
 
 Walking down from the current $\lambda$, the segment \eqref{eq:segment} stays optimal
-until one of two things happens. The implementation enumerates four event \emph{types},
-two for each direction:
+until an \emph{event} changes the active set. Events come in two families. The first
+acts on the \emph{variables} through the box bounds (the four types below, two per
+direction); the second, present only when $G w \le h$ has rows, acts on the
+\emph{constraints} (an inequality row activating or releasing). We describe the box
+events first:
 
 \paragraph{A free asset reaches a bound (free $\to$ blocked).}
 A free weight evolves as $w_i(\lambda) = \alpha_i + \lambda\beta_i$. It meets a bound at
@@ -413,9 +447,23 @@ A blocked asset wants to become free at
 admissible only when the asset is at its \emph{upper} bound with $\delta_i < 0$, or at
 its \emph{lower} bound with $\delta_i > 0$.
 
-These candidate ratios are assembled into a matrix $L\in\R^{n\times 4}$ (one column per
-event type), with entries set to $-\infty$ where the event cannot occur. Two
-numerical guards apply:
+\paragraph{An inequality row activates or releases (the row analogue).}
+The same two moves occur for the rows of $G w \le h$, now on \emph{constraints} rather
+than variables. An inactive row $j$ has slack
+$s_j(\lambda) = g_j\trans w(\lambda) - h_j = (g_j\trans\alpha - h_j) + \lambda\,
+g_j\trans\beta$, affine in $\lambda$; it becomes active (binding) at the $\lambda$ where
+the slack reaches zero from the feasible side. An active row carries a nonnegative
+multiplier $\eta_j(\lambda) = \eta_j^{\alpha} + \lambda\,\eta_j^{\beta}$, also affine in
+$\lambda$; it releases at the $\lambda$ where that multiplier reaches zero. These are
+exactly the ratios \eqref{eq:freeevents}--\eqref{eq:blockedevents} with the slack
+playing the role of a free weight and the row multiplier that of a bound multiplier;
+\S\ref{sec:lars} gives the construction and the sign conventions.
+
+These candidate ratios are assembled into a matrix $L\in\R^{(n+p)\times 4}$: the first
+$n$ rows hold the box events of a variable (across the four columns), and the trailing
+$p$ rows hold the activate/release events of an inequality row, with entries set to
+$-\infty$ where the event cannot occur. (With no inequality rows, $p=0$ and $L$ is the
+$n\times 4$ matrix of the box-and-budget problem.) Two numerical guards apply:
 
 \begin{itemize}
 \item \textbf{Slope floor.} Slopes $\beta_i$ and derivatives $\delta_i$ are tested
@@ -446,7 +494,8 @@ asset index, and within an asset the lowest event-type column. This makes the ch
 deterministic and resolves degeneracies one asset per iteration.
 
 Termination follows by the standard anti-cycling argument. There are only finitely
-many free/blocked partitions (at most $2^{n}$), and each partition fixes the affine
+many active-set states (at most $2^{n+p}$: the free/blocked split of the $n$ variables
+and the active subset of the $p$ inequality rows), and each state fixes the affine
 segment \eqref{eq:segment} and hence the interval of $\lambda$ over which it is
 optimal. The parameter $\lambda$ is non-increasing along the walk, so the only way to
 fail to terminate is to revisit a partition at the same $\lambda^{\star}$: a cycle.
@@ -471,8 +520,9 @@ segment). Termination is guaranteed in exact arithmetic by the anti-cycling argu
 \S\ref{sec:bland}; the hard iteration cap of $100(n+1)$ is a \emph{numerical} safety net
 rather than the guarantee itself. A correct trace empirically runs $O(n)$ times, so far
 exceeding this cap signals a floating-point failure (e.g.\ a tolerance-induced cycle),
-which is raised loudly rather than allowed to hang. Every stored turning point is validated to satisfy the bounds and the
-budget constraint before being accepted.
+which is raised loudly rather than allowed to hang. Every stored turning point is
+validated to satisfy the bounds, the equality constraints $A w = b$, and the
+inequality constraints $G w \le h$ before being accepted.
 
 \subsection{The complete procedure}
 
@@ -484,31 +534,39 @@ Algorithm~1 collects the steps.
 
 \smallskip
 \textit{Input:} mean $\mu$, covariance $\Sig$, bounds $\lb,\ub$, equality
-constraints $A,b$, tolerance $\tau$.
+constraints $A,b$, inequality constraints $G,h$, tolerance $\tau$.
 
 \smallskip
 \begin{enumerate}\setlength{\itemsep}{2pt}
-\item Compute $w^{(0)} \gets \texttt{init\_algo}(\mu,\lb,\ub)$, the maximum-return
-      vertex (\S\ref{sec:first}); append it with $\lambda \gets \infty$.
+\item Compute the maximum-return vertex $w^{(0)}$ (\S\ref{sec:first}): the greedy
+      \texttt{init\_algo} when $A$ is the all-ones budget and there are no inequality
+      rows, otherwise the linear program \texttt{first\_vertex\_lp}. Record its free
+      set and its active inequality rows $\Sset$, and append it with
+      $\lambda \gets \infty$.
 \item \textbf{While} $\lambda > 0$:
   \begin{enumerate}\setlength{\itemsep}{2pt}
-  \item Read the free/blocked partition $(\F,\B)$ of the last turning point;
-        classify $\B$ into \emph{at-upper}/\emph{at-lower} and fix $w_\B$ to the
-        active bounds.
-  \item Solve the free block $\Sig_{\F\F}$ for $Y, z^{\alpha}, z^{\beta}$
-        (multi-RHS, \S\ref{sec:blockelim}).
-  \item Form the Schur complement $S = A_\F Y$ and solve \eqref{eq:schur} for
-        $\nu^{\alpha},\nu^{\beta}$; back-substitute \eqref{eq:freesoln} to get
+  \item Read the free/blocked partition $(\F,\B)$ and the active inequality rows
+        $\Sset$ of the last turning point; classify $\B$ into
+        \emph{at-upper}/\emph{at-lower} and fix $w_\B$ to the active bounds. Stack the
+        active constraints into $C_\F = [\,A_\F;\,G_{\Sset\F}\,]$ (just $A_\F$ when
+        $\Sset=\varnothing$).
+  \item Solve the free block $\Sig_{\F\F}$ for $Y = \Sig_{\F\F}\inv C_\F\trans$ and
+        $z^{\alpha}, z^{\beta}$ (multi-RHS, \S\ref{sec:blockelim}).
+  \item Form the Schur complement $S = C_\F Y$ and solve \eqref{eq:schur} for the
+        equality and active-inequality multipliers $(\nu^{\alpha},\eta^{\alpha})$ and
+        $(\nu^{\beta},\eta^{\beta})$; back-substitute \eqref{eq:freesoln} to get
         $\alpha,\beta$.
   \item Compute the reduced gradients $\gamma,\delta$ via
         \eqref{eq:gamma}--\eqref{eq:delta}.
-  \item Assemble the candidate ratios $L$ from
-        \eqref{eq:freeevents}--\eqref{eq:blockedevents}; apply the slope floor and
-        the $\lambda$ window. Set $\lambda^{\star} \gets \max L$; \textbf{if}
+  \item Assemble the $(n+p)\times 4$ candidate-ratio matrix $L$ (\S\ref{sec:events}):
+        the box events \eqref{eq:freeevents}--\eqref{eq:blockedevents} and the
+        inequality-row activate/release events; apply the slope floor and the
+        $\lambda$ window. Set $\lambda^{\star} \gets \max L$; \textbf{if}
         $\lambda^{\star} < 0$ \textbf{break}.
-  \item Pick the event by the Bland-style rule (\S\ref{sec:bland}) and flip the
-        \texttt{free} status of that one asset. Set $\lambda \gets \lambda^{\star}$
-        and append the turning point $w \gets \alpha + \lambda^{\star}\beta$.
+  \item Pick the event by the Bland-style rule (\S\ref{sec:bland}) and flip the status
+        of the single coordinate responsible: the \texttt{free} flag of a variable, or
+        the active flag of an inequality row. Set $\lambda \gets \lambda^{\star}$ and
+        append the turning point $w \gets \alpha + \lambda^{\star}\beta$.
   \end{enumerate}
 \item Append the final turning point $w \gets \alpha$ at $\lambda = 0$ (the
       minimum-variance portfolio) and \textbf{return} the list of turning points.
@@ -652,16 +710,18 @@ maximum, exploiting the same piecewise-linear weight structure.
 points; between them the closed-form segment \eqref{eq:segment} holds. No
 discretisation error is introduced.
 
-\item \textbf{Number of turning points.} Each iteration changes exactly one asset's
-status. Empirically the number of turning points is $O(n)$; the worst case is
+\item \textbf{Number of turning points.} Each iteration changes exactly one
+coordinate's status: a variable entering or leaving the free set, or an inequality
+row activating or releasing. Empirically the number of turning points is $O(n)$; the worst case is
 combinatorial (as for parametric active-set methods generally) but is not observed on
 the problems of \S\ref{sec:experiment}. The implementation caps iterations at
 $100(n+1)$ as a numerical safety net.
 
 \item \textbf{Per-iteration cost.} Dominated by the free-block solve: $O(n_\F^3)$ for
 the dense backend, or $O(n_\F k^2 + k^3)$ for the factor backend via Woodbury
-\eqref{eq:woodbury}. The Schur complement \eqref{eq:schur} adds only an $m\times m$
-solve ($m=1$ for the budget constraint).
+\eqref{eq:woodbury}. The Schur complement \eqref{eq:schur} adds only an
+$(m+|\Sset|)\times(m+|\Sset|)$ solve over the equality rows plus the active
+inequality rows ($m=1$, $\Sset=\varnothing$ for the plain budget constraint).
 
 \item \textbf{Robustness on degenerate data.} The Bland-style tie-break
 (\S\ref{sec:bland}) and the $\sqrt{\varepsilon_{\text{mach}}}$ slope floor
@@ -808,6 +868,82 @@ rather than a tuned solver. What is genuinely particular to \texttt{cvxcla} is
 orthogonal to all of these: the operator interface and the structured factor and
 Gram backends (\S\ref{sec:operators}), which run the same exact-frontier trace
 directly on a covariance representation the general toolkits do not exploit.
+
+\section{Using the package}
+\label{sec:usage}
+
+The package is installed with \texttt{pip install cvxcla} and the whole workflow
+goes through a single class, \texttt{CLA}. The user supplies the mean $\mu$, the
+covariance $\Sig$ (a dense array or any backend of \S\ref{sec:operators}), the box
+bounds $\lb,\ub$, and the constraints: the equality system $A,b$ (always at least
+the budget), and optionally the inequality system $G,h$. Constructing the object
+traces the whole frontier; the turning points and the derived \texttt{Frontier}
+(\S\ref{sec:frontier}) are then available as attributes. Listing~\ref{lst:basic}
+traces a small long-only, fully-invested problem and reads off the maximum-Sharpe
+portfolio.
+
+\begin{lstlisting}[style=pyin,caption={Tracing a frontier and reading the
+maximum-Sharpe portfolio.},label={lst:basic}]
+import numpy as np
+from cvxcla import CLA, FactorCovariance
+
+rng = np.random.default_rng(1)
+n, k = 6, 2
+d = rng.uniform(0.1, 0.5, n)            # idiosyncratic variances
+U = rng.standard_normal((n, k))         # factor loadings
+Delta = np.diag(rng.uniform(0.5, 2.0, k))
+Sigma = np.diag(d) + U @ Delta @ U.T    # a dense 2-factor covariance
+mean = rng.standard_normal(n)
+
+cla = CLA(
+    mean=mean, covariance=Sigma,
+    lower_bounds=np.zeros(n), upper_bounds=np.ones(n),
+    a=np.ones((1, n)), b=np.ones(1),    # fully invested: sum(w) = 1
+)
+print("turning points:", len(cla.turning_points))
+sr, w = cla.frontier.max_sharpe
+print("max Sharpe:", round(sr, 4))
+print("weights:", np.round(w, 3))
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+turning points: 7
+max Sharpe: 2.4037
+weights: [0.    0.    0.704 0.296 0.    0.   ]
+\end{lstlisting}
+
+Switching to a structured backend changes only the covariance argument: the
+turning-point loop is untouched, and because the factor backend represents the
+\emph{same} $\Sig$ it returns the identical frontier (\S\ref{sec:operators}),
+solving through the Woodbury identity instead of forming $\Sig$
+(Listing~\ref{lst:factor}). A short-sample sample covariance is handled the same
+way through \texttt{GramCovariance}, built straight from the centred return matrix.
+
+\begin{lstlisting}[style=pyin,caption={The factor backend traces the identical
+frontier without ever forming the $n\times n$ matrix.},label={lst:factor}]
+factor = FactorCovariance(d=d, u=U, delta=np.diag(Delta))
+cla_factor = CLA(
+    mean=mean, covariance=factor,
+    lower_bounds=np.zeros(n), upper_bounds=np.ones(n),
+    a=np.ones((1, n)), b=np.ones(1),
+)
+w_dense = np.array([t.weights for t in cla.turning_points])
+w_factor = np.array([t.weights for t in cla_factor.turning_points])
+print("identical frontier:", np.allclose(w_dense, w_factor))
+\end{lstlisting}
+
+\begin{lstlisting}[style=pyout]
+identical frontier: True
+\end{lstlisting}
+
+General linear constraints are passed the same way: a weighted or multi-row $A,b$
+for sector or factor neutrality, and $G,h$ for group or sector exposure caps (a
+$\ge$ floor is the negated row), exactly the program \eqref{eq:qp}. Every figure
+and table in the remainder of this paper is regenerated by a single replication
+script, \srcfile{experiments/reproduce_paper.py}{experiments/reproduce\_paper.py},
+which runs each experiment in turn off the committed inputs (no network access)
+and reports which artefact it produces; the individual scripts it calls are cited
+at the relevant figures and tables below.
 
 \section{Numerical experiment}
 \label{sec:experiment}
@@ -1080,11 +1216,18 @@ optima rather than approximating them (\srcfile{experiments/validate_exact.py}{e
 \subsection{Empirical example: the S\&P 500 frontier}
 \label{sec:empirical}
 
-To close, we run the algorithm on real data. Using
-\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py} we pull the current S\&P 500 constituents
-from Wikipedia and download five years of daily adjusted-close prices via
-\texttt{yfinance}, yielding $N = 494$ assets over $T = 1213$ trading days
-(2021-07-30 to 2026-05-29) after dropping thinly-traded names. From the
+To close, we run the algorithm on real data. The experiment runs off a frozen
+snapshot shipped with the package,
+\srcfile{experiments/data/sp500_pct_returns.parquet}{experiments/data/sp500\_pct\_returns.parquet}
+($N = 494$ assets over $T = 1213$ trading days, 2021-07-30 to 2026-05-29;
+SHA-256 \texttt{b5faa522\ldots9937e}), so the figures below reproduce
+deterministically and offline, with no dependence on a live data feed. The
+snapshot was produced once by
+\srcfile{experiments/fetch_sp500.py}{experiments/fetch\_sp500.py}, which pulls the
+then-current S\&P 500 constituents from Wikipedia, downloads five years of daily
+adjusted-close prices via \texttt{yfinance}, and drops thinly-traded names; that
+script is retained for provenance and refresh only and is not part of the
+reproducible path. From the
 full-history sample mean and covariance (condition number $\approx 1.1\times
 10^{5}$) the CLA traces the entire long-only frontier (\textbf{96 turning
 points}) in a median of $\approx 14$~ms (Figure~\ref{fig:realfrontier}); a
