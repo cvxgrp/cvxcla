@@ -690,6 +690,54 @@ $X_{c\F}\trans X_{c\F}$ at each solve. The same caveat governs the factor backen
 observation count $T$, stays well below $n$; at full rank the structured route is
 slower than the plain dense matrix.
 
+\subsection{Regularization through the operator}
+\label{sec:regularization}
+
+A regularized objective is supported whenever the penalty is \emph{quadratic}, and
+for the same reason the bare algorithm works: a quadratic penalty changes only the
+Hessian, so the KKT system stays linear in $\lambda$ and the path stays piecewise
+linear. A ridge (Tikhonov) term is the canonical case,
+\begin{equation}
+\label{eq:ridge}
+\tfrac12\, w\trans\Sig\, w - \lambda\,\mu\trans w + \tfrac{\gamma}{2}\,\lVert w\rVert_2^2
+\;=\;
+\tfrac12\, w\trans(\Sig + \gamma I)\, w - \lambda\,\mu\trans w,
+\qquad \gamma \ge 0,
+\end{equation}
+which is exactly the substitution $\Sig \mapsto \Sig + \gamma I$, and more generally
+$\Sig + \gamma M$ for any positive-semidefinite $M$ (a factor-exposure penalty, a
+deviation-from-benchmark term, a quadratic turnover penalty
+$\lVert w - w_{\text{prev}}\rVert_2^2$). Because the turning-point loop reaches the
+covariance only through the operator protocol of \S\ref{sec:operators}, the
+regularized form is just another \texttt{QuadraticForm}: the penalty is supplied by
+the \emph{backend} and the loop is untouched, each step still a single symmetric
+positive-definite solve. The result is the exact frontier of the regularized
+objective.
+
+Two backends already realise this. \texttt{GramCovariance} takes a ridge
+$\delta \ge 0$ directly (\S\ref{sec:gram}), representing
+$\Sig = X_c\trans X_c/(T-1) + \delta I$, and \texttt{FactorCovariance}
+\eqref{eq:factor} is itself a structured ridge, positive definite by the
+idiosyncratic floor $d > 0$. A quadratic regularizer is therefore not merely
+permitted but recommended where it is needed: it is precisely the conditioning fix
+for the rank-deficient free block of \S\ref{sec:empirical}, where the unregularized
+trace is declined. A small $\gamma$, or a factor model, keeps the free block full
+rank and the trace completes.
+
+The boundary follows from the same quadratic requirement. Shrinkage toward a
+\emph{nonzero} target $w_0$, $\tfrac{\gamma}{2}\lVert w - w_0\rVert_2^2$, is still
+quadratic and compatible in principle, but it adds a $\lambda$-independent linear
+term $-\gamma\, w_0\trans w$ that the present interface, whose linear term is exactly
+$-\lambda\mu$, does not expose. A nonsmooth $\ell_1$ penalty $\tau\lVert w\rVert_1$ is
+not a term in this objective at all: it is piecewise linear, vacuous for the
+long-only fully-invested book (where $\lVert w\rVert_1 = \mathbf{1}\trans w = 1$ is
+constant), and where it does bite (gross exposure with short positions) it is traced
+by the LASSO homotopy over $\tau$ rather than the risk-aversion sweep over $\lambda$,
+the correspondence of \S\ref{sec:lars}; a gross-exposure \emph{constraint}
+$\lVert w\rVert_1 \le c$ is instead polyhedral, expressible as $G w \le h$ under the
+split $w = w^+ - w^-$. Genuinely nonquadratic penalties (an entropy or log-barrier
+term) break the linear-in-$\lambda$ structure and lie outside the method.
+
 \section{The efficient frontier object}
 \label{sec:frontier}
 
