@@ -269,6 +269,20 @@ class LassoBuilder:
         self.y = np.asarray(y, dtype=np.float64)
         self._g_blocks: list[NDArray[np.float64]] = []
         self._h_blocks: list[NDArray[np.float64]] = []
+        self._nonneg = False
+
+    def non_negative(self) -> LassoBuilder:
+        """Restrict the coefficients to ``beta >= 0`` (the non-negative LASSO).
+
+        Under ``beta >= 0`` the l1 penalty collapses to the linear term
+        ``lam * sum(beta)``, so the path is the standard one restricted to positive
+        signs -- structurally the CLA's box-bounded parametric QP.
+
+        Returns:
+            ``self``, for chaining.
+        """
+        self._nonneg = True
+        return self
 
     def inequality(self, g: NDArray[np.float64], h: float | NDArray[np.float64]) -> LassoBuilder:
         """Add one or more inequality rows ``G beta <= h`` (repeated calls accumulate).
@@ -307,4 +321,4 @@ class LassoBuilder:
         """
         g = np.vstack(self._g_blocks) if self._g_blocks else None
         h = np.concatenate(self._h_blocks) if self._h_blocks else None
-        return Lasso(x=self.x, y=self.y, g=g, h=h)
+        return Lasso(x=self.x, y=self.y, g=g, h=h, nonneg=self._nonneg)

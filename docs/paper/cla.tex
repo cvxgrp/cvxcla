@@ -1810,9 +1810,21 @@ every segment midpoint matches a per-$\lambda$ constrained QP solve (CVXPY/Clara
 to $\approx 2\times 10^{-10}$ in coefficients and to machine precision in feasibility
 (\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}),
 so the one path-tracing engine returns the exact \emph{constrained} regularisation
-path as well as the exact constrained frontier. The fluent builder of
-\S\ref{sec:usage} carries over unchanged, so the constrained path reads the same way
-as the constrained frontier (Listing~\ref{lst:lassobuilder}).
+path as well as the exact constrained frontier.
+
+The sign restriction $\beta \ge 0$ (the non-negative LASSO) is where the unification
+is most literal. With $\beta \ge 0$ the penalty $\lVert\beta\rVert_1 =
+\mathbf{1}\trans\beta$ becomes \emph{linear}, so the problem is exactly the CLA's
+box-bounded parametric quadratic program: Hessian $H = X\trans X$, lower bound $0$,
+and the $\lambda$-linear term $X\trans y - \lambda\mathbf{1}$. The homotopy is then
+the standard path restricted to positive signs (only the $+\lambda$ entry event,
+started from $\beta = 0$ at $\lambda_{\max} = \max_j (X\trans y)_j$). \texttt{cvxcla}
+traces it with \texttt{nonneg=True}, and every segment midpoint matches the
+per-$\lambda$ non-negative QP to $\approx 3\times10^{-11}$
+(\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}).
+The fluent builder of \S\ref{sec:usage} carries over unchanged for both, so a
+constrained or non-negative path reads the same way as the constrained frontier
+(Listing~\ref{lst:lassobuilder}).
 
 \begin{lstlisting}[style=pyin,caption={The constrained LASSO through the same fluent
 builder as the CLA: \texttt{.inequality(G, h)} then \texttt{.trace()}.},label={lst:lassobuilder}]
@@ -1821,6 +1833,9 @@ from cvxcla import Lasso
 # per-group exposure caps G beta <= h on a standardised regression
 lasso = Lasso.problem(X, y).inequality(G, h).trace()
 print("breakpoints:", len(lasso.path))
+
+# the non-negative LASSO (beta >= 0) is the same builder with one more step
+nonneg = Lasso.problem(X, y).non_negative().trace()
 \end{lstlisting}
 
 \section{Conclusion}

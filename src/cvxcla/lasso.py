@@ -132,6 +132,7 @@ class Lasso:
     y: NDArray[np.float64]
     g: NDArray[np.float64] | None = None
     h: NDArray[np.float64] | None = None
+    nonneg: bool = False  # pragma: no mutate
     tol: float = 1e-9  # pragma: no mutate
     path: list[Breakpoint] = field(default_factory=list)
 
@@ -224,25 +225,35 @@ class Lasso:
         return float(np.max(np.abs(self.xty)))
 
     def begin(self) -> tuple[float, _LassoState]:
-        """Record the all-zero solution at ``lam_max`` and enter the first coordinate.
+        """Record the all-zero solution at the start penalty and enter the first coordinate.
 
-        Returns:
-            ``(lam_max, state)`` where ``state`` already has the most-correlated
-            coordinate in the active set and no inequality rows active, mirroring
-            the CLA's first turning point.
+        For the plain or inequality-constrained LASSO the start is
+        ``lam_max = ||X^T y||_inf`` and the most-correlated coordinate enters with its
+        sign. Under the non-negative restriction ``beta >= 0`` the l1 penalty becomes
+        the linear term ``lam * 1^T beta``, only positive correlations can enter, so
+        the start is ``lam_max = max_j (X^T y)_j`` and the coordinate enters with sign
+        ``+``. When no coordinate can enter (e.g. every correlation is non-positive
+        under ``beta >= 0``), ``beta = 0`` is optimal for all ``lambda`` and the path
+        is the single point.
         """
         n = self.dimension
         xty = self.xty
-        lam_max = self.lam_max
-        j0 = int(np.argmax(np.abs(xty)))
-        self.path.append(Breakpoint(lam_max, np.zeros(n), np.zeros(n, dtype=bool)))
-
-        active = np.zeros(n, dtype=bool)
-        active[j0] = True
-        signs = np.zeros(n)
-        signs[j0] = np.sign(xty[j0])
         rows_active = np.zeros(self.g_matrix.shape[0], dtype=bool)
-        return lam_max, _LassoState(active, signs, rows_active, lam_max)
+        if self.nonneg:
+            lam_max = float(np.max(xty)) if n else 0.0
+            j0, s0 = int(np.argmax(xty)), 1.0
+        else:
+            lam_max = self.lam_max
+            j0 = int(np.argmax(np.abs(xty)))
+            s0 = float(np.sign(xty[j0]))
+
+        self.path.append(Breakpoint(max(lam_max, 0.0), np.zeros(n), np.zeros(n, dtype=bool)))
+        active = np.zeros(n, dtype=bool)
+        signs = np.zeros(n)
+        if lam_max > self.tol:
+            active[j0] = True
+            signs[j0] = s0
+        return max(lam_max, 0.0), _LassoState(active, signs, rows_active, max(lam_max, 0.0))
 
     def segment(self, state: _LassoState) -> _LassoSegment:
         """Solve the affine segment for the current support, signs, and active rows.
@@ -261,6 +272,10 @@ class Lasso:
 
         xty_s = xty[active]
         signs_s = signs[active]
+        if not np.any(active):
+            # Empty support (e.g. the non-negative path when no correlation is
+            # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
+            return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
         if not np.any(rows_active):
             # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S).
             alpha[active] = self.quad.solve_free(active, xty_s)
@@ -315,10 +330,12 @@ class Lasso:
         enters_pos = inactive & (np.abs(denom_pos) > self.tol)  # pragma: no mutate
         l_mat[:n][enters_pos, 1] = p[enters_pos] / denom_pos[enters_pos]
 
-        # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j)
-        denom_neg = 1.0 + q
-        enters_neg = inactive & (np.abs(denom_neg) > self.tol)  # pragma: no mutate
-        l_mat[:n][enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
+        # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j). Disabled under the
+        # non-negative restriction beta >= 0, where only positive entries are allowed.
+        if not self.nonneg:
+            denom_neg = 1.0 + q
+            enters_neg = inactive & (np.abs(denom_neg) > self.tol)  # pragma: no mutate
+            l_mat[:n][enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
 
         if rows:
             g_mat = self.g_matrix

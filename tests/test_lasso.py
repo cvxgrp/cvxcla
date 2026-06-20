@@ -203,6 +203,66 @@ class TestConstrainedLasso:
             Lasso(x=x, y=y, g=g[:, :-1], h=h)
 
 
+def _nonneg_coordinate_descent(x: np.ndarray, y: np.ndarray, lam: float, iters: int = 5000) -> np.ndarray:
+    """An independent non-negative LASSO solver (coordinate descent, clamped at 0)."""
+    n = x.shape[1]
+    beta = np.zeros(n)
+    col_sq = np.sum(x * x, axis=0)
+    r = y - x @ beta
+    for _ in range(iters):
+        max_change = 0.0
+        for j in range(n):
+            if col_sq[j] == 0.0:
+                continue
+            rho = x[:, j] @ r + col_sq[j] * beta[j]
+            new = max(rho - lam, 0.0) / col_sq[j]  # soft-threshold then clamp at 0
+            if new != beta[j]:
+                r += x[:, j] * (beta[j] - new)
+                max_change = max(max_change, abs(new - beta[j]))
+                beta[j] = new
+        if max_change < 1e-12:
+            break
+    return beta
+
+
+class TestNonNegativeLasso:
+    """The LASSO path under the sign restriction ``beta >= 0``."""
+
+    def test_path_is_non_negative(self):
+        """Every breakpoint has non-negative coefficients."""
+        x, y = _uncorrelated_problem()
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for bp in lasso.path:
+            assert np.all(bp.beta >= -1e-9)
+
+    def test_matches_nonneg_coordinate_descent(self):
+        """Sampled along the path, beta matches an independent non-negative solver."""
+        x, y = _correlated_problem()
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for frac in (0.8, 0.5, 0.25, 0.05):
+            lam = frac * float(np.max(x.T @ y))
+            np.testing.assert_allclose(lasso.solution(lam), _nonneg_coordinate_descent(x, y, lam), atol=1e-5)
+
+    def test_suppresses_negative_coefficients(self):
+        """A coefficient the plain LASSO drives negative is held at zero here."""
+        x, y = _correlated_problem()
+        plain = Lasso(x=x, y=y)
+        nonneg = Lasso(x=x, y=y, nonneg=True)
+        lam = 0.2 * plain.lam_max
+        assert np.min(plain.solution(lam)) < -1e-6, "expected the plain path to go negative"
+        assert np.all(nonneg.solution(lam) >= -1e-9)
+
+    def test_builder_non_negative_matches_constructor(self):
+        """``.non_negative()`` on the builder equals ``nonneg=True`` directly."""
+        x, y = _uncorrelated_problem()
+        built = Lasso.problem(x, y).non_negative().trace()
+        direct = Lasso(x=x, y=y, nonneg=True)
+        assert len(built.path) == len(direct.path)
+        for frac in (0.8, 0.4, 0.1):
+            lam = frac * direct.path[0].lam
+            np.testing.assert_allclose(built.solution(lam), direct.solution(lam), atol=1e-12)
+
+
 class TestLassoBuilder:
     """The fluent ``Lasso.problem(...).trace()`` builder."""
 
