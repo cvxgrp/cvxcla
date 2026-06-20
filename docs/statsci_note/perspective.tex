@@ -33,15 +33,14 @@ Optimization, and Finance}
 
 \begin{aug}
 \author[A]{\fnms{Trevor John}~\snm{Hastie}\thanksref{t1}\ead[label=e1]{hastie@stanford.edu}}
-\author[B]{\fnms{Thomas}~\snm{Schmelzer}\ead[label=e2]{thomas.s@yukkalab.com}}
+\author[B]{\fnms{Thomas}~\snm{Schmelzer}\ead[label=e2]{thomas@jqr.ae}}
 
 \thankstext{t1}{The authors are listed alphabetically. This account builds on, and is
 dedicated to, the work of Harry Markowitz (1927--2023).}
 
 \address[A]{Department of Statistics, Stanford University, Stanford, California,
 USA\printead[presep={\ }]{e1}.}
-\address[B]{Thomas Schmelzer, \textit{affiliation to be completed}%
-\printead[presep={\ }]{e2}.}
+\address[B]{Jebel Quant Research, Abu Dhabi\printead[presep={\ }]{e2}.}
 \end{aug}
 
 \begin{abstract}
@@ -119,8 +118,10 @@ Fix a strictly convex quadratic whose linear part carries a scalar $\lambda$,
 minimised over a polyhedron:
 \begin{equation}
 \label{eq:pqp}
-x(\lambda) = \arg\min_{x \in \R^n}\ \tfrac12\, x\trans H x - \lambda\, d\trans x
-\quad\text{s.t.}\quad A x = b,\ G x \le h,\ \lb \le x \le \ub , \qquad H \succ 0 .
+\begin{aligned}
+x(\lambda) = \arg\min_{x \in \R^n}\ &\tfrac12\, x\trans H x - \lambda\, d\trans x \\
+\text{s.t.}\quad &A x = b,\ \ G x \le h,\ \ \lb \le x \le \ub,\ \ H \succ 0 .
+\end{aligned}
 \end{equation}
 A polyhedral \emph{penalty} such as $\lambda\|x\|_1$ fits the same template through its
 subgradient, as Section~\ref{sec:identity} makes explicit. This is a one-parameter
@@ -228,14 +229,18 @@ For weights $w\in\R^n$, expected returns $\mu$, and covariance $\Sig\succ 0$, th
 gross-exposure-constrained mean--variance program is
 \begin{equation}
 \label{eq:mark}
-\text{M}_c:\quad \min_{w}\ \tfrac12\, w\trans \Sig\, w - \mu\trans w
-\quad\text{s.t.}\quad \|w\|_1 \le c,\ \ A w = b,\ \ G w \le h .
+\begin{aligned}
+\text{M}_c:\quad \min_{w}\ &\tfrac12\, w\trans \Sig\, w - \mu\trans w \\
+\text{s.t.}\quad &\|w\|_1 \le c,\ \ A w = b,\ \ G w \le h .
+\end{aligned}
 \end{equation}
 For a response $y\in\R^m$ and design $X\in\R^{m\times n}$, the constrained LASSO is
 \begin{equation}
 \label{eq:lasso}
-\text{L}_\lambda:\quad \min_{\beta}\ \tfrac12\,\|y - X\beta\|_2^2 + \lambda\,\|\beta\|_1
-\quad\text{s.t.}\quad A\beta = b,\ \ G\beta \le h .
+\begin{aligned}
+\text{L}_\lambda:\quad \min_{\beta}\ &\tfrac12\,\|y - X\beta\|_2^2 + \lambda\,\|\beta\|_1 \\
+\text{s.t.}\quad &A\beta = b,\ \ G\beta \le h .
+\end{aligned}
 \end{equation}
 
 \begin{theorem}[CLA--LASSO identity under general constraints]
@@ -293,10 +298,11 @@ Let $\beta(\lambda)$ be the constrained LASSO path and
 $c(\lambda)=\|\beta(\lambda)\|_1$ as in Theorem~\ref{thm:identity}. Then $c$ is
 continuous and piecewise linear, affine on each segment with
 \[
-c'(\lambda) = -\,s_\Aset\trans \beta_{\mathrm{slope},\Aset},
-\qquad
+\begin{gathered}
 \beta_\Aset(\lambda) = \alpha_\Aset - \lambda\,\beta_{\mathrm{slope},\Aset},
-\quad s_\Aset = \operatorname{sign}\!\big(\beta_\Aset\big),
+\qquad s_\Aset = \operatorname{sign}(\beta_\Aset), \\
+c'(\lambda) = -\,s_\Aset\trans \beta_{\mathrm{slope},\Aset},
+\end{gathered}
 \]
 the sum taken over the current support $\Aset$. In the unconstrained case
 $\beta_{\mathrm{slope},\Aset} = (X_\Aset\trans X_\Aset)^{-1} s_\Aset$, so
@@ -371,7 +377,7 @@ in general, and the cap binds for $c$ below the unconstrained $\|w\|_1$.
 Figure~\ref{fig:both} shows the shared object: a single piecewise-linear coefficient
 path, traced here as a LASSO, whose breakpoints carry two vocabularies at once.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=0.74\textwidth]{path_both_sides.pdf}
 \caption{One piecewise-linear path, two readings. The coordinate paths
@@ -382,7 +388,38 @@ its correlation reaches $\lambda$ is, on the portfolio side, a blocked multiplie
 changing sign; a coordinate \emph{leaving} when its coefficient reaches zero is a free
 weight reaching a bound. The curve is identical; only the names differ.}
 \label{fig:both}
-\end{figure}
+\end{figure*}
+
+\paragraph{The portfolio face, concretely.}
+A small example fixes the portfolio reading. We simulate $T=50$ daily returns for
+$N=20$ assets from a $K=5$ factor model, take the factor covariance itself
+$\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ as the risk model, estimate $\mu$
+by the sample mean, and trace the long-only, fully invested frontier
+($\mathbf{1}\trans w = 1$, $0\le w\le 1$), the instance $\mathrm{M}_c$ of
+\eqref{eq:mark} in which the gross-exposure constraint is vacuous by
+Proposition~\ref{prop:hinge}. The Critical Line Algorithm returns the \emph{entire}
+frontier as a sequence of \textbf{21 turning points} (Figure~\ref{fig:frontier});
+between consecutive points the frontier is the exact affine segment
+\eqref{eq:affine}, so these $21$ corner portfolios describe the whole efficient set
+with no discretisation, the portfolio counterpart of the LASSO breakpoints of
+Figure~\ref{fig:both}. The dense matrix and the structured (Woodbury)
+\texttt{FactorCovariance} backend represent the \emph{same} $\Sig$ and return the
+identical $21$-point frontier: by the operator reading of $H$
+(Section~\ref{sec:scheme}) the structured solve changes only the cost of each step,
+never the result.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{frontier.pdf}
+\caption{The efficient frontier of a $20$-asset, $50$-day factor-model problem in
+expected-return/volatility space, computed exactly by the Critical Line Algorithm.
+Each marker is one of the $21$ turning points; the endpoints are the maximum-return
+portfolio ($\lambda=\infty$) and the global minimum-variance portfolio
+($\lambda=0$). Axes are in the dimensionless model units of the simulated process.
+These corners are the portfolio reading of the breakpoints that, on the regression
+side, form the LASSO path of Figure~\ref{fig:both}.}
+\label{fig:frontier}
+\end{figure*}
 
 \section{Shared scaffolding, particular features}
 \label{sec:taxonomy}
@@ -540,7 +577,7 @@ corners, the breakpoints, that carry the model-selection information. Coordinate
 descent and proximal solvers, run on a $\lambda$-grid, approximate the path in exactly
 this way; the homotopy returns the corners themselves.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=0.74\textwidth]{path_grid_misses.pdf}
 \caption{An exact constrained (non-negative) LASSO path traced by the homotopy (solid,
@@ -549,7 +586,7 @@ samples lie on the true path, but interpolating between them misses the corners 
 homotopy resolves; a finer grid narrows the gap but never closes it, whereas the
 homotopy returns the breakpoints by construction.}
 \label{fig:grid}
-\end{figure}
+\end{figure*}
 
 Treating $H$ as an operator is also where the scheme meets scale. A structured
 quadratic form, a diagonal-plus-low-rank factor covariance in finance or a kernel in
