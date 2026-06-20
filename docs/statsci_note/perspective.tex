@@ -1,13 +1,11 @@
-\documentclass[11pt]{article}
+\documentclass[sts]{imsart}
 
-\usepackage[margin=1in]{geometry}
-\usepackage{amsmath, amssymb, amsthm}
-\usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{microtype}
-\usepackage{natbib}
-\usepackage[hidelinks]{hyperref}
+\RequirePackage{amsthm,amsmath,amsfonts,amssymb}
+\RequirePackage[authoryear]{natbib}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
 
+\startlocaldefs
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Sig}{\Sigma}
 \newcommand{\F}{\mathcal{F}}
@@ -24,18 +22,27 @@
 \newtheorem{lemma}{Lemma}
 \theoremstyle{definition}
 \newtheorem{remark}{Remark}
-
-\title{Following the Solution:\\
-Parametric Active-Set Homotopies in Statistics, Optimization, and Finance}
-
-\author{Trevor John Hastie \and Thomas Schmelzer%
-\thanks{The authors are listed alphabetically. Perspective draft for
-\emph{Statistical Science}. We build on, and dedicate this account to, the work of
-Harry Markowitz (1927--2023).}}
-\date{Draft, \today}
+\endlocaldefs
 
 \begin{document}
-\maketitle
+
+\begin{frontmatter}
+\title{Following the Solution: Parametric Active-Set Homotopies in Statistics,
+Optimization, and Finance}
+\runtitle{Parametric Active-Set Homotopies}
+
+\begin{aug}
+\author[A]{\fnms{Trevor John}~\snm{Hastie}\thanksref{t1}\ead[label=e1]{hastie@stanford.edu}}
+\author[B]{\fnms{Thomas}~\snm{Schmelzer}\ead[label=e2]{thomas.s@yukkalab.com}}
+
+\thankstext{t1}{The authors are listed alphabetically. This account builds on, and is
+dedicated to, the work of Harry Markowitz (1927--2023).}
+
+\address[A]{Department of Statistics, Stanford University, Stanford, California,
+USA\printead[presep={\ }]{e1}.}
+\address[B]{Thomas Schmelzer, \textit{affiliation to be completed}%
+\printead[presep={\ }]{e2}.}
+\end{aug}
 
 \begin{abstract}
 Many methods across statistics, optimization, and finance return not a single
@@ -58,6 +65,17 @@ invented in the 1950s, forgotten by statistics, and rediscovered around 2000, an
 collect the questions the unified view makes precise, chiefly the gap between the
 linear path length seen in practice and the exponential one possible in theory.
 \end{abstract}
+
+\begin{keyword}
+\kwd{Critical Line Algorithm}
+\kwd{LASSO}
+\kwd{least angle regression}
+\kwd{regularization path}
+\kwd{parametric quadratic programming}
+\kwd{homotopy}
+\end{keyword}
+
+\end{frontmatter}
 
 \section{Introduction}
 
