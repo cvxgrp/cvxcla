@@ -316,6 +316,13 @@ implementation calls these vectors \texttt{r\_alpha} and \texttt{r\_beta}. Equat
 for an interval of $\lambda$. A \emph{turning point} is a value of $\lambda$ at which
 the partition $(\F,\B)$ must change, i.e.\ an endpoint of such an interval.
 
+In the language of parametric optimisation, \eqref{eq:qp} is a one-parameter
+\emph{multi-parametric quadratic program}, whose solution map is piecewise affine
+over a polyhedral partition of $\lambda$: \eqref{eq:segment} is one piece and the
+turning points are its breakpoints. The homotopy methods of statistical learning
+(LARS and the LASSO) share exactly this structure, a correspondence we develop in
+\S\ref{sec:lars}.
+
 \section{The first turning point}
 \label{sec:first}
 
