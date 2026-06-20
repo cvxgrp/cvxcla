@@ -63,18 +63,10 @@ def main() -> None:
     ax.axhline(0.0, color="0.4", lw=0.6)
     ax.set_xlabel(r"penalty $\lambda$")
     ax.set_ylabel(r"coefficient $\beta_j(\lambda)$")
-    ax.set_title("Exact constrained path (solid) vs.\\ a 6-point grid (dashed)", fontsize=10)
+    ax.set_title("Exact constrained path (solid) vs. a 6-point grid (dashed)", fontsize=10)
     ax.invert_xaxis()
     ax.margins(x=0.02)
     ax.legend(fontsize=7.5, loc="upper left")
-    ax.text(
-        0.015,
-        0.03,
-        "open squares: grid samples; the dashed interpolation cuts the corners the homotopy resolves",
-        transform=ax.transAxes,
-        fontsize=7.0,
-        color="0.35",
-    )
     fig.tight_layout()
     out = "docs/statsci_note/path_grid_misses.pdf"
     fig.savefig(out)

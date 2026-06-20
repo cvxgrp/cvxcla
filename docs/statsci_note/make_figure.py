@@ -52,14 +52,6 @@ def main() -> None:
     ax.set_title("One piecewise-linear path, two readings", fontsize=10)
     ax.invert_xaxis()  # the homotopy runs as lambda decreases
     ax.margins(x=0.02)
-    ax.text(
-        0.015,
-        0.03,
-        f"{len(lams)} breakpoints; each is a LASSO enter/leave $=$ a CLA bound/multiplier event",
-        transform=ax.transAxes,
-        fontsize=7.5,
-        color="0.35",
-    )
     fig.tight_layout()
     out = "docs/statsci_note/path_both_sides.pdf"
     fig.savefig(out)
