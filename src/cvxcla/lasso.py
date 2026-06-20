@@ -278,9 +278,12 @@ class Lasso:
             # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
             return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
         if not np.any(rows_active):
-            # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S).
-            alpha[active] = self.quad.solve_free(active, xty_s)
-            beta_slope[active] = self.quad.solve_free(active, signs_s)
+            # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S). Solve both
+            # right-hand sides at once so H_SS is factorised a single time per
+            # breakpoint (one np.linalg.solve, not two).
+            sol = self.quad.solve_free(active, np.column_stack([xty_s, signs_s]))
+            alpha[active] = sol[:, 0]
+            beta_slope[active] = sol[:, 1]
         else:
             # Bordered solve over (beta_S, eta_R): the active rows G_RS act as
             # equality rows, exactly the CLA's Schur complement (cla.py).
