@@ -44,6 +44,7 @@ Event families, mirroring the CLA's "move to / leave a bound":
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from itertools import pairwise
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -195,14 +196,14 @@ class Lasso:
             return np.zeros(0)
         return np.atleast_1d(self.h)
 
-    @property
+    @cached_property
     def quad(self) -> QuadraticForm:
-        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend."""
+        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed)."""
         return DenseCovariance(self.x.T @ self.x)
 
-    @property
+    @cached_property
     def xty(self) -> NDArray[np.float64]:
-        """The linear data ``X^T y`` (the analogue of the CLA's expected returns)."""
+        """The linear data ``X^T y`` (the analogue of the CLA's expected returns; cached)."""
         return self.x.T @ self.y
 
     @property
