@@ -149,24 +149,20 @@ precisely this structure that the operator abstraction of this paper exploits: t
 covariance the classical CLA treats as dense is, in practice, almost never dense.
 
 We claim no new turning points (the frontier is Markowitz's, and \texttt{cvxcla}
-traces exactly the same one) but a new \emph{interface} to it: we capture the
-covariance contract as three operations (a matrix--vector product, a free-block
-solve, and a free-to-blocked cross product) so that structured risk models trace
-the identical frontier without touching the algorithm. The one element here that
-is, to our knowledge, not standard in existing CLA
-implementations (which operate on an explicit dense covariance
-\citep{markowitz2000, bailey2013}) is this \emph{covariance-operator
-abstraction}. The turning-point loop touches the covariance through only three
-operations: a matrix--vector product, a solve against the free-asset block, and a
-free-to-blocked cross product. Capturing exactly this contract as a small
-protocol decouples the algorithm from the covariance representation, so a
-structured risk model (e.g.\ a diagonal-plus-low-rank factor covariance solved
-through the Woodbury identity) drops in as a backend and traces the
-\emph{same exact frontier} at lower memory in every case, and at a fraction of the
-time when its rank is genuinely low (few factors over many assets), without a
-single change to the turning-point loop. This is the paper's main engineering
-contribution; the experiments of \S\ref{sec:experiment} quantify both the memory
-saving and the regime-dependent speed-up.
+traces exactly the same one) but a new \emph{interface} to it. The turning-point
+loop touches the covariance through only three operations: a matrix--vector
+product, a solve against the free-asset block, and a free-to-blocked cross product.
+Capturing exactly this contract as a small protocol decouples the algorithm from
+the covariance representation, so a structured risk model (e.g.\ a
+diagonal-plus-low-rank factor covariance solved through the Woodbury identity)
+drops in as a backend and traces the \emph{same exact frontier} at lower memory in
+every case, and at a fraction of the time when its rank is genuinely low (few
+factors over many assets), without a single change to the turning-point loop. To
+our knowledge this \emph{covariance-operator abstraction} is not standard in
+existing CLA implementations, which operate on an explicit dense covariance
+\citep{markowitz2000, bailey2013}; it is the paper's main engineering contribution,
+and the experiments of \S\ref{sec:experiment} quantify both the memory saving and
+the regime-dependent speed-up.
 
 \paragraph{Contributions.}
 The turning points are Markowitz's; the contribution here is one of
@@ -214,15 +210,10 @@ trace deterministic on the degenerate problems we test but is not proven to defu
 every adversarial tie-heavy or very large instance; tracing through these declined
 cases is left to future work.
 
-One thread runs throughout. The critical-line iteration is a \emph{parametric
+One thread runs throughout: the critical-line iteration is a \emph{parametric
 active-set homotopy}, the same family as the LARS/LASSO path of statistical
-learning: a strictly convex quadratic whose linear term moves with a scalar
-parameter, traced from one breakpoint to the next while an active set is
-maintained. The portfolio frontier stays in the foreground, but the identical
-path-tracing engine, with the covariance replaced by a Gram matrix, traces the
-(constrained) LASSO regularisation path; \S\ref{sec:lars} makes the correspondence
-literal and runs both through one implementation. We flag it here so the machinery
-below reads as a general path-follower, not a portfolio-only tool.
+learning. We flag it here, and develop it in \S\ref{sec:lars}, so the machinery
+below reads as a general path-follower rather than a portfolio-only tool.
 
 The accompanying \texttt{cvxcla}
 package\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} provides the
