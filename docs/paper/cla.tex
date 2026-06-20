@@ -68,9 +68,11 @@
 % The url-path uses literal underscores; the display escapes them for \texttt.
 \newcommand{\repourl}{https://github.com/cvxgrp/cvxcla}
 % Pin source links to an immutable commit, not the moving \texttt{main} branch, so
-% they do not rot as the code is refactored. Bump \srcref to the tagged/archived
+% they do not rot as the code is refactored. Currently pinned to the latest mainline
+% commit that matches the manuscript (the Cholesky free-block solve, the conditioning
+% guard, and the constrained/non-negative LASSO); replace with the tagged/archived
 % release (the Zenodo-archived commit) at submission time.
-\newcommand{\srcref}{v1.8.0}
+\newcommand{\srcref}{ce875aa480d314f1f309cb40b9bd3ebc23d321a1}
 \newcommand{\srcfile}[2]{\href{\repourl/blob/\srcref/#1}{\texttt{#2}}}
 
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
