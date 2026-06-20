@@ -11,8 +11,10 @@ frontier_20x50                      Figure 1  (frontier.pdf)
 runtime_scaling                     Figure 2  (scaling.pdf) + Table 1
 rank_scaling                        Figure 3  (rank_scaling.pdf) + Table 2
 validate_exact                      Section 10.5 exactness numbers
+validate_constraints                Section 10.5 general-constraint exactness
 frontier_real                       Figure 4  (real_frontier.pdf)
 degeneracy_boundary                 Figure 5  (degeneracy.pdf)
+tie_degeneracy                      Section 10.6 tie-heavy stress envelope
 clarabel_baseline                   Figure 6  (clarabel_baseline.pdf) + Section 10 baseline
 lasso_path                          Figure 7  (lasso_path.pdf) + Section 11 LASSO check
 ==================================  ==========================================
@@ -51,8 +53,10 @@ STEPS: list[tuple[str, str, bool]] = [
     ("runtime_scaling", "Figure 2 (scaling.pdf) + Table 1", True),
     ("rank_scaling", "Figure 3 (rank_scaling.pdf) + Table 2", True),
     ("validate_exact", "Section 10.5 exactness numbers", False),
+    ("validate_constraints", "Section 10.5 general-constraint exactness", False),
     ("frontier_real", "Figure 4 (real_frontier.pdf)", False),
     ("degeneracy_boundary", "Figure 5 (degeneracy.pdf)", False),
+    ("tie_degeneracy", "Section 10.6 tie-heavy stress envelope", False),
     ("clarabel_baseline", "Figure 6 (clarabel_baseline.pdf)", True),
     ("lasso_path", "Figure 7 (lasso_path.pdf) + Section 11 LASSO check", False),
 ]

@@ -172,6 +172,17 @@ class CLA:
         """Number of assets ``n`` (the problem dimension for the path tracer)."""
         return len(self.mean)
 
+    @property
+    def event_dimension(self) -> int:
+        """Coordinate count for the path-length safety cap: ``n`` bounds + ``p`` rows.
+
+        Each turning point fixes the activity of exactly one coordinate -- a box
+        bound, or an inequality row of ``G w <= h`` -- so the tracer's iteration cap
+        scales with ``n + p`` rather than ``n`` alone. With no inequality rows this
+        is just ``n``.
+        """
+        return self.dimension + int(self.g_matrix.shape[0])
+
     @cached_property
     def _free_blocks_well_conditioned(self) -> bool:
         """Whether every free-block solve along the trace is numerically safe.
