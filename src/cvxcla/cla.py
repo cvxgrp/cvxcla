@@ -220,12 +220,13 @@ class CLA:
         ``segment``, ``event_matrix``, ``step``, ``finish``) it calls.
 
         The reduced KKT system at each turning point is solved by block
-        elimination: two multi-RHS solves against the free covariance block
-        (via the covariance backend) and a small m x m Schur complement
-        ``A_F @ Sigma_FF^{-1} @ A_F.T``, where m is the number of equality
-        constraints. The covariance only enters through the ``QuadraticForm``
-        interface, so structured backends (e.g. ``FactorCovariance``) never
-        materialise an n x n matrix.
+        elimination: a single multi-RHS solve against the free covariance block
+        (via the covariance backend), covering the constraint columns and the
+        alpha and beta systems together so ``Sigma_FF`` is factorised once, then a
+        small Schur-complement solve ``A_F @ Sigma_FF^{-1} @ A_F.T`` over the
+        equality (and active inequality) rows. The covariance only enters through
+        the ``QuadraticForm`` interface, so structured backends (e.g.
+        ``FactorCovariance``) never materialise an n x n matrix.
 
         Raises:
             RuntimeError: If all variables are blocked, which would make the
