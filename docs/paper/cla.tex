@@ -85,44 +85,35 @@ frontier, with a LARS/LASSO twin, as implemented in \texttt{cvxcla}}
 \maketitle
 
 \begin{abstract}
-\texttt{cvxcla} is an open implementation of the Critical Line Algorithm (CLA) of
-Markowitz, which computes the \emph{entire} mean--variance efficient frontier of a
-portfolio problem exactly, rather than sampling it point by point, under box bounds
-together with general linear equality ($A w = b$) and inequality ($G w \le h$)
-constraints. The frontier is piecewise linear in weight space: between two
-consecutive \emph{turning points} the optimal weights are an affine function
-$w(\lambda) = \alpha + \lambda\beta$ of a single scalar parameter $\lambda$ that
-trades expected return against variance, and the algorithm walks from the
-maximum-return portfolio ($\lambda=\infty$) to the minimum-variance portfolio
-($\lambda=0$), changing the status of exactly one variable or one active constraint
-at each turning point, each step a single block-eliminated
-Karush--Kuhn--Tucker solve.
+\texttt{cvxcla} is an open implementation of Markowitz's Critical Line Algorithm
+(CLA), which computes the \emph{entire} mean--variance efficient frontier exactly,
+rather than sampling it point by point, under box bounds and general linear equality
+($A w = b$) and inequality ($G w \le h$) constraints. The frontier is piecewise
+linear: between consecutive \emph{turning points} the optimal weights are an affine
+function $w(\lambda) = \alpha + \lambda\beta$ of the risk--return parameter
+$\lambda$, and the algorithm walks from the maximum-return to the minimum-variance
+portfolio, changing the status of one variable or one active constraint at each
+turning point through a single block-eliminated Karush--Kuhn--Tucker solve.
 
-The frontier is Markowitz's; the contribution here is threefold. First, an \emph{operator
-interface}: the turning-point loop reaches the covariance only through a few
-linear-algebraic operations, so capturing that contract as a small protocol
-decouples the algorithm from the covariance representation and lets structured risk
-models (diagonal plus low rank) trace the same exact frontier without ever
-materialising a dense $n\times n$ matrix, at a fraction of the cost when their
-structure is genuinely low-rank. Second, a \emph{unification}: the CLA is the
-one-parameter specialisation of multi-parametric quadratic programming and shares
-its mechanics with the LARS/LASSO homotopy of statistical learning, so the same
-path-tracing engine, carrying the same general linear constraints, returns the exact
-constrained efficient frontier and the exact constrained LASSO regularisation path
-alike. Third, an
-\emph{open, tested, and benchmarked implementation}, with event logic hardened
-against degeneracy and floating-point noise.
-
-This hardening is bounded, not total: near-degenerate problems are repaired by
-projecting sub-tolerance round-off back onto the feasible set, while genuinely
-rank-deficient or degenerate instances are declined with an actionable diagnosis
-rather than mis-solved (the boundaries, including the unproven worst case of the
-lowest-index tie-break, are stated precisely in the body). The benchmarks should be
-read in this light: to the best of our
-knowledge no maintained, installable large-scale CLA implementation is available
-to compare against, so the runtime comparison is against PyPortfolioOpt (the most
-widely-used open CLA) together with internal controls, not a tuned large-scale
-competitor.
+The frontier is Markowitz's; the contribution is threefold. First, an
+\emph{operator interface}: the turning-point loop touches the covariance only
+through a few linear-algebraic operations, so a small protocol decouples the
+algorithm from the covariance representation and lets structured risk models
+(diagonal plus low rank) trace the same exact frontier without ever forming a dense
+$n\times n$ matrix, at a fraction of the cost when the structure is genuinely
+low-rank. Second, a \emph{unification}: the CLA is the one-parameter case of
+multi-parametric quadratic programming and shares its mechanics with the LARS/LASSO
+homotopy, so one path-tracing engine, carrying the same linear constraints, returns
+both the exact constrained efficient frontier and the exact constrained LASSO path.
+Third, an \emph{open, tested, and benchmarked} implementation, with event logic
+hardened against degeneracy and floating-point noise. This hardening is bounded, not
+total: sub-tolerance round-off is projected back onto the feasible set, while
+genuinely rank-deficient instances are declined with an actionable diagnosis rather
+than mis-solved (the boundaries, including the unproven worst case of the
+lowest-index tie-break, are stated precisely in the body). To the best of our
+knowledge no maintained, installable large-scale CLA implementation is available to
+compare against, so the runtime study uses PyPortfolioOpt (the most widely-used open
+CLA) together with internal controls, rather than a tuned large-scale competitor.
 \end{abstract}
 
 \tableofcontents
