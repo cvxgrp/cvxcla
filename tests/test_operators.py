@@ -729,3 +729,12 @@ class TestGramCovariance:
         # The solve allocates a few copies of the (T, n) data, never an n x n block.
         assert peak < 4 * 8 * t * n
         assert peak < 0.2 * 8 * n * n  # far below a single dense n x n matrix
+
+
+def test_dense_solve_free_falls_back_when_not_positive_definite():
+    """A symmetric indefinite block makes Cholesky fail; the LU fallback still solves it."""
+    matrix = np.array([[1.0, 2.0], [2.0, 1.0]])  # symmetric; eigenvalues 3 and -1 (indefinite)
+    cov = DenseCovariance(matrix)
+    free = np.array([True, True])
+    rhs = np.array([1.0, -1.0])
+    np.testing.assert_allclose(cov.solve_free(free, rhs), np.linalg.solve(matrix, rhs))

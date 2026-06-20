@@ -37,13 +37,21 @@ from cvxcla import Lasso
 SIZES = [20, 40, 80, 160, 320, 640]
 SEED = 7
 REPEATS = 3
+N_FACTORS = 10  # constant factor count, as in the CLA scaling experiment
 
 
 def make_problem(rng: np.random.Generator, n: int) -> tuple[np.ndarray, np.ndarray]:
-    """A standardised ``2n x n`` regression with a sparse ground truth."""
+    """A standardised ``2n x n`` factor-model regression with a sparse ground truth.
+
+    The design follows a ``K = N_FACTORS`` factor model (as in the CLA scaling
+    experiment): each feature is a loading-weighted mix of 10 common factors plus
+    idiosyncratic noise, so the columns are correlated rather than independent.
+    """
     m = 2 * n
-    x = rng.standard_normal((m, n))
-    x = x - x.mean(0)
+    factors = rng.standard_normal((m, N_FACTORS))  # m observations x K factors
+    loadings = rng.standard_normal((n, N_FACTORS))  # n features x K factors
+    x = factors @ loadings.T + rng.standard_normal((m, n))  # common factors + idiosyncratic
+    x = (x - x.mean(0)) / x.std(0)  # standardise the columns
     beta = np.zeros(n)
     support = rng.choice(n, max(1, n // 5), replace=False)
     beta[support] = rng.standard_normal(support.size)

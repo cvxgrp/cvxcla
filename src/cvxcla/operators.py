@@ -24,6 +24,7 @@ from typing import Protocol, cast, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.linalg import cho_factor, cho_solve  # type: ignore[import-untyped]
 
 
 def _rcond_symmetric(block: NDArray[np.float64]) -> float:
@@ -185,7 +186,15 @@ class DenseCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
+        block = self.matrix[np.ix_(free, free)]
+        try:
+            # The free block of a covariance/Gram matrix is symmetric positive
+            # definite, so Cholesky is ~1.5x faster than a general LU solve.
+            return cast("NDArray[np.float64]", cho_solve(cho_factor(block, overwrite_a=True, check_finite=False), rhs))
+        except np.linalg.LinAlgError:
+            # Not numerically positive definite (rank-deficient / indefinite):
+            # fall back to the general solve, which the degeneracy guards handle.
+            return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
