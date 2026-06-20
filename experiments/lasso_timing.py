@@ -39,6 +39,9 @@ SEED = 7
 REPEATS = 3
 N_FACTORS = 10  # constant factor count, as in the CLA scaling experiment
 
+HIGHDIM_OBS = 100  # fixed observations m for the p >> n sweep
+HIGHDIM_FEATURES = [200, 500, 1000, 2000, 4000]  # n >> m
+
 
 def make_problem(rng: np.random.Generator, n: int) -> tuple[np.ndarray, np.ndarray]:
     """A standardised ``2n x n`` factor-model regression with a sparse ground truth.
@@ -154,5 +157,50 @@ def main() -> None:
     print(f"wrote {out}")
 
 
+def make_highdim(rng: np.random.Generator, m: int, n: int) -> tuple[np.ndarray, np.ndarray]:
+    """A centred ``p >> n`` factor-model regression: ``m`` observations, ``n >> m`` features."""
+    factors = rng.standard_normal((m, N_FACTORS))
+    loadings = rng.standard_normal((n, N_FACTORS))
+    x = factors @ loadings.T + rng.standard_normal((m, n))
+    x = x - x.mean(0)  # centred design (the gram route's convention)
+    beta = np.zeros(n)
+    support = rng.choice(n, max(1, m // 10), replace=False)
+    beta[support] = rng.standard_normal(support.size)
+    y = x @ beta + 0.1 * rng.standard_normal(m)
+    return x, y - y.mean()
+
+
+def highdim() -> None:
+    """Benchmark ``p >> n``: dense Gram vs the data-matrix (``gram``) backend vs scikit-learn.
+
+    Forming the ``n x n`` Gram (the dense route) is ``O(n^2)`` and blows up; the
+    ``gram`` route solves through the data matrix in the ``m``-dimensional
+    observation space and stays close to scikit-learn's compiled LARS.
+    """
+    from sklearn.linear_model import lars_path
+
+    print(f"\n=== high-dimensional p >> n  (m = {HIGHDIM_OBS} observations) ===")
+    worst = 0.0
+    for n in HIGHDIM_FEATURES:
+        rng = np.random.default_rng(SEED)
+        x, y = make_highdim(rng, HIGHDIM_OBS, n)
+        m = x.shape[0]
+        gram_path = Lasso(x=x, y=y, gram=True)
+        alphas, _active, coefs = lars_path(x, y, method="lasso")
+        match = max(
+            float(np.max(np.abs(gram_path.solution(m * a) - coefs[:, i]))) for i, a in enumerate(alphas) if a > 0
+        )
+        worst = max(worst, match)
+        t_sk = median_time(lambda x=x, y=y: lars_path(x, y, method="lasso"))
+        t_dense = median_time(lambda x=x, y=y: Lasso(x=x, y=y))
+        t_gram = median_time(lambda x=x, y=y: Lasso(x=x, y=y, gram=True))
+        print(
+            f"n={n:5d}  bps={len(gram_path.path):4d}  match={match:.1e}   "
+            f"sklearn={t_sk * 1e3:7.1f} ms  cvxcla-dense={t_dense * 1e3:8.1f} ms  cvxcla-gram={t_gram * 1e3:7.1f} ms"
+        )
+    print(f"max |beta_cvxcla(gram) - beta_sklearn|: {worst:.1e}")
+
+
 if __name__ == "__main__":
     main()
+    highdim()

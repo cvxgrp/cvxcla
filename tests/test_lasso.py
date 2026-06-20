@@ -315,6 +315,24 @@ class TestLassoBuilder:
             Lasso.problem(x, y).inequality(g, h[:-1])
 
 
+def test_gram_backend_matches_dense_high_dimensional():
+    """gram=True (Woodbury in observation space) matches the dense path when p > n."""
+    rng = np.random.default_rng(4)
+    m, n = 40, 120  # p = n > m: the high-dimensional regime
+    x = rng.standard_normal((m, n))
+    x = x - x.mean(0)  # centred design (the gram route's convention)
+    beta = np.zeros(n)
+    beta[rng.choice(n, 4, replace=False)] = rng.standard_normal(4)
+    y = x @ beta + 0.05 * rng.standard_normal(m)
+    y = y - y.mean()
+    dense = Lasso(x=x, y=y)
+    gram = Lasso(x=x, y=y, gram=True)
+    assert len(dense.path) == len(gram.path)
+    for bp in dense.path:
+        if bp.lam > 1e-9:
+            np.testing.assert_allclose(gram.solution(bp.lam), dense.solution(bp.lam), atol=1e-7)
+
+
 def test_constraint_accessors_empty_without_constraints():
     """The g/h accessors return empty arrays when no inequality is supplied."""
     x, y = _uncorrelated_problem()

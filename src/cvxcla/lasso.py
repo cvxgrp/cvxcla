@@ -51,7 +51,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import DenseCovariance, QuadraticForm
+from .operators import DenseCovariance, GramCovariance, QuadraticForm
 from .pathtracer import trace
 
 if TYPE_CHECKING:
@@ -134,6 +134,7 @@ class Lasso:
     g: NDArray[np.float64] | None = None
     h: NDArray[np.float64] | None = None
     nonneg: bool = False  # pragma: no mutate
+    gram: bool = False  # pragma: no mutate
     tol: float = 1e-9  # pragma: no mutate
     path: list[Breakpoint] = field(default_factory=list)
 
@@ -198,7 +199,19 @@ class Lasso:
 
     @cached_property
     def quad(self) -> QuadraticForm:
-        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed)."""
+        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed).
+
+        With ``gram=True`` the data-matrix backend is used instead of forming the
+        ``n x n`` Gram: it solves through the Woodbury identity in the
+        ``m``-dimensional observation space and never materialises an ``n x n``
+        matrix, the win in the high-dimensional ``p >> n`` regime (more features than
+        observations). ``GramCovariance`` represents ``X_c^T X_c / (m-1)``, so scaling
+        the data by ``sqrt(m-1)`` recovers ``X^T X`` exactly for a **centred** design
+        (the standard LASSO convention; pass a column-centred ``x``).
+        """
+        if self.gram:
+            m = self.x.shape[0]
+            return GramCovariance(self.x * np.sqrt(m - 1.0))
         return DenseCovariance(self.x.T @ self.x)
 
     @cached_property
