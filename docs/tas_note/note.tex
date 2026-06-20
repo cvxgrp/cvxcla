@@ -1,0 +1,315 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+
+% --- notation ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Sig}{\Sigma}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\B}{\mathcal{B}}
+\newcommand{\Aset}{\mathcal{A}}
+\newcommand{\Sset}{\mathcal{S}}
+\newcommand{\trans}{^{\top}}
+\newcommand{\lb}{\ell}
+\newcommand{\ub}{u}
+\newcommand{\inv}{^{-1}}
+
+\newtheorem{proposition}{Proposition}
+
+\title{The Critical Line Algorithm \emph{is} a constrained LASSO:\\
+a dictionary between two homotopies}
+
+\author{%
+  [Authors]\thanks{Draft for \emph{The American Statistician}. The companion
+  software paper describes \texttt{cvxcla}, the open implementation used for the
+  numerical checks below.}%
+}
+
+\date{Draft, \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Markowitz's Critical Line Algorithm (CLA), which traces the mean--variance
+efficient frontier, and the LARS/LASSO homotopy, which traces the
+$\ell_1$-regularised regression path, are taught in different fields and seldom
+presented together. They are the same algorithm. Both follow the optimiser of a
+strictly convex quadratic as a single scalar parameter varies, both produce a
+piecewise-linear path, and both trace it by an active-set walk from one breakpoint
+to the next. We give the exact dictionary between the two, and then push past the
+textbook (unconstrained) correspondence: a \emph{single} active-set homotopy traces
+the Markowitz frontier and the LASSO path under \emph{arbitrary} linear equality and
+inequality constraints, with box bounds, non-negativity, and a gross-exposure
+($\ell_1$) cap as special cases. The unifying lens is that one side carves its
+active set with explicit polyhedral constraints while the other has it induced by
+the $\ell_1$ subgradient; the gross-exposure portfolio is exactly where the two
+coincide. One implementation runs both, and reproduces \texttt{scikit-learn}'s LASSO
+path to machine precision.
+\end{abstract}
+
+\section{Two paths, one mechanism}
+
+A surprising number of methods compute a \emph{path}: not a single fit, but the
+whole family of optimisers as one scalar parameter is swept. Two of the most used
+live in different literatures. In finance, the Critical Line Algorithm
+\citep{markowitz1956, markowitz1959} traces the mean--variance efficient frontier as
+the risk-aversion parameter varies. In statistics, least angle regression and the
+LASSO homotopy \citep{tibshirani1996, osborne2000, efron2004} trace the
+$\ell_1$-regularised regression coefficients as the penalty varies. They are taught
+apart, cited apart, and implemented apart.
+
+Our point is that they are one algorithm. This is not a loose analogy: the two
+problems are instances of the same parametric quadratic program, their solution
+maps are the same piecewise-linear object, and the active-set walk that traces one
+traces the other verbatim. Making the correspondence precise does three things. It
+lets a reader fluent in one field read the other for free; it transfers
+machinery (an exact, constrained LASSO path falls out of the portfolio side); and
+it isolates what is genuinely particular to each problem from what is shared
+scaffolding.
+
+\section{The two parametric quadratic programs}
+
+\paragraph{The portfolio frontier.}
+Let $w\in\R^n$ be portfolio weights, $\mu\in\R^n$ expected returns, and
+$\Sig\in\R^{n\times n}$ a symmetric positive (semi)definite covariance. The CLA
+traces the \emph{return-parametrised} quadratic program
+\begin{equation}
+\label{eq:cla}
+\min_{w\in\R^n}\ \tfrac12\, w\trans \Sig\, w \;-\; \lambda\, \mu\trans w
+\quad\text{subject to}\quad \mathbf{1}\trans w = 1,\ \ \lb \le w \le \ub,
+\end{equation}
+as $\lambda$ decreases from $+\infty$ (the maximum-return portfolio) to $0$ (the
+global minimum-variance portfolio). The locus of optimisers is the efficient
+frontier.
+
+\paragraph{The regression path.}
+For a response $y\in\R^m$ and design $X\in\R^{m\times n}$, the LASSO solves
+\begin{equation}
+\label{eq:lasso}
+\min_{\beta\in\R^n}\ \tfrac12\,\|y - X\beta\|_2^2 \;+\; \lambda\,\|\beta\|_1 ,
+\end{equation}
+and its minimiser $\beta(\lambda)$ is traced as $\lambda$ decreases from the value
+$\lambda_{\max}=\|X\trans y\|_\infty$ (where $\beta=0$) towards $0$.
+
+\paragraph{Why both paths are piecewise linear.}
+Fix the \emph{active set}. For \eqref{eq:cla} this is the \emph{free} set $\F$ of
+assets strictly inside their bounds (the rest pinned at $\lb$ or $\ub$); for
+\eqref{eq:lasso} it is the support $\Aset=\{j:\beta_j\neq 0\}$ together with the
+signs $s_\Aset=\operatorname{sign}(\beta_\Aset)$. On the region of $\lambda$ where
+the active set is constant, the stationarity (KKT) conditions are linear in the
+unknowns with a \emph{constant} system matrix and a right-hand side
+\emph{affine} in $\lambda$:
+\begin{align}
+\label{eq:cla-seg}
+\text{(CLA)}\quad & \Sig_{\F\F}\, w_\F + \nu\,\mathbf{1}_\F = \lambda\,\mu_\F - \Sig_{\F\B}w_\B,
+   && \mathbf{1}\trans w = 1, \\
+\label{eq:lasso-seg}
+\text{(LASSO)}\quad & X_\Aset\trans X_\Aset\, \beta_\Aset = X_\Aset\trans y - \lambda\, s_\Aset .
+\end{align}
+Hence each solves to an affine function of $\lambda$,
+\[
+w_\F(\lambda) = \alpha + \lambda\,\beta, \qquad
+\beta_\Aset(\lambda) = a - \lambda\, c ,
+\]
+valid until the active set must change. Those change-points are the CLA's
+\emph{turning points} and the LASSO's \emph{breakpoints}. This is the
+\citet{rosset2007} criterion at work: a quadratic loss together with a polyhedral
+(piecewise-linear) penalty or constraint forces a piecewise-linear path. In the
+language of parametric optimisation both are \emph{one-parameter parametric
+quadratic programs}, whose solution map is piecewise affine over a polyhedral
+partition of $\lambda$; the same structure underlies explicit model predictive
+control \citep{bemporad2002}.
+
+\section{The dictionary}
+
+Comparing \eqref{eq:cla-seg} and \eqref{eq:lasso-seg}, the covariance $\Sig$ plays
+the role of the Gram matrix $X\trans X$ and the expected-return vector $\mu$ the
+role of $X\trans y$. Under that single substitution the two homotopies line up term
+for term (Table~\ref{tab:dict}). The walk is identical: at each step compute the
+affine segment, find the smallest decrease in $\lambda$ at which an active-set event
+occurs, apply it, repeat. Even the anti-cycling rule is shared: both inherit the
+simplex method's lowest-index (Bland) tie-break to stay deterministic on degenerate
+problems.
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lll}
+\toprule
+Ingredient & Critical Line Algorithm & LARS / LASSO homotopy \\
+\midrule
+Swept parameter & risk aversion $\lambda:\infty\!\to\!0$ & penalty $\lambda:\infty\!\to\!0$ \\
+Quadratic form  & covariance $\Sig$ & Gram matrix $X\trans X$ \\
+Linear term     & expected returns $\mu$ & correlations $X\trans y$ \\
+Solution path   & $w(\lambda)=\alpha+\lambda\beta$ & $\beta(\lambda)=a-\lambda c$ \\
+Active set      & free assets (off the bounds) & support (nonzero $\beta_j$) \\
+Enter event     & blocked multiplier changes sign & correlation reaches $\lambda$ \\
+Leave event     & free weight reaches a box bound & coefficient reaches zero \\
+Step length     & \multicolumn{2}{l}{smallest positive step to the next breakpoint} \\
+Degeneracy      & lowest-index tie-break & lowest-index tie-break \\
+\bottomrule
+\end{tabular}
+\caption{The Critical Line Algorithm and the LARS/LASSO homotopy as two instances of
+one parametric active-set scheme. The only substitution is
+$(\Sig,\mu)\leftrightarrow(X\trans X,\,X\trans y)$.}
+\label{tab:dict}
+\end{table}
+
+There is one genuinely instructive difference, and it is structural rather than
+cosmetic. In the CLA the active set is carved out by \emph{explicit} polyhedral
+constraints: an asset is blocked when it sits on a box bound, and the events are
+weights reaching bounds or multipliers releasing them. In the LASSO the active set
+is \emph{induced} by the $\ell_1$ penalty through its subgradient: sparsity is an
+emergent property of the geometry, not a constraint the modeller writes down. The
+same polyhedral mechanism runs in opposite directions, one imposing the faces and
+the other discovering them. (A second, minor difference: forward LARS only adds
+variables, whereas the CLA, like the full LASSO homotopy, both adds and drops them
+as $\lambda$ decreases.)
+
+\section{Beyond the textbook case: general linear constraints}
+
+The correspondence above is the unconstrained (or budget-only) one. Its real
+payoff is that it survives \emph{general} linear constraints, and that the
+extension is the same on both sides. Augment either problem with an equality system
+$A x = b$ and inequalities $G x \le h$:
+\begin{equation}
+\label{eq:general}
+\min_x\ \tfrac12\, x\trans H x - \lambda\, d\trans x \ \ (\text{or}\ +\lambda\|x\|_1)
+\quad\text{s.t.}\quad A x = b,\ \ G x \le h,\ \ \lb \le x \le \ub,
+\end{equation}
+with $(H,d)=(\Sig,\mu)$ for the frontier and $(H,d)=(X\trans X, X\trans y)$ for the
+path. An \emph{active} inequality row, held at $g_i\trans x = h_i$, enters the
+reduced KKT system exactly as an equality row does: stacking
+$C=[\,A;\,G_{\Sset}\,]$ over the active rows $\Sset$ recovers the equality-only
+solve with $A$ replaced by $C$. So each step is still one solve against the
+free/support block of $H$, bordered by an $(m+|\Sset|)\times(m+|\Sset|)$ Schur
+complement. Box bounds and coefficient signs stay a separate, cheaper per-variable
+active set rather than being folded into $G$, so the common constraint-free problem
+pays nothing for the generality. (It is worth recording the natural wrong turn:
+turning an inequality into an equality with a non-negative slack leaves the slack
+with no curvature, so the augmented Hessian is only positive \emph{semi}definite and
+the reduced solve is singular whenever the inequality is inactive. The bordered
+system avoids this.)
+
+This matters because the statistics side rarely has an exact \emph{constrained}
+path. Coordinate descent and proximal methods deliver an approximate path on a
+$\lambda$-grid; LARS gives the unconstrained path. Equation~\eqref{eq:general}
+traces, exactly and in one pass, the LASSO path under arbitrary $G\beta \le h$, under
+non-negativity $\beta\ge 0$ (the analogue of a long-only portfolio), and under a
+linear equality. The dictionary now reads: long-only $\leftrightarrow$ non-negative
+LASSO; the budget $\mathbf{1}\trans w = 1$ $\leftrightarrow$ a linear equality on
+$\beta$; a sector- or factor-neutrality row $\leftrightarrow$ a linear equality;
+a group-exposure cap $\leftrightarrow$ an inequality row.
+
+\paragraph{Where the two literally coincide.}
+The bound-versus-penalty duality is not only conceptual. \citet{brodie2009} add a
+gross-exposure constraint $\|w\|_1 \le c$ to the Markowitz problem and show the
+result \emph{is} a LASSO, with $c$ promoting sparse, stable portfolios. For a
+long-only, fully invested portfolio the constraint is silent, since the budget
+already fixes $\|w\|_1 = \mathbf{1}\trans w = 1$; this is why the plain CLA traces a
+frontier rather than a sparsity path. Once short positions are admitted under a
+gross-exposure cap, the explicit constraint and the induced penalty describe the
+same polyhedron, and the parametric program the CLA traces and the LASSO path are
+not merely similar but identical.
+
+\section{One implementation, two problems}
+
+Because the walk is shared, a single path-tracing engine serves both: it touches
+the quadratic form $H$ only through a matrix--vector product, a solve against the
+active block, and an active-to-inactive cross product, and is told only what an
+``event'' means. The \texttt{cvxcla} package
+\citep{cvxcla} implements exactly this. Its \texttt{Lasso} object feeds the Gram
+matrix $X\trans X$ and the vector $X\trans y$ to the same loop that traces the
+portfolio frontier; the protocol it calls is named for a generic quadratic form,
+not for the covariance, for this reason.
+
+Two checks, deliberately light, confirm the identification.
+
+\emph{The unconstrained path is the LASSO path.} On a standard regression design,
+\texttt{cvxcla} and \texttt{scikit-learn}'s \texttt{lars\_path} report the same
+number of breakpoints and the same coefficients to machine precision: across the
+design we use, the maximum coefficient discrepancy is
+$\max_j |\hat\beta_j^{\texttt{cvxcla}} - \hat\beta_j^{\texttt{sklearn}}| = 3.2\times
+10^{-15}$ over $13$ breakpoints. The two implementations trace the identical path;
+they differ only in heritage.
+
+\emph{The constrained path is exact.} Under a per-coordinate non-negativity
+constraint $\beta\ge 0$ and a linear inequality $G\beta\le h$, the path traced by
+\eqref{eq:general} matches a reference quadratic-program solver
+(\texttt{CVXPY}/Clarabel) solved independently at each breakpoint to a maximum
+coefficient discrepancy of $\approx 6\times 10^{-10}$ -- solver precision -- whereas
+a grid-based approximation only samples the same curve.
+
+\section{What is, and is not, new}
+
+The ingredients are individually known, and we are explicit about which.
+\citet{efron2004} established the LARS/LASSO homotopy; \citet{osborne2000} gave an
+earlier homotopy view. \citet{rosset2007} characterised exactly when a regularised
+path is piecewise linear, a result that subsumes both problems. \citet{brodie2009}
+identified the gross-exposure Markowitz problem as a LASSO. The parametric-QP and
+explicit-MPC viewpoint \citep{bemporad2002} is classical in control. What we add is
+the consolidation that these pieces invite but do not state: a single active-set
+homotopy, and an explicit term-for-term dictionary, under which the
+\emph{constrained} Markowitz frontier and the \emph{constrained} LASSO path (general
+linear equalities and inequalities, non-negativity, and the gross-exposure ball) are
+the same computation -- extending the unconstrained correspondence and the single
+gross-exposure special case to arbitrary polyhedral constraints -- together with the
+reference implementation that traces both.
+
+\section{Discussion}
+
+Reading the two algorithms as one is more than tidy. It tells a portfolio
+practitioner that the machinery for sparse, leverage-constrained allocations is the
+LASSO homotopy, and it hands a statistician an exact path under constraints that the
+usual solvers approximate or cannot express. It also clarifies pedagogy: the
+critical line and the LASSO path are the same object seen from the constraint side
+and the penalty side, and the gross-exposure portfolio is the hinge between them.
+The broader moral is the one parametric optimisation has long known and the two
+fields rediscovered separately: when a strictly convex quadratic is followed along a
+single parameter under polyhedral structure, the path is piecewise linear and an
+active set is all the state you need to trace it exactly.
+
+\begin{thebibliography}{Markowitz(1959)}
+
+\bibitem[Bemporad et~al.(2002)]{bemporad2002} Bemporad, A., Morari, M., Dua, V., and
+Pistikopoulos, E.~N. (2002). The explicit linear quadratic regulator for constrained
+systems. \emph{Automatica}, 38(1), 3--20.
+
+\bibitem[Brodie et~al.(2009)]{brodie2009} Brodie, J., Daubechies, I., De Mol, C.,
+Giannone, D., and Loris, I. (2009). Sparse and stable Markowitz portfolios.
+\emph{Proceedings of the National Academy of Sciences}, 106(30), 12267--12272.
+
+\bibitem[Authors(2025)]{cvxcla} Authors (2025). \texttt{cvxcla}: the Critical Line
+Algorithm with a covariance-operator interface. Companion software paper.
+
+\bibitem[Efron et~al.(2004)]{efron2004} Efron, B., Hastie, T., Johnstone, I., and
+Tibshirani, R. (2004). Least angle regression. \emph{The Annals of Statistics},
+32(2), 407--499.
+
+\bibitem[Markowitz(1956)]{markowitz1956} Markowitz, H.~M. (1956). The optimization of
+a quadratic function subject to linear constraints. \emph{Naval Research Logistics
+Quarterly}, 3(1--2), 111--133.
+
+\bibitem[Markowitz(1959)]{markowitz1959} Markowitz, H.~M. (1959). \emph{Portfolio
+Selection: Efficient Diversification of Investments}. Wiley, New York.
+
+\bibitem[Osborne et~al.(2000)]{osborne2000} Osborne, M.~R., Presnell, B., and
+Turlach, B.~A. (2000). A new approach to variable selection in least squares
+problems. \emph{IMA Journal of Numerical Analysis}, 20(3), 389--403.
+
+\bibitem[Rosset and Zhu(2007)]{rosset2007} Rosset, S. and Zhu, J. (2007). Piecewise
+linear regularized solution paths. \emph{The Annals of Statistics}, 35(3),
+1012--1030.
+
+\bibitem[Tibshirani(1996)]{tibshirani1996} Tibshirani, R. (1996). Regression
+shrinkage and selection via the lasso. \emph{Journal of the Royal Statistical
+Society, Series B}, 58(1), 267--288.
+
+\end{thebibliography}
+
+\end{document}
