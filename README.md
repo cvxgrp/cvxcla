@@ -26,6 +26,11 @@ for portfolio optimization.
 The CLA efficiently computes the entire efficient frontier for portfolio optimization
 problems with linear constraints and bounds on the weights.
 
+The same parametric active-set engine also traces the **LASSO** regularisation path
+(the `Lasso` class) — including general inequality constraints `Gβ ≤ h` and the
+non-negative LASSO `β ≥ 0` — so the Critical Line Algorithm and the LARS/LASSO
+homotopy come out as two instances of one path-following engine.
+
 The Critical Line Algorithm was introduced by Harry Markowitz
 in [The Optimization of Quadratic Functions Subject to Linear Constraints](https://www.rand.org/pubs/research_memoranda/RM1438.html)
 and further described in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
@@ -96,6 +101,9 @@ approximation needed.
   Woodbury identity
 - Visualization of the efficient frontier using Plotly
 - Computation of the maximum Sharpe ratio portfolio
+- **LASSO regularisation path** through the same engine (`Lasso`), with the same
+  fluent builder, general inequality constraints `Gβ ≤ h`, and the non-negative
+  LASSO `β ≥ 0`
 - Fully tested and documented codebase
 
 ## 🚀 Installation
@@ -263,6 +271,49 @@ covariance = FactorCovariance(
 
 See the [factor backend documentation](https://www.cvxgrp.org/cvxcla/factor/)
 for the protocol, the math, and benchmarks against the dense path.
+
+### The LASSO through the same engine
+
+The same path-tracer drives the LASSO regularisation path. `Lasso` plays the Gram
+matrix `XᵀX` and the vector `Xᵀy` the way the CLA plays the covariance and the mean,
+and traces the whole path from `λ_max` (where `β = 0`) down to the least-squares fit:
+
+```python
+import numpy as np
+from cvxcla import Lasso
+
+rng = np.random.default_rng(0)
+X = rng.standard_normal((60, 12))
+y = X @ rng.standard_normal(12) + 0.1 * rng.standard_normal(60)
+
+# plain LASSO path; .solution(lam) evaluates beta at any penalty
+lasso = Lasso(x=X, y=y)
+beta = lasso.solution(0.5 * lasso.lam_max)
+
+# the same fluent builder as the CLA
+lasso = Lasso.problem(X, y).trace()
+```
+
+It carries the same constraints the CLA does. Add general inequality rows `Gβ ≤ h`
+(with `h > 0`, e.g. per-group exposure caps), or restrict to the **non-negative
+LASSO** `β ≥ 0` — where the ℓ₁ penalty collapses to the linear term `λ·1ᵀβ`, making
+it exactly the CLA's box-bounded parametric QP:
+
+```python
+# group-exposure caps G beta <= h (cap features 0–3 and 4–7)
+G = np.zeros((2, 12))
+G[0, :4] = 1.0
+G[1, 4:8] = 1.0
+h = np.array([1.0, 1.0])
+lasso = Lasso.problem(X, y).inequality(G, h).trace()
+
+# non-negative LASSO (beta >= 0)
+lasso = Lasso.problem(X, y).non_negative().trace()
+```
+
+Both return the exact path, validated breakpoint-by-breakpoint against a per-λ QP
+solver. (Equality constraints `Aβ = b` need a feasibility seed and are not yet
+supported; the canonical sum-to-zero case cannot be traced one coordinate at a time.)
 
 ## 🧪 Testing
 

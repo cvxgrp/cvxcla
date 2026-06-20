@@ -142,6 +142,187 @@ class TestLassoValidation:
             Lasso(np.ones((5, 3)), np.ones(4))
 
 
+class TestConstrainedLasso:
+    """The LASSO path under linear inequality constraints ``G beta <= h``."""
+
+    @staticmethod
+    def _problem_with_caps():
+        """A standardised regression with group-sum caps that bind along the path."""
+        rng = np.random.default_rng(1)
+        m, n = 50, 10
+        x = rng.standard_normal((m, n))
+        x = (x - x.mean(0)) / x.std(0)
+        beta = rng.standard_normal(n)
+        y = x @ beta + 0.1 * rng.standard_normal(m)
+        y = y - y.mean()
+        group = np.arange(n) % 3
+        g = np.array([(group == j).astype(float) for j in range(3)])
+        beta_ols = np.linalg.lstsq(x, y, rcond=None)[0]
+        h = np.maximum(np.abs(g @ beta_ols) * 0.4, 0.1)
+        return x, y, g, h
+
+    def test_path_is_feasible(self):
+        """Every breakpoint satisfies the inequality constraints."""
+        x, y, g, h = self._problem_with_caps()
+        lasso = Lasso(x=x, y=y, g=g, h=h)
+        for bp in lasso.path:
+            assert np.all(g @ bp.beta <= h + 1e-7)
+
+    def test_cap_binds(self):
+        """At least one breakpoint holds a constraint row active (the cap bites)."""
+        x, y, g, h = self._problem_with_caps()
+        lasso = Lasso(x=x, y=y, g=g, h=h)
+        assert any(np.any(np.abs(g @ bp.beta - h) <= 1e-7) for bp in lasso.path), "expected a binding cap"
+
+    def test_loose_caps_match_unconstrained(self):
+        """With caps too loose to bind, the constrained path equals the plain LASSO."""
+        x, y, g, _ = self._problem_with_caps()
+        constrained = Lasso(x=x, y=y, g=g, h=np.full(g.shape[0], 1e6))
+        plain = Lasso(x=x, y=y)
+        for frac in (0.8, 0.5, 0.2):
+            lam = frac * plain.lam_max
+            np.testing.assert_allclose(constrained.solution(lam), plain.solution(lam), atol=1e-7)
+
+    def test_rejects_nonpositive_h(self):
+        """A non-positive ``h`` entry (``beta = 0`` infeasible) is rejected."""
+        x, y, g, h = self._problem_with_caps()
+        h[0] = 0.0
+        with pytest.raises(ValueError, match="strictly positive"):
+            Lasso(x=x, y=y, g=g, h=h)
+
+    def test_rejects_g_without_h(self):
+        """Providing ``g`` without ``h`` is rejected."""
+        x, y, g, _ = self._problem_with_caps()
+        with pytest.raises(ValueError, match="together"):
+            Lasso(x=x, y=y, g=g)
+
+    def test_rejects_bad_g_shape(self):
+        """A ``g`` whose column count is not ``n`` is rejected."""
+        x, y, g, h = self._problem_with_caps()
+        with pytest.raises(ValueError, match="g must have shape"):
+            Lasso(x=x, y=y, g=g[:, :-1], h=h)
+
+
+def _nonneg_coordinate_descent(x: np.ndarray, y: np.ndarray, lam: float, iters: int = 5000) -> np.ndarray:
+    """An independent non-negative LASSO solver (coordinate descent, clamped at 0)."""
+    n = x.shape[1]
+    beta = np.zeros(n)
+    col_sq = np.sum(x * x, axis=0)
+    r = y - x @ beta
+    for _ in range(iters):
+        max_change = 0.0
+        for j in range(n):
+            if col_sq[j] == 0.0:
+                continue
+            rho = x[:, j] @ r + col_sq[j] * beta[j]
+            new = max(rho - lam, 0.0) / col_sq[j]  # soft-threshold then clamp at 0
+            if new != beta[j]:
+                r += x[:, j] * (beta[j] - new)
+                max_change = max(max_change, abs(new - beta[j]))
+                beta[j] = new
+        if max_change < 1e-12:
+            break
+    return beta
+
+
+class TestNonNegativeLasso:
+    """The LASSO path under the sign restriction ``beta >= 0``."""
+
+    def test_path_is_non_negative(self):
+        """Every breakpoint has non-negative coefficients."""
+        x, y = _uncorrelated_problem()
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for bp in lasso.path:
+            assert np.all(bp.beta >= -1e-9)
+
+    def test_matches_nonneg_coordinate_descent(self):
+        """Sampled along the path, beta matches an independent non-negative solver."""
+        x, y = _correlated_problem()
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for frac in (0.8, 0.5, 0.25, 0.05):
+            lam = frac * float(np.max(x.T @ y))
+            np.testing.assert_allclose(lasso.solution(lam), _nonneg_coordinate_descent(x, y, lam), atol=1e-5)
+
+    def test_suppresses_negative_coefficients(self):
+        """A coefficient the plain LASSO drives negative is held at zero here."""
+        x, y = _correlated_problem()
+        plain = Lasso(x=x, y=y)
+        nonneg = Lasso(x=x, y=y, nonneg=True)
+        lam = 0.2 * plain.lam_max
+        assert np.min(plain.solution(lam)) < -1e-6, "expected the plain path to go negative"
+        assert np.all(nonneg.solution(lam) >= -1e-9)
+
+    def test_builder_non_negative_matches_constructor(self):
+        """``.non_negative()`` on the builder equals ``nonneg=True`` directly."""
+        x, y = _uncorrelated_problem()
+        built = Lasso.problem(x, y).non_negative().trace()
+        direct = Lasso(x=x, y=y, nonneg=True)
+        assert len(built.path) == len(direct.path)
+        for frac in (0.8, 0.4, 0.1):
+            lam = frac * direct.path[0].lam
+            np.testing.assert_allclose(built.solution(lam), direct.solution(lam), atol=1e-12)
+
+    def test_all_nonpositive_correlations_give_zero_path(self):
+        """With no positive correlation, the non-negative path is identically zero."""
+        rng = np.random.default_rng(3)
+        x = np.abs(rng.standard_normal((30, 5))) + 0.1  # all-positive design
+        y = -x.sum(axis=1)  # so X^T y < 0 componentwise: nothing can enter
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for bp in lasso.path:
+            np.testing.assert_allclose(bp.beta, 0.0, atol=1e-9)
+        np.testing.assert_allclose(lasso.solution(0.0), 0.0, atol=1e-9)
+
+
+class TestLassoBuilder:
+    """The fluent ``Lasso.problem(...).trace()`` builder."""
+
+    def test_plain_builder_matches_constructor(self):
+        """``Lasso.problem(x, y).trace()`` equals the direct ``Lasso(x, y)``."""
+        x, y = _uncorrelated_problem()
+        built = Lasso.problem(x, y).trace()
+        direct = Lasso(x=x, y=y)
+        assert len(built.path) == len(direct.path)
+        for frac in (0.8, 0.4, 0.1):
+            lam = frac * direct.lam_max
+            np.testing.assert_allclose(built.solution(lam), direct.solution(lam), atol=1e-12)
+
+    def test_inequality_builder_matches_constructor(self):
+        """The builder's ``.inequality(g, h)`` equals passing ``g, h`` directly."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        built = Lasso.problem(x, y).inequality(g, h).trace()
+        direct = Lasso(x=x, y=y, g=g, h=h)
+        assert len(built.path) == len(direct.path)
+        for bp in built.path:
+            assert np.all(g @ bp.beta <= h + 1e-7)
+
+    def test_inequality_accumulates_rows(self):
+        """Repeated ``.inequality`` calls stack rows, like the CLA builder."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        stacked = Lasso.problem(x, y).inequality(g[:1], h[:1]).inequality(g[1:], h[1:]).trace()
+        direct = Lasso(x=x, y=y, g=g, h=h)
+        assert len(stacked.path) == len(direct.path)
+
+    def test_builder_rejects_bad_inequality_shape(self):
+        """A row vector of the wrong width is rejected at ``.inequality``."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        with pytest.raises(ValueError, match=r"must have .* columns"):
+            Lasso.problem(x, y).inequality(g[:, :-1], h)
+
+    def test_builder_rejects_bad_inequality_h_length(self):
+        """An ``h`` whose length does not match the rows of ``g`` is rejected."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        with pytest.raises(ValueError, match="h must have"):
+            Lasso.problem(x, y).inequality(g, h[:-1])
+
+
+def test_constraint_accessors_empty_without_constraints():
+    """The g/h accessors return empty arrays when no inequality is supplied."""
+    x, y = _uncorrelated_problem()
+    lasso = Lasso(x=x, y=y)
+    assert lasso.h_vector.shape == (0,)
+    assert lasso.g_matrix.shape == (0, x.shape[1])
+
+
 def test_breakpoint_is_frozen():
     """Breakpoint is an immutable record."""
     import dataclasses
