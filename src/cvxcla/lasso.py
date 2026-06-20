@@ -52,7 +52,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .operators import DenseCovariance, GramCovariance, QuadraticForm
-from .pathtracer import trace
+from .pathtracer import InequalityConstrained, trace
 
 if TYPE_CHECKING:
     from .builder import LassoBuilder
@@ -107,7 +107,7 @@ class Breakpoint:
 
 
 @dataclass
-class Lasso:
+class Lasso(InequalityConstrained):
     """The LASSO regularisation path, traced as a parametric active-set problem.
 
     Constructing a ``Lasso`` traces the entire path from ``lam_max`` (where
@@ -183,20 +183,6 @@ class Lasso:
 
         return LassoBuilder(x, y)
 
-    @property
-    def g_matrix(self) -> NDArray[np.float64]:
-        """Inequality matrix ``G`` as a ``(p, n)`` array (empty ``(0, n)`` if none)."""
-        if self.g is None:
-            return np.zeros((0, self.dimension))
-        return np.atleast_2d(self.g)
-
-    @property
-    def h_vector(self) -> NDArray[np.float64]:
-        """Inequality right-hand side ``h`` as a ``(p,)`` array (empty if none)."""
-        if self.h is None:
-            return np.zeros(0)
-        return np.atleast_1d(self.h)
-
     @cached_property
     def quad(self) -> QuadraticForm:
         """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed).
@@ -223,11 +209,6 @@ class Lasso:
     def dimension(self) -> int:
         """Number of features ``n`` (the problem dimension for the path tracer)."""
         return int(self.x.shape[1])
-
-    @property
-    def event_dimension(self) -> int:
-        """Coordinate count for the path-length cap: ``n`` features + ``p`` rows."""
-        return self.dimension + int(self.g_matrix.shape[0])
 
     @property
     def lam_max(self) -> float:
