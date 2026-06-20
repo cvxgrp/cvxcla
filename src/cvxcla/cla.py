@@ -181,7 +181,7 @@ class CLA:
         scales with ``n + p`` rather than ``n`` alone. With no inequality rows this
         is just ``n``.
         """
-        return self.dimension + self.g_matrix.shape[0]
+        return self.dimension + int(self.g_matrix.shape[0])
 
     @cached_property
     def _free_blocks_well_conditioned(self) -> bool:
