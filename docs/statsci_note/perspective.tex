@@ -398,19 +398,23 @@ the long-only budget is infeasible. With short positions $\|w\|_1>\mathbf{1}\tra
 in general, and the cap binds for $c$ below the unconstrained $\|w\|_1$.
 \end{proof}
 
-Figure~\ref{fig:both} shows the shared object: a single piecewise-linear coefficient
-path, traced here as a LASSO, whose breakpoints carry two vocabularies at once.
+Figure~\ref{fig:both} shows the identity directly. On one dataset, the LASSO
+regularisation path traced by the homotopy and the gross-exposure-constrained
+mean--variance solutions, solved \emph{independently} as quadratic programs, are the
+same curve.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.74\textwidth]{path_both_sides.pdf}
-\caption{One piecewise-linear path, two readings. The coordinate paths
-$\beta_j(\lambda)=w_j(\lambda)$ of a small problem traced by the shared homotopy
-(\texttt{cvxcla}). Each breakpoint (vertical guide) is simultaneously a LASSO event
-and a Critical Line Algorithm event: a coordinate \emph{entering} the support when
-its correlation reaches $\lambda$ is, on the portfolio side, a blocked multiplier
-changing sign; a coordinate \emph{leaving} when its coefficient reaches zero is a free
-weight reaching a bound. The curve is identical; only the names differ.}
+\includegraphics[width=0.66\textwidth]{path_identity.pdf}
+\caption{Theorem~\ref{thm:identity}, in coefficients. For one dataset, the LASSO
+regularisation path traced by the \texttt{cvxcla} homotopy (lines) and the
+gross-exposure-constrained mean--variance problem
+$\min \tfrac12\|y-X\beta\|_2^2$ subject to $\|\beta\|_1\le c$, solved
+\emph{independently} as a quadratic program at each cap (open markers), plotted against
+the shared parameter $\|\beta\|_1$ (the $\ell_1$ budget, equivalently the
+gross-exposure cap). The two formulations trace the \emph{same} curve: across the
+sampled caps the independent solutions agree with the homotopy path to
+$\approx 3\times 10^{-8}$, solver precision.}
 \label{fig:both}
 \end{figure*}
 
@@ -596,8 +600,9 @@ $H$ only through a matrix--vector product, a solve against the active block, and
 active-to-inactive cross product, one implementation serves every instance: told the
 quadratic form (as an operator) and what an event means, it traces the path. The same
 loop that follows the efficient frontier follows the LASSO path when handed
-$X\trans X$ and $X\trans y$. The \texttt{cvxcla} package \citep{cvxcla} realises this;
-Figure~\ref{fig:both} is its output. Two deliberately light checks confirm that
+$X\trans X$ and $X\trans y$. The \texttt{cvxcla} package \citep{cvxcla} realises this,
+and traced the homotopy shown in Figure~\ref{fig:both}. Two deliberately light checks
+confirm that
 Theorem~\ref{thm:identity} holds numerically and not merely on paper. On a standard
 design, the traced path agrees with \texttt{scikit-learn}'s \texttt{lars\_path} to
 $3.2\times10^{-15}$ in the coefficients over the same breakpoints; under a
@@ -605,23 +610,10 @@ non-negativity and an inequality constraint, the constrained path matches a refe
 quadratic-program solver, solved independently at each breakpoint, to
 $\approx 6\times10^{-10}$.
 
-The exactness is not a numerical nicety. Figure~\ref{fig:grid} contrasts the exact
-constrained path with what gridding the penalty reports: the grid solutions lie on the
-true path, but the linear interpolation a practitioner draws between them cuts the very
-corners, the breakpoints, that carry the model-selection information. Coordinate
-descent and proximal solvers, run on a $\lambda$-grid, approximate the path in exactly
-this way; the homotopy returns the corners themselves.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.74\textwidth]{path_grid_misses.pdf}
-\caption{An exact constrained (non-negative) LASSO path traced by the homotopy (solid,
-breakpoints marked) against a six-point penalty grid (dashed, open squares). The grid
-samples lie on the true path, but interpolating between them misses the corners the
-homotopy resolves; a finer grid narrows the gap but never closes it, whereas the
-homotopy returns the breakpoints by construction.}
-\label{fig:grid}
-\end{figure*}
+The exactness is not a numerical nicety: gridding the penalty and interpolating between
+grid points cuts the very corners, the breakpoints, that carry the model-selection
+information. Coordinate-descent and proximal solvers run on a $\lambda$-grid approximate
+the path in exactly this way, whereas the homotopy returns the corners themselves.
 
 Treating $H$ as an operator is also where the scheme meets scale. A structured
 quadratic form, a diagonal-plus-low-rank factor covariance in finance or a kernel in
