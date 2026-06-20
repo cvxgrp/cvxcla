@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 from .first import first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
-from .pathtracer import trace
+from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
 # A genuinely rank-deficient free block has a reciprocal condition number at
@@ -59,7 +59,7 @@ class _Segment(NamedTuple):
 
 
 @dataclass(frozen=True)
-class CLA:
+class CLA(InequalityConstrained):
     """Critical Line Algorithm implementation based on Markowitz's approach.
 
     This class implements the Critical Line Algorithm as described by Harry Markowitz
@@ -147,41 +147,10 @@ class CLA:
             return self.covariance
         return DenseCovariance(self.covariance)
 
-    @cached_property
-    def g_matrix(self) -> NDArray[np.float64]:
-        """Inequality matrix ``G`` of ``G w <= h`` as a ``(p, n)`` array.
-
-        ``None`` is normalised to an empty ``(0, n)`` matrix, so the inequality
-        machinery is a no-op and the trace reduces exactly to the equality-only
-        problem. This is the single point where the inequality input is
-        normalised, mirroring ``covariance_operator`` for the covariance.
-        """
-        if self.g is None:
-            return np.zeros((0, self.dimension))
-        return np.atleast_2d(np.asarray(self.g, dtype=np.float64))
-
-    @cached_property
-    def h_vector(self) -> NDArray[np.float64]:
-        """Inequality right-hand side ``h`` of ``G w <= h`` as a ``(p,)`` array."""
-        if self.h is None:
-            return np.zeros(0)
-        return np.atleast_1d(np.asarray(self.h, dtype=np.float64))
-
     @property
     def dimension(self) -> int:
         """Number of assets ``n`` (the problem dimension for the path tracer)."""
         return len(self.mean)
-
-    @property
-    def event_dimension(self) -> int:
-        """Coordinate count for the path-length safety cap: ``n`` bounds + ``p`` rows.
-
-        Each turning point fixes the activity of exactly one coordinate -- a box
-        bound, or an inequality row of ``G w <= h`` -- so the tracer's iteration cap
-        scales with ``n + p`` rather than ``n`` alone. With no inequality rows this
-        is just ``n``.
-        """
-        return self.dimension + int(self.g_matrix.shape[0])
 
     @cached_property
     def _free_blocks_well_conditioned(self) -> bool:
