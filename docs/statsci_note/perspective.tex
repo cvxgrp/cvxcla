@@ -1,9 +1,17 @@
 \documentclass[sts]{imsart}
 
+% Suppress benign font-substitution warnings: imsart's Times lacks a few shapes
+% (e.g. small-caps italic), which LaTeX substitutes automatically with no visual effect.
+\RequirePackage{silence}
+\WarningFilter{latexfont}{Font shape}
+
 \RequirePackage{amsthm,amsmath,amsfonts,amssymb}
 \RequirePackage[authoryear]{natbib}
 \RequirePackage{graphicx}
 \RequirePackage{booktabs}
+
+% Let TeX absorb the few sub-20pt inline-math overflows in the narrow column.
+\setlength{\emergencystretch}{2em}
 
 \startlocaldefs
 \newcommand{\R}{\mathbb{R}}
@@ -33,10 +41,11 @@
 \title{Following the Solution: Parametric Active-Set Homotopies in Statistics,
 Optimization, and Finance}
 \runtitle{Parametric Active-Set Homotopies}
+\runauthor{T. J. Hastie and T. Schmelzer}
 
 \begin{aug}
-\author[A]{\fnms{Trevor John}~\snm{Hastie}\thanksref{t1}\ead[label=e1]{hastie@stanford.edu}}
-\author[B]{\fnms{Thomas}~\snm{Schmelzer}\ead[label=e2]{thomas@jqr.ae}}
+\author[A]{\fnms{Trevor John}~\snm{Hastie}\thanksref{t1}\ead[label=e1]{hastie@stanford.edu}\orcid{0000-0002-0164-3142}}
+\author[B]{\fnms{Thomas}~\snm{Schmelzer}\ead[label=e2]{thomas@jqr.ae}\orcid{0009-0009-9771-3501}}
 
 \thankstext{t1}{The authors are listed alphabetically. This account builds on, and is
 dedicated to, the work of Harry Markowitz (1927--2023).}
@@ -48,24 +57,21 @@ USA\printead[presep={\ }]{e1}.}
 
 \begin{abstract}
 Many methods across statistics, optimization, and finance return not a single
-solution but a \emph{path} of solutions as one scalar parameter is swept: the LASSO
-follows the $\ell_1$-regularised coefficients along the penalty; the support-vector
-machine follows the dual variables along the cost; explicit model predictive control
-precomputes the control law along the state; and Markowitz's Critical Line Algorithm,
-older than all of them, follows the optimal portfolio along risk aversion. We argue,
-and prove on the cleanest pair, that these are one device. Our contribution is an
-exact identity, not an analogy: with the covariance taken to be a Gram matrix, the
-constrained mean--variance frontier and the constrained LASSO path are the
-\emph{same} piecewise-linear curve, with breakpoints in bijection, and this survives
-arbitrary linear equality and inequality constraints, well beyond the unconstrained
-correspondence and the single gross-exposure case known since
-\citet{brodie2009}. Around the theorem we organise the family by the small list of
-features that actually distinguish its members (whether the active set is imposed by
-constraints or induced by a penalty, whether it only grows or also shrinks, and what
-structure the quadratic form carries), recount the history in which the device was
-invented in the 1950s, forgotten by statistics, and rediscovered around 2000, and
-collect the questions the unified view makes precise, chiefly the gap between the
-linear path length seen in practice and the exponential one possible in theory.
+solution but a \emph{path} as one scalar parameter is swept: the LASSO along its
+penalty, the support-vector machine along its cost, explicit model predictive control
+along the state, and Markowitz's Critical Line Algorithm, older than all of them,
+along risk aversion. We argue, and prove on the cleanest pair, that these are one
+device. Our central result is an exact identity, not an analogy: with the covariance
+taken to be a Gram matrix, the constrained mean--variance frontier and the constrained
+LASSO path are the \emph{same} piecewise-linear curve, breakpoints in bijection, and
+this survives arbitrary linear equality and inequality constraints, beyond the
+unconstrained correspondence and the gross-exposure case of \citet{brodie2009}. The
+accompanying open-source package \texttt{cvxcla} makes the unification operational: it
+traces every instance, efficient frontier or regularisation path, through one engine
+that reaches its quadratic form only as an operator, so factor models and kernels drop
+in unchanged. Around these we organise the family by its few distinguishing features,
+recount how the device, invented in the 1950s, was rediscovered by statistics around
+2000, and collect the open questions the unified view makes precise.
 \end{abstract}
 
 \begin{keyword}
@@ -75,6 +81,12 @@ linear path length seen in practice and the exponential one possible in theory.
 \kwd{regularization path}
 \kwd{parametric quadratic programming}
 \kwd{homotopy}
+\end{keyword}
+
+\begin{keyword}[class=MSC2020]
+\kwd[Primary ]{62J07}
+\kwd[; secondary ]{90C20}
+\kwd{91G10}
 \end{keyword}
 
 \end{frontmatter}
@@ -103,10 +115,10 @@ arbitrary linear constraints. We state this as a theorem and prove it. Second
 (Section~\ref{sec:taxonomy}), once the identity is in hand, the entire family is
 organised by a short list of distinguishing features, and the apparent diversity of
 the methods collapses onto that list. Third (Sections~\ref{sec:tour}--\ref{sec:comp}),
-the unification is not only conceptual: a single implementation, accessing its
-quadratic form as an operator, traces every instance, and structured forms (factor
-models, kernels) are the lever that carries the sixty-year-old algorithm to modern
-scale.
+the unification is not only conceptual but \emph{operational}: the open-source package
+\texttt{cvxcla} traces every instance through one engine that accesses its quadratic
+form only as an operator, so structured forms (factor models, kernels) drop in and
+carry the sixty-year-old algorithm to modern scale.
 
 The synthesis is, in places, a synthesis of known parts, and we are explicit about
 which (Section~\ref{sec:history} and throughout). What is new is the exact
@@ -495,9 +507,10 @@ coordinates, not of scheme.
 
 \paragraph{The Critical Line Algorithm} $H=\Sig$, $d=\mu$; the active set is
 \emph{imposed} by the box bounds and is non-monotone, with assets leaving and
-re-entering the free set as $\lambda$ decreases. It is the oldest instance by four
-decades (Section~\ref{sec:history}) and, through Theorem~\ref{thm:identity}, the
-portfolio face of the LASSO.
+re-entering the free set as $\lambda$ decreases, tracing the corner portfolios of
+Figure~\ref{fig:frontier}. It is the oldest instance by four decades
+(Section~\ref{sec:history}) and, through Theorem~\ref{thm:identity}, the portfolio
+face of the LASSO.
 
 \paragraph{Explicit model predictive control} The constrained linear-quadratic
 regulator solved as a function of the state \citep{bemporad2002, tondel2003} is the
@@ -527,6 +540,16 @@ and independent of, the general active-set quadratic-programming theory of the s
 years, notably \citet{wolfe1959}, who in \emph{Econometrica} adapted the simplex
 method to quadratic programming and fixed the ratio-test-and-pivot lineage the homotopy
 still rides.
+
+The wider apparatus was being built in the same handful of years, and strikingly often
+in the same journal. \citet{frankwolfe1956} and \citet{beale1959} gave general
+quadratic-programming algorithms, while \citet{gasssaaty1955} introduced
+\emph{parametric} linear programming, following a solution as a cost coefficient
+varies, the linear ancestor of the homotopy used here; the Markowitz, Frank--Wolfe,
+Beale, and Gass--Saaty papers all appeared in the \emph{Naval Research Logistics
+Quarterly} between 1955 and 1959. By the close of the decade the parametric active-set
+treatment of quadratic programs existed, in finance and in optimization alike, in
+essentially the form we use today.
 
 Two threads then ran for half a century. On the modelling side, \citet{sharpe1963}, at
 Markowitz's suggestion, introduced the single-index model, writing the covariance as a
@@ -665,6 +688,9 @@ rest, and turns four parallel literatures on path-following into one.
 L\'opez de Prado, M. (2013). An open-source implementation of the critical-line
 algorithm for portfolio optimization. \emph{Algorithms}, 6(1), 169--196.
 
+\bibitem[Beale(1959)]{beale1959} Beale, E.~M.~L. (1959). On quadratic programming.
+\emph{Naval Research Logistics Quarterly}, 6(3), 227--243.
+
 \bibitem[Bemporad et~al.(2002)]{bemporad2002} Bemporad, A., Morari, M., Dua, V., and
 Pistikopoulos, E.~N. (2002). The explicit linear quadratic regulator for constrained
 systems. \emph{Automatica}, 38(1), 3--20.
@@ -679,6 +705,14 @@ Algorithm with a covariance-operator interface. Companion software paper.
 \bibitem[Efron et~al.(2004)]{efron2004} Efron, B., Hastie, T., Johnstone, I., and
 Tibshirani, R. (2004). Least angle regression. \emph{The Annals of Statistics},
 32(2), 407--499.
+
+\bibitem[Frank and Wolfe(1956)]{frankwolfe1956} Frank, M. and Wolfe, P. (1956). An
+algorithm for quadratic programming. \emph{Naval Research Logistics Quarterly},
+3(1--2), 95--110.
+
+\bibitem[Gass and Saaty(1955)]{gasssaaty1955} Gass, S.~I. and Saaty, T.~L. (1955). The
+computational algorithm for the parametric objective function. \emph{Naval Research
+Logistics Quarterly}, 2(1--2), 39--45.
 
 \bibitem[Hastie et~al.(2004)]{hastie2004svm} Hastie, T., Rosset, S., Tibshirani, R.,
 and Zhu, J. (2004). The entire regularization path for the support vector machine.
