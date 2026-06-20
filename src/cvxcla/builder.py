@@ -32,6 +32,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .cla import CLA
+from .lasso import Lasso
 from .operators import QuadraticForm
 
 
@@ -234,3 +235,76 @@ class ProblemBuilder:
             g=g,
             h=h,
         )
+
+
+class LassoBuilder:
+    """Chainable builder for a LASSO regularisation-path problem.
+
+    The LASSO counterpart of :class:`ProblemBuilder`. Construct one via
+    :meth:`cvxcla.lasso.Lasso.problem`, optionally add inequality constraints with
+    :meth:`inequality`, and finish with :meth:`trace`, which builds the
+    :class:`cvxcla.lasso.Lasso` and traces the entire regularisation path. Like the
+    CLA builder it adds no modelling power: it accepts the same ``G beta <= h`` rows
+    the ``Lasso`` already supports and nothing else.
+
+    Examples:
+        >>> import numpy as np
+        >>> from cvxcla import Lasso
+        >>> rng = np.random.default_rng(0)
+        >>> x = rng.standard_normal((30, 5))
+        >>> y = rng.standard_normal(30)
+        >>> lasso = Lasso.problem(x, y).trace()
+        >>> len(lasso.path) > 0
+        True
+    """
+
+    def __init__(self, x: NDArray[np.float64], y: NDArray[np.float64]) -> None:
+        """Start a builder for design matrix ``x`` and response ``y``.
+
+        Args:
+            x: Design matrix of shape ``(m, n)``.
+            y: Response vector of shape ``(m,)``.
+        """
+        self.x = np.asarray(x, dtype=np.float64)
+        self.y = np.asarray(y, dtype=np.float64)
+        self._g_blocks: list[NDArray[np.float64]] = []
+        self._h_blocks: list[NDArray[np.float64]] = []
+
+    def inequality(self, g: NDArray[np.float64], h: float | NDArray[np.float64]) -> LassoBuilder:
+        """Add one or more inequality rows ``G beta <= h`` (repeated calls accumulate).
+
+        Args:
+            g: A length-``n`` row vector or a ``(p, n)`` matrix.
+            h: The matching right-hand side: a scalar for a single row, or a
+                length-``p`` vector. Each entry must be strictly positive (so
+                ``beta = 0`` stays feasible), checked when the path is traced.
+
+        Returns:
+            ``self``, for chaining.
+
+        Raises:
+            ValueError: If ``g``'s column count is not ``n`` or ``h``'s length does
+                not match the rows of ``g``.
+        """
+        g_block = np.atleast_2d(np.asarray(g, dtype=np.float64))
+        h_block = np.atleast_1d(np.asarray(h, dtype=np.float64))
+        if self.x.ndim == 2 and g_block.shape[1] != self.x.shape[1]:
+            msg = f"inequality: coefficient matrix must have {self.x.shape[1]} columns, got shape {g_block.shape}"
+            raise ValueError(msg)
+        if h_block.shape[0] != g_block.shape[0]:
+            msg = f"inequality: h must have {g_block.shape[0]} entries to match the rows, got {h_block.shape[0]}"
+            raise ValueError(msg)
+        self._g_blocks.append(g_block)
+        self._h_blocks.append(h_block)
+        return self
+
+    def trace(self) -> Lasso:
+        """Assemble the pieces, build the ``Lasso``, and trace the full path.
+
+        Returns:
+            The traced :class:`cvxcla.lasso.Lasso`, whose ``path`` holds the
+            breakpoints of the (constrained) regularisation path.
+        """
+        g = np.vstack(self._g_blocks) if self._g_blocks else None
+        h = np.concatenate(self._h_blocks) if self._h_blocks else None
+        return Lasso(x=self.x, y=self.y, g=g, h=h)

@@ -17,6 +17,7 @@ degeneracy_boundary                 Figure 5  (degeneracy.pdf)
 tie_degeneracy                      Section 10.6 tie-heavy stress envelope
 clarabel_baseline                   Figure 6  (clarabel_baseline.pdf) + Section 10 baseline
 lasso_path                          Figure 7  (lasso_path.pdf) + Section 11 LASSO check
+validate_lasso_constraints          Section 11 constrained-LASSO exactness
 ==================================  ==========================================
 
 The S&P 500 input is the frozen snapshot committed at
@@ -59,6 +60,7 @@ STEPS: list[tuple[str, str, bool]] = [
     ("tie_degeneracy", "Section 10.6 tie-heavy stress envelope", False),
     ("clarabel_baseline", "Figure 6 (clarabel_baseline.pdf)", True),
     ("lasso_path", "Figure 7 (lasso_path.pdf) + Section 11 LASSO check", False),
+    ("validate_lasso_constraints", "Section 11 constrained-LASSO exactness", False),
 ]
 
 

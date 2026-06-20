@@ -142,6 +142,103 @@ class TestLassoValidation:
             Lasso(np.ones((5, 3)), np.ones(4))
 
 
+class TestConstrainedLasso:
+    """The LASSO path under linear inequality constraints ``G beta <= h``."""
+
+    @staticmethod
+    def _problem_with_caps():
+        """A standardised regression with group-sum caps that bind along the path."""
+        rng = np.random.default_rng(1)
+        m, n = 50, 10
+        x = rng.standard_normal((m, n))
+        x = (x - x.mean(0)) / x.std(0)
+        beta = rng.standard_normal(n)
+        y = x @ beta + 0.1 * rng.standard_normal(m)
+        y = y - y.mean()
+        group = np.arange(n) % 3
+        g = np.array([(group == j).astype(float) for j in range(3)])
+        beta_ols = np.linalg.lstsq(x, y, rcond=None)[0]
+        h = np.maximum(np.abs(g @ beta_ols) * 0.4, 0.1)
+        return x, y, g, h
+
+    def test_path_is_feasible(self):
+        """Every breakpoint satisfies the inequality constraints."""
+        x, y, g, h = self._problem_with_caps()
+        lasso = Lasso(x=x, y=y, g=g, h=h)
+        for bp in lasso.path:
+            assert np.all(g @ bp.beta <= h + 1e-7)
+
+    def test_cap_binds(self):
+        """At least one breakpoint holds a constraint row active (the cap bites)."""
+        x, y, g, h = self._problem_with_caps()
+        lasso = Lasso(x=x, y=y, g=g, h=h)
+        assert any(np.any(np.abs(g @ bp.beta - h) <= 1e-7) for bp in lasso.path), "expected a binding cap"
+
+    def test_loose_caps_match_unconstrained(self):
+        """With caps too loose to bind, the constrained path equals the plain LASSO."""
+        x, y, g, _ = self._problem_with_caps()
+        constrained = Lasso(x=x, y=y, g=g, h=np.full(g.shape[0], 1e6))
+        plain = Lasso(x=x, y=y)
+        for frac in (0.8, 0.5, 0.2):
+            lam = frac * plain.lam_max
+            np.testing.assert_allclose(constrained.solution(lam), plain.solution(lam), atol=1e-7)
+
+    def test_rejects_nonpositive_h(self):
+        """A non-positive ``h`` entry (``beta = 0`` infeasible) is rejected."""
+        x, y, g, h = self._problem_with_caps()
+        h[0] = 0.0
+        with pytest.raises(ValueError, match="strictly positive"):
+            Lasso(x=x, y=y, g=g, h=h)
+
+    def test_rejects_g_without_h(self):
+        """Providing ``g`` without ``h`` is rejected."""
+        x, y, g, _ = self._problem_with_caps()
+        with pytest.raises(ValueError, match="together"):
+            Lasso(x=x, y=y, g=g)
+
+    def test_rejects_bad_g_shape(self):
+        """A ``g`` whose column count is not ``n`` is rejected."""
+        x, y, g, h = self._problem_with_caps()
+        with pytest.raises(ValueError, match="g must have shape"):
+            Lasso(x=x, y=y, g=g[:, :-1], h=h)
+
+
+class TestLassoBuilder:
+    """The fluent ``Lasso.problem(...).trace()`` builder."""
+
+    def test_plain_builder_matches_constructor(self):
+        """``Lasso.problem(x, y).trace()`` equals the direct ``Lasso(x, y)``."""
+        x, y = _uncorrelated_problem()
+        built = Lasso.problem(x, y).trace()
+        direct = Lasso(x=x, y=y)
+        assert len(built.path) == len(direct.path)
+        for frac in (0.8, 0.4, 0.1):
+            lam = frac * direct.lam_max
+            np.testing.assert_allclose(built.solution(lam), direct.solution(lam), atol=1e-12)
+
+    def test_inequality_builder_matches_constructor(self):
+        """The builder's ``.inequality(g, h)`` equals passing ``g, h`` directly."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        built = Lasso.problem(x, y).inequality(g, h).trace()
+        direct = Lasso(x=x, y=y, g=g, h=h)
+        assert len(built.path) == len(direct.path)
+        for bp in built.path:
+            assert np.all(g @ bp.beta <= h + 1e-7)
+
+    def test_inequality_accumulates_rows(self):
+        """Repeated ``.inequality`` calls stack rows, like the CLA builder."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        stacked = Lasso.problem(x, y).inequality(g[:1], h[:1]).inequality(g[1:], h[1:]).trace()
+        direct = Lasso(x=x, y=y, g=g, h=h)
+        assert len(stacked.path) == len(direct.path)
+
+    def test_builder_rejects_bad_inequality_shape(self):
+        """A row vector of the wrong width is rejected at ``.inequality``."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        with pytest.raises(ValueError, match=r"must have .* columns"):
+            Lasso.problem(x, y).inequality(g[:, :-1], h)
+
+
 def test_breakpoint_is_frozen():
     """Breakpoint is an immutable record."""
     import dataclasses

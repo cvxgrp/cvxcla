@@ -11,7 +11,7 @@ methods to compute and analyze the efficient frontier.
 
 import importlib.metadata
 
-from .builder import ProblemBuilder
+from .builder import LassoBuilder, ProblemBuilder
 from .cla import CLA
 from .lasso import Lasso
 from .operators import (
@@ -32,6 +32,7 @@ __all__ = [
     "GramCovariance",
     "IncrementalDenseCovariance",
     "Lasso",
+    "LassoBuilder",
     "ParametricProblem",
     "ProblemBuilder",
     "QuadraticForm",

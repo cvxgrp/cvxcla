@@ -106,7 +106,10 @@ models (diagonal plus low rank) trace the same exact frontier without ever
 materialising a dense $n\times n$ matrix, at a fraction of the cost when their
 structure is genuinely low-rank. Second, a \emph{unification}: the CLA is the
 one-parameter specialisation of multi-parametric quadratic programming and shares
-its mechanics with the LARS/LASSO homotopy of statistical learning. Third, an
+its mechanics with the LARS/LASSO homotopy of statistical learning, so the same
+path-tracing engine, carrying the same general linear constraints, returns the exact
+constrained efficient frontier and the exact constrained LASSO regularisation path
+alike. Third, an
 \emph{open, tested, and benchmarked implementation}, with event logic hardened
 against degeneracy and floating-point noise.
 
@@ -1785,6 +1788,40 @@ implementations agree to solver precision ($\approx 3\times 10^{-15}$), confirmi
 that the CLA engine and the LARS/LASSO homotopy trace the identical path.}
 \label{fig:lasso}
 \end{figure}
+
+\subsection{A constrained LASSO through the same engine}
+\label{sec:lassoconstrained}
+
+The unification is not confined to the textbook LASSO. The same general linear
+inequality constraints the CLA carries, $G\beta \le h$, drop into the LASSO path
+unchanged: an active row enters the reduced system as the bordered Schur complement
+of \S\ref{sec:blockelim}, and the generalised correlation that drives the
+enter/leave events simply carries the active-row multipliers,
+$X\trans(y - X\beta(\lambda)) - G_{\Sset}\trans\eta(\lambda)$. The path stays
+piecewise linear (a quadratic loss under a polyhedral penalty \emph{and} polyhedral
+constraints, the criterion of \citet{rosset2007}), and \texttt{cvxcla.Lasso} accepts
+$G,h$ exactly as the \texttt{CLA} does. We require $h > 0$ so the path can start from
+the feasible $\beta = 0$ with every row slack, the same first vertex as the
+unconstrained LASSO; an equality system $A\beta = b$, or a zero entry of $h$, would
+need the linear-programming feasibility seed of \S\ref{sec:first} and is left to
+future work. On a standardised $60\times 12$ regression with per-group exposure caps
+$G\beta \le h$ ($15$ breakpoints, a cap active at $9$ of the $14$ interior segments),
+every segment midpoint matches a per-$\lambda$ constrained QP solve (CVXPY/Clarabel)
+to $\approx 2\times 10^{-10}$ in coefficients and to machine precision in feasibility
+(\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}),
+so the one path-tracing engine returns the exact \emph{constrained} regularisation
+path as well as the exact constrained frontier. The fluent builder of
+\S\ref{sec:usage} carries over unchanged, so the constrained path reads the same way
+as the constrained frontier (Listing~\ref{lst:lassobuilder}).
+
+\begin{lstlisting}[style=pyin,caption={The constrained LASSO through the same fluent
+builder as the CLA: \texttt{.inequality(G, h)} then \texttt{.trace()}.},label={lst:lassobuilder}]
+from cvxcla import Lasso
+
+# per-group exposure caps G beta <= h on a standardised regression
+lasso = Lasso.problem(X, y).inequality(G, h).trace()
+print("breakpoints:", len(lasso.path))
+\end{lstlisting}
 
 \section{Conclusion}
 
