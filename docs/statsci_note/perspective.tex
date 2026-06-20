@@ -26,6 +26,9 @@
 
 \begin{document}
 
+% Number sections and subsections only; \paragraph headers stay unnumbered run-in.
+\setcounter{secnumdepth}{2}
+
 \begin{frontmatter}
 \title{Following the Solution: Parametric Active-Set Homotopies in Statistics,
 Optimization, and Finance}
@@ -201,7 +204,7 @@ method's degeneracy hazard and its remedy: a lowest-index (Bland) tie-break that
 the walk deterministic. We call \eqref{eq:pqp}, \eqref{eq:affine}, and this homotopy
 the \emph{common scheme}.
 
-\paragraph{$H$ is an operator, not a matrix.}
+\paragraph{$H$ is an operator, not a matrix}
 It is worth stating at the outset what the homotopy actually asks of $H$, because it is
 much less than ``a stored $n\times n$ matrix.'' Inspecting the step of
 Lemma~\ref{lem:affine}, the quadratic form enters only through three linear actions:
@@ -224,7 +227,7 @@ We now show that the two most dissimilar members of the family are, under one
 substitution, the same instance of the common scheme, and that the identity is robust
 to general constraints.
 
-\paragraph{The two programs.}
+\paragraph{The two programs}
 For weights $w\in\R^n$, expected returns $\mu$, and covariance $\Sig\succ 0$, the
 gross-exposure-constrained mean--variance program is
 \begin{equation}
@@ -255,8 +258,12 @@ active-set homotopy traces both.
 \end{theorem}
 
 \begin{proof}
-Completing the square, $\tfrac12\|y-Xw\|_2^2 = \tfrac12 w\trans (X\trans X) w -
-(X\trans y)\trans w + \tfrac12\|y\|_2^2$. With $\Sig=X\trans X$ and $\mu=X\trans y$ the
+Completing the square,
+\[
+\tfrac12\|y-Xw\|_2^2 = \tfrac12\, w\trans (X\trans X)\, w - (X\trans y)\trans w
++ \tfrac12\|y\|_2^2 .
+\]
+With $\Sig=X\trans X$ and $\mu=X\trans y$ the
 objective of $\mathrm{M}_c$ equals $\tfrac12\|y-Xw\|_2^2$ up to the additive constant
 $\tfrac12\|y\|_2^2$, which does not affect the minimiser. Hence, under the same linear
 constraints $Aw=b,\ Gw\le h$, $\mathrm{M}_c$ is exactly the constrained least-squares
@@ -320,9 +327,11 @@ positive definite and $s_\Aset$ is not annihilated by it.
 
 \begin{proof}
 On a segment the support $\Aset$ and the signs $s_\Aset$ are fixed, so
-$\|\beta(\lambda)\|_1 = \sum_{j\in\Aset} s_j\,\beta_j(\lambda)
-= s_\Aset\trans(\alpha_\Aset - \lambda\,\beta_{\mathrm{slope},\Aset})$, affine in
-$\lambda$ with the stated slope; continuity across breakpoints follows from continuity
+\[
+\|\beta(\lambda)\|_1 = \sum_{j\in\Aset} s_j\,\beta_j(\lambda)
+= s_\Aset\trans(\alpha_\Aset - \lambda\,\beta_{\mathrm{slope},\Aset}),
+\]
+affine in $\lambda$ with the stated slope; continuity across breakpoints follows from continuity
 of $\beta(\lambda)$. Unconstrained, the segment stationarity
 $X_\Aset\trans X_\Aset\,\beta_\Aset = X_\Aset\trans y - \lambda\,s_\Aset$ gives
 $\beta_{\mathrm{slope},\Aset} = (X_\Aset\trans X_\Aset)^{-1}s_\Aset$, and
@@ -334,9 +343,12 @@ complement expresses the free block of the response to a right-hand side $(g;0)$
 $Z(Z\trans H_{\F\F} Z)^{-1}Z\trans g$, where the columns of $Z$ are a basis for the null
 space of $C_\F$ (the active constraint tangent space). With $g=s_\Aset$ this gives
 $\beta_{\mathrm{slope},\Aset}$ on the support, so
-$s_\Aset\trans\beta_{\mathrm{slope},\Aset}
-= \big\|(Z\trans H_{\F\F}Z)^{-1/2}Z\trans s_\Aset\big\|_2^2 \ge 0$, with equality only
-when $Z\trans s_\Aset = 0$, i.e.\ when $s_\Aset$ lies in the span of the active normals.
+\[
+s_\Aset\trans\beta_{\mathrm{slope},\Aset}
+= \big\|(Z\trans H_{\F\F}Z)^{-1/2}Z\trans s_\Aset\big\|_2^2 \ge 0,
+\]
+with equality only when $Z\trans s_\Aset = 0$, i.e.\ when $s_\Aset$ lies in the span of
+the active normals.
 Otherwise it is strictly positive and the bijection follows as before.
 \end{proof}
 
@@ -349,7 +361,7 @@ sequence finite, so the homotopy of Section~\ref{sec:scheme} is well defined and
 identity is between two genuinely single-valued curves.
 \end{remark}
 
-\paragraph{Bound versus penalty.}
+\paragraph{Bound versus penalty}
 The identity has a structural reading. In $\mathrm{M}_c$ the sparsity is governed by
 an \emph{explicit} constraint, the gross-exposure ball; in $\mathrm{L}_\lambda$ it is
 \emph{induced} by a penalty through its subgradient. The next proposition records
@@ -390,7 +402,7 @@ weight reaching a bound. The curve is identical; only the names differ.}
 \label{fig:both}
 \end{figure*}
 
-\paragraph{The portfolio face, concretely.}
+\paragraph{The portfolio face, concretely}
 A small example fixes the portfolio reading. We simulate $T=50$ daily returns for
 $N=20$ assets from a $K=5$ factor model, take the factor covariance itself
 $\Sig = \operatorname{diag}(d) + U\,\Delta\,U\trans$ as the risk model, estimate $\mu$
@@ -458,21 +470,21 @@ Read through the taxonomy of Section~\ref{sec:taxonomy}, each member is the comm
 scheme with its quadratic form and face-mechanism filled in, and the differences are
 exactly the four features.
 
-\paragraph{The LASSO and least angle regression.} $H=X\trans X$, $d=X\trans y$; the
+\paragraph{The LASSO and least angle regression} $H=X\trans X$, $d=X\trans y$; the
 active set is induced by the $\ell_1$ subgradient and is non-monotone. A coordinate
 enters when its correlation with the residual reaches $\lambda$ and leaves when its
 coefficient crosses zero; forward LARS is the entering-only ancestor, and the LASSO
 modification restores the leave move \citep{efron2004}. This is the instance
 Theorem~\ref{thm:identity} pairs with the CLA.
 
-\paragraph{The support-vector-machine path.} \citet{hastie2004svm} trace the SVM
+\paragraph{The support-vector-machine path} \citet{hastie2004svm} trace the SVM
 solution as the cost parameter varies; here $H$ is a \emph{kernel} Gram matrix
 $\kappa(X,X)$, the active set is the set of margin support vectors, and the events are
 points crossing the margin. It is induced and non-monotone, and it is the sharpest
 illustration of the operator reading of $H$: the path touches the kernel only through
 the three actions of Section~\ref{sec:scheme}, never forming it densely.
 
-\paragraph{The elastic net and the generalized lasso.} The elastic net
+\paragraph{The elastic net and the generalized lasso} The elastic net
 \citep{zou2005} adds a ridge, sending $H\to X\trans X + \eta I$ and otherwise leaving
 the scheme untouched: the regularisation merely conditions the quadratic form. The
 generalized lasso \citep{tibshirani2011}, with penalty $\lambda\|D\beta\|_1$ for a
@@ -481,13 +493,13 @@ penalties as special cases), traces a piecewise-linear \emph{dual} path by the s
 homotopy; the face-mechanism acts on $D\beta$ rather than $\beta$, a change of
 coordinates, not of scheme.
 
-\paragraph{The Critical Line Algorithm.} $H=\Sig$, $d=\mu$; the active set is
+\paragraph{The Critical Line Algorithm} $H=\Sig$, $d=\mu$; the active set is
 \emph{imposed} by the box bounds and is non-monotone, with assets leaving and
 re-entering the free set as $\lambda$ decreases. It is the oldest instance by four
 decades (Section~\ref{sec:history}) and, through Theorem~\ref{thm:identity}, the
 portfolio face of the LASSO.
 
-\paragraph{Explicit model predictive control.} The constrained linear-quadratic
+\paragraph{Explicit model predictive control} The constrained linear-quadratic
 regulator solved as a function of the state \citep{bemporad2002, tondel2003} is the
 multidimensional cousin: the parameter is a \emph{vector} (the state), so the scheme's
 interval of breakpoints becomes a polyhedral partition into critical regions and the
