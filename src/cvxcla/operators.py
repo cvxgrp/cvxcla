@@ -24,6 +24,15 @@ from typing import Protocol, cast, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.linalg import cho_factor, cho_solve  # type: ignore[import-untyped]
+from scipy.linalg.lapack import get_lapack_funcs  # type: ignore[import-untyped]
+
+# When the cheap LAPACK 1-norm condition *estimate* clears the singularity floor
+# by this margin, the decision is conclusive; an estimate landing within the
+# margin falls back to the exact symmetric rcond. The margin generously covers
+# the gap between the 1-norm estimate and the true 2-norm reciprocal condition
+# number, so the boolean answer is identical to the exact comparison.
+_RCOND_ESTIMATE_MARGIN = 1.0e3
 
 
 def _rcond_symmetric(block: NDArray[np.float64]) -> float:
@@ -185,7 +194,15 @@ class DenseCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
+        block = self.matrix[np.ix_(free, free)]
+        try:
+            # The free block of a covariance/Gram matrix is symmetric positive
+            # definite, so Cholesky is ~1.5x faster than a general LU solve.
+            return cast("NDArray[np.float64]", cho_solve(cho_factor(block, overwrite_a=True, check_finite=False), rhs))
+        except np.linalg.LinAlgError:
+            # Not numerically positive definite (rank-deficient / indefinite):
+            # fall back to the general solve, which the degeneracy guards handle.
+            return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
@@ -204,6 +221,34 @@ class DenseCovariance:
     def rcond_free(self, free: NDArray[np.bool_]) -> float:
         """Reciprocal condition number of the free block; see the protocol."""
         return _rcond_symmetric(self.matrix[np.ix_(free, free)])
+
+    def rcond_floor_cleared(self, floor: float) -> bool:
+        """Fast up-front conditioning test: is the whole matrix's rcond at least ``floor``?
+
+        An optional optimisation hook (not part of the :class:`QuadraticForm`
+        protocol, so backends need not provide it): the CLA calls it once, when
+        present, to decide whether the per-turning-point conditioning guard can be
+        skipped, and otherwise falls back to the exact ``rcond_free`` on the full
+        mask. The boolean is identical to ``rcond_free(<all free>) >= floor``.
+
+        Settles the common well-conditioned case with a Cholesky factorisation
+        plus a LAPACK 1-norm condition estimate (``?pocon``) -- ``O(n^3)`` for the
+        factor but only ``O(n^2)`` for the estimate -- instead of the full
+        eigendecomposition the exact :meth:`rcond_free` would run. A
+        non-positive-definite matrix (Cholesky fails) is below any positive floor;
+        an estimate within :data:`_RCOND_ESTIMATE_MARGIN` of the floor defers to
+        the exact symmetric rcond, so the answer matches ``rcond_free(all) >= floor``.
+        """
+        try:
+            cho, _lower = cho_factor(self.matrix, check_finite=False)
+        except np.linalg.LinAlgError:
+            return False  # not numerically positive definite: below any positive floor
+        (pocon,) = get_lapack_funcs(("pocon",), (self.matrix,))
+        anorm = float(np.linalg.norm(self.matrix, 1))
+        rcond_estimate = float(pocon(cho, anorm)[0])
+        if rcond_estimate >= floor * _RCOND_ESTIMATE_MARGIN:
+            return True
+        return _rcond_symmetric(self.matrix) >= floor
 
 
 class IncrementalDenseCovariance:
@@ -277,6 +322,10 @@ class IncrementalDenseCovariance:
     def rcond_free(self, free: NDArray[np.bool_]) -> float:
         """Reciprocal condition number of the free block (delegates to dense)."""
         return self._dense.rcond_free(free)
+
+    def rcond_floor_cleared(self, floor: float) -> bool:
+        """Fast up-front conditioning test (delegates to the wrapped dense matrix)."""
+        return self._dense.rcond_floor_cleared(floor)
 
     def solve_free(self, free: NDArray[np.bool_], rhs: NDArray[np.float64]) -> NDArray[np.float64]:
         """Solve ``Sigma[free][:, free] @ y = rhs`` using the maintained inverse.

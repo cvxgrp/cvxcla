@@ -44,13 +44,14 @@ Event families, mirroring the CLA's "move to / leave a bound":
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from itertools import pairwise
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import DenseCovariance, QuadraticForm
+from .operators import DenseCovariance, GramCovariance, QuadraticForm
 from .pathtracer import trace
 
 if TYPE_CHECKING:
@@ -133,6 +134,7 @@ class Lasso:
     g: NDArray[np.float64] | None = None
     h: NDArray[np.float64] | None = None
     nonneg: bool = False  # pragma: no mutate
+    gram: bool = False  # pragma: no mutate
     tol: float = 1e-9  # pragma: no mutate
     path: list[Breakpoint] = field(default_factory=list)
 
@@ -195,14 +197,26 @@ class Lasso:
             return np.zeros(0)
         return np.atleast_1d(self.h)
 
-    @property
+    @cached_property
     def quad(self) -> QuadraticForm:
-        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend."""
+        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed).
+
+        With ``gram=True`` the data-matrix backend is used instead of forming the
+        ``n x n`` Gram: it solves through the Woodbury identity in the
+        ``m``-dimensional observation space and never materialises an ``n x n``
+        matrix, the win in the high-dimensional ``p >> n`` regime (more features than
+        observations). ``GramCovariance`` represents ``X_c^T X_c / (m-1)``, so scaling
+        the data by ``sqrt(m-1)`` recovers ``X^T X`` exactly for a **centred** design
+        (the standard LASSO convention; pass a column-centred ``x``).
+        """
+        if self.gram:
+            m = self.x.shape[0]
+            return GramCovariance(self.x * np.sqrt(m - 1.0))
         return DenseCovariance(self.x.T @ self.x)
 
-    @property
+    @cached_property
     def xty(self) -> NDArray[np.float64]:
-        """The linear data ``X^T y`` (the analogue of the CLA's expected returns)."""
+        """The linear data ``X^T y`` (the analogue of the CLA's expected returns; cached)."""
         return self.x.T @ self.y
 
     @property
@@ -277,9 +291,12 @@ class Lasso:
             # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
             return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
         if not np.any(rows_active):
-            # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S).
-            alpha[active] = self.quad.solve_free(active, xty_s)
-            beta_slope[active] = self.quad.solve_free(active, signs_s)
+            # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S). Solve both
+            # right-hand sides at once so H_SS is factorised a single time per
+            # breakpoint (one np.linalg.solve, not two).
+            sol = self.quad.solve_free(active, np.column_stack([xty_s, signs_s]))
+            alpha[active] = sol[:, 0]
+            beta_slope[active] = sol[:, 1]
         else:
             # Bordered solve over (beta_S, eta_R): the active rows G_RS act as
             # equality rows, exactly the CLA's Schur complement (cla.py).
