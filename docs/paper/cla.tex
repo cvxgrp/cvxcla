@@ -1296,7 +1296,9 @@ algebra. It is slow because of \emph{how} it organises the work: it rebuilds a f
 inverse of the free block from scratch at every step, and in the branch that
 decides which blocked asset should re-enter it recomputes that full $O(n_\F^3)$
 inverse once for \emph{every} candidate blocked asset, of order $n$ dense
-inverses per turning point. \texttt{cvxcla} instead forms the affine segment once
+inverses per turning point (in the reference code of \citet{bailey2013} the call
+\texttt{np.linalg.inv(covarF)} sits inside the per-candidate \texttt{for i in b}
+loop that searches for the asset to free; PyPortfolioOpt inherits this structure). \texttt{cvxcla} instead forms the affine segment once
 per step from a single solve and evaluates all event candidates simultaneously
 (the $L$ matrix of \S\ref{sec:events}), so the gap is structural and algorithmic,
 not a \texttt{numpy} artefact.
