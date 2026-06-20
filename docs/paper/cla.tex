@@ -630,11 +630,13 @@ point we return to in \S\ref{sec:lars}. Four backends implement it.
 \subsection{Dense covariance}
 
 \texttt{DenseCovariance} wraps an explicit symmetric $n\times n$ matrix and implements
-the three operations with plain \texttt{numpy} calls: \texttt{matvec} is $\Sig x$,
-\texttt{solve\_free} is \texttt{np.linalg.solve} on the principal submatrix
-$\Sig_{\F\F}$, and \texttt{cross} is the off-diagonal block product. This reproduces
-exactly the behaviour of the classical CLA on a raw matrix and is the reference
-backend.
+the three operations with plain \texttt{numpy}/\texttt{scipy} calls: \texttt{matvec}
+is $\Sig x$, \texttt{cross} is the off-diagonal block product, and \texttt{solve\_free}
+solves the symmetric positive-definite system $\Sig_{\F\F}x=b$ on the principal
+submatrix by Cholesky factorisation (\texttt{scipy.linalg.cho\_factor}/\texttt{cho\_solve}),
+falling back to a general LU solve (\texttt{np.linalg.solve}) on the rare block that is
+not numerically positive-definite. This reproduces exactly the behaviour of the
+classical CLA on a raw matrix and is the reference backend.
 
 \subsection{Incremental dense covariance}
 \label{sec:incremental}
@@ -1226,21 +1228,21 @@ problems.
 
 Figure~\ref{fig:scaling} plots the median trace time against $n$ on log--log
 axes. A least-squares fit over the largest four sizes gives an empirical exponent
-of $\approx 2.2$ for the \texttt{cvxcla} dense backend and $\approx 1.3$ for the
+of $\approx 2.1$ for the \texttt{cvxcla} dense backend and $\approx 1.3$ for the
 factor backend: the dense per-iteration solve scales like $O(n_\F^3)$ over $O(n)$
 iterations, while the Woodbury solve with fixed $K$ stays close to linear in $n$.
 The dense and factor backends are comparable for small universes (the Woodbury
 correction carries a fixed $K\times K$ overhead), but the factor backend pulls
-away as $n$ grows: from rough parity at $n=40$ to a $\approx 7.7\times$ speedup
-at $n=640$ (Table~\ref{tab:scaling}). This $\approx 7.7\times$ is the genuine
+away as $n$ grows: from rough parity at $n=40$ to a $\approx 6.0\times$ speedup
+at $n=640$ (Table~\ref{tab:scaling}). This $\approx 6.0\times$ is the genuine
 \emph{algorithmic} gain: both backends are vectorised \texttt{numpy} solving the
 identical $\Sig$, so the only difference is the asymptotic Woodbury advantage of
 the structured solve over the dense one.
 
 For external context we also time PyPortfolioOpt, which scales far more steeply
 ($\approx n^{3.4}$): at $n=640$ it takes about $255$~seconds, so \texttt{cvxcla}'s
-dense backend is roughly $322\times$ faster and the factor backend roughly
-$2460\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
+dense backend is roughly $397\times$ faster and the factor backend roughly
+$2370\times$ faster. This gap is not a \texttt{numpy}-versus-Python artefact (
 PyPortfolioOpt uses \texttt{numpy} for its linear algebra) but a consequence of
 how it organises the work: it rebuilds a full free-block inverse at every step,
 and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
@@ -1253,12 +1255,12 @@ and once per candidate in the asset-entry search (\S\ref{sec:bailey}).
 \toprule
 $n$ & Turning points & PyPortfolioOpt & Inverse baseline & Dense & Factor \\
 \midrule
-$20$  & $21$  & $7.1$        & $0.7$   & $1.2$   & $1.6$ \\
-$40$  & $42$  & $39.9$       & $2.0$   & $3.5$   & $3.5$ \\
-$80$  & $81$  & $207.9$      & $4.8$   & $7.7$   & $6.9$ \\
-$160$ & $159$ & $1{,}470$    & $12.7$  & $26.1$  & $14.8$ \\
-$320$ & $322$ & $16{,}632$   & $50.1$  & $122.7$ & $36.5$ \\
-$640$ & $641$ & $254{,}726$  & $328.6$ & $792.0$ & $103.6$ \\
+$20$  & $21$  & $7.1$        & $0.7$   & $1.4$   & $1.5$ \\
+$40$  & $42$  & $39.9$       & $1.9$   & $3.5$   & $3.4$ \\
+$80$  & $81$  & $207.9$      & $4.6$   & $7.7$   & $6.9$ \\
+$160$ & $159$ & $1{,}470$    & $12.6$  & $23.1$  & $14.6$ \\
+$320$ & $322$ & $16{,}632$   & $49.2$  & $100.1$ & $35.1$ \\
+$640$ & $641$ & $254{,}726$  & $307.6$ & $642.0$ & $107.3$ \\
 \bottomrule
 \end{tabular}
 \caption{Frontier trace time (milliseconds) versus number of assets $n$ ($K=10$
@@ -1271,7 +1273,7 @@ $O(n)$-point frontier. ``Inverse baseline'' is the incremental-inverse CLA of
 rank-one updates instead of re-solving each step, so the gap between it and the
 dense backend isolates the linear-algebra strategy. Empirically the times scale
 like $\approx n^{3.4}$ (PyPortfolioOpt), $\approx n^{2.0}$ (inverse baseline),
-$\approx n^{2.2}$ (\texttt{cvxcla} dense) and $\approx n^{1.3}$
+$\approx n^{2.1}$ (\texttt{cvxcla} dense) and $\approx n^{1.3}$
 (\texttt{cvxcla} factor).}
 \label{tab:scaling}
 \end{table}
@@ -1283,10 +1285,10 @@ $\approx n^{2.2}$ (\texttt{cvxcla} dense) and $\approx n^{1.3}$
 PyPortfolioOpt \citep{pyportfolioopt}, a critical-line implementation in pure
 Python, scales like $\approx n^{3.4}$; the vectorised explicit-inverse baseline of
 \S\ref{sec:baseline} like $\approx n^{2.0}$; \texttt{cvxcla}'s dense backend like
-$\approx n^{2.2}$; and its diagonal-plus-low-rank factor backend, solving the
+$\approx n^{2.1}$; and its diagonal-plus-low-rank factor backend, solving the
 identical covariance through the Woodbury identity, like $\approx n^{1.3}$. At
-$n = 640$ the factor backend is roughly $2460\times$ faster than PyPortfolioOpt and
-$7.7\times$ faster than the dense backend. The incremental-inverse baseline and the
+$n = 640$ the factor backend is roughly $2370\times$ faster than PyPortfolioOpt and
+$6.0\times$ faster than the dense backend. The incremental-inverse baseline and the
 dense backend lie close together, far below PyPortfolioOpt; that gap reflects how
 PyPortfolioOpt organises its per-step work, not the underlying critical-line
 algorithm (\S\ref{sec:baseline}). The orange
@@ -1300,7 +1302,7 @@ repetitions; the shaded band around each spans their min and max.}
 \subsection{What the runtime gap is, and is not}
 \label{sec:baseline}
 
-The $\approx 322\times$ gap between \texttt{cvxcla}'s dense backend and
+The $\approx 397\times$ gap between \texttt{cvxcla}'s dense backend and
 PyPortfolioOpt at $n=640$ invites a lazy explanation (``vectorised
 \texttt{numpy} versus slow Python'') that is wrong. PyPortfolioOpt already uses
 \texttt{numpy} (\texttt{np.linalg.inv}, \texttt{np.dot}) for its per-step linear
@@ -1328,9 +1330,9 @@ traces the identical turning points to machine precision (max.\ weight discrepan
 $<10^{-13}$ across $n=20$--$160$), so the comparison against the dense backend is
 clean: only the linear-algebra strategy differs.
 
-The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $329$~ms at
-$n=640$) is about $2.4\times$ \emph{faster} than the dense backend
-($\approx n^{2.2}$, $792$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
+The answer is yes: the incremental-inverse baseline ($\approx n^{2.0}$, $308$~ms at
+$n=640$) is about $2.1\times$ \emph{faster} than the dense backend
+($\approx n^{2.1}$, $642$~ms), exactly as the $O(n_\F^2)$-versus-$O(n_\F^3)$ count
 predicts. \texttt{cvxcla}'s block elimination is therefore not the fastest possible
 dense strategy, and the package ships the incremental inverse as the opt-in
 \texttt{IncrementalDenseCovariance} backend (\S\ref{sec:incremental}) for callers
@@ -1340,8 +1342,8 @@ numerically robust step to step: the factor backend never forms $\Sig_{\F\F}$ at
 all, so there is no inverse to maintain: it solves through the Woodbury
 identity. The default dense backend gives up the modest incremental-inverse win to
 keep one turning-point loop that runs over \emph{any} backend, and the factor
-backend more than repays it: at $n=640$ it is $\approx 7.7\times$ faster than the
-dense backend and $\approx 3.2\times$ faster than the incremental-inverse baseline,
+backend more than repays it: at $n=640$ it is $\approx 6.0\times$ faster than the
+dense backend and $\approx 2.9\times$ faster than the incremental-inverse baseline,
 the only one of the four implementations with a genuinely sub-quadratic exponent
 ($\approx n^{1.3}$). The structured solve, not the linear-algebra bookkeeping, is
 the real algorithmic advance.
@@ -1356,7 +1358,7 @@ $K \in \{20, 40, 80, 160, 320\}$ of the ground-truth covariance, tracing the sam
 frontier with both backends. The dense backend factorises the same $320 \times
 320$ free block regardless of $K$, so its time is essentially flat; the Woodbury
 solve costs $O(n_\F K^2 + K^3)$ per step and grows with $K$. Figure~\ref{fig:rank}
-and Table~\ref{tab:rank} show the crossover: the factor backend is $3.1\times$
+and Table~\ref{tab:rank} show the crossover: the factor backend is $2.8\times$
 faster at $K=20$, reaches parity near $K=160$, and is about $2\times$ \emph{slower}
 at $K = 320$, where the ``low-rank'' part is full rank and the Woodbury correction
 is pure overhead. The practical reading is that the structured backend pays off
@@ -1369,11 +1371,11 @@ hundreds or thousands of assets ($K \ll n$).
 \toprule
 $K$ & \texttt{cvxcla} dense [ms] & \texttt{cvxcla} factor [ms] & Speedup \\
 \midrule
-$20$  & $112.0$ & $36.2$  & $3.1\times$ \\
-$40$  & $114.1$ & $43.0$  & $2.7\times$ \\
-$80$  & $108.1$ & $59.7$  & $1.8\times$ \\
-$160$ & $86.4$  & $78.5$  & $1.1\times$ \\
-$320$ & $87.1$  & $194.4$ & $0.4\times$ \\
+$20$  & $102.1$ & $36.1$  & $2.8\times$ \\
+$40$  & $100.2$ & $45.2$  & $2.2\times$ \\
+$80$  & $99.0$  & $58.9$  & $1.7\times$ \\
+$160$ & $83.9$  & $87.8$  & $1.0\times$ \\
+$320$ & $81.0$  & $199.9$ & $0.4\times$ \\
 \bottomrule
 \end{tabular}
 \caption{Frontier trace time at fixed $n = 320$ as the factor rank $K$ varies
@@ -1447,9 +1449,9 @@ script is retained for provenance and refresh only and is not part of the
 reproducible path. From the
 full-history sample mean and covariance (condition number $\approx 1.1\times
 10^{5}$) the CLA traces the entire long-only frontier (\textbf{96 turning
-points}) in a median of $\approx 14$~ms (Figure~\ref{fig:realfrontier}); a
+points}) in a median of $\approx 18$~ms (Figure~\ref{fig:realfrontier}); a
 rank-$20$ diagonal-plus-low-rank approximation of the same covariance traces a
-near-identical frontier ($89$ turning points) in $\approx 9$~ms through the
+near-identical frontier ($89$ turning points) in $\approx 10$~ms through the
 Woodbury backend. The annualised frontier spans expected returns of
 $0.14$--$0.89$ over volatilities of $0.10$--$0.87$, with a maximum Sharpe ratio of
 about $2.7$. This figure is measured in-sample (the frontier is optimised over
@@ -1572,9 +1574,9 @@ and time the whole sweep against a single \texttt{cvxcla} trace
 (\srcfile{experiments/clarabel_baseline.py}{experiments/clarabel\_baseline.py}).
 
 Even with the modelling layer stripped away, the grid is slower at every size and
-the gap widens with $n$: from $\approx 1.7\times$ at $n=20$ to $\approx 59\times$ at
-$n=320$, where one \texttt{cvxcla} trace takes $\approx 0.12$~s and the $320$
-Clarabel solves take $\approx 7.4$~s ($\approx 23$~ms each). The sweep grows like
+the gap widens with $n$: from $\approx 1.7\times$ at $n=20$ to $\approx 69\times$ at
+$n=320$, where one \texttt{cvxcla} trace takes $\approx 0.10$~s and the $320$
+Clarabel solves take $\approx 7.0$~s ($\approx 22$~ms each). The sweep grows like
 $\approx n^{2.9}$ -- $n$ solves, each an interior-point QP whose own cost climbs
 with $n$ -- far steeper than the trace (Figure~\ref{fig:clarabel}). And the grid
 only \emph{samples} the frontier: each Clarabel solution matches the exact
@@ -1593,7 +1595,7 @@ the whole frontier by gridding is both slower and only approximate.
 (log--log): a single exact \texttt{cvxcla} trace against reconstructing the frontier
 with $n$ Clarabel \citep{clarabel} QP solves over a $\lambda$-grid (the solver
 driven natively, no CVXPY layer). The grid sweep grows like $\approx n^{2.9}$ and is
-$\approx 59\times$ slower than the trace at $n=320$, and yields only an $n$-point
+$\approx 69\times$ slower than the trace at $n=320$, and yields only an $n$-point
 sampling rather than the exact piecewise-linear frontier.}
 \label{fig:clarabel}
 \end{figure}
