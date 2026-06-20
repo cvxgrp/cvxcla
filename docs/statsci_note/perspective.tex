@@ -107,26 +107,63 @@ subgradient, as Section~\ref{sec:identity} makes explicit. This is a one-paramet
 parametric quadratic program; its solution map has the structure that is the whole
 story.
 
-\begin{lemma}[Affine segments]
+\begin{lemma}[Affine segments and the bordered solve]
 \label{lem:affine}
-On any maximal interval of $\lambda$ on which the active set (the equalities, the
-active inequality rows, and the variables at a box bound) is constant, the optimiser
-of \eqref{eq:pqp} is affine in $\lambda$,
+On any maximal interval of $\lambda$ on which the active set is constant, the optimiser
+of \eqref{eq:pqp} is affine,
 \begin{equation}
 \label{eq:affine}
 x(\lambda) = \alpha + \lambda\,\beta ,
 \end{equation}
-for constant $\alpha,\beta$ determined by $H$ and the active constraint normals.
+and $(\alpha,\beta)$ come from a single bordered linear solve \eqref{eq:border} whose
+matrix is constant on the interval. An active inequality row enters that solve
+identically to an equality row.
 \end{lemma}
 
 \begin{proof}
-With the active set fixed, the KKT conditions of \eqref{eq:pqp} are a square linear
-system in $x$ and the active multipliers whose coefficient matrix depends only on $H$
-and the active normals, and whose right-hand side is $\lambda d$ plus constants from
-the fixed bound values and active right-hand sides. The system is nonsingular because
-$H\succ 0$ and the active normals are linearly independent at a vertex of the
-parametric program, so its solution is an affine function of the only $\lambda$-dependent
-term, $\lambda d$. Restricting to $x$ gives \eqref{eq:affine}.
+Fix $\lambda$ in the interior of the interval and name the active set: the equalities
+$A$ (always active); the active inequality rows $\Sset\subseteq\{1,\dots,p\}$, those
+held at $g_i\trans x = h_i$, the remainder carrying a zero multiplier by complementary
+slackness; and the blocked variables $\B$ pinned at a bound, with free set
+$\F=\B^{c}$. Stack the active linear constraints as
+$C=\big[\begin{smallmatrix}A\\ G_{\Sset}\end{smallmatrix}\big]\in
+\R^{(m+|\Sset|)\times n}$ with right-hand side $r=(b;\,h_{\Sset})$. Because $H\succ0$
+the program \eqref{eq:pqp} is strictly convex, so the KKT conditions are necessary and
+sufficient. Stationarity is
+\[
+Hx - \lambda d + C\trans\zeta + \rho = 0,
+\]
+with $\zeta\in\R^{m+|\Sset|}$ the equality and active-inequality multipliers and $\rho$
+the bound multipliers, supported on $\B$. Read the $\F$ rows, where $\rho_\F=0$, and
+split $Hx$ into free and blocked columns: $(Hx)_\F = H_{\F\F}\,x_\F + H_{\F\B}\,x_\B$,
+with $x_\B$ fixed at its bound values. Primal feasibility of the active rows is
+$C_\F x_\F + C_\B x_\B = r$. Collecting the unknowns $(x_\F,\zeta)$,
+\begin{equation}
+\label{eq:border}
+\begin{bmatrix} H_{\F\F} & C_\F\trans \\[2pt] C_\F & 0 \end{bmatrix}
+\begin{bmatrix} x_\F \\[2pt] \zeta \end{bmatrix}
+=
+\begin{bmatrix} \lambda\, d_\F - H_{\F\B}\,x_\B \\[2pt] r - C_\B\,x_\B \end{bmatrix}.
+\end{equation}
+The coefficient matrix is the saddle-point matrix of the active constraints, and it is
+nonsingular. Indeed $H_{\F\F}$ is a principal submatrix of $H\succ0$, hence positive
+definite, and under the linear-independence constraint qualification $C_\F$ has full
+row rank; if $(u,v)$ lies in the kernel then $H_{\F\F}u + C_\F\trans v = 0$ and
+$C_\F u = 0$, so left-multiplying the first equation by $u\trans$ gives
+$u\trans H_{\F\F}u + (C_\F u)\trans v = u\trans H_{\F\F}u = 0$, which forces $u=0$
+since $H_{\F\F}\succ0$, whereupon $C_\F\trans v = 0$ with $C_\F$ of full row rank forces
+$v=0$. Now the matrix in \eqref{eq:border} depends only on $H$ and the active normals,
+so it is constant on the interval, while the right-hand side is affine in $\lambda$
+(the only $\lambda$ term is $\lambda d_\F$); hence $(x_\F(\lambda),\zeta(\lambda))$ is
+affine in $\lambda$, and appending the $\lambda$-independent blocked entries $x_\B$
+gives \eqref{eq:affine} with $\beta_\B = 0$. Each homotopy step is therefore one solve
+of \eqref{eq:border}: a factorisation of $H_{\F\F}$ bordered by the $m+|\Sset|$ active
+normals through its Schur complement. Finally, $G_{\Sset}$ enters \eqref{eq:border}
+only as additional rows of $C$, indistinguishable from the equality rows $A$, and the
+box bounds are carried by the partition $(\F,\B)$ and the fixed $x_\B$, not folded into
+$C$. A polyhedral penalty $\lambda\|x\|_1$ is the same statement with $d$ replaced, on
+each segment, by the constant subgradient sign pattern $-s_\Aset$ of the support; that
+is the only change needed to read \eqref{eq:border} as the LASSO segment solve.
 \end{proof}
 
 The intervals partition the $\lambda$-axis at \emph{breakpoints} where the active set
@@ -218,12 +255,72 @@ Section~\ref{sec:scheme} visits the same vertices in the same order.
 The unconstrained ($A,G$ absent) case is the textbook LARS/LASSO correspondence; the
 single gross-exposure case with a budget is \citet{brodie2009}. The content of
 Theorem~\ref{thm:identity} is that arbitrary linear equalities and inequalities pass
-through unchanged: an active inequality row $g_i\trans x = h_i$ enters the reduced KKT
-system exactly as an equality, by stacking $C=[\,A;\,G_{\Sset}\,]$ over the active rows
-$\Sset$ and replacing $A$ with $C$ in the segment solve of Lemma~\ref{lem:affine}.
+through unchanged, and this is now a consequence of Lemma~\ref{lem:affine} rather than
+a claim: an active inequality row appears in the bordered solve \eqref{eq:border} as a
+row of $C=[\,A;\,G_{\Sset}\,]$, indistinguishable from an equality, so the segment, the
+breakpoints, and the per-step cost are exactly those of the equality-only problem.
 Statistics rarely has an \emph{exact} constrained LASSO path; coordinate descent and
 proximal methods approximate it on a grid, and LARS omits the constraints. The
 portfolio side supplies it for free.
+\end{remark}
+
+The bijection $c(\lambda)$ asserted in Theorem~\ref{thm:identity} can be pinned down
+exactly, which both sharpens the theorem and isolates the only way it can fail.
+
+\begin{proposition}[Regularity of the $c$--$\lambda$ correspondence]
+\label{prop:reg}
+Let $\beta(\lambda)$ be the constrained LASSO path and
+$c(\lambda)=\|\beta(\lambda)\|_1$ as in Theorem~\ref{thm:identity}. Then $c$ is
+continuous and piecewise linear, affine on each segment with
+\[
+c'(\lambda) = -\,s_\Aset\trans \beta_{\mathrm{slope},\Aset},
+\qquad
+\beta_\Aset(\lambda) = \alpha_\Aset - \lambda\,\beta_{\mathrm{slope},\Aset},
+\quad s_\Aset = \operatorname{sign}\!\big(\beta_\Aset\big),
+\]
+the sum taken over the current support $\Aset$. In the unconstrained case
+$\beta_{\mathrm{slope},\Aset} = (X_\Aset\trans X_\Aset)^{-1} s_\Aset$, so
+\[
+c'(\lambda) = -\, s_\Aset\trans (X_\Aset\trans X_\Aset)^{-1} s_\Aset \;<\; 0
+\]
+on every segment with nonempty support, and $c$ is a strictly decreasing,
+piecewise-linear bijection from $(0,\lambda_{\max}]$ onto $[0,\|\beta(0)\|_1)$. In the
+constrained case $\beta_{\mathrm{slope},\Aset}$ is the free block of the solution of
+\eqref{eq:border} with right-hand side $(s_\Aset;\,0)$, and
+$s_\Aset\trans\beta_{\mathrm{slope},\Aset}\ge 0$; the strict inequality, and hence the
+bijection, holds whenever the reduced Hessian on the active constraint tangent space is
+positive definite and $s_\Aset$ is not annihilated by it.
+\end{proposition}
+
+\begin{proof}
+On a segment the support $\Aset$ and the signs $s_\Aset$ are fixed, so
+$\|\beta(\lambda)\|_1 = \sum_{j\in\Aset} s_j\,\beta_j(\lambda)
+= s_\Aset\trans(\alpha_\Aset - \lambda\,\beta_{\mathrm{slope},\Aset})$, affine in
+$\lambda$ with the stated slope; continuity across breakpoints follows from continuity
+of $\beta(\lambda)$. Unconstrained, the segment stationarity
+$X_\Aset\trans X_\Aset\,\beta_\Aset = X_\Aset\trans y - \lambda\,s_\Aset$ gives
+$\beta_{\mathrm{slope},\Aset} = (X_\Aset\trans X_\Aset)^{-1}s_\Aset$, and
+$s_\Aset\trans(X_\Aset\trans X_\Aset)^{-1}s_\Aset > 0$ because
+$X_\Aset\trans X_\Aset\succ0$ and $s_\Aset\neq0$ on a nonempty support; a strictly
+negative derivative on every segment makes $c$ a strictly decreasing bijection onto its
+range. In the constrained case, eliminating $\zeta$ from \eqref{eq:border} by its Schur
+complement expresses the free block of the response to a right-hand side $(g;0)$ as
+$Z(Z\trans H_{\F\F} Z)^{-1}Z\trans g$, where the columns of $Z$ are a basis for the null
+space of $C_\F$ (the active constraint tangent space). With $g=s_\Aset$ this gives
+$\beta_{\mathrm{slope},\Aset}$ on the support, so
+$s_\Aset\trans\beta_{\mathrm{slope},\Aset}
+= \big\|(Z\trans H_{\F\F}Z)^{-1/2}Z\trans s_\Aset\big\|_2^2 \ge 0$, with equality only
+when $Z\trans s_\Aset = 0$, i.e.\ when $s_\Aset$ lies in the span of the active normals.
+Otherwise it is strictly positive and the bijection follows as before.
+\end{proof}
+
+\begin{remark}[Uniqueness]
+When the columns of $X$ are in general position the unconstrained LASSO solution is
+unique at every $\lambda$ \citep{tibshirani2013}. Under general position together with
+the linear-independence constraint qualification at each visited active set, the
+constrained path of Theorem~\ref{thm:identity} is likewise unique and its breakpoint
+sequence finite, so the homotopy of Section~\ref{sec:scheme} is well defined and the
+identity is between two genuinely single-valued curves.
 \end{remark}
 
 \paragraph{Bound versus penalty.}
@@ -300,18 +397,47 @@ fully tame the adversarial worst case (Section~\ref{sec:length}).
 \section{A tour of the instances}
 \label{sec:tour}
 
-Read through the taxonomy, the instances are short to describe. The \textbf{LASSO}
-\citep{tibshirani1996, efron2004} is induced, non-monotone, $H=X\trans X$. The
-\textbf{SVM regularization path} \citep{hastie2004svm} is induced, non-monotone, $H$ a
-kernel matrix; the \textbf{elastic net} \citep{zou2005} adds a ridge, sending
-$H\to X\trans X+\eta I$; the \textbf{generalized lasso} \citep{tibshirani2011} traces a
-piecewise-linear \emph{dual} path for penalties $\lambda\|D\beta\|_1$ (fused lasso,
-trend filtering, graph penalties). The \textbf{Critical Line Algorithm}
-\citep{markowitz1956, markowitz1959} is imposed, non-monotone, $H=\Sig$; it is the
-oldest instance by four decades. \textbf{Explicit MPC} \citep{bemporad2002, tondel2003}
-is the multidimensional cousin, with a vector parameter and a polyhedral partition into
-critical regions in place of the interval of breakpoints. Each is the common scheme with
-$(H,d)$ and a face-mechanism filled in; none requires new machinery.
+Read through the taxonomy of Section~\ref{sec:taxonomy}, each member is the common
+scheme with its quadratic form and face-mechanism filled in, and the differences are
+exactly the four features.
+
+\paragraph{The LASSO and least angle regression.} $H=X\trans X$, $d=X\trans y$; the
+active set is induced by the $\ell_1$ subgradient and is non-monotone. A coordinate
+enters when its correlation with the residual reaches $\lambda$ and leaves when its
+coefficient crosses zero; forward LARS is the entering-only ancestor, and the LASSO
+modification restores the leave move \citep{efron2004}. This is the instance
+Theorem~\ref{thm:identity} pairs with the CLA.
+
+\paragraph{The support-vector-machine path.} \citet{hastie2004svm} trace the SVM
+solution as the cost parameter varies; here $H$ is a \emph{kernel} Gram matrix
+$\kappa(X,X)$, the active set is the set of margin support vectors, and the events are
+points crossing the margin. It is induced and non-monotone, and it is the sharpest
+illustration of the operator reading of $H$: the path touches the kernel only through
+the three actions of Section~\ref{sec:scheme}, never forming it densely.
+
+\paragraph{The elastic net and the generalized lasso.} The elastic net
+\citep{zou2005} adds a ridge, sending $H\to X\trans X + \eta I$ and otherwise leaving
+the scheme untouched: the regularisation merely conditions the quadratic form. The
+generalized lasso \citep{tibshirani2011}, with penalty $\lambda\|D\beta\|_1$ for a
+structured difference operator $D$ (the fused lasso, trend filtering, and graph
+penalties as special cases), traces a piecewise-linear \emph{dual} path by the same
+homotopy; the face-mechanism acts on $D\beta$ rather than $\beta$, a change of
+coordinates, not of scheme.
+
+\paragraph{The Critical Line Algorithm.} $H=\Sig$, $d=\mu$; the active set is
+\emph{imposed} by the box bounds and is non-monotone, with assets leaving and
+re-entering the free set as $\lambda$ decreases. It is the oldest instance by four
+decades (Section~\ref{sec:history}) and, through Theorem~\ref{thm:identity}, the
+portfolio face of the LASSO.
+
+\paragraph{Explicit model predictive control.} The constrained linear-quadratic
+regulator solved as a function of the state \citep{bemporad2002, tondel2003} is the
+multidimensional cousin: the parameter is a \emph{vector} (the state), so the scheme's
+interval of breakpoints becomes a polyhedral partition into critical regions and the
+homotopy becomes region traversal. The one-parameter slice is exactly \eqref{eq:pqp}.
+
+None of these needs machinery beyond Section~\ref{sec:scheme}; what looks like five
+literatures is one algorithm with five fillings.
 
 \section{History}
 \label{sec:history}
@@ -387,6 +513,24 @@ non-negativity and an inequality constraint, the constrained path matches a refe
 quadratic-program solver, solved independently at each breakpoint, to
 $\approx 6\times10^{-10}$.
 
+The exactness is not a numerical nicety. Figure~\ref{fig:grid} contrasts the exact
+constrained path with what gridding the penalty reports: the grid solutions lie on the
+true path, but the linear interpolation a practitioner draws between them cuts the very
+corners, the breakpoints, that carry the model-selection information. Coordinate
+descent and proximal solvers, run on a $\lambda$-grid, approximate the path in exactly
+this way; the homotopy returns the corners themselves.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.74\textwidth]{path_grid_misses.pdf}
+\caption{An exact constrained (non-negative) LASSO path traced by the homotopy (solid,
+breakpoints marked) against a six-point penalty grid (dashed, open squares). The grid
+samples lie on the true path, but interpolating between them misses the corners the
+homotopy resolves; a finer grid narrows the gap but never closes it, whereas the
+homotopy returns the breakpoints by construction.}
+\label{fig:grid}
+\end{figure}
+
 Treating $H$ as an operator is also where the scheme meets scale. A structured
 quadratic form, a diagonal-plus-low-rank factor covariance in finance or a kernel in
 learning, supplies the same operations far more cheaply than a dense $H$, with no
@@ -417,6 +561,21 @@ Bland tie-break, which guarantees termination but not graceful behavior on the m
 degenerate large instances, be replaced by a rule with a worst-case guarantee, or shown
 unnecessary for generic data? A resolution would apply to every instance at once,
 which is the practical dividend of seeing them as one.
+
+The constrained identity raises questions of its own. Proposition~\ref{prop:reg} shows
+the $c$--$\lambda$ correspondence is a bijection except on segments where the active
+signs are annihilated by the constraints; characterising the designs and constraint
+systems on which such flat segments occur, and whether they are non-generic under a
+continuous design, would settle when the constrained path is globally reparametrisable
+between its penalty and constraint forms. The worst-case breakpoint count under general
+$G\beta\le h$ is also open: each inequality row adds a face that can be crossed, so the
+constrained path is at least as long as the unconstrained one, but whether $p$
+inequality rows can \emph{multiply} the count rather than merely add to it is not known.
+And the uniqueness behind Theorem~\ref{thm:identity} rests on general position plus a
+constraint qualification; the boundary where the qualification fails is the constrained
+analogue of the unconstrained ties the Bland rule manages, and invites the same
+analysis. These are not portfolio questions or regression questions but questions about
+the shared object, which is the point.
 
 \section{Conclusion}
 
@@ -509,6 +668,9 @@ selection. \emph{Computers \& Operations Research}, 35(12), 3945--3961.
 \bibitem[Tibshirani(1996)]{tibshirani1996} Tibshirani, R. (1996). Regression
 shrinkage and selection via the lasso. \emph{Journal of the Royal Statistical
 Society, Series B}, 58(1), 267--288.
+
+\bibitem[Tibshirani(2013)]{tibshirani2013} Tibshirani, R.~J. (2013). The lasso problem
+and uniqueness. \emph{Electronic Journal of Statistics}, 7, 1456--1490.
 
 \bibitem[Tibshirani and Taylor(2011)]{tibshirani2011} Tibshirani, R.~J. and Taylor,
 J. (2011). The solution path of the generalized lasso. \emph{The Annals of
