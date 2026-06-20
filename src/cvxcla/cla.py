@@ -195,16 +195,26 @@ class CLA:
         covariance clears the singularity floor, no free block encountered along
         the trace can be singular, and the per-turning-point conditioning guard in
         :meth:`_emit` is provably never triggered. We then skip it, paying one
-        ``rcond`` evaluation here instead of one at every turning point (the latter
+        conditioning test here instead of one at every turning point (the latter
         is a full eigendecomposition of the free block, as costly as the KKT solve,
-        so it otherwise dominates the trace).
+        so it otherwise dominates the trace). The up-front test itself goes through
+        :meth:`~cvxcla.operators.QuadraticForm.rcond_floor_cleared`, which the dense
+        backend settles with a Cholesky factorisation plus a condition estimate
+        rather than its own full eigendecomposition.
 
         When the full covariance is itself near-singular (for example a sample
         covariance from fewer observations than assets) this is ``False`` and the
         per-step guard in :meth:`_emit` runs unchanged, preserving the degeneracy
         diagnosis exactly.
         """
-        return self.covariance_operator.rcond_free(np.ones(self.dimension, dtype=bool)) >= _RCOND_FLOOR
+        # ``rcond_floor_cleared`` is an optional fast-path hook (the dense backend
+        # answers it with a Cholesky factorisation plus a condition estimate). A
+        # backend that does not provide it falls back to the exact full-mask rcond.
+        cleared = getattr(self.covariance_operator, "rcond_floor_cleared", None)
+        if cleared is not None:
+            return bool(cleared(_RCOND_FLOOR))
+        full = np.ones(self.dimension, dtype=bool)
+        return self.covariance_operator.rcond_free(full) >= _RCOND_FLOOR
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
