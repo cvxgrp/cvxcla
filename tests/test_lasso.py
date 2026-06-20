@@ -262,6 +262,16 @@ class TestNonNegativeLasso:
             lam = frac * direct.path[0].lam
             np.testing.assert_allclose(built.solution(lam), direct.solution(lam), atol=1e-12)
 
+    def test_all_nonpositive_correlations_give_zero_path(self):
+        """With no positive correlation, the non-negative path is identically zero."""
+        rng = np.random.default_rng(3)
+        x = np.abs(rng.standard_normal((30, 5))) + 0.1  # all-positive design
+        y = -x.sum(axis=1)  # so X^T y < 0 componentwise: nothing can enter
+        lasso = Lasso(x=x, y=y, nonneg=True)
+        for bp in lasso.path:
+            np.testing.assert_allclose(bp.beta, 0.0, atol=1e-9)
+        np.testing.assert_allclose(lasso.solution(0.0), 0.0, atol=1e-9)
+
 
 class TestLassoBuilder:
     """The fluent ``Lasso.problem(...).trace()`` builder."""
@@ -297,6 +307,20 @@ class TestLassoBuilder:
         x, y, g, h = TestConstrainedLasso._problem_with_caps()
         with pytest.raises(ValueError, match=r"must have .* columns"):
             Lasso.problem(x, y).inequality(g[:, :-1], h)
+
+    def test_builder_rejects_bad_inequality_h_length(self):
+        """An ``h`` whose length does not match the rows of ``g`` is rejected."""
+        x, y, g, h = TestConstrainedLasso._problem_with_caps()
+        with pytest.raises(ValueError, match="h must have"):
+            Lasso.problem(x, y).inequality(g, h[:-1])
+
+
+def test_constraint_accessors_empty_without_constraints():
+    """The g/h accessors return empty arrays when no inequality is supplied."""
+    x, y = _uncorrelated_problem()
+    lasso = Lasso(x=x, y=y)
+    assert lasso.h_vector.shape == (0,)
+    assert lasso.g_matrix.shape == (0, x.shape[1])
 
 
 def test_breakpoint_is_frozen():
