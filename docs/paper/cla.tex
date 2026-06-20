@@ -73,9 +73,9 @@
 \newcommand{\srcref}{v1.8.0}
 \newcommand{\srcfile}[2]{\href{\repourl/blob/\srcref/#1}{\texttt{#2}}}
 
-\title{\textbf{Exact Constrained Solution Paths for Portfolio Optimization
-and the LASSO}\\[0.3em]
-\large A parametric active-set method, as implemented in \texttt{cvxcla}}
+\title{\textbf{The Critical Line Algorithm}\\[0.3em]
+\large A parametric active-set method for the constrained mean--variance efficient
+frontier, with a LARS/LASSO twin, as implemented in \texttt{cvxcla}}
 
 \author{Thomas Schmelzer\\[2pt]
 \normalsize Jebel Quant Research, Abu Dhabi}
@@ -222,6 +222,16 @@ equality system, where the free set is too small to span the constraints
 trace deterministic on the degenerate problems we test but is not proven to defuse
 every adversarial tie-heavy or very large instance; tracing through these declined
 cases is left to future work.
+
+One thread runs throughout. The critical-line iteration is a \emph{parametric
+active-set homotopy}, the same family as the LARS/LASSO path of statistical
+learning: a strictly convex quadratic whose linear term moves with a scalar
+parameter, traced from one breakpoint to the next while an active set is
+maintained. The portfolio frontier stays in the foreground, but the identical
+path-tracing engine, with the covariance replaced by a Gram matrix, traces the
+(constrained) LASSO regularisation path; \S\ref{sec:lars} makes the correspondence
+literal and runs both through one implementation. We flag it here so the machinery
+below reads as a general path-follower, not a portfolio-only tool.
 
 The accompanying \texttt{cvxcla}
 package\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} provides the
@@ -768,7 +778,7 @@ $\lVert w\rVert_1 \le c$ is instead polyhedral, expressible as $G w \le h$ under
 split $w = w^+ - w^-$. Genuinely nonquadratic penalties (an entropy or log-barrier
 term) break the linear-in-$\lambda$ structure and lie outside the method.
 
-\section{The efficient frontier object}
+\section{The frontier object and its properties}
 \label{sec:frontier}
 
 The list of turning points is wrapped in a \texttt{Frontier} object
@@ -796,7 +806,7 @@ point of largest discrete Sharpe ratio brackets the continuous maximum. The
 frontier object therefore returns the maximum-Sharpe portfolio exactly, not to a
 search tolerance.
 
-\section{Complexity and properties}
+Four properties of the traced frontier are worth recording explicitly.
 
 \begin{itemize}
 \item \textbf{Exactness.} The frontier is returned exactly as a finite set of turning
@@ -830,136 +840,6 @@ complete with optimal turning points (\S\ref{sec:empirical}). The tie-break is r
 on the degenerate problems we test but is not proven to defuse every degeneracy;
 \S\ref{sec:empirical} states this boundary precisely.
 \end{itemize}
-
-\section{Relation to the Bailey--L\'opez de Prado implementation}
-\label{sec:bailey}
-
-The most widely used open implementation of the CLA is that of
-\citet{bailey2013} (the implementation behind PyPortfolioOpt's \texttt{CLA}
-\citep{pyportfolioopt}, against which we benchmark in \S\ref{sec:experiment}).
-That paper is the reference open-source CLA; when published it filled a real gap,
-as the only prior documented implementation was the Markowitz--Todd VBA-Excel code
-of \citet{markowitz2000}. Our
-implementation in fact shares several of its design choices: the same greedy
-first turning point (\S\ref{sec:first}), the explicit minimum-variance endpoint
-at $\lambda = 0$, and locating the maximum-Sharpe portfolio between bracketing
-turning points (\S\ref{sec:frontier}, in closed form here). It traces the same
-turning points as the method described here, since the underlying mathematics is
-Markowitz's, but differs in four ways that matter in practice.
-
-\begin{enumerate}
-\item \textbf{Covariance representation.} Bailey--L\'opez de Prado operate on an
-\emph{explicit dense covariance matrix}: each turning point forms and inverts the
-free-block covariance $\Sig_{\F\F}$ directly (their \texttt{getMatrices} /
-\texttt{reduceMatrix} helpers slice the stored matrix). \texttt{cvxcla} never
-requires the matrix: it reaches the covariance only through the operator protocol
-of \S\ref{sec:operators}, so structured backends (the diagonal-plus-low-rank
-Woodbury solve) plug in unchanged. This is the central difference and the source
-of the asymptotic speed-up in \S\ref{sec:rankscaling}.
-
-\item \textbf{Linear algebra.} Where the reference algorithm forms an explicit
-inverse of the free block from scratch at each step (and, in the branch that
-decides which blocked asset re-enters, recomputes that full inverse once for every
-candidate), \texttt{cvxcla} casts each step as the reduced KKT saddle-point solve
-of \S\ref{sec:blockelim}: a single block-eliminated solve against $\Sig_{\F\F}$
-feeding an $m \times m$ Schur complement, with the event search over all
-candidates vectorised rather than looped. More fundamentally, Bailey--L\'opez de
-Prado never assemble a KKT system at all: they substitute an explicit
-$\Sig_{\F\F}\inv$ into closed-form Lagrange expressions for $\lambda$, $\gamma$,
-and $w_\F$ specialised to the single budget row. The saddle-point formulation is
-what lets \texttt{cvxcla} reach the covariance as a black-box solve (the backend
-abstraction) and take an arbitrary $A$ (next point) where their closed-form
-algebra admits only one.
-
-\item \textbf{Constraint generality.} The reference implementation targets box
-bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
-an arbitrary set of $m$ linear equality constraints $A w = b$ and $p$ linear
-inequality constraints $G w \le h$; the budget is just the case
-$A = \mathbf{1}\trans$, $b = 1$, $p = 0$, and the Schur complement scales to
-$m + |\Sset| > 1$ active rows at negligible cost. The turning-point loop is general
-in $A$ throughout, and an active inequality row is carried as an extra row of that
-Schur complement (\S\ref{sec:lars}); the only constraint-specific step is the
-maximum-return vertex that seeds it, found by the greedy fill for an all-ones budget
-and by a linear program (HiGHS, via \texttt{scipy}) for a general $A$ or any $G$
-(\S\ref{sec:first}). This covers leverage, dollar-neutral long/short books, multi-row
-neutralities (sector, factor), and group- or sector-exposure caps. One
-caveat mirrors the degeneracy guarantee of \S\ref{sec:empirical}: the general-$A$
-path assumes a well-conditioned first vertex, where the free set has the $m$ assets
-the equalities require. At a \emph{degenerate} vertex (a basic asset pinned exactly
-on a box bound, so the free set is too small to span the constraints) the reduced
-$A_\F$ loses row rank and the Schur complement is singular. That vertex is
-\emph{declined} at the first turning point with an actionable diagnosis rather than
-mis-solved; tracing through it (rather than declining) is left to future work
-alongside the tie-heavy hardening of \S\ref{sec:empirical}.
-
-\item \textbf{Degeneracy handling.} On tie-heavy or degenerate inputs several
-events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit
-Bland-style, lowest-index tie-break (\S\ref{sec:bland}) together with a
-floating-point slope floor (\S\ref{sec:events}) to keep the trace deterministic
-and bounded; the reference implementation has no comparable anti-cycling rule. It
-also projects the sub-tolerance round-off that near-degenerate vertices produce
-back onto the feasible set, so near-rank-deficient covariances trace to
-completion with optimal turning points; only a genuinely rank-deficient free
-block is declined (\S\ref{sec:empirical}).
-\end{enumerate}
-
-These differences compound into a large runtime gap (\S\ref{sec:experiment}). It
-would be tempting to dismiss the gap as ``just an implementation detail,'' but the
-reference implementation is not slow for lack of \texttt{numpy}: it uses
-\texttt{numpy} for its per-step algebra. It is slow because of the structure
-above: a full free-block inverse rebuilt every step, and rebuilt once per
-candidate in the asset-entry search. \S\ref{sec:baseline} pins this down with a
-controlled baseline.
-
-\paragraph{Relation to large-scale active-set methods.}
-Bailey--L\'opez de Prado is the natural baseline because it is the most widely
-used open CLA, but it is not the only line of work on tracing the frontier
-efficiently. \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010}
-develop parametric quadratic-programming and active-set methods aimed squarely at
-\emph{large} universes, and they too drive the per-step cost well below a dense
-$O(n_\F^3)$ refactorisation. The decisive difference is \emph{where} the speed-up
-comes from. Those methods accelerate the linear algebra of a covariance that is
-still treated as an explicit (if large and possibly sparse) matrix (through
-incremental factorisation updates, exploitation of sparsity, or specialised
-pivoting) so the gain is tied to a particular matrix representation baked into
-the solver. \texttt{cvxcla} instead leaves the turning-point loop entirely
-representation-agnostic: the covariance enters only through the three-operation
-operator protocol of \S\ref{sec:operators}, so the same loop runs unchanged on a
-dense matrix or on a diagonal-plus-low-rank factor model, and the asymptotic
-advantage of \S\ref{sec:rankscaling} is a property of the \emph{backend}, not of
-the algorithm. The two ideas are complementary rather than competing: an
-incremental-update solver for the free block could itself be wrapped as a
-\texttt{CovarianceOperator} and dropped in. A direct empirical comparison is left
-to future work, for a concrete reason: no maintained, installable fast large-scale
-CLA exists to benchmark against. The closest is the Fortran implementation of
-\citet{niedermayer2010} (with MATLAB and Python bindings), which reports speedups
-of several orders of magnitude over earlier CLA codes but is effectively
-unmaintained and not buildable on current toolchains without nontrivial effort;
-\citet{hirschberger2010}'s ``CIOS'' is self-contained Java research code; and a
-general parametric active-set QP solver such as qpOASES would have to be driven
-along $\lambda$ with warm starts rather than tracing the frontier natively.
-Reviving the Niedermayer code, or a $\lambda$-swept qpOASES, is the natural
-baseline for such a comparison. The reading here is that \texttt{cvxcla}'s
-contribution is the interface that makes such backends interchangeable, not a
-claim to the fastest dense large-scale solve.
-
-\paragraph{Relation to portfolio-optimization software.}
-Set against the broader ecosystem of portfolio-optimization packages, the
-distinction is less speed than \emph{what is computed}. General toolkits, in Python
-Riskfolio-Lib \citep{riskfolio} and the scikit-learn-based \texttt{skfolio}
-\citep{skfolio}, and in R \texttt{fPortfolio} \citep{fportfolio} and the
-disciplined-convex layer \texttt{CVXR} \citep{cvxr}, construct a portfolio by
-solving a (mean--variance or richer) optimisation at a \emph{single} risk target,
-typically by handing a quadratic or conic program to a general solver; recovering
-the frontier then means re-solving on a grid of targets, an approximation that the
-grid resolution controls. \texttt{cvxcla}, like the CLA itself and like
-PyPortfolioOpt's \texttt{CLA} \citep{pyportfolioopt}, instead returns the
-\emph{entire} frontier exactly as a finite set of turning points, with no grid.
-Among the exact-CLA tools, PyPortfolioOpt is the natural head-to-head
-(\S\ref{sec:experiment}) but, as noted there, is not a performance-tuned solver. What is genuinely particular to \texttt{cvxcla} is
-orthogonal to all of these: the operator interface and the structured factor and
-Gram backends (\S\ref{sec:operators}), which run the same exact-frontier trace
-directly on a covariance representation the general toolkits do not exploit.
 
 \section{Using the package}
 \label{sec:usage}
@@ -1117,6 +997,136 @@ script, \srcfile{experiments/reproduce_paper.py}{reproduce\_paper.py},
 which runs each experiment in turn off the committed inputs (no network access)
 and reports which artefact it produces; the individual scripts it calls are cited
 at the relevant figures and tables below.
+
+\section{Relation to the Bailey--L\'opez de Prado implementation}
+\label{sec:bailey}
+
+The most widely used open implementation of the CLA is that of
+\citet{bailey2013} (the implementation behind PyPortfolioOpt's \texttt{CLA}
+\citep{pyportfolioopt}, against which we benchmark in \S\ref{sec:experiment}).
+That paper is the reference open-source CLA; when published it filled a real gap,
+as the only prior documented implementation was the Markowitz--Todd VBA-Excel code
+of \citet{markowitz2000}. Our
+implementation in fact shares several of its design choices: the same greedy
+first turning point (\S\ref{sec:first}), the explicit minimum-variance endpoint
+at $\lambda = 0$, and locating the maximum-Sharpe portfolio between bracketing
+turning points (\S\ref{sec:frontier}, in closed form here). It traces the same
+turning points as the method described here, since the underlying mathematics is
+Markowitz's, but differs in four ways that matter in practice.
+
+\begin{enumerate}
+\item \textbf{Covariance representation.} Bailey--L\'opez de Prado operate on an
+\emph{explicit dense covariance matrix}: each turning point forms and inverts the
+free-block covariance $\Sig_{\F\F}$ directly (their \texttt{getMatrices} /
+\texttt{reduceMatrix} helpers slice the stored matrix). \texttt{cvxcla} never
+requires the matrix: it reaches the covariance only through the operator protocol
+of \S\ref{sec:operators}, so structured backends (the diagonal-plus-low-rank
+Woodbury solve) plug in unchanged. This is the central difference and the source
+of the asymptotic speed-up in \S\ref{sec:rankscaling}.
+
+\item \textbf{Linear algebra.} Where the reference algorithm forms an explicit
+inverse of the free block from scratch at each step (and, in the branch that
+decides which blocked asset re-enters, recomputes that full inverse once for every
+candidate), \texttt{cvxcla} casts each step as the reduced KKT saddle-point solve
+of \S\ref{sec:blockelim}: a single block-eliminated solve against $\Sig_{\F\F}$
+feeding an $m \times m$ Schur complement, with the event search over all
+candidates vectorised rather than looped. More fundamentally, Bailey--L\'opez de
+Prado never assemble a KKT system at all: they substitute an explicit
+$\Sig_{\F\F}\inv$ into closed-form Lagrange expressions for $\lambda$, $\gamma$,
+and $w_\F$ specialised to the single budget row. The saddle-point formulation is
+what lets \texttt{cvxcla} reach the covariance as a black-box solve (the backend
+abstraction) and take an arbitrary $A$ (next point) where their closed-form
+algebra admits only one.
+
+\item \textbf{Constraint generality.} The reference implementation targets box
+bounds plus a single budget (fully-invested) constraint. \texttt{cvxcla} admits
+an arbitrary set of $m$ linear equality constraints $A w = b$ and $p$ linear
+inequality constraints $G w \le h$; the budget is just the case
+$A = \mathbf{1}\trans$, $b = 1$, $p = 0$, and the Schur complement scales to
+$m + |\Sset| > 1$ active rows at negligible cost. The turning-point loop is general
+in $A$ throughout, and an active inequality row is carried as an extra row of that
+Schur complement (\S\ref{sec:lars}); the only constraint-specific step is the
+maximum-return vertex that seeds it, found by the greedy fill for an all-ones budget
+and by a linear program (HiGHS, via \texttt{scipy}) for a general $A$ or any $G$
+(\S\ref{sec:first}). This covers leverage, dollar-neutral long/short books, multi-row
+neutralities (sector, factor), and group- or sector-exposure caps. One
+caveat mirrors the degeneracy guarantee of \S\ref{sec:empirical}: the general-$A$
+path assumes a well-conditioned first vertex, where the free set has the $m$ assets
+the equalities require. At a \emph{degenerate} vertex (a basic asset pinned exactly
+on a box bound, so the free set is too small to span the constraints) the reduced
+$A_\F$ loses row rank and the Schur complement is singular. That vertex is
+\emph{declined} at the first turning point with an actionable diagnosis rather than
+mis-solved; tracing through it (rather than declining) is left to future work
+alongside the tie-heavy hardening of \S\ref{sec:empirical}.
+
+\item \textbf{Degeneracy handling.} On tie-heavy or degenerate inputs several
+events can share the same critical $\lambda$. \texttt{cvxcla} applies an explicit
+Bland-style, lowest-index tie-break (\S\ref{sec:bland}) together with a
+floating-point slope floor (\S\ref{sec:events}) to keep the trace deterministic
+and bounded; the reference implementation has no comparable anti-cycling rule. It
+also projects the sub-tolerance round-off that near-degenerate vertices produce
+back onto the feasible set, so near-rank-deficient covariances trace to
+completion with optimal turning points; only a genuinely rank-deficient free
+block is declined (\S\ref{sec:empirical}).
+\end{enumerate}
+
+These differences compound into a large runtime gap (\S\ref{sec:experiment}). It
+would be tempting to dismiss the gap as ``just an implementation detail,'' but the
+reference implementation is not slow for lack of \texttt{numpy}: it uses
+\texttt{numpy} for its per-step algebra. It is slow because of the structure
+above: a full free-block inverse rebuilt every step, and rebuilt once per
+candidate in the asset-entry search. \S\ref{sec:baseline} pins this down with a
+controlled baseline.
+
+\paragraph{Relation to large-scale active-set methods.}
+Bailey--L\'opez de Prado is the natural baseline because it is the most widely
+used open CLA, but it is not the only line of work on tracing the frontier
+efficiently. \citet{perold1984}, \citet{stein2008} and \citet{hirschberger2010}
+develop parametric quadratic-programming and active-set methods aimed squarely at
+\emph{large} universes, and they too drive the per-step cost well below a dense
+$O(n_\F^3)$ refactorisation. The decisive difference is \emph{where} the speed-up
+comes from. Those methods accelerate the linear algebra of a covariance that is
+still treated as an explicit (if large and possibly sparse) matrix (through
+incremental factorisation updates, exploitation of sparsity, or specialised
+pivoting) so the gain is tied to a particular matrix representation baked into
+the solver. \texttt{cvxcla} instead leaves the turning-point loop entirely
+representation-agnostic: the covariance enters only through the three-operation
+operator protocol of \S\ref{sec:operators}, so the same loop runs unchanged on a
+dense matrix or on a diagonal-plus-low-rank factor model, and the asymptotic
+advantage of \S\ref{sec:rankscaling} is a property of the \emph{backend}, not of
+the algorithm. The two ideas are complementary rather than competing: an
+incremental-update solver for the free block could itself be wrapped as a
+\texttt{CovarianceOperator} and dropped in. A direct empirical comparison is left
+to future work, for a concrete reason: no maintained, installable fast large-scale
+CLA exists to benchmark against. The closest is the Fortran implementation of
+\citet{niedermayer2010} (with MATLAB and Python bindings), which reports speedups
+of several orders of magnitude over earlier CLA codes but is effectively
+unmaintained and not buildable on current toolchains without nontrivial effort;
+\citet{hirschberger2010}'s ``CIOS'' is self-contained Java research code; and a
+general parametric active-set QP solver such as qpOASES would have to be driven
+along $\lambda$ with warm starts rather than tracing the frontier natively.
+Reviving the Niedermayer code, or a $\lambda$-swept qpOASES, is the natural
+baseline for such a comparison. The reading here is that \texttt{cvxcla}'s
+contribution is the interface that makes such backends interchangeable, not a
+claim to the fastest dense large-scale solve.
+
+\paragraph{Relation to portfolio-optimization software.}
+Set against the broader ecosystem of portfolio-optimization packages, the
+distinction is less speed than \emph{what is computed}. General toolkits, in Python
+Riskfolio-Lib \citep{riskfolio} and the scikit-learn-based \texttt{skfolio}
+\citep{skfolio}, and in R \texttt{fPortfolio} \citep{fportfolio} and the
+disciplined-convex layer \texttt{CVXR} \citep{cvxr}, construct a portfolio by
+solving a (mean--variance or richer) optimisation at a \emph{single} risk target,
+typically by handing a quadratic or conic program to a general solver; recovering
+the frontier then means re-solving on a grid of targets, an approximation that the
+grid resolution controls. \texttt{cvxcla}, like the CLA itself and like
+PyPortfolioOpt's \texttt{CLA} \citep{pyportfolioopt}, instead returns the
+\emph{entire} frontier exactly as a finite set of turning points, with no grid.
+Among the exact-CLA tools, PyPortfolioOpt is the natural head-to-head
+(\S\ref{sec:experiment}) but, as noted there, is not a performance-tuned solver. What is genuinely particular to \texttt{cvxcla} is
+orthogonal to all of these: the operator interface and the structured factor and
+Gram backends (\S\ref{sec:operators}), which run the same exact-frontier trace
+directly on a covariance representation the general toolkits do not exploit.
 
 \section{Numerical experiment}
 \label{sec:experiment}
