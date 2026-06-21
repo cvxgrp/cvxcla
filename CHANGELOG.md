@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [1.8.1] - 2026-06-21
+
+### New Features
+- Constrained + non-negative LASSO, fluent builder, README; paper flow cleanups (#750)
+
+### Bug Fixes
+- *(pathtracer)* Relative event tolerance + lambda clamp in select_next_event (#769)
+
+### Documentation
+- *(paper)* Repin srcref to v1.8.0, regenerate Table 1/Figure 2 (#738) (#744)
+- *(paper)* Address JSS referee points #745, #746, #747 and minors m4–m8 (#749)
+- *(paper)* Tighten the abstract and introduction, name the mpQP framing in §2 (#754)
+
+### Performance
+- *(lasso)* Cache Gram, single-factorisation, Cholesky solve, and a p>>n GramCovariance backend (#752)
+
+### Maintenance
+- Share G<=h inequality normalization via an InequalityConstrained mixin (#753)
+
+### Other Changes
+- Remove obsolete `cvxcla.optimize` module (#766)
+
 ## [1.8.0] - 2026-06-19
 
 ### New Features
@@ -73,6 +95,7 @@ and entries are generated from [Conventional Commits](https://www.conventionalco
 - Move paper/ → docs/paper/ to match Rhiza PAPER_DIR (#679)
 - Extract a generic parametric active-set path tracer (CLA + LASSO) (#697)
 - Remove PyPI and conda publishing from the release workflow (#705)
+- Bump version 1.7.0 → 1.8.0
 
 ## [1.7.0] - 2026-06-11
 
