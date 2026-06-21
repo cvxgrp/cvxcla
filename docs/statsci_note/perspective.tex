@@ -59,10 +59,11 @@ USA\printead[presep={\ }]{e1}.}
 \begin{abstract}
 Many methods across statistics, optimization, and finance return not a single
 solution but a \emph{path} as one scalar parameter is swept: the LASSO along its
-penalty, the support-vector machine along its cost, explicit model predictive control
-along the state, and Markowitz's Critical Line Algorithm, older than all of them,
-along risk aversion. We argue, and prove on the cleanest pair, that these are one
-device. Our central result is an exact identity, not an analogy: with the covariance
+penalty, the support-vector machine along its cost, and Markowitz's Critical Line
+Algorithm, older than all of them, along risk aversion; explicit model predictive
+control, whose parameter is a vector state, is the multi-parameter generalisation of
+the same scheme. We argue, and prove on the cleanest pair, that the scalar-parameter
+methods are one device. Our central result is an exact identity, not an analogy: with the covariance
 taken to be a Gram matrix, the constrained mean--variance frontier and the constrained
 LASSO path are the \emph{same} piecewise-linear curve, breakpoints in bijection, and
 this survives arbitrary linear equality and inequality constraints, beyond the
@@ -521,7 +522,10 @@ face of the LASSO.
 regulator solved as a function of the state \citep{bemporad2002, tondel2003} is the
 multidimensional cousin: the parameter is a \emph{vector} (the state), so the scheme's
 interval of breakpoints becomes a polyhedral partition into critical regions and the
-homotopy becomes region traversal. The one-parameter slice is exactly \eqref{eq:pqp}.
+homotopy becomes region traversal. Only its one-parameter slice is literally
+\eqref{eq:pqp}; explicit MPC is therefore a \emph{generalisation} of the common
+scheme, not another instance of the scalar identity of Section~\ref{sec:identity},
+which concerns that slice and not the full vector partition.
 
 None of these needs machinery beyond Section~\ref{sec:scheme}; what looks like five
 literatures is one algorithm with five fillings.
@@ -666,8 +670,12 @@ the shared object, which is the point.
 
 Statistics, optimization, and finance each found that following the optimiser of a
 parametrised convex quadratic produces a piecewise-linear path that an active set
-suffices to trace, and each named the discovery after its own problem. They are one
-device. The portfolio frontier and the LASSO path are not analogous but identical, by
+suffices to trace, and each named the discovery after its own problem. For a scalar
+parameter they are one device; explicit model predictive control, sweeping a vector
+state, is the multi-parameter generalisation of that device rather than another copy
+of the scalar path, and the exact identity that follows is a statement about the
+scalar members. The portfolio frontier and the LASSO path are not analogous but
+identical, by
 a one-line substitution that survives general constraints
 (Theorem~\ref{thm:identity}); the apparent variety of the wider family reduces to a
 short list of features (Section~\ref{sec:taxonomy}); and one implementation, accessing
