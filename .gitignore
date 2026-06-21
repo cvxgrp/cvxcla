@@ -34,6 +34,13 @@ docs/paper/*.fls
 docs/paper/*.log
 docs/paper/*.out
 docs/paper/*.toc
+docs/statsci_note/perspective.pdf
+docs/statsci_note/*.aux
+docs/statsci_note/*.fdb_latexmk
+docs/statsci_note/*.fls
+docs/statsci_note/*.log
+docs/statsci_note/*.out
+docs/statsci_note/*.toc
 
 # temp file used by Junie
 .output.txt
