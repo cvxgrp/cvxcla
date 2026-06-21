@@ -1,9 +1,10 @@
 \documentclass[sts]{imsart}
 
-% Suppress benign font-substitution warnings: imsart's Times lacks a few shapes
-% (e.g. small-caps italic), which LaTeX substitutes automatically with no visual effect.
-\RequirePackage{silence}
-\WarningFilter{latexfont}{Font shape}
+% imsart's Times lacks a few shapes (e.g. small-caps italic), which LaTeX
+% substitutes automatically with no visual effect; the resulting font-shape
+% warnings are benign. (The \texttt{silence} package used to mute them, but it
+% crashes inside \texttt{\textbackslash end\{frontmatter\}} under TeX~Live~2026,
+% so the cosmetic filter is omitted.)
 
 \RequirePackage{amsthm,amsmath,amsfonts,amssymb}
 \RequirePackage[authoryear]{natbib}
@@ -98,8 +99,8 @@ recount how the device, invented in the 1950s, was rediscovered by statistics ar
 
 \section{Introduction}
 
-This is a paper about one algorithm that four fields invented separately and never
-fully recognised as shared. The algorithm follows the optimiser of a parametrised
+This is a paper about one algorithmic idea that four fields invented separately and
+never fully recognised as shared. The algorithm follows the optimiser of a parametrised
 convex quadratic as a single scalar moves; the solution traces a
 piecewise-linear curve, and an active set is all the state needed to trace it
 exactly. In statistics it is least angle regression and the LASSO homotopy
@@ -330,9 +331,13 @@ through unchanged, and this is now a consequence of Lemma~\ref{lem:affine} rathe
 a claim: an active inequality row appears in the bordered solve \eqref{eq:border} as a
 row of $C=[\,A;\,G_{\Sset}\,]$, indistinguishable from an equality, so the segment, the
 breakpoints, and the per-step cost are exactly those of the equality-only problem.
-Statistics rarely has an \emph{exact} constrained LASSO path; coordinate descent and
-proximal methods approximate it on a grid, and LARS omits the constraints. The same
-active-set homotopy, read on the portfolio side, computes it exactly.
+The general-purpose solvers most practitioners reach for, coordinate descent and
+proximal methods, return the path only on a $\lambda$-grid, and standard LARS omits the
+constraints; that a quadratic loss under polyhedral constraints still admits an exact
+piecewise-linear path is itself classical \citep{rosset2007}. What the identity adds is
+that no separate machinery is needed to trace it: the same active-set homotopy that
+follows the efficient frontier returns the constrained LASSO path exactly, the
+constraints entering the per-step solve indistinguishably from equalities.
 \end{remark}
 
 The parameter map $c(\lambda)$ of Theorem~\ref{thm:identity} can be pinned down
@@ -746,6 +751,17 @@ its quadratic form as an operator, traces them all. Recognising the device lets 
 result, an implementation, or a worst-case analysis built for one instance serve the
 rest, and turns four parallel literatures on path-following into one.
 
+\begin{acks}[Acknowledgments]
+We thank Philipp Schiele for his work on the \texttt{cvxcla} package, and the Stanford
+convex optimization group (\texttt{cvxgrp}) and Stephen Boyd for hosting it and for the
+broader intellectual setting in which this work took shape.
+\end{acks}
+
+\begin{funding}
+This work began during a sabbatical of Schmelzer at Stanford University in 2023,
+supported by the Abu Dhabi Investment Authority (ADIA).
+\end{funding}
+
 \begin{thebibliography}{Tibshirani and Taylor(2011)}
 
 \bibitem[Bailey and L\'opez de Prado(2013)]{bailey2013} Bailey, D.~H. and
@@ -762,11 +778,6 @@ systems. \emph{Automatica}, 38(1), 3--20.
 \bibitem[Brodie et~al.(2009)]{brodie2009} Brodie, J., Daubechies, I., De Mol, C.,
 Giannone, D., and Loris, I. (2009). Sparse and stable Markowitz portfolios.
 \emph{Proceedings of the National Academy of Sciences}, 106(30), 12267--12272.
-
-\bibitem[Schmelzer and Schiele(2025)]{cvxcla} Schmelzer, T. and Schiele, P.
-(2025). \texttt{cvxcla}: the Critical Line Algorithm with a covariance-operator
-interface. Version 1.8.0, open-source software (MIT licence).
-\url{https://github.com/cvxgrp/cvxcla}.
 
 \bibitem[Efron et~al.(2004)]{efron2004} Efron, B., Hastie, T., Johnstone, I., and
 Tibshirani, R. (2004). Least angle regression. \emph{The Annals of Statistics},
@@ -826,6 +837,11 @@ optimization. \emph{Management Science}, 30(10), 1143--1160.
 \bibitem[Rosset and Zhu(2007)]{rosset2007} Rosset, S. and Zhu, J. (2007). Piecewise
 linear regularized solution paths. \emph{The Annals of Statistics}, 35(3),
 1012--1030.
+
+\bibitem[Schmelzer and Schiele(2025)]{cvxcla} Schmelzer, T. and Schiele, P.
+(2025). \texttt{cvxcla}: the Critical Line Algorithm with a covariance-operator
+interface. Version 1.8.1, open-source software (MIT licence).
+\url{https://github.com/cvxgrp/cvxcla}.
 
 \bibitem[Sharpe(1963)]{sharpe1963} Sharpe, W.~F. (1963). A simplified model for
 portfolio analysis. \emph{Management Science}, 9(2), 277--293.
