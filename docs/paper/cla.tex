@@ -9,7 +9,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath, amssymb, amsthm}
 \usepackage{bm}
 \usepackage{geometry}
 \usepackage{graphicx}
@@ -63,6 +63,10 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 
+% --- theorem-like environments ------------------------------------------
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+
 % --- repository links ---------------------------------------------------
 % \srcfile{url-path}{display}: a clickable link to a file in the repository.
 % The url-path uses literal underscores; the display escapes them for \texttt.
@@ -103,8 +107,11 @@ algorithm from the covariance representation and lets structured risk models
 $n\times n$ matrix, at a fraction of the cost when the structure is genuinely
 low-rank. Second, a \emph{unification}: the CLA is the one-parameter case of
 multi-parametric quadratic programming and shares its mechanics with the LARS/LASSO
-homotopy, so one path-tracing engine, carrying the same linear constraints, returns
-both the exact constrained efficient frontier and the exact constrained LASSO path.
+homotopy; the two solution paths coincide as point sets under a gross-exposure
+constraint, and one path-tracing engine, carrying the same linear constraints,
+returns both the exact constrained efficient frontier and the exact constrained LASSO
+path (a parameter-level bijection holds under an additional regularity condition
+detailed in~\S\ref{sec:lars}).
 Third, an \emph{open, tested, and benchmarked} implementation, with event logic
 hardened against degeneracy and floating-point noise. This hardening is bounded, not
 total: sub-tolerance round-off is projected back onto the feasible set, while
@@ -182,8 +189,11 @@ scaling (\S\ref{sec:rankscaling}).
 broader parametric active-set family: the one-parameter specialisation of
 multi-parametric quadratic programming and explicit model predictive control, and
 the mean--variance counterpart of the LARS/LASSO homotopy of statistical learning
-(\S\ref{sec:lars}), a correspondence the \texttt{GramCovariance} backend makes
-literal.
+(\S\ref{sec:lars}).  The two solution paths coincide as point sets under a
+gross-exposure constraint; a bijection on parameter values holds under an additional
+regularity condition (Theorem~\ref{thm:cla-lasso} and
+Proposition~\ref{prop:regularity}).  The \texttt{GramCovariance} backend makes
+the correspondence literal.
 \item \textbf{An open, tested, benchmarked implementation.} Hardened event logic, a
 Bland-style lowest-index tie-break (\S\ref{sec:bland}) and a floating-point slope
 floor (\S\ref{sec:events}), keeps the trace deterministic and prevents cycling and
@@ -1733,6 +1743,38 @@ sparsity path. Once short positions are admitted under a gross-exposure cap,
 however, the parametric program the CLA traces and the LASSO path coincide: the two
 are then not merely structurally similar but two homotopies over the same parametric
 quadratic program.
+
+\begin{theorem}[CLA--LASSO path coincidence]\label{thm:cla-lasso}
+Under a gross-exposure constraint $\|w\|_1 \le c$ with short positions admitted
+($\lb_i < 0$ for some $i$), the CLA solution path $\lambda \mapsto w(\lambda)$ and
+the LASSO regularisation path $c \mapsto \beta(c)$ are two homotopies over the same
+parametric quadratic programme.
+\begin{enumerate}
+\item[(a)] \textbf{Point-set coincidence.} The two paths coincide as solution curves:
+every CLA turning point $w(\lambda_k)$ is a LASSO breakpoint, and every LASSO
+breakpoint is a CLA turning point.
+\item[(b)] \textbf{Bijection on parameters (conditional).} The gross-exposure
+reparametrisation $c(\lambda) = \|w(\lambda)\|_1$ maps the CLA turning-point
+parameter values $\{\lambda_k\}$ bijectively onto the LASSO breakpoint values
+$\{c_k\}$ if and only if $c'(\lambda) \neq 0$ on every interior segment.  This
+regularity condition is characterised in Proposition~\ref{prop:regularity}.
+\end{enumerate}
+\end{theorem}
+
+\begin{proposition}[Bijection regularity]\label{prop:regularity}
+On a CLA segment with affine direction $\beta$ (so $w(\lambda) = \alpha + \lambda\beta$)
+and free-set sign vector $s_\F = \operatorname{sign}(w_\F(\lambda))$, the
+gross-exposure derivative is
+\[
+c'(\lambda) \;=\; s_\F\trans\beta_\F.
+\]
+The map $\lambda \mapsto c(\lambda)$ is locally injective on that segment if and only
+if $s_\F\trans\beta_\F \neq 0$.  The condition fails---and the bijection of
+Theorem~\ref{thm:cla-lasso}(b) degenerates---when the active constraints force the
+free-asset direction to have zero net signed mass ($s_\F\trans\beta_\F = 0$), so that
+the gross-exposure level is constant over a positive $\lambda$-interval and multiple
+risk-aversion values correspond to the same $c$.
+\end{proposition}
 
 \subsection{A LASSO path through the same engine}
 \label{sec:lassodemo}
