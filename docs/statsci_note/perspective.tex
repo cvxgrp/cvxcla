@@ -130,10 +130,15 @@ form only as an operator, so structured forms (factor models, kernels) drop in a
 carry the sixty-year-old algorithm to modern scale.
 
 The synthesis is, in places, a synthesis of known parts, and we are explicit about
-which (Section~\ref{sec:history} and throughout). What is new is the exact
-general-constraint identity and the organisation it makes possible; what is old, and
-worth retelling, is that statistics spent the 2000s rediscovering a device finance
-and optimization had in the 1950s.
+which (Section~\ref{sec:history} and throughout). To our knowledge no previous work has
+unified the Critical Line Algorithm with LARS/LASSO, the support-vector-machine path,
+the generalized lasso, and explicit model predictive control as instances of a single
+parametric active-set homotopy, nor proved the exact mean--variance$\,=\,$LASSO path
+identity under arbitrary linear equality and inequality constraints; the constrained
+LASSO path itself, under such constraints, is due to \citet{gaines2018}. What is new
+here is the exact general-constraint identity and the organisation it makes possible;
+what is old, and worth retelling, is that statistics spent the 2000s rediscovering a
+device finance and optimization had in the 1950s.
 
 \section{The common scheme}
 \label{sec:scheme}
@@ -226,7 +231,9 @@ The intervals partition the $\lambda$-axis at \emph{breakpoints} where the activ
 must change; \citet{rosset2007} gave the clean sufficient condition (a quadratic loss
 with a polyhedral penalty or constraint), and in control the same fact is the
 piecewise-affinity of the mpQP solution over \emph{critical regions}
-\citep{bemporad2002}. Continuity of $x(\lambda)$ across breakpoints (the free block is
+\citep{bemporad2002}; \citet{roll2008} likewise traces single-parameter
+piecewise-linear solution paths in that setting, explicitly generalising the
+LARS/LASSO construction. Continuity of $x(\lambda)$ across breakpoints (the free block is
 uniquely determined on each segment, and adjacent segments agree at the breakpoint)
 lets a \emph{homotopy} recover the whole path: from a vertex with known
 active set, follow \eqref{eq:affine} to the first event, update the active set by that
@@ -334,10 +341,13 @@ breakpoints, and the per-step cost are exactly those of the equality-only proble
 The general-purpose solvers most practitioners reach for, coordinate descent and
 proximal methods, return the path only on a $\lambda$-grid, and standard LARS omits the
 constraints; that a quadratic loss under polyhedral constraints still admits an exact
-piecewise-linear path is itself classical \citep{rosset2007}. What the identity adds is
-that no separate machinery is needed to trace it: the same active-set homotopy that
-follows the efficient frontier returns the constrained LASSO path exactly, the
-constraints entering the per-step solve indistinguishably from equalities.
+piecewise-linear path is itself classical \citep{rosset2007}, and the constrained LASSO
+path under arbitrary linear equalities and inequalities is traced directly, by an
+active-set homotopy on the same KKT system, by \citet{gaines2018}. What the identity
+adds is not that path but its reading: it \emph{is} the constrained mean--variance
+frontier, returned by the very loop that follows the efficient frontier, with no
+separate machinery and the constraints entering the per-step solve indistinguishably
+from equalities.
 \end{remark}
 
 The parameter map $c(\lambda)$ of Theorem~\ref{thm:identity} can be pinned down
@@ -787,6 +797,10 @@ Tibshirani, R. (2004). Least angle regression. \emph{The Annals of Statistics},
 algorithm for quadratic programming. \emph{Naval Research Logistics Quarterly},
 3(1--2), 95--110.
 
+\bibitem[Gaines et~al.(2018)]{gaines2018} Gaines, B.~R., Kim, J., and Zhou, H.
+(2018). Algorithms for fitting the constrained lasso. \emph{Journal of Computational
+and Graphical Statistics}, 27(4), 861--871.
+
 \bibitem[Gass and Saaty(1955)]{gasssaaty1955} Gass, S.~I. and Saaty, T.~L. (1955). The
 computational algorithm for the parametric objective function. \emph{Naval Research
 Logistics Quarterly}, 2(1--2), 39--45.
@@ -833,6 +847,9 @@ problems. \emph{IMA Journal of Numerical Analysis}, 20(3), 389--403.
 
 \bibitem[Perold(1984)]{perold1984} Perold, A.~F. (1984). Large-scale portfolio
 optimization. \emph{Management Science}, 30(10), 1143--1160.
+
+\bibitem[Roll(2008)]{roll2008} Roll, J. (2008). Piecewise linear solution paths with
+application to direct weight optimization. \emph{Automatica}, 44(11), 2745--2753.
 
 \bibitem[Rosset and Zhu(2007)]{rosset2007} Rosset, S. and Zhu, J. (2007). Piecewise
 linear regularized solution paths. \emph{The Annals of Statistics}, 35(3),
