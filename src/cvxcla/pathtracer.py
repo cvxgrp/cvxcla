@@ -86,29 +86,43 @@ def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tup
     The current segment is valid only for ``lambda`` at or below the current value
     (the path is traced with non-increasing ``lambda``), so ratios above it are
     spurious crossings outside the segment and are discarded; if none remain the
-    trace is complete. Among events tied (within ``tol``) for the largest valid
-    ratio, a Bland-style lowest-``(coordinate, event type)`` rule makes the choice
-    deterministic and prevents cycling on degenerate problems.
+    trace is complete. Among events tied for the largest valid ratio, a Bland-style
+    lowest-``(coordinate, event type)`` rule makes the choice deterministic and
+    prevents cycling on degenerate problems.
+
+    Two events are "the same" breakpoint only when their ``lambda`` values agree to
+    floating-point scale, so the validity window and the tie-break use a tolerance
+    *relative* to the ``lambda`` magnitude. A fixed absolute tolerance mis-ranks the
+    densely spaced breakpoints of large paths: their spacing shrinks with the problem
+    size, so an absolute window eventually merges genuinely distinct events, picks the
+    wrong one by the tie-break, and lets ``lambda`` step backwards. The caller's
+    ``tol`` is treated as an upper bound on this relative rate; event ordering needs a
+    roundoff-scale window regardless of the coarser ``tol`` used elsewhere (e.g. to
+    classify a weight as sitting on a bound). Finally, the chosen ``lambda`` is clamped
+    below the current value, so roundoff in the segment solve can never make a
+    breakpoint appear above it.
 
     Args:
         l_mat: The ``(n, k)`` matrix of candidate critical ``lambda`` values.
         lam: The current (upper) ``lambda`` bound on valid events.
-        tol: Tolerance for the validity window and the tie-break.
+        tol: Upper bound on the relative event-ordering tolerance.
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
         valid event remains.
     """
     l_mat = l_mat.copy()  # do not mutate the caller's matrix
-    l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
+    rate = min(tol, 1e-10)  # roundoff-scale relative window; tol is only an upper bound
+    l_mat[l_mat > lam + rate * max(1.0, abs(lam))] = -np.inf  # pragma: no mutate
 
     lam_max = np.max(l_mat)
     if lam_max < 0:  # pragma: no mutate
         return None
 
-    tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
+    tied = np.argwhere(l_mat >= lam_max - rate * max(1.0, abs(lam_max)))  # pragma: no mutate
     sec, direction = tied[0]
-    return int(sec), int(direction), float(l_mat[sec, direction])
+    # lambda is non-increasing along the path: clamp away any roundoff overshoot.
+    return int(sec), int(direction), float(min(lam, l_mat[sec, direction]))
 
 
 def trace(problem: ParametricProblem) -> None:
