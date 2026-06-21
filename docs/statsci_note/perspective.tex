@@ -643,7 +643,12 @@ again to machine precision (about $5\times10^{-16}$). A conic interior-point sol
 agrees only to its own $\approx 10^{-8}$ floor, which is why the agreement is reported
 against a direct active-set reference. On real data, the diabetes study of
 \citet{efron2004} itself, the homotopy reproduces \texttt{lars\_path} to
-$\approx 2\times10^{-10}$ over its thirteen breakpoints.
+$\approx 2\times10^{-10}$ over its thirteen breakpoints. The high-dimensional regime is
+no obstacle: on a $p\gg n$ design, where $X\trans X$ is singular, the homotopy still
+traces the path, the active support never exceeding $\operatorname{rank}(X)$ so that the
+free block $X_\F\trans X_\F$ stays positive definite (the standing assumption of
+Section~\ref{sec:scheme}), and it again matches \texttt{lars\_path}, to
+$\approx 10^{-13}$ on designs with $p$ several times $n$.
 
 \paragraph{Tracing cleanly at scale} The homotopy returns the whole long-only frontier
 as an exactly ordered sequence of turning points well beyond the small illustration of
@@ -702,12 +707,19 @@ degenerate large instances, be replaced by a rule with a worst-case guarantee, o
 unnecessary for generic data? A resolution would apply to every instance at once,
 which is the practical dividend of seeing them as one.
 
-The constrained identity raises questions of its own. Proposition~\ref{prop:reg} shows
-the $c$--$\lambda$ correspondence is a bijection except on segments where the active
-signs are annihilated by the constraints; characterising the designs and constraint
-systems on which such flat segments occur, and whether they are non-generic under a
-continuous design, would settle when the constrained path is globally reparametrisable
-between its penalty and constraint forms. The worst-case breakpoint count under general
+The constrained identity raises questions of its own, and the first can now be largely
+answered. Proposition~\ref{prop:reg} writes the slope as
+$c'(\lambda) = -\,\|(Z\trans H_{\F\F}Z)^{-1/2}Z\trans s_\Aset\|_2^2$, which vanishes
+exactly when $Z\trans s_\Aset = 0$, that is, when the sign vector $s_\Aset$ lies in the
+span of the active constraint normals. For a continuous design those normals span a
+fixed proper subspace, and a $\pm1$ vector landing in it is a measure-zero coincidence,
+so flat segments are \emph{non-generic}: away from them the penalty and constraint forms
+are mutually reparametrisable. They are not impossible, and the boundary is sharp by
+construction: a single equality whose normal is aligned with the support's signs,
+$a = s_\Aset$, makes $s_\Aset$ an active normal, forces $Z\trans s_\Aset = 0$, and
+produces a flat segment on which a whole range of penalties $\lambda$ collapses to one
+budget $c$ and the reparametrisation fails. What stays open is which constraint systems
+force such alignment on a set of positive measure rather than at isolated points. The worst-case breakpoint count under general
 $G\beta\le h$ is also open: each inequality row adds a face that can be crossed, so the
 constrained path is at least as long as the unconstrained one, but whether $p$
 inequality rows can \emph{multiply} the count rather than merely add to it is not known.

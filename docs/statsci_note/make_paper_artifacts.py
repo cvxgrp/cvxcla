@@ -21,6 +21,7 @@ Numbers re-derived and checked against the manuscript (Sec. 7, "Computation"):
   E. Full frontier traced cleanly as N grows            -> monotone to N=6400 (Sec. 7/9)
   F. Real data: diabetes LASSO path vs lars_path        -> ~2e-10  (Efron et al. 2004 data)
   G. Operator scaling: factor covariance vs dense       -> 2x..35x faster, N=250..2000 (Sec. 8)
+  H. p>>n LASSO (X'X singular) vs lars_path             -> ~1e-13  (Sec. 7; support <= rank X)
 
 The two QP references are deliberately different solvers. Check C uses the conic
 interior-point solver CLARABEL (whose ~1e-8 floor is exactly the "solver precision" the
@@ -356,6 +357,40 @@ def check_real_data() -> Check:
 
 
 # --------------------------------------------------------------------------------------
+# Check H: the p >> n regime (X'X singular) still traces, matching lars_path
+# --------------------------------------------------------------------------------------
+def check_high_dim() -> Check:
+    """Trace the LASSO path on a p >> n design; X'X is singular yet the path is exact.
+
+    The active support never exceeds rank(X), so the free block X_F'X_F is positive
+    definite (the standing assumption) even though the full Gram matrix is rank-deficient.
+    """
+    from sklearn.linear_model import lars_path
+
+    rng = np.random.default_rng(0)
+    m, n = 40, 100  # p = 100 >> n = 40 samples
+    x = rng.standard_normal((m, n))
+    x = x - x.mean(axis=0, keepdims=True)
+    beta_true = np.zeros(n)
+    beta_true[:5] = [3.0, -2.0, 1.5, -1.0, 2.0]
+    y = x @ beta_true + 0.1 * rng.standard_normal(m)
+    y = y - y.mean()
+
+    lasso = Lasso(x=x, y=y)
+    lams = np.array([bp.lam for bp in lasso.path])
+    betas = np.array([bp.beta for bp in lasso.path])
+    max_support = max(int((np.abs(b) > 1e-9).sum()) for b in betas)
+    rank = int(np.linalg.matrix_rank(x))
+
+    alphas, _, coefs = lars_path(x, y, method="lasso")
+    sk_lams = alphas * m
+    sk_coefs = coefs.T
+    gap = max(float(np.max(np.abs(sk_coefs[k] - beta_at_lambda(lams, betas, sk_lams[k])))) for k in range(len(sk_lams)))
+    print(f"    p>>n (m={m}, n={n}): rank(X)={rank}, max support={max_support}, vs lars_path {gap:.1e}")
+    return Check("p>>n LASSO vs lars_path", gap, 1e-9, "~1e-13")
+
+
+# --------------------------------------------------------------------------------------
 # Check G: the operator reading buys scale -- factor covariance vs dense, wall time
 # --------------------------------------------------------------------------------------
 def report_scaling() -> Check:
@@ -402,13 +437,14 @@ def main() -> None:
     check_a = check_lars_path()
     check_b = check_constrained_qp()
     check_f = check_real_data()
+    check_h = check_high_dim()
     print("  envelope sweep:")
     check_e = check_envelope()
 
     print("\n== Operator scaling (Sec. 8): factor covariance vs dense ==")
     check_g = report_scaling()
 
-    checks = [check_a, check_b, check_c, check_d, check_e, check_f, check_g]
+    checks = [check_a, check_b, check_c, check_d, check_e, check_f, check_g, check_h]
     print()
     for c in checks:
         print(c.line())
