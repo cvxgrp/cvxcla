@@ -65,7 +65,7 @@ control, whose parameter is a vector state, is the multi-parameter generalisatio
 the same scheme. We argue, and prove on the cleanest pair, that the scalar-parameter
 methods are one device: with the covariance taken to be a Gram matrix, the constrained
 mean--variance frontier and the constrained LASSO path are the \emph{same}
-piecewise-linear curve, breakpoints in bijection. The identity is exact, and, beyond the
+piecewise-linear curve, with the same breakpoints. The identity is exact, and, beyond the
 unconstrained correspondence and the gross-exposure case of \citet{brodie2009}, it
 survives arbitrary linear equality and inequality constraints. Its proof is short, a
 completion of squares read through the affine-segment structure the family shares; the
@@ -100,7 +100,7 @@ recount how the device, invented in the 1950s, was rediscovered by statistics ar
 
 This is a paper about one algorithm that four fields invented separately and never
 fully recognised as shared. The algorithm follows the optimiser of a parametrised
-strictly convex quadratic as a single scalar moves; the solution traces a
+convex quadratic as a single scalar moves; the solution traces a
 piecewise-linear curve, and an active set is all the state needed to trace it
 exactly. In statistics it is least angle regression and the LASSO homotopy
 \citep{tibshirani1996, osborne2000, efron2004}; in machine learning the regularization
@@ -113,8 +113,8 @@ markowitz1959}.
 
 We make three claims, and we lead with them rather than with the survey. First
 (Section~\ref{sec:identity}), the two most dissimilar-looking members, a portfolio
-optimizer and a sparse regression, are under one substitution the same curve,
-breakpoint for breakpoint, and the identity persists under arbitrary linear
+optimizer and a sparse regression, are under one substitution the same curve, with the
+same breakpoints, and the identity persists under arbitrary linear
 constraints. We state this as a theorem and prove it, but the proof is elementary, a
 completion of squares together with the affine-segment structure of
 Section~\ref{sec:scheme}; its value is that it turns a familiar analogy into an exact
@@ -137,19 +137,30 @@ and optimization had in the 1950s.
 \section{The common scheme}
 \label{sec:scheme}
 
-Fix a strictly convex quadratic whose linear part carries a scalar $\lambda$,
+Fix a convex quadratic whose linear part carries a scalar $\lambda$,
 minimised over a polyhedron:
 \begin{equation}
 \label{eq:pqp}
 \begin{aligned}
 x(\lambda) = \arg\min_{x \in \R^n}\ &\tfrac12\, x\trans H x - \lambda\, d\trans x \\
-\text{s.t.}\quad &A x = b,\ \ G x \le h,\ \ \lb \le x \le \ub,\ \ H \succ 0 .
+\text{s.t.}\quad &A x = b,\ \ G x \le h,\ \ \lb \le x \le \ub .
 \end{aligned}
 \end{equation}
 A polyhedral \emph{penalty} such as $\lambda\|x\|_1$ fits the same template through its
 subgradient, as Section~\ref{sec:identity} makes explicit. This is a one-parameter
 parametric quadratic program; its solution map has the structure that is the whole
 story.
+
+\paragraph{The standing assumption} We require only that $H\succeq0$ and that the
+\emph{reduced} Hessian $H_{\F\F}$ on the free block be positive definite at every
+active set the path visits. This is weaker than the textbook $H\succ0$, and
+deliberately so: it is exactly what the regression instance needs. There
+$H=X\trans X$ is singular whenever $p>n$, the very regime the LASSO is built for, yet
+the free block $X_\F\trans X_\F$ is positive definite as soon as the active columns are
+linearly independent, which holds in general position (the uniqueness remark after
+Theorem~\ref{thm:identity}). The finance instance has $H=\Sig\succ0$ outright, so the
+condition is automatic there. Under it the bordered solve below is well-posed, which is
+all the homotopy ever touches; a globally positive-definite $H$ is never needed.
 
 \begin{lemma}[Affine segments and the bordered solve]
 \label{lem:affine}
@@ -171,9 +182,9 @@ held at $g_i\trans x = h_i$, the remainder carrying a zero multiplier by complem
 slackness; and the blocked variables $\B$ pinned at a bound, with free set
 $\F=\B^{c}$. Stack the active linear constraints as
 $C=\big[\begin{smallmatrix}A\\ G_{\Sset}\end{smallmatrix}\big]\in
-\R^{(m+|\Sset|)\times n}$ with right-hand side $r=(b;\,h_{\Sset})$. Because $H\succ0$
-the program \eqref{eq:pqp} is strictly convex, so the KKT conditions are necessary and
-sufficient. Stationarity is
+\R^{(m+|\Sset|)\times n}$ with right-hand side $r=(b;\,h_{\Sset})$. Because the program
+\eqref{eq:pqp} is convex ($H\succeq0$) with linear constraints, the KKT conditions are
+necessary and sufficient. Stationarity is
 \[
 Hx - \lambda d + C\trans\zeta + \rho = 0,
 \]
@@ -190,8 +201,8 @@ $C_\F x_\F + C_\B x_\B = r$. Collecting the unknowns $(x_\F,\zeta)$,
 \begin{bmatrix} \lambda\, d_\F - H_{\F\B}\,x_\B \\[2pt] r - C_\B\,x_\B \end{bmatrix}.
 \end{equation}
 The coefficient matrix is the saddle-point matrix of the active constraints, and it is
-nonsingular. Indeed $H_{\F\F}$ is a principal submatrix of $H\succ0$, hence positive
-definite, and under the linear-independence constraint qualification $C_\F$ has full
+nonsingular. Indeed $H_{\F\F}\succ0$ by the standing assumption, and under the
+linear-independence constraint qualification $C_\F$ has full
 row rank; if $(u,v)$ lies in the kernel then $H_{\F\F}u + C_\F\trans v = 0$ and
 $C_\F u = 0$, so left-multiplying the first equation by $u\trans$ gives
 $u\trans H_{\F\F}u + (C_\F u)\trans v = u\trans H_{\F\F}u = 0$, which forces $u=0$
@@ -214,8 +225,9 @@ The intervals partition the $\lambda$-axis at \emph{breakpoints} where the activ
 must change; \citet{rosset2007} gave the clean sufficient condition (a quadratic loss
 with a polyhedral penalty or constraint), and in control the same fact is the
 piecewise-affinity of the mpQP solution over \emph{critical regions}
-\citep{bemporad2002}. Continuity of $x(\lambda)$ across breakpoints (from strict
-convexity) lets a \emph{homotopy} recover the whole path: from a vertex with known
+\citep{bemporad2002}. Continuity of $x(\lambda)$ across breakpoints (the free block is
+uniquely determined on each segment, and adjacent segments agree at the breakpoint)
+lets a \emph{homotopy} recover the whole path: from a vertex with known
 active set, follow \eqref{eq:affine} to the first event, update the active set by that
 one event, repeat. Each step is one solve against the active block of $H$ bordered by
 the active normals. Event selection, ``the smallest positive step to the next
@@ -269,12 +281,15 @@ For a response $y\in\R^m$ and design $X\in\R^{m\times n}$, the constrained LASSO
 \begin{theorem}[CLA--LASSO identity under general constraints]
 \label{thm:identity}
 Suppose $\Sig = X\trans X$ and $\mu = X\trans y$. Then for every $\lambda\ge 0$ there is
-a $c(\lambda)=\|\beta(\lambda)\|_1$ such that $\mathrm{M}_{c(\lambda)}$ and
-$\mathrm{L}_\lambda$ have the same minimiser, and $c(\lambda)$ is nonincreasing. The
-solution path of $\mathrm{M}_c$ as $c$ varies and the regularization path of
-$\mathrm{L}_\lambda$ as $\lambda$ varies are therefore the \emph{same}
-piecewise-linear curve in $\R^n$, with their breakpoints in bijection. The same
-active-set homotopy traces both.
+a $c(\lambda)=\|\beta(\lambda)\|_1$, nonincreasing in $\lambda$, such that
+$\mathrm{M}_{c(\lambda)}$ and $\mathrm{L}_\lambda$ have the same minimiser. The solution
+path of $\mathrm{M}_c$ as $c$ varies and the regularization path of
+$\mathrm{L}_\lambda$ as $\lambda$ varies are therefore the \emph{same} piecewise-linear
+curve in $\R^n$, traced by the same active-set homotopy and sharing the same breakpoints
+as points of $\R^n$. The correspondence of the \emph{parameters},
+$\lambda\mapsto c(\lambda)$, matches the two breakpoint sequences one-to-one whenever it
+is strictly decreasing; Proposition~\ref{prop:reg} pins down exactly when it is, and the
+single way it can fail.
 \end{theorem}
 
 \begin{proof}
@@ -297,10 +312,11 @@ $c(\lambda)=\|\beta(\lambda)\|_1$ the active constraint level at the dual value
 $\lambda$; $c(\lambda)$ is nonincreasing because larger penalties shrink $\|\beta\|_1$.
 Both objectives are quadratic and both feasible sets are polyhedral, so by
 Lemma~\ref{lem:affine} each path is piecewise linear; since the two programs share a
-minimiser at every parameter value, the two paths are the same set of points, and the
-breakpoints (the parameter values at which the active set changes) are in bijection
-under $\lambda\mapsto c(\lambda)$. Tracing either by the homotopy of
-Section~\ref{sec:scheme} visits the same vertices in the same order.
+minimiser at every parameter value, the two paths are the same set of points, with the
+same corners, and tracing either by the homotopy of Section~\ref{sec:scheme} visits the
+same vertices in the same order. The parameter map $\lambda\mapsto c(\lambda)$ is
+nonincreasing; it matches the breakpoint values one-to-one exactly when it is strictly
+decreasing, which is the content of Proposition~\ref{prop:reg}.
 \end{proof}
 
 \begin{remark}
@@ -316,8 +332,9 @@ proximal methods approximate it on a grid, and LARS omits the constraints. The
 portfolio side supplies it for free.
 \end{remark}
 
-The bijection $c(\lambda)$ asserted in Theorem~\ref{thm:identity} can be pinned down
-exactly, which both sharpens the theorem and isolates the only way it can fail.
+The parameter map $c(\lambda)$ of Theorem~\ref{thm:identity} can be pinned down
+exactly, which both sharpens the theorem and isolates the only way the parameter
+bijection can fail.
 
 \begin{proposition}[Regularity of the $c$--$\lambda$ correspondence]
 \label{prop:reg}
