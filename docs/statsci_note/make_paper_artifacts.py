@@ -19,6 +19,8 @@ Numbers re-derived and checked against the manuscript (Sec. 7, "Computation"):
   C. Fig. 1 caps: independent conic QP vs homotopy      -> ~3e-8    (text: ~3e-8)
   D. Dense Sigma vs FactorCovariance operator           -> identical 21-point frontier
   E. Full frontier traced cleanly as N grows            -> monotone to N=6400 (Sec. 7/9)
+  F. Real data: diabetes LASSO path vs lars_path        -> ~2e-10  (Efron et al. 2004 data)
+  G. Operator scaling: factor covariance vs dense       -> 2x..35x faster, N=250..2000 (Sec. 8)
 
 The two QP references are deliberately different solvers. Check C uses the conic
 interior-point solver CLARABEL (whose ~1e-8 floor is exactly the "solver precision" the
@@ -41,6 +43,7 @@ the seeds below.
 from __future__ import annotations
 
 import sys
+import time
 from dataclasses import dataclass
 
 import matplotlib as mpl
@@ -321,8 +324,76 @@ def check_envelope() -> Check:
     return Check("frontier monotone to N=6400", worst, 1e-9, "clean (roundoff)")
 
 
+# --------------------------------------------------------------------------------------
+# Check F: the identity on a real dataset (the Efron et al. 2004 LARS diabetes data)
+# --------------------------------------------------------------------------------------
+def check_real_data() -> Check:
+    """Trace the LASSO path on the real diabetes dataset; match scikit-learn lars_path.
+
+    This is the dataset of Efron, Hastie, Johnstone and Tibshirani (2004), the paper
+    that made the piecewise-linear path famous, so it is the natural real-data check of
+    the identity the homotopy traces.
+    """
+    from sklearn.datasets import load_diabetes
+    from sklearn.linear_model import lars_path
+
+    x, y = load_diabetes(return_X_y=True)
+    x = x - x.mean(axis=0, keepdims=True)
+    y = y - y.mean()
+    m, n = x.shape
+
+    lasso = Lasso(x=x, y=y)
+    lams = np.array([bp.lam for bp in lasso.path])
+    betas = np.array([bp.beta for bp in lasso.path])
+
+    alphas, _, coefs = lars_path(x, y, method="lasso")
+    sk_lams = alphas * m
+    sk_coefs = coefs.T
+
+    gap = max(float(np.max(np.abs(sk_coefs[k] - beta_at_lambda(lams, betas, sk_lams[k])))) for k in range(len(sk_lams)))
+    print(f"    diabetes (m={m}, n={n}): {len(lasso.path)} breakpoints, agree with lars_path to {gap:.1e}")
+    return Check("real-data LASSO (diabetes) vs lars_path", gap, 1e-7, "~2e-10")
+
+
+# --------------------------------------------------------------------------------------
+# Check G: the operator reading buys scale -- factor covariance vs dense, wall time
+# --------------------------------------------------------------------------------------
+def report_scaling() -> Check:
+    """Time the frontier with a structured (Woodbury) factor operator vs a dense Sigma.
+
+    Same problem, same frontier; only the cost of each homotopy step changes. The factor
+    operator supplies H's three actions in O(nk) instead of O(n^2), so the gap widens
+    with N. Wall times are hardware-dependent; the time *ratio* at the largest N is the
+    portable, reproducible quantity, and must show the operator comfortably ahead.
+    """
+    ratio_at_max = 1.0
+    for n in (250, 500, 1000, 2000):
+        mean, factor, dense = factor_problem(seed=0, n_assets=n, n_days=max(2 * n, 30), n_factors=10)
+        kw = {
+            "mean": mean,
+            "lower_bounds": np.zeros(n),
+            "upper_bounds": np.ones(n),
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+        t0 = time.perf_counter()
+        cla_f = CLA(covariance=factor, **kw)
+        t_factor = time.perf_counter() - t0
+        t0 = time.perf_counter()
+        CLA(covariance=dense, **kw)
+        t_dense = time.perf_counter() - t0
+        ratio_at_max = t_factor / t_dense
+        speedup = t_dense / t_factor
+        print(
+            f"    N={n:5d}: {len(cla_f):5d} pts | factor {t_factor:6.2f}s | "
+            f"dense {t_dense:6.2f}s | speedup x{speedup:5.1f}"
+        )
+    # PASS when the factor operator is comfortably faster than dense at the largest N.
+    return Check("factor vs dense @N=2000 (time ratio)", ratio_at_max, 0.5, "<0.5 (>2x)")
+
+
 def main() -> None:
-    """Regenerate both figures, run all five checks, and report PASS/FAIL."""
+    """Regenerate both figures, run every check, and report PASS/FAIL."""
     print("== Figures ==")
     check_c = figure_identity()
     check_d = figure_frontier()
@@ -330,10 +401,14 @@ def main() -> None:
     print("\n== Numerical checks (Sec. 7) ==")
     check_a = check_lars_path()
     check_b = check_constrained_qp()
+    check_f = check_real_data()
     print("  envelope sweep:")
     check_e = check_envelope()
 
-    checks = [check_a, check_b, check_c, check_d, check_e]
+    print("\n== Operator scaling (Sec. 8): factor covariance vs dense ==")
+    check_g = report_scaling()
+
+    checks = [check_a, check_b, check_c, check_d, check_e, check_f, check_g]
     print()
     for c in checks:
         print(c.line())
