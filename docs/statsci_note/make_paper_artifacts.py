@@ -18,6 +18,7 @@ Numbers re-derived and checked against the manuscript (Sec. 7, "Computation"):
   B. Constrained path vs independent active-set QP      -> ~5e-16   (text: ~6e-10)
   C. Fig. 1 caps: independent conic QP vs homotopy      -> ~3e-8    (text: ~3e-8)
   D. Dense Sigma vs FactorCovariance operator           -> identical 21-point frontier
+  E. Full frontier traced cleanly as N grows            -> monotone to N=6400 (Sec. 7/9)
 
 The two QP references are deliberately different solvers. Check C uses the conic
 interior-point solver CLARABEL (whose ~1e-8 floor is exactly the "solver precision" the
@@ -287,8 +288,41 @@ def check_constrained_qp() -> Check:
     return Check("constrained path vs active-set QP", worst, TOL_CONSTRAINED_QP, "~6e-10")
 
 
+# --------------------------------------------------------------------------------------
+# Check E: the full frontier is traced cleanly as the universe grows
+# --------------------------------------------------------------------------------------
+def check_envelope() -> Check:
+    """Trace full long-only frontiers at growing N; the path must stay monotone.
+
+    On an efficient frontier the expected return is non-increasing from the maximum-
+    return corner to the global minimum-variance one, so an out-of-order turning point
+    shows up as an *increase* in returns along the traced path. With the relative
+    event-ordering tolerance in ``select_next_event`` the frontier stays clean as the
+    universe grows; the worst up-jump across the sizes below is reported and must sit at
+    roundoff level (a coarse absolute tolerance, by contrast, lets it grow with N).
+    """
+    sizes = [100, 400, 1600, 6400]
+    worst = 0.0
+    for n in sizes:
+        k = max(2, min(10, n // 4))
+        mean, factor, _ = factor_problem(seed=0, n_assets=n, n_days=max(2 * n, 30), n_factors=k)
+        cla = CLA(
+            mean=mean,
+            covariance=factor,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        ret = np.asarray(cla.frontier.returns)
+        up_jump = float(np.max(np.diff(ret)))  # > 0 means an out-of-order turning point
+        worst = max(worst, up_jump)
+        print(f"    N={n:5d}: {len(cla):5d} turning points, worst return up-jump {up_jump:.1e}")
+    return Check("frontier monotone to N=6400", worst, 1e-9, "clean (roundoff)")
+
+
 def main() -> None:
-    """Regenerate both figures, run all four checks, and report PASS/FAIL."""
+    """Regenerate both figures, run all five checks, and report PASS/FAIL."""
     print("== Figures ==")
     check_c = figure_identity()
     check_d = figure_frontier()
@@ -296,8 +330,10 @@ def main() -> None:
     print("\n== Numerical checks (Sec. 7) ==")
     check_a = check_lars_path()
     check_b = check_constrained_qp()
+    print("  envelope sweep:")
+    check_e = check_envelope()
 
-    checks = [check_a, check_b, check_c, check_d]
+    checks = [check_a, check_b, check_c, check_d, check_e]
     print()
     for c in checks:
         print(c.line())
