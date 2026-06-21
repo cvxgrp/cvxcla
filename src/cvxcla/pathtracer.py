@@ -23,6 +23,7 @@ by the same ``trace`` here.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
@@ -78,6 +79,55 @@ class ParametricProblem(Protocol):
     def finish(self, state: Any, segment: Any) -> None:
         """Record the final ``lambda = 0`` vertex (the segment's intercept)."""
         ...  # pragma: no cover
+
+
+class InequalityConstrained:
+    """Mixin: normalise optional ``G x <= h`` inequality rows for a parametric problem.
+
+    Both the CLA (``G w <= h`` exposure caps) and the LASSO (``G beta <= h``) carry an
+    optional inequality system through the same bordered machinery, so normalising the
+    raw ``g``/``h`` inputs -- and counting the resulting path-length coordinates -- lives
+    here once rather than being duplicated in each class. A concrete problem supplies the
+    ``g``/``h`` inputs (``None`` when there are no inequality rows) and a ``dimension``.
+    """
+
+    g: NDArray[np.float64] | None
+    h: NDArray[np.float64] | None
+
+    @property
+    def dimension(self) -> int:
+        """Number of coordinates ``n``; provided by the concrete problem class."""
+        raise NotImplementedError  # pragma: no cover
+
+    @cached_property
+    def g_matrix(self) -> NDArray[np.float64]:
+        """Inequality matrix ``G`` of ``G x <= h`` as a ``(p, n)`` float array.
+
+        ``None`` is normalised to an empty ``(0, n)`` matrix, so the inequality
+        machinery is a no-op and the trace reduces exactly to the unconstrained
+        problem. This is the single point where the inequality input is normalised.
+        """
+        if self.g is None:
+            return np.zeros((0, self.dimension))
+        return np.atleast_2d(np.asarray(self.g, dtype=np.float64))
+
+    @cached_property
+    def h_vector(self) -> NDArray[np.float64]:
+        """Inequality right-hand side ``h`` of ``G x <= h`` as a ``(p,)`` float array (empty if none)."""
+        if self.h is None:
+            return np.zeros(0)
+        return np.atleast_1d(np.asarray(self.h, dtype=np.float64))
+
+    @property
+    def event_dimension(self) -> int:
+        """Coordinate count for the tracer's path-length safety cap: ``n`` + ``p`` rows.
+
+        Each turning point fixes the activity of exactly one coordinate -- a box bound
+        (or LASSO coefficient) or an inequality row of ``G x <= h`` -- so the iteration
+        cap scales with ``n + p`` rather than ``n`` alone. With no inequality rows this
+        is just ``n``.
+        """
+        return self.dimension + int(self.g_matrix.shape[0])
 
 
 def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tuple[int, int, float] | None:
