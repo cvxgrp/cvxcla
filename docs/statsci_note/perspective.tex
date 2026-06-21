@@ -63,11 +63,14 @@ penalty, the support-vector machine along its cost, and Markowitz's Critical Lin
 Algorithm, older than all of them, along risk aversion; explicit model predictive
 control, whose parameter is a vector state, is the multi-parameter generalisation of
 the same scheme. We argue, and prove on the cleanest pair, that the scalar-parameter
-methods are one device. Our central result is an exact identity, not an analogy: with the covariance
-taken to be a Gram matrix, the constrained mean--variance frontier and the constrained
-LASSO path are the \emph{same} piecewise-linear curve, breakpoints in bijection, and
-this survives arbitrary linear equality and inequality constraints, beyond the
-unconstrained correspondence and the gross-exposure case of \citet{brodie2009}. The
+methods are one device: with the covariance taken to be a Gram matrix, the constrained
+mean--variance frontier and the constrained LASSO path are the \emph{same}
+piecewise-linear curve, breakpoints in bijection. The identity is exact, and, beyond the
+unconstrained correspondence and the gross-exposure case of \citet{brodie2009}, it
+survives arbitrary linear equality and inequality constraints. Its proof is short, a
+completion of squares read through the affine-segment structure the family shares; the
+content is that it makes a long-standing analogy precise and general, not that it is
+technically deep. The
 accompanying open-source package \texttt{cvxcla} makes the unification operational: it
 traces every instance, efficient frontier or regularisation path, through one engine
 that reaches its quadratic form only as an operator, so factor models and kernels drop
@@ -109,11 +112,14 @@ Critical Line Algorithm for the efficient frontier \citep{markowitz1956,
 markowitz1959}.
 
 We make three claims, and we lead with them rather than with the survey. First
-(Section~\ref{sec:identity}), the connection between the two most dissimilar-looking
-members, a portfolio optimizer and a sparse regression, is an \emph{exact identity}:
-under one substitution the constrained Markowitz frontier and the constrained LASSO
-path are the same curve, breakpoint for breakpoint, and the identity holds under
-arbitrary linear constraints. We state this as a theorem and prove it. Second
+(Section~\ref{sec:identity}), the two most dissimilar-looking members, a portfolio
+optimizer and a sparse regression, are under one substitution the same curve,
+breakpoint for breakpoint, and the identity persists under arbitrary linear
+constraints. We state this as a theorem and prove it, but the proof is elementary, a
+completion of squares together with the affine-segment structure of
+Section~\ref{sec:scheme}; its value is that it turns a familiar analogy into an exact
+and general statement, and that the constraints, which statistics usually handles only
+approximately, pass through for free. Second
 (Section~\ref{sec:taxonomy}), once the identity is in hand, the entire family is
 organised by a short list of distinguishing features, and the apparent diversity of
 the methods collapses onto that list. Third (Sections~\ref{sec:tour}--\ref{sec:comp}),
