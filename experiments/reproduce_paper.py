@@ -12,11 +12,11 @@ runtime_scaling                     Figure 2  (scaling.pdf) + Table 1
 rank_scaling                        Figure 3  (rank_scaling.pdf) + Table 2
 validate_exact                      Section 10.5 exactness numbers
 validate_constraints                Section 10.5 general-constraint exactness
-frontier_real                       Figure 4  (real_frontier.pdf)
-degeneracy_boundary                 Figure 5  (degeneracy.pdf)
+frontier_real                       Figure 4  (real_frontier.pdf) + Figure 5 (real_timing.pdf) + Table 3
+degeneracy_boundary                 Figure 6  (degeneracy.pdf)
 tie_degeneracy                      Section 10.6 tie-heavy stress envelope
-clarabel_baseline                   Figure 6  (clarabel_baseline.pdf) + Section 10 baseline
-lasso_path                          Figure 7  (lasso_path.pdf) + Section 11 LASSO check
+clarabel_baseline                   Figure 7  (clarabel_baseline.pdf) + Section 10 baseline
+lasso_path                          Figure 8  (lasso_path.pdf) + Section 11 LASSO check
 validate_lasso_constraints          Section 11 constrained-LASSO exactness
 ==================================  ==========================================
 
@@ -55,7 +55,7 @@ STEPS: list[tuple[str, str, bool]] = [
     ("rank_scaling", "Figure 3 (rank_scaling.pdf) + Table 2", True),
     ("validate_exact", "Section 10.5 exactness numbers", False),
     ("validate_constraints", "Section 10.5 general-constraint exactness", False),
-    ("frontier_real", "Figure 4 (real_frontier.pdf)", False),
+    ("frontier_real", "Figure 4 (real_frontier.pdf) + Figure 5 (real_timing.pdf) + Table 3", False),
     ("degeneracy_boundary", "Figure 5 (degeneracy.pdf)", False),
     ("tie_degeneracy", "Section 10.6 tie-heavy stress envelope", False),
     ("clarabel_baseline", "Figure 6 (clarabel_baseline.pdf)", True),
