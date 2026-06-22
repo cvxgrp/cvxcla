@@ -3,9 +3,9 @@ repo: jebel-quant/rhiza
 host: github
 ref: v0.19.3
 include: []
-exclude: []
+exclude:
+- .github/workflows/rhiza_release.yml
 templates:
-- legal
 - github-paper
 files:
 - .bandit
@@ -42,8 +42,6 @@ files:
 - .rhiza/.env
 - .rhiza/.gitignore
 - .rhiza/.rhiza-version
-- .rhiza/CODE_OF_CONDUCT.md
-- .rhiza/CONTRIBUTING.md
 - .rhiza/assets/rhiza-logo.svg
 - .rhiza/completions/README.md
 - .rhiza/completions/rhiza-completion.bash
@@ -92,9 +90,7 @@ files:
 - .rhiza/tests/utils/test_suppression_audit.py
 - .rhiza/utils/pip_audit_policy.py
 - .rhiza/utils/suppression_audit.py
-- LICENSE
 - Makefile
-- SECURITY.md
 - cliff.toml
 - docs/assets/rhiza-logo.svg
 - docs/development/MARIMO.md
@@ -105,5 +101,5 @@ files:
 - ruff.toml
 profiles:
 - github-project
-synced_at: '2026-06-16T14:10:01Z'
+synced_at: '2026-06-22T01:24:33Z'
 strategy: merge
