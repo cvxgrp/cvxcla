@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .builder import ProblemBuilder
 
 from .first import first_vertex_lp, init_algo
-from .operators import DenseCovariance, QuadraticForm
+from .operators import DenseCovariance, QuadraticForm, bordered_solve
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
@@ -377,28 +377,26 @@ class CLA(InequalityConstrained):
         # of the reduced QP at this vertex.
         c = np.vstack([self.a, self.g_matrix[active_ineq]])
         d = np.concatenate([self.b, self.h_vector[active_ineq]])
-        mc = c.shape[0]
         c_free = c[:, free_in]
 
-        # [Sigma_FF  C_F.T] [x ]   [r1]   solved for the alpha (weights) and beta
-        # [C_F       0    ] [nu] = [r2]   systems via Sigma_FF^{-1} [C_F.T | r1_a | r1_b]
-        rhs_free = np.column_stack([c_free.T, -cov.cross(free_in, fixed_weights), self.mean[free_in]])
-        solved = cov.solve_free(free_in, rhs_free)
-        y = solved[:, :mc]  # Sigma_FF^{-1} C_F.T
-        z_alpha = solved[:, mc]
-        z_beta = solved[:, mc + 1]
+        # The reduced KKT system is the shared bordered solve: the constant system
+        # carries the blocked-weight shift -Sigma_FB w_B and the reduced constraint
+        # right-hand side d - C_B w_B; the slope system carries the mean with a zero
+        # constraint right-hand side (A r_beta = 0).
+        x_alpha, x_beta, nu_alpha, nu_beta = bordered_solve(
+            cov,
+            free_in,
+            c_free,
+            -cov.cross(free_in, fixed_weights),
+            self.mean[free_in],
+            d - c[:, out] @ fixed_weights[out],
+            np.zeros(c.shape[0]),
+        )
 
-        # Schur complement C_F Sigma_FF^{-1} C_F.T and the stacked multipliers
-        schur = c_free @ y
-        r2_alpha = d - c[:, out] @ fixed_weights[out]
-        nu = np.linalg.solve(schur, np.column_stack([c_free @ z_alpha - r2_alpha, c_free @ z_beta]))
-        nu_alpha, nu_beta = nu[:, 0], nu[:, 1]
-
-        # Back-substitute the free weights
         r_alpha = fixed_weights.copy()
-        r_alpha[free_in] = z_alpha - y @ nu_alpha
+        r_alpha[free_in] = x_alpha
         r_beta = np.zeros(ns)
-        r_beta[free_in] = z_beta - y @ nu_beta
+        r_beta[free_in] = x_beta
 
         gamma = cov.matvec(r_alpha) + c.T @ nu_alpha
         delta = cov.matvec(r_beta) + c.T @ nu_beta - self.mean
