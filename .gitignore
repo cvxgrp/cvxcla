@@ -42,6 +42,9 @@ docs/statsci_note/*.log
 docs/statsci_note/*.out
 docs/statsci_note/*.toc
 
+# monograph drafts and reference PDFs (kept local)
+docs/monograph/
+
 # temp file used by Junie
 .output.txt
 
