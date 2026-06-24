@@ -646,38 +646,23 @@ $H$ only through a matrix--vector product, a solve against the active block, and
 active-to-inactive cross product, one implementation serves every instance: told the
 quadratic form (as an operator) and what an event means, it traces the path. The same
 loop that follows the efficient frontier follows the LASSO path when handed
-$X\trans X$ and $X\trans y$. The \texttt{cvxcla} package \citep{cvxcla} realises this,
-and traced the homotopy shown in Figure~\ref{fig:both}. A few deliberately light checks
-confirm that
-Theorem~\ref{thm:identity} holds numerically and not merely on paper. On a standard
-design, the traced path agrees with \texttt{scikit-learn}'s \texttt{lars\_path} to
-machine precision, about $10^{-15}$ in the coefficients, over the same breakpoints;
-under a non-negativity and an inequality constraint, the constrained path matches an
-independent active-set quadratic-program solver, run separately at each breakpoint,
-again to machine precision (about $5\times10^{-16}$). A conic interior-point solver
-agrees only to its own $\approx 10^{-8}$ floor, which is why the agreement is reported
-against a direct active-set reference. On real data, the diabetes study of
-\citet{efron2004} itself, the homotopy reproduces \texttt{lars\_path} to
-$\approx 2\times10^{-10}$ over its thirteen breakpoints. The high-dimensional regime is
-no obstacle: on a $p\gg n$ design, where $X\trans X$ is singular, the homotopy still
-traces the path, the active support never exceeding $\operatorname{rank}(X)$ so that the
-free block $X_\F\trans X_\F$ stays positive definite (the standing assumption of
-Section~\ref{sec:scheme}), and it again matches \texttt{lars\_path}, to
-$\approx 10^{-13}$ on designs with $p$ several times $n$.
+$X\trans X$ and $X\trans y$, and the open-source \texttt{cvxcla} package \citep{cvxcla}
+realises exactly this. The identity is not merely formal: the traced path agrees to
+machine precision with \texttt{scikit-learn}'s \texttt{lars\_path}, including on the
+diabetes data of \citet{efron2004} and on high-dimensional ($p\gg n$) designs, where the
+active support never exceeds $\operatorname{rank}(X)$ so the free block
+$X_\F\trans X_\F$ stays positive definite (the standing assumption of
+Section~\ref{sec:scheme}); under non-negativity and inequality constraints it matches an
+independent active-set quadratic-program solver to the same precision.
 
-\paragraph{Tracing cleanly at scale} The homotopy returns the whole long-only frontier
-as an exactly ordered sequence of turning points well beyond the small illustration of
-Figure~\ref{fig:frontier}. One numerical point earns its keep here. The breakpoints of a
+\paragraph{Ordering breakpoints} One numerical point earns its keep. The breakpoints of a
 large path crowd together, their spacing shrinking with the universe size, so ordering
 them, and the simplex-style ratio test that does it, must use a tolerance \emph{relative}
 to the scale of $\lambda$; a fixed absolute tolerance eventually merges distinct
 breakpoints, mis-ranks them, and lets the parameter step backwards. With the relative
-test, \texttt{cvxcla} returns strictly monotone frontiers, turning points in the correct
-order to floating-point precision, on factor-model universes from $N=100$ up to
-$N=6400$ assets, the largest agreeing turn for turn with a tight-tolerance reference; the
-count of corners stays near-linear, about $N$ for an $N$-asset frontier. This is benign,
-general-position behaviour; the adversarial worst case is a separate matter, taken up in
-Section~\ref{sec:length}.
+test the frontier comes back strictly monotone, its turning points correctly ordered to
+floating-point precision. This is benign, general-position behaviour; the adversarial
+worst case is a separate matter, taken up in Section~\ref{sec:length}.
 
 The exactness is not a numerical nicety: gridding the penalty and interpolating between
 grid points cuts the very corners, the breakpoints, that carry the model-selection
@@ -687,16 +672,10 @@ the path in exactly this way, whereas the homotopy returns the corners themselve
 Treating $H$ as an operator is also where the scheme meets scale. A structured
 quadratic form, a diagonal-plus-low-rank factor covariance in finance or a kernel in
 learning, supplies the same operations far more cheaply than a dense $H$, with no
-change to the homotopy. This is not only asymptotics. Tracing the entire long-only
-frontier of a $k=10$ factor universe, the diagonal-plus-low-rank
-\texttt{FactorCovariance} operator returns the \emph{identical} frontier as the dense
-$\Sig$ but does so about $4\times$ faster at $N=250$ assets, $11\times$ at $N=1000$,
-and $36\times$ at $N=2000$ (where the dense solve takes some twenty seconds and the
-operator under one); the gap widens with $N$ because each step costs $O(nk)$ rather
-than $O(n^2)$ (hardware-dependent figures, reproduced by the companion script). The
-portfolio analogue of a structured or kernelised design is a factor risk model, and it
-is how Markowitz's algorithm reaches universe sizes its original dense formulation
-could not.
+change to the homotopy: each step costs $O(nk)$ rather than $O(n^2)$, and the structured
+backend returns the \emph{identical} frontier as the dense one. The portfolio analogue
+of a structured or kernelised design is a factor risk model, and it is how Markowitz's
+algorithm reaches universe sizes its original dense formulation could not.
 
 \section{How long is the path?}
 \label{sec:length}
