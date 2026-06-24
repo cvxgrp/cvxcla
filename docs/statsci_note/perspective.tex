@@ -99,18 +99,23 @@ recount how the device, invented in the 1950s, was rediscovered by statistics ar
 
 \section{Introduction}
 
-This is a paper about one algorithmic idea that four fields invented separately and
-never fully recognised as shared. The algorithm follows the optimiser of a parametrised
-convex quadratic as a single scalar moves; the solution traces a
+This paper began at an implementation. Writing a fast solver for Markowitz's Critical
+Line Algorithm for the efficient frontier \citep{markowitz1956, markowitz1959}, we were
+struck by how closely its inner loop reproduced the LARS/LASSO homotopy that statistics
+arrived at four decades later \citep{tibshirani1996, osborne2000, efron2004}: the same
+active set, the same piecewise-linear path, the same ratio test choosing the next
+breakpoint, with only the names of the quantities differing. (The solver, \texttt{cvxcla},
+is the open-source package we draw on throughout.) Pursued, the resemblance turns out to be an exact identity, and it is one
+instance of a larger pattern: a single algorithmic idea that four fields invented
+separately and never fully recognised as shared. The algorithm follows the optimiser of
+a parametrised convex quadratic as a single scalar moves; the solution traces a
 piecewise-linear curve, and an active set is all the state needed to trace it
-exactly. In statistics it is least angle regression and the LASSO homotopy
-\citep{tibshirani1996, osborne2000, efron2004}; in machine learning the regularization
-path of the support vector machine \citep{hastie2004svm} and the elastic net and
-generalized lasso \citep{zou2005, tibshirani2011}; in control the explicit linear
-quadratic regulator computed by multi-parametric quadratic programming
-\citep{bemporad2002, tondel2003}; and in finance, decades earlier, Markowitz's
-Critical Line Algorithm for the efficient frontier \citep{markowitz1956,
-markowitz1959}.
+exactly. In statistics it is least angle regression and the LASSO homotopy; in machine
+learning the regularization path of the support vector machine \citep{hastie2004svm} and
+the elastic net and generalized lasso \citep{zou2005, tibshirani2011}; in control the
+explicit linear quadratic regulator computed by multi-parametric quadratic programming
+\citep{bemporad2002, tondel2003}; and in finance, decades earlier, the Critical Line
+Algorithm we had set out to implement.
 
 We make three claims, and we lead with them rather than with the survey. First
 (Section~\ref{sec:identity}), the two most dissimilar-looking members, a portfolio
