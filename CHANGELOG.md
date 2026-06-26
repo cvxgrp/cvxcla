@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [1.8.2] - 2026-06-26
+
+### New Features
+- Add ClusterFuzzLite fuzzing scaffold for cvxcla (#782)
+
+### Documentation
+- Statistical Science perspective — CLA as a constrained LASSO (with T. Hastie) (#755)
+
+### Maintenance
+- Extract shared bordered KKT solve into operators.bordered_solve (#779)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 3 updates (#781)
+- Chore(deps)(deps): bump the github-actions group with 12 updates (#780)
+
 ## [1.8.1] - 2026-06-21
 
 ### New Features
@@ -26,6 +39,7 @@ and entries are generated from [Conventional Commits](https://www.conventionalco
 
 ### Other Changes
 - Remove obsolete `cvxcla.optimize` module (#766)
+- Bump version 1.8.0 → 1.8.1
 
 ## [1.8.0] - 2026-06-19
 
