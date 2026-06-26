@@ -408,3 +408,29 @@ def test_operator_mode_rejects_design_and_operator_together():
     _d, _u, _delta, sigma, xty = _factor_gram(seed=3)
     with pytest.raises(ValueError, match="either"):
         Lasso(x=np.eye(xty.shape[0]), y=np.zeros(xty.shape[0]), quad_form=DenseCovariance(sigma), linear=xty)
+
+
+def test_operator_mode_requires_both_quad_form_and_linear():
+    """In operator mode, quad_form and linear (X^T y) must be supplied together."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=4)
+    with pytest.raises(ValueError, match="together"):
+        Lasso(quad_form=DenseCovariance(sigma))
+    with pytest.raises(ValueError, match="together"):
+        Lasso(linear=xty)
+
+
+def test_operator_mode_rejects_non_1d_linear():
+    """The linear term X^T y must be a 1d vector."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=5)
+    with pytest.raises(ValueError, match="1d vector"):
+        Lasso(quad_form=DenseCovariance(sigma), linear=xty[:, None])
+
+
+def test_requires_design_or_operator():
+    """Constructing a Lasso with neither a design nor an operator is rejected."""
+    with pytest.raises(ValueError, match="provide a design"):
+        Lasso()
