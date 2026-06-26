@@ -119,24 +119,35 @@ class Lasso(InequalityConstrained):
     Optional linear inequality constraints ``G beta <= h`` (with ``h > 0``) are
     traced through the same bordered solve as the CLA's ``G w <= h`` rows.
 
+    The quadratic form may be given either as a dense design ``(x, y)`` (the usual
+    case, ``H = X^T X``) or, via :meth:`from_operator`, as a ``QuadraticForm``
+    operator with the linear term ``X^T y``. The operator route lets a structured
+    form, a diagonal-plus-low-rank factor model or a kernel, drive the path in
+    ``O(nk)`` per step without forming the ``n x n`` Gram matrix, exactly as on the
+    portfolio side.
+
     Attributes:
-        x: Design matrix of shape ``(m, n)``.
-        y: Response vector of shape ``(m,)``.
+        x: Design matrix of shape ``(m, n)`` (``None`` in operator mode).
+        y: Response vector of shape ``(m,)`` (``None`` in operator mode).
         g: Optional inequality matrix ``(p, n)`` of ``G beta <= h``; ``None`` means
             the plain LASSO.
         h: Optional inequality right-hand side ``(p,)``; must be strictly positive.
         tol: Tolerance for event selection and the validity window.
         path: The discovered breakpoints, populated on construction.
+        quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
+        linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
     """
 
-    x: NDArray[np.float64]
-    y: NDArray[np.float64]
+    x: NDArray[np.float64] | None = None
+    y: NDArray[np.float64] | None = None
     g: NDArray[np.float64] | None = None
     h: NDArray[np.float64] | None = None
     nonneg: bool = False  # pragma: no mutate
     gram: bool = False  # pragma: no mutate
     tol: float = 1e-9  # pragma: no mutate
     path: list[Breakpoint] = field(default_factory=list)
+    quad_form: QuadraticForm | None = None  # pragma: no mutate
+    linear: NDArray[np.float64] | None = None  # pragma: no mutate
 
     def __post_init__(self) -> None:
         """Validate shapes and trace the full LASSO path.
@@ -146,12 +157,28 @@ class Lasso(InequalityConstrained):
                 constraint shapes are inconsistent, or any ``h`` entry is not
                 strictly positive (which would make ``beta = 0`` infeasible).
         """
-        if self.x.ndim != 2:
-            msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
-            raise ValueError(msg)
-        if self.y.shape != (self.x.shape[0],):
-            msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
-            raise ValueError(msg)
+        operator_mode = self.quad_form is not None or self.linear is not None
+        if operator_mode:
+            if self.quad_form is None or self.linear is None:
+                msg = "quad_form and linear (X^T y) must be provided together"
+                raise ValueError(msg)
+            if self.x is not None or self.y is not None:
+                msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
+                raise ValueError(msg)
+            self.linear = np.asarray(self.linear, dtype=np.float64)
+            if self.linear.ndim != 1:
+                msg = f"linear must be the 1d vector X^T y, got shape {self.linear.shape}"
+                raise ValueError(msg)
+        else:
+            if self.x is None or self.y is None:
+                msg = "provide a design (x, y) or an operator (quad_form, linear)"
+                raise ValueError(msg)
+            if self.x.ndim != 2:
+                msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
+                raise ValueError(msg)
+            if self.y.shape != (self.x.shape[0],):
+                msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
+                raise ValueError(msg)
         if self.g is not None or self.h is not None:
             if self.g is None or self.h is None:
                 msg = "g and h must be provided together"
@@ -183,6 +210,51 @@ class Lasso(InequalityConstrained):
 
         return LassoBuilder(x, y)
 
+    @classmethod
+    def from_operator(
+        cls,
+        quad: QuadraticForm,
+        xty: NDArray[np.float64],
+        *,
+        g: NDArray[np.float64] | None = None,
+        h: NDArray[np.float64] | None = None,
+        nonneg: bool = False,
+        tol: float = 1e-9,
+    ) -> Lasso:
+        """Trace a LASSO path with the quadratic form supplied as an operator.
+
+        The regression counterpart of :class:`cvxcla.cla.CLA` accepting a
+        ``QuadraticForm`` covariance. Instead of a dense design ``X``, pass the Gram
+        operator ``H`` (anything implementing :class:`QuadraticForm`, for example a
+        :class:`cvxcla.operators.FactorCovariance` or a kernel) together with the
+        linear term ``X^T y``. The homotopy reaches ``H`` only through ``matvec`` and
+        ``solve_free``, so a diagonal-plus-low-rank factor model or a kernel traces
+        the path in ``O(nk)`` per step without ever forming the ``n x n`` matrix,
+        exactly as on the portfolio side. For the path to coincide with the
+        design-matrix LASSO one needs ``H = X^T X`` and ``xty = X^T y``
+        (Theorem 1); any positive-semidefinite operator whose free blocks are
+        positive definite traces a well-defined path.
+
+        Args:
+            quad: The quadratic form ``H`` as a :class:`QuadraticForm` operator.
+            xty: The linear term ``X^T y`` of shape ``(n,)``.
+            g: Optional inequality matrix of ``G beta <= h``.
+            h: Optional inequality right-hand side; entries must be strictly positive.
+            nonneg: Restrict the path to ``beta >= 0``.
+            tol: Tolerance for event selection and the validity window.
+
+        Returns:
+            A traced :class:`Lasso` whose ``path`` holds the breakpoints.
+        """
+        return cls(
+            quad_form=quad,
+            linear=np.asarray(xty, dtype=np.float64),
+            g=g,
+            h=h,
+            nonneg=nonneg,
+            tol=tol,
+        )
+
     @cached_property
     def quad(self) -> QuadraticForm:
         """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed).
@@ -195,6 +267,8 @@ class Lasso(InequalityConstrained):
         the data by ``sqrt(m-1)`` recovers ``X^T X`` exactly for a **centred** design
         (the standard LASSO convention; pass a column-centred ``x``).
         """
+        if self.quad_form is not None:
+            return self.quad_form
         if self.gram:
             m = self.x.shape[0]
             return GramCovariance(self.x * np.sqrt(m - 1.0))
@@ -203,12 +277,16 @@ class Lasso(InequalityConstrained):
     @cached_property
     def xty(self) -> NDArray[np.float64]:
         """The linear data ``X^T y`` (the analogue of the CLA's expected returns; cached)."""
+        if self.linear is not None:
+            return self.linear
         return self.x.T @ self.y
 
     @property
     def dimension(self) -> int:
         """Number of features ``n`` (the problem dimension for the path tracer)."""
-        return int(self.x.shape[1])
+        if self.x is not None:
+            return int(self.x.shape[1])
+        return int(self.xty.shape[0])
 
     @property
     def lam_max(self) -> float:
