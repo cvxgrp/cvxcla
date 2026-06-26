@@ -598,27 +598,34 @@ class CLA(InequalityConstrained):
     ) -> None:
         """Build and store a turning point, projecting away sub-tolerance round-off.
 
+        Orchestrates the three steps taken at every turning point: refuse the point
+        if the free-asset block is numerically singular (see
+        :meth:`_guard_degeneracy`); project the candidate back onto the feasible
+        set to clear sub-tolerance round-off (see :meth:`_project_feasible`); then
+        validate and store it (see :meth:`_append`).
+
         On tie-heavy or near-degenerate problems (a short, near-rank-deficient
-        sample covariance, duplicated assets, or many coincident events) the walk
-        can reach a degenerate vertex at which a free weight sits essentially on
-        one of its bounds. Accumulated floating-point round-off over the many
-        turning points of a large trace then places that weight a hair outside its
-        box. The covariance there has near-flat directions (its small eigenvalues),
-        and the round-off lies in exactly those directions, so the candidate is
-        optimal to solver precision but not exactly feasible.
+        sample covariance, duplicated assets, or many coincident events) accumulated
+        floating-point round-off over the many turning points of a large trace can
+        place a free weight a hair outside its box. The covariance there has
+        near-flat directions (its small eigenvalues) and the round-off lies in
+        exactly those directions, so the candidate is optimal to solver precision
+        but not exactly feasible; the projection clears it and is a strict no-op for
+        the well-posed turning points that are already feasible.
+        """
+        self._guard_degeneracy(lamb, free)
+        weights = self._project_feasible(weights, active_ineq)
+        self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq))
+
+    def _guard_degeneracy(self, lamb: float, free: NDArray[np.bool_]) -> None:
+        """Refuse the turning point when the free-asset block is numerically singular.
 
         We distinguish two regimes by the conditioning of the free-asset block.
         While that block stays numerically full rank its solve is reliable and any
-        box violation is round-off: we project the candidate onto the feasible box
-        and, for the canonical budget constraint, rescale to restore the budget
-        exactly. The projected point is then exactly feasible while remaining
-        optimal (its objective matches a reference QP solve to roughly ``1e-8``;
-        the weight difference is the problem's own non-uniqueness along the flat
-        directions, not suboptimality). This is a no-op for well-posed turning
-        points, which are already strictly feasible. Once the free set grows past
-        the covariance rank the block is numerically singular and its solve is
-        unreliable; whatever weights it produces (feasible or not) cannot be
-        trusted, so we refuse and raise an actionable diagnosis instead of
+        box violation is round-off, which :meth:`_project_feasible` clears. Once the
+        free set grows past the covariance rank the block is numerically singular
+        and its solve is unreliable; whatever weights it produces (feasible or not)
+        cannot be trusted, so we refuse and raise an actionable diagnosis instead of
         silently returning a possibly-suboptimal frontier.
 
         The discriminator is the free block's reciprocal condition number, read
@@ -634,10 +641,14 @@ class CLA(InequalityConstrained):
         covariance is itself near-singular, which is exactly the regime that can
         produce an untrustworthy free-block solve.
 
+        Args:
+            lamb: Lambda value of the candidate turning point, used in the message.
+            free: Boolean mask of the free assets at the candidate.
+
         Raises:
             ValueError: With a degeneracy-specific message when the free-asset
                 block is numerically singular (an unreliable solve); otherwise
-                propagates nothing.
+                returns without effect.
         """
         # When the full covariance clears the floor, interlacing guarantees every
         # free block does too, so the per-step guard can never fire -- skip it and
@@ -660,11 +671,6 @@ class CLA(InequalityConstrained):
                     "(diagonal-plus-low-rank), which is positive definite by construction."
                 )
                 raise ValueError(msg)
-        # Full-rank regime: the box violation is sub-tolerance round-off in the
-        # covariance's flat directions, so project the candidate back onto the
-        # feasible set and let the trace continue.
-        weights = self._project_feasible(weights, active_ineq)
-        self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq))
 
     def _project_feasible(
         self, weights: NDArray[np.float64], active_ineq: NDArray[np.bool_] | None = None
@@ -673,25 +679,15 @@ class CLA(InequalityConstrained):
 
         On tie-heavy or near-degenerate problems accumulated round-off can place a
         candidate a hair outside its box at a well-conditioned vertex. Projecting it
-        back onto ``{w : lower <= w <= upper, A w = b}`` clears that round-off and
+        back onto ``{w : lower <= w <= upper, C w = d}`` clears that round-off and
         lets the trace continue. The projection is a strict no-op for well-posed,
         already-feasible turning points (the common case), so it does not perturb
         the exact frontier.
 
-        For the all-ones budget constraint (and no active inequality row) this is the
-        Euclidean projection onto the capped simplex, computed by water-filling a
-        single shift ``theta`` so that ``sum(clip(w - theta, lower, upper)) = b``. A
-        plain clip-then-rescale is deliberately *not* used: rescaling the clipped
-        weights to restore the budget can push capped weights back over their bound
-        when many assets are capped at once (heavy ties under a tight cap),
-        re-introducing the very infeasibility the projection is meant to clear.
-
-        Otherwise the projection alternates between the box (a clip) and the affine
-        set ``{C w = d}``, where ``C`` stacks the equality rows ``A`` and the
-        active inequality rows ``G_S`` (held at equality ``g_i w = h_i``). The
-        candidate already satisfies ``C w = d`` (the reduced KKT solve enforces it)
-        and the inactive inequality rows keep a margin, so a few iterations converge
-        to a point feasible to the box, the equalities, and every inequality.
+        Dispatches to the closed-form capped-simplex projection for the canonical
+        all-ones budget with no active inequality row (see
+        :meth:`_project_capped_simplex`), and to the general alternating projection
+        otherwise (see :meth:`_project_alternating`).
 
         Args:
             weights: The candidate weight vector to project.
@@ -710,23 +706,59 @@ class CLA(InequalityConstrained):
             return weights
 
         if not active_ineq.any() and self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
-            # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect
-            # for the theta that hits the budget. The bracket clips to all-upper
-            # (sum at least the budget) at theta_lo and all-lower (at most the
-            # budget) at theta_hi, so a root is guaranteed for any feasible problem.
-            budget = float(self.b[0])
-            theta_lo = float((weights - upper).min()) - 1.0
-            theta_hi = float((weights - lower).max()) + 1.0
-            for _ in range(100):
-                theta = 0.5 * (theta_lo + theta_hi)
-                if float(np.clip(weights - theta, lower, upper).sum()) > budget:
-                    theta_lo = theta
-                else:
-                    theta_hi = theta
-            return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
+            return self._project_capped_simplex(weights)
+        return self._project_alternating(weights, active_ineq)
 
-        # General case: alternating projection onto the box and the affine
-        # {C w = d}, with C = [A ; G_active] holding the active rows at equality.
+    def _project_capped_simplex(self, weights: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Euclidean projection onto the capped simplex for the all-ones budget.
+
+        Computed by water-filling a single shift ``theta`` so that
+        ``sum(clip(w - theta, lower, upper)) = b``. A plain clip-then-rescale is
+        deliberately *not* used: rescaling the clipped weights to restore the budget
+        can push capped weights back over their bound when many assets are capped at
+        once (heavy ties under a tight cap), re-introducing the very infeasibility
+        the projection is meant to clear.
+
+        Args:
+            weights: The candidate weight vector, known to violate its box.
+
+        Returns:
+            The projected weight vector, on the budget and inside the box.
+        """
+        lower, upper = self.lower_bounds, self.upper_bounds
+        # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect
+        # for the theta that hits the budget. The bracket clips to all-upper
+        # (sum at least the budget) at theta_lo and all-lower (at most the
+        # budget) at theta_hi, so a root is guaranteed for any feasible problem.
+        budget = float(self.b[0])
+        theta_lo = float((weights - upper).min()) - 1.0
+        theta_hi = float((weights - lower).max()) + 1.0
+        for _ in range(100):
+            theta = 0.5 * (theta_lo + theta_hi)
+            if float(np.clip(weights - theta, lower, upper).sum()) > budget:
+                theta_lo = theta
+            else:
+                theta_hi = theta
+        return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
+
+    def _project_alternating(self, weights: NDArray[np.float64], active_ineq: NDArray[np.bool_]) -> NDArray[np.float64]:
+        """Alternating projection onto the box and the affine set ``{C w = d}``.
+
+        ``C`` stacks the equality rows ``A`` and the active inequality rows ``G_S``
+        (held at equality ``g_i w = h_i``). The candidate already satisfies
+        ``C w = d`` (the reduced KKT solve enforces it) and the inactive inequality
+        rows keep a margin, so a few iterations alternating a box clip with the
+        affine projection converge to a point feasible to the box, the equalities,
+        and every inequality.
+
+        Args:
+            weights: The candidate weight vector, known to violate its box.
+            active_ineq: Boolean mask (length ``p``) of the active inequality rows.
+
+        Returns:
+            The projected weight vector, feasible to the box and the constraints.
+        """
+        lower, upper = self.lower_bounds, self.upper_bounds
         c = np.vstack([self.a, self.g_matrix[active_ineq]])
         d = np.concatenate([self.b, self.h_vector[active_ineq]])
         gram = c @ c.T
