@@ -51,7 +51,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import DenseCovariance, GramCovariance, QuadraticForm
+from .operators import DenseCovariance, GramCovariance, QuadraticForm, bordered_solve
 from .pathtracer import InequalityConstrained, trace
 
 if TYPE_CHECKING:
@@ -349,28 +349,22 @@ class Lasso(InequalityConstrained):
             # Empty support (e.g. the non-negative path when no correlation is
             # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
             return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
-        if not np.any(rows_active):
-            # Plain LASSO solve: beta_S(lam) = H_SS^{-1}(xty_S - lam s_S). Solve both
-            # right-hand sides at once so H_SS is factorised a single time per
-            # breakpoint (one np.linalg.solve, not two).
-            sol = self.quad.solve_free(active, np.column_stack([xty_s, signs_s]))
-            alpha[active] = sol[:, 0]
-            beta_slope[active] = sol[:, 1]
-        else:
-            # Bordered solve over (beta_S, eta_R): the active rows G_RS act as
-            # equality rows, exactly the CLA's Schur complement (cla.py).
-            g_rs = self.g_matrix[np.ix_(rows_active, active)]  # |R| x |S|
-            h_r = self.h_vector[rows_active]
-            rhs = np.column_stack([xty_s, signs_s, g_rs.T])  # |S| x (2 + |R|)
-            sol = self.quad.solve_free(active, rhs)
-            u0, u1, big_y = sol[:, 0], sol[:, 1], sol[:, 2:]  # big_y = H_SS^{-1} G_RS^T
-            schur = g_rs @ big_y  # |R| x |R|
-            eta_a = np.linalg.solve(schur, g_rs @ u0 - h_r)
-            eta_s = -np.linalg.solve(schur, g_rs @ u1)
-            alpha[active] = u0 - big_y @ eta_a
-            beta_slope[active] = u1 + big_y @ eta_s
-            eta_alpha[rows_active] = eta_a
-            eta_slope[rows_active] = eta_s
+
+        # The active rows G_RS act as equality rows in the reduced KKT system, exactly
+        # the CLA's bordered Schur solve (operators.bordered_solve). With no active rows
+        # (|R| = 0) this reduces to the plain LASSO solve beta_S(lam) = H_SS^{-1}(xty_S -
+        # lam s_S). The slope's constraint right-hand side is zero, and the slope
+        # multiplier nu carries the opposite sign convention to eta(lam) (beta = alpha -
+        # lam beta_slope here, vs w = r_alpha + lam r_beta in the CLA), hence the flip.
+        g_rs = self.g_matrix[np.ix_(rows_active, active)]  # |R| x |S|
+        h_r = self.h_vector[rows_active]
+        x_const, x_slope, eta_a, nu_slope = bordered_solve(
+            self.quad, active, g_rs, xty_s, signs_s, h_r, np.zeros(g_rs.shape[0])
+        )
+        alpha[active] = x_const
+        beta_slope[active] = x_slope
+        eta_alpha[rows_active] = eta_a
+        eta_slope[rows_active] = -nu_slope
 
         # Generalised correlation c(lam) = xty - H beta(lam) - G_R^T eta(lam) = p + lam q.
         g_r = self.g_matrix[rows_active]

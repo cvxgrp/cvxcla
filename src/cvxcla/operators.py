@@ -132,6 +132,56 @@ class QuadraticForm(Protocol):
         ...  # pragma: no cover
 
 
+def bordered_solve(
+    quad: QuadraticForm,
+    free: NDArray[np.bool_],
+    c_free: NDArray[np.float64],
+    rhs_const: NDArray[np.float64],
+    rhs_slope: NDArray[np.float64],
+    d_const: NDArray[np.float64],
+    d_slope: NDArray[np.float64],
+) -> tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+]:
+    """Solve the bordered KKT system ``[[H_FF, C_F^T], [C_F, 0]] @ [x; nu] = [rhs; d]``.
+
+    The shared segment solve of ``cvxcla.cla`` and ``cvxcla.lasso``. ``H_FF`` is the
+    free block of the quadratic form, ``C_F`` the constraint rows on the free columns.
+    The constant and ``lambda``-slope right-hand sides are solved together so ``H_FF``
+    is factorised once; ``mc == 0`` (no constraint rows) is the plain free-block solve.
+    ``H_FF`` is reached only through ``solve_free``, so structured backends never
+    materialise an ``n x n`` matrix. Returns ``(x_const, x_slope, nu_const, nu_slope)``:
+    the free solution and constraint multipliers per system (multipliers empty if
+    ``mc == 0``). Callers assemble the right-hand sides and interpret the outputs.
+    """
+    mc = c_free.shape[0]
+    if mc == 0:
+        sol = quad.solve_free(free, np.column_stack([rhs_const, rhs_slope]))
+        empty: NDArray[np.float64] = np.zeros(0)
+        return sol[:, 0], sol[:, 1], empty, empty
+
+    # One multi-RHS solve against H_FF covers the constraint columns C_F^T and both
+    # the constant and slope systems, so H_FF is factorised a single time.
+    solved = quad.solve_free(free, np.column_stack([c_free.T, rhs_const, rhs_slope]))
+    y = solved[:, :mc]  # H_FF^{-1} C_F^T
+    z_const = solved[:, mc]
+    z_slope = solved[:, mc + 1]
+
+    # Schur complement C_F H_FF^{-1} C_F^T and the stacked multipliers.
+    schur = c_free @ y
+    nu = cast(
+        "NDArray[np.float64]",
+        np.linalg.solve(schur, np.column_stack([c_free @ z_const - d_const, c_free @ z_slope - d_slope])),
+    )
+    nu_const, nu_slope = nu[:, 0], nu[:, 1]
+
+    # Back-substitute the free solution.
+    return z_const - y @ nu_const, z_slope - y @ nu_slope, nu_const, nu_slope
+
+
 @dataclass(frozen=True)
 class DenseCovariance:
     """Dense reference implementation of the ``CovarianceOperator`` protocol.
