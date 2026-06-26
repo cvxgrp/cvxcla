@@ -348,3 +348,89 @@ def test_breakpoint_is_frozen():
     bp = Breakpoint(lam=1.0, beta=np.zeros(2), active=np.zeros(2, dtype=bool))
     with pytest.raises(dataclasses.FrozenInstanceError):
         bp.lam = 2.0
+
+
+def _factor_gram(seed: int = 0, n: int = 12, k: int = 3):
+    """A diagonal-plus-low-rank Gram H = diag(d) + U diag(delta) U^T and a linear term."""
+    rng = np.random.default_rng(seed)
+    u = rng.standard_normal((n, k)) / np.sqrt(n)
+    delta = rng.uniform(0.5, 2.0, k) * n
+    d = rng.uniform(0.5, 2.0, n)
+    sigma = np.diag(d) + (u * delta) @ u.T
+    beta_true = np.zeros(n)
+    beta_true[:4] = [2.0, -1.5, 1.1, 0.7]
+    xty = sigma @ beta_true + 0.05 * rng.standard_normal(n)
+    return d, u, delta, sigma, xty
+
+
+def test_from_operator_factor_matches_dense():
+    """The factor (Woodbury) operator traces the identical path as the dense Gram."""
+    from cvxcla.operators import DenseCovariance, FactorCovariance
+
+    d, u, delta, sigma, xty = _factor_gram()
+    factor = Lasso.from_operator(FactorCovariance(d=d, u=u, delta=delta), xty)
+    dense = Lasso.from_operator(DenseCovariance(sigma), xty)
+    assert len(factor.path) == len(dense.path)
+    for bp_f, bp_d in zip(factor.path, dense.path, strict=True):
+        np.testing.assert_allclose(bp_f.beta, bp_d.beta, atol=1e-10)
+
+
+def test_from_operator_matches_design_matrix():
+    """from_operator(H = X^T X, X^T y) reproduces the design-matrix LASSO path."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=1)
+    chol = np.linalg.cholesky(sigma)
+    x = chol.T  # X^T X = sigma exactly
+    y = x @ np.linalg.solve(sigma, xty)  # so that X^T y = xty
+    op = Lasso.from_operator(DenseCovariance(sigma), xty)
+    design = Lasso(x=x, y=y)
+    assert len(op.path) == len(design.path)
+    for bp_o, bp_x in zip(op.path, design.path, strict=True):
+        np.testing.assert_allclose(bp_o.beta, bp_x.beta, atol=1e-8)
+
+
+def test_from_operator_with_inequality():
+    """A structured operator traces a path under a genuine inequality constraint."""
+    from cvxcla.operators import FactorCovariance
+
+    d, u, delta, _sigma, xty = _factor_gram(seed=2)
+    n = xty.shape[0]
+    lasso = Lasso.from_operator(FactorCovariance(d=d, u=u, delta=delta), xty, g=np.ones((1, n)), h=np.array([3.0]))
+    assert len(lasso.path) >= 1
+    assert float(np.ones(n) @ lasso.path[-1].beta) <= 3.0 + 1e-6
+
+
+def test_operator_mode_rejects_design_and_operator_together():
+    """Supplying both (x, y) and (quad_form, linear) is rejected."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=3)
+    with pytest.raises(ValueError, match="either"):
+        Lasso(x=np.eye(xty.shape[0]), y=np.zeros(xty.shape[0]), quad_form=DenseCovariance(sigma), linear=xty)
+
+
+def test_operator_mode_requires_both_quad_form_and_linear():
+    """In operator mode, quad_form and linear (X^T y) must be supplied together."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=4)
+    with pytest.raises(ValueError, match="together"):
+        Lasso(quad_form=DenseCovariance(sigma))
+    with pytest.raises(ValueError, match="together"):
+        Lasso(linear=xty)
+
+
+def test_operator_mode_rejects_non_1d_linear():
+    """The linear term X^T y must be a 1d vector."""
+    from cvxcla.operators import DenseCovariance
+
+    _d, _u, _delta, sigma, xty = _factor_gram(seed=5)
+    with pytest.raises(ValueError, match="1d vector"):
+        Lasso(quad_form=DenseCovariance(sigma), linear=xty[:, None])
+
+
+def test_requires_design_or_operator():
+    """Constructing a Lasso with neither a design nor an operator is rejected."""
+    with pytest.raises(ValueError, match="provide a design"):
+        Lasso()
