@@ -46,7 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import cached_property
 from itertools import pairwise
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -269,17 +269,22 @@ class Lasso(InequalityConstrained):
         """
         if self.quad_form is not None:
             return self.quad_form
+        # Not operator mode, so __post_init__ guarantees a design matrix.
+        x = cast("NDArray[np.float64]", self.x)
         if self.gram:
-            m = self.x.shape[0]
-            return GramCovariance(self.x * np.sqrt(m - 1.0))
-        return DenseCovariance(self.x.T @ self.x)
+            m = x.shape[0]
+            return GramCovariance(x * np.sqrt(m - 1.0))
+        return DenseCovariance(x.T @ x)
 
     @cached_property
     def xty(self) -> NDArray[np.float64]:
         """The linear data ``X^T y`` (the analogue of the CLA's expected returns; cached)."""
         if self.linear is not None:
             return self.linear
-        return self.x.T @ self.y
+        # Not operator mode, so __post_init__ guarantees a design (x, y).
+        x = cast("NDArray[np.float64]", self.x)
+        y = cast("NDArray[np.float64]", self.y)
+        return x.T @ y
 
     @property
     def dimension(self) -> int:
