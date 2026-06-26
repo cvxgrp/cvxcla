@@ -3,9 +3,3 @@ ref: "v0.19.3"
 
 profiles:
   - github-project
-
-templates:
-  - github-paper
-
-exclude:
-  - .github/workflows/rhiza_release.yml
