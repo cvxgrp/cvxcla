@@ -45,6 +45,9 @@ docs/statsci_note/*.toc
 # monograph drafts and reference PDFs (kept local)
 docs/monograph/
 
+# book prospectus (kept local)
+docs/prospectus.md
+
 # temp file used by Junie
 .output.txt
 

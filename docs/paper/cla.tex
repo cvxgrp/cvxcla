@@ -74,8 +74,8 @@
 \newcommand{\srcfile}[2]{\href{\repourl/blob/\srcref/#1}{\texttt{#2}}}
 
 \title{\textbf{The Critical Line Algorithm}\\[0.3em]
-\large A parametric active-set method for the constrained mean--variance efficient
-frontier, with a LARS/LASSO twin, as implemented in \texttt{cvxcla}}
+\large An operator-based implementation for the constrained mean--variance efficient
+frontier in \texttt{cvxcla}}
 
 \author{Thomas Schmelzer\\[2pt]
 \normalsize Jebel Quant Research, Abu Dhabi}
@@ -101,11 +101,13 @@ through a few linear-algebraic operations, so a small protocol decouples the
 algorithm from the covariance representation and lets structured risk models
 (diagonal plus low rank) trace the same exact frontier without ever forming a dense
 $n\times n$ matrix, at a fraction of the cost when the structure is genuinely
-low-rank. Second, a \emph{unification}: the CLA is the one-parameter case of
-multi-parametric quadratic programming and shares its mechanics with the LARS/LASSO
-homotopy, so one path-tracing engine, carrying the same linear constraints, returns
-both the exact constrained efficient frontier and the exact constrained LASSO path.
-Third, an \emph{open, tested, and benchmarked} implementation, with event logic
+low-rank. Second, \emph{generality and reuse}: the turning-point loop is written for
+box bounds together with arbitrary linear equality ($Aw=b$) and inequality
+($Gw\le h$) constraints, and, because it reaches the covariance only as an operator,
+the same engine drives a reusable path tracer (the package's \texttt{Lasso} class is one
+client). The cross-field correspondence this reflects, and its history, are the subject
+of a companion paper \citep{schmelzer2026perspective}; here we treat only the
+implementation. Third, an \emph{open, tested, and benchmarked} implementation, with event logic
 hardened against degeneracy and floating-point noise. This hardening is bounded, not
 total: sub-tolerance round-off is projected back onto the feasible set, while
 genuinely rank-deficient instances are declined with an actionable diagnosis rather
@@ -120,33 +122,25 @@ CLA) together with internal controls, rather than a tuned large-scale competitor
 
 \section{Introduction}
 
-The mean--variance portfolio selection problem was introduced by \citet{markowitz1952}
-in doctoral work completed at the University of Chicago at the age of~24; Markowitz
-later recounted that Milton Friedman, on his dissertation committee, questioned whether
-the result was economics at all. The problem asks for the allocation of capital across
-$n$ assets that minimises risk for a given level of expected return. Sweeping the
-return level produces a one-parameter family of optimal portfolios whose risk--return
-image is the \emph{efficient frontier}. Four years later, at RAND, Markowitz gave the
-problem its constructive solution: the Critical Line Algorithm (CLA), introduced by
-\citet{markowitz1956} and developed in full in his 1959 monograph
-\citep{markowitz1959}. The CLA computes this frontier \emph{exactly and in full}: it returns a
-finite list of \emph{turning points} between which the frontier is described in closed
-form, so no discretisation or repeated re-optimisation is required. It belongs to a
-broad family of parametric quadratic-programming and active-set methods for the
-efficient frontier \citep{wolfe1959, perold1984, niedermayer2010, bailey2013};
-\citet{markowitz2000} give the canonical description and a reference implementation,
-and \citet{markowitz2021} a recent step-by-step review that also extends the method
-to mean--semivariance, while \citet{perold1984}, \citet{stein2008} and
-\citet{hirschberger2010} develop large-scale and active-set variants.
+The mean--variance portfolio selection problem \citep{markowitz1952} asks for the
+allocation of capital across $n$ assets that minimises risk for a given level of
+expected return; sweeping the return level produces a one-parameter family of optimal
+portfolios whose risk--return image is the \emph{efficient frontier}. The Critical Line
+Algorithm (CLA) of \citet{markowitz1956, markowitz1959} computes this frontier
+\emph{exactly and in full}: it returns a finite list of \emph{turning points} between
+which the frontier is described in closed form, so no discretisation or repeated
+re-optimisation is required. The canonical description and a reference implementation
+are due to \citet{markowitz2000}; \citet{perold1984}, \citet{stein2008}, and
+\citet{hirschberger2010} develop large-scale and active-set variants,
+\citet{niedermayer2010} a careful fast implementation, \citet{bailey2013} a widely used
+open-source one, and \citet{markowitz2021} a recent review extending the method to
+mean--semivariance.
 
-When Markowitz designed the CLA, the structured covariance models that dominate modern
-portfolio construction did not yet exist; classical implementations therefore assume a
-dense matrix. Structure arrived with the single-index model of \citet{sharpe1963},
-developed at Markowitz's suggestion to tame the estimation and computational burden of
-a full covariance by writing it as a diagonal matrix plus a single rank-one term.
-Modern multi-factor risk models generalise this diagonal-plus-low-rank form, and it is
-precisely this structure that the operator abstraction of this paper exploits: the
-covariance the classical CLA treats as dense is, in practice, almost never dense.
+Classical CLA implementations assume a dense covariance. In practice it is almost never
+dense: modern multi-factor risk models, generalising the single-index model
+\citep{sharpe1963}, write the covariance as a diagonal matrix plus a low-rank term, and
+it is precisely this diagonal-plus-low-rank structure that the operator abstraction of
+this paper exploits.
 
 We claim no new turning points (the frontier is Markowitz's, and \texttt{cvxcla}
 traces exactly the same one) but a new \emph{interface} to it. The turning-point
@@ -178,12 +172,14 @@ instantiated by a diagonal-plus-low-rank factor backend (\S\ref{sec:operators})
 that solves the free block through the Woodbury identity, never materialising an
 $n\times n$ matrix, and traces the identical frontier with sub-quadratic empirical
 scaling (\S\ref{sec:rankscaling}).
-\item \textbf{A unification.} We make explicit that the CLA is one instance of a
-broader parametric active-set family: the one-parameter specialisation of
-multi-parametric quadratic programming and explicit model predictive control, and
-the mean--variance counterpart of the LARS/LASSO homotopy of statistical learning
-(\S\ref{sec:lars}), a correspondence the \texttt{GramCovariance} backend makes
-literal.
+\item \textbf{Generality and a reusable tracer.} The turning-point loop is written for
+box bounds together with arbitrary linear equality ($A w = b$) and inequality
+($G w \le h$) constraints, an active inequality row entering the same reduced solve as
+an extra equality row at no cost to the box-only problem (\S\ref{sec:lars}). Because the
+loop reaches the covariance only through the operator interface, it factors into a
+problem-agnostic path tracer of which the package's \texttt{Lasso} class is a second
+client (\S\ref{sec:lars}). The broader cross-field correspondence this reflects is the
+subject of a companion paper \citep{schmelzer2026perspective}, not of this one.
 \item \textbf{An open, tested, benchmarked implementation.} Hardened event logic, a
 Bland-style lowest-index tie-break (\S\ref{sec:bland}) and a floating-point slope
 floor (\S\ref{sec:events}), keeps the trace deterministic and prevents cycling and
@@ -209,11 +205,6 @@ equality system, where the free set is too small to span the constraints
 trace deterministic on the degenerate problems we test but is not proven to defuse
 every adversarial tie-heavy or very large instance; tracing through these declined
 cases is left to future work.
-
-One thread runs throughout: the critical-line iteration is a \emph{parametric
-active-set homotopy}, the same family as the LARS/LASSO path of statistical
-learning. We flag it here, and develop it in \S\ref{sec:lars}, so the machinery
-below reads as a general path-follower rather than a portfolio-only tool.
 
 The accompanying \texttt{cvxcla}
 package\footnote{\href{\repourl}{\texttt{github.com/cvxgrp/cvxcla}}} provides the
@@ -310,9 +301,7 @@ the partition $(\F,\B)$ must change, i.e.\ an endpoint of such an interval.
 In the language of parametric optimisation, \eqref{eq:qp} is a one-parameter
 \emph{multi-parametric quadratic program}, whose solution map is piecewise affine
 over a polyhedral partition of $\lambda$: \eqref{eq:segment} is one piece and the
-turning points are its breakpoints. The homotopy methods of statistical learning
-(LARS and the LASSO) share exactly this structure, a correspondence we develop in
-\S\ref{sec:lars}.
+turning points are its breakpoints.
 
 \section{The first turning point}
 \label{sec:first}
@@ -1589,170 +1578,53 @@ sampling rather than the exact piecewise-linear frontier.}
 \label{fig:clarabel}
 \end{figure}
 
-\section{Connection to homotopy methods: least angle regression and the LASSO}
+\section{A reusable path tracer: general constraints and the \texttt{Lasso} client}
 \label{sec:lars}
 
-The CLA is one instance of a broader idea that recurs across optimisation and
-statistics: when the optimiser of a convex problem is followed as a single scalar
-parameter varies, the solution path is frequently piecewise linear, and it can be
-traced exactly by stepping from one breakpoint to the next while maintaining an
-active set. The same structure drives least angle regression (LARS) and the LASSO
-homotopy in statistical learning \citep{tibshirani1996, osborne2000, efron2004}.
-Making the correspondence explicit places the CLA in a family it is seldom
-presented alongside, and separates the features that are essential to the method
-from those particular to the portfolio setting.
+The turning-point loop never refers to portfolios except through the data
+$(\Sig, \mu)$ and the feasible set. Two consequences of this are worth recording, both
+purely about the implementation; the broader correspondence they reflect, with least
+angle regression and the LASSO homotopy of statistical learning, and its history, are
+the subject of a companion paper \citep{schmelzer2026perspective} and are not revisited
+here.
 
-The most direct relative is in control rather than statistics. The CLA is a
-one-parameter \emph{multi-parametric quadratic program} (mpQP): a strictly convex
-QP whose linear term depends affinely on a parameter, and whose solution map is
-therefore piecewise affine over a polyhedral partition of the parameter space. This
-is the structure exploited by explicit model predictive control, where the optimal
-control law is precomputed as a piecewise-affine function of the state by mpQP
-path-following \citep{bemporad2002, tondel2003}. The turning points of the CLA are
-the breakpoints of that map for the single risk-aversion parameter, and the event
-logic of \S\ref{sec:events} is the one-dimensional specialisation of the
-critical-region traversal used there. The general mpQP machinery also handles
-arbitrary polyhedral constraints, and \texttt{cvxcla} admits them too, through the
-inequality rows $G w \le h$ of \eqref{eq:qp}. The mechanism is the row analogue of
-the box active set. A box bound is a per-variable inequality: an asset is free or
-blocked, and the events are a free weight reaching a bound or a blocked multiplier
-releasing it. A row of $G w \le h$ is a per-row inequality: it is active (held at
-$g_i\trans w = h_i$) or slack, and the events are a slack row's residual reaching
-zero, so it activates, or an active row's multiplier reaching zero, so it releases.
-Both kinds of event are the same ``smallest positive step to the next breakpoint''
-along the affine segment; the row events are simply scanned over the $p$ rows of $G$
-in addition to the $n$ box coordinates (\S\ref{sec:events}).
+\paragraph{General linear inequalities.} Beyond box bounds and the equality system
+$A w = b$, \texttt{cvxcla} admits arbitrary linear inequalities $G w \le h$ from
+\eqref{eq:qp} at no structural cost. The mechanism is the row analogue of the box active
+set: a box bound is a per-variable inequality (an asset is free or blocked), while a row
+of $G w \le h$ is a per-row inequality (active at $g_i\trans w = h_i$, or slack), and the
+events are the same ``smallest positive step to the next breakpoint'', scanned over the
+$p$ rows of $G$ in addition to the $n$ box coordinates (\S\ref{sec:events}). An active
+inequality row enters the reduced KKT system \eqref{eq:kkt} exactly as an equality row:
+stacking $C = [\,A;\,G_{\Sset}\,]$ over the active rows recovers the equality-only solve
+with $A$ replaced by $C$, so each step is still a solve against the free covariance block
+$\Sig_{\F\F}$ (through the operator interface of \S\ref{sec:operators}, never an
+$n\times n$ matrix) feeding an $(m+|\Sset|)\times(m+|\Sset|)$ Schur complement. The box
+bounds remain a separate, cheaper per-variable active set rather than being folded into
+$G$, so the common box-only problem pays nothing for the generalisation. Turning an
+inequality into an equality with a non-negative slack does \emph{not} work: the slack
+carries no curvature, so the augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only
+positive semidefinite and the reduced solve is singular whenever a slack is free; the
+bordered system above and a per-row event are used instead.
 
-Crucially, this does \emph{not} sacrifice the structure that the equality-only case
-enjoys. An active inequality row enters the reduced KKT system \eqref{eq:kkt} exactly
-as an equality row does: stacking $C = [\,A;\,G_{\Sset}\,]$ over the active rows
-recovers the equality-only solve with $A$ replaced by $C$, so each step is still a
-solve against the free covariance block $\Sig_{\F\F}$ (through the operator interface
-of \S\ref{sec:operators}, never an $n\times n$ matrix) feeding an
-$(m+|\Sset|)\times(m+|\Sset|)$ Schur complement. The box bounds remain a separate,
-cheaper per-variable active set rather than being folded into $G$, so the common
-box-only problem pays nothing for the generalisation.
-
-What does \emph{not} work, and is worth recording because it is the natural first
-reflex, is turning an inequality into an equality with a slack. Writing
-$g_i\trans w + s_i = h_i$ with $s_i \ge 0$ leaves the slack with no curvature in the
-objective, so the augmented Hessian $\operatorname{diag}(\Sig, 0)$ is only positive
-\emph{semi}-definite and the reduced solve is singular whenever a slack is free
-(precisely when its inequality is inactive). Admitting general inequalities therefore
-goes through the bordered system above and a per-row event, not a change of
-variables, which is exactly what the implementation does.
-
-The LASSO solves, for a response $y$ and design matrix $X$,
-\[
-\min_{\beta}\ \tfrac12\,\|y - X\beta\|_2^2 \;+\; \lambda\,\|\beta\|_1,
-\]
-and its minimiser $\beta(\lambda)$ is a continuous, piecewise-linear function of the
-penalty $\lambda$ \citep{efron2004, rosset2007}. As $\lambda$ decreases from the
-value at which $\beta = 0$ towards $0$, the path proceeds in straight segments; at
-each breakpoint the active set (the support of $\beta$) changes, either because an
-inactive variable whose correlation with the current residual reaches $\lambda$
-enters, or because an active coefficient reaches zero and leaves. LARS computes
-these breakpoints and segment directions directly, exactly as the CLA computes
-turning points and the affine segments \eqref{eq:segment} between them.
-
-The two algorithms line up term for term (Table~\ref{tab:lars}).
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lll}
-\toprule
-Ingredient & Critical Line Algorithm & LARS / LASSO homotopy \\
-\midrule
-Swept parameter & risk aversion $\lambda:\infty\!\to\!0$ & penalty $\lambda:\infty\!\to\!0$ \\
-Solution path   & $w(\lambda)=\alpha+\lambda\beta$ (pw.\ linear) & $\beta(\lambda)$ (pw.\ linear) \\
-Active set      & free set $\F$ (weights off the bounds) & support (nonzero $\beta_j$) \\
-Linear solve    & reduced KKT over $\Sig_{\F\F}$ & least squares over $X_{\mathcal A}$ \\
-Enter event     & blocked multiplier changes sign & residual correlation reaches $\lambda$ \\
-Leave event     & free weight reaches a box bound & active coefficient reaches zero \\
-Step length     & \multicolumn{2}{l}{smallest positive step to the next breakpoint} \\
-Degeneracy      & Bland lowest-index tie-break (\S\ref{sec:bland}) & tie-break among simultaneous hits \\
-\bottomrule
-\end{tabular}
-\caption{The Critical Line Algorithm and the LARS/LASSO homotopy as two instances
-of the same parametric active-set scheme. The role played by the covariance $\Sig$
-and the mean $\mu$ in the reduced KKT solve \eqref{eq:saddle} is played by the Gram
-matrix $X\trans X$ and the vector $X\trans y$ in the regression path.}
-\label{tab:lars}
-\end{table}
-
-The correspondence is not a coincidence. \citet{rosset2007} characterise when a
-regularised solution path is piecewise linear: a quadratic (or piecewise-quadratic)
-loss together with a polyhedral, i.e.\ piecewise-linear, constraint or penalty
-suffices. Both problems meet the criterion. The CLA minimises a quadratic objective
-\eqref{eq:qp} over a polyhedral feasible set (box bounds, linear equalities, and
-linear inequalities); the
-LASSO minimises a quadratic loss under a polyhedral ($\ell_1$) penalty. In each case
-the KKT conditions are affine in the parameter, the system matrix is constant while
-the active set is fixed, and the active set can change only at the discrete
-parameter values that the homotopy steps between. The ``smallest positive step to
-the next breakpoint'' rule of \S\ref{sec:events} is the same step-length computation that
-advances the LARS path, and both inherit it, for the same anti-cycling reasons, from
-the simplex method (\S\ref{sec:bland}).
-
-Three differences are worth stating precisely, since they are exactly what
-distinguishes the portfolio problem.
-
-\paragraph{What induces the active set.} In the CLA the active set is carved out by
-\emph{explicit} polyhedral constraints: an asset is blocked when it sits on a box
-bound, and the events are free weights reaching those bounds, or blocked multipliers
-releasing them. In the LASSO the active set is \emph{induced} by the $\ell_1$
-penalty through its subgradient: sparsity is an emergent property of the geometry,
-not a constraint the modeller writes down. The same polyhedral mechanism runs in
-opposite directions, one imposing the faces and the other discovering them.
-
-\paragraph{Entering and leaving.} Forward LARS only ever \emph{adds} variables to
-the active set; the LASSO modification restores the ability to drop one when its
-coefficient crosses zero. The CLA needs both moves throughout, as assets become free
-and blocked while $\lambda$ decreases, so it corresponds to the full LASSO homotopy
-rather than to forward LARS.
-
-\paragraph{The data enter only through linear algebra.} The Gram matrix $X\trans X$
-that defines the LARS direction is played here by the covariance $\Sig$ in the
-reduced KKT solve \eqref{eq:saddle}, and $X\trans y$ by the expected-return vector
-$\mu$. Seen this way, the covariance-operator abstraction of \S\ref{sec:operators} is
-the statement that the path-tracing logic touches $\Sig$ only through a few
-linear-algebraic operations, just as the LARS recursion touches $X$ only through
-Gram-matrix solves; a structured $\Sig$ (a factor model) is the portfolio analogue
-of a structured or kernelised design. The package makes the correspondence literal:
-the \texttt{GramCovariance} backend (\S\ref{sec:gram}) builds $\Sig$ from the
-centred data matrix $X_c$ directly through \eqref{eq:gram}, so the CLA runs off
-$X_c$ exactly as LARS runs off the design matrix, and the protocol it calls is named
-\texttt{QuadraticForm} rather than after the covariance for this reason.
-
-The bridge is more than analogy. \citet{brodie2009} add a gross-exposure constraint
-$\|w\|_1 \le c$ to the Markowitz problem and show that the result \emph{is} a LASSO,
-with $c$ promoting sparse, stable portfolios. For the long-only, fully-invested
-problem this constraint is silent, since the budget already fixes $\|w\|_1 =
-\mathbf{1}\trans w = 1$, which is why the plain CLA traces a frontier rather than a
-sparsity path. Once short positions are admitted under a gross-exposure cap,
-however, the parametric program the CLA traces and the LASSO path coincide: the two
-are then not merely structurally similar but two homotopies over the same parametric
-quadratic program.
-
-\subsection{A LASSO path through the same engine}
-\label{sec:lassodemo}
-
-The correspondence is not only conceptual: the package makes it executable. The
-class \texttt{Lasso} (\srcfile{src/cvxcla/lasso.py}{src/cvxcla/lasso.py}) is driven by the
-\emph{same} \texttt{cvxcla.pathtracer.trace} loop and the same Bland event
-selection as the \texttt{CLA}; only the segment solve and the meaning of an event
-differ. It supplies the Gram matrix $X\trans X$ (as a \texttt{DenseCovariance}, the
-backend named \texttt{QuadraticForm} precisely because it is not specific to a
-covariance) and the linear data $X\trans y$, and traces the entire LASSO
-regularisation path from $\lambda_{\max}=\lVert X\trans y\rVert_\infty$ (where
-$\beta=0$) down to the least-squares fit at $\lambda=0$. As a check that this is the
-\emph{same} homotopy the reference statistical-learning solvers trace, we compare it
-breakpoint by breakpoint against scikit-learn's \texttt{lars\_path}
-\citep{scikitlearn} on a standardised $60\times 12$ regression
-(Listing~\ref{lst:lasso}); the two paths coincide to solver precision (maximum
-coefficient discrepancy $\approx 3\times 10^{-15}$ over all $13$ breakpoints,
-Figure~\ref{fig:lasso}). The experiment is reproducible from
-\srcfile{experiments/lasso_path.py}{experiments/lasso\_path.py}.
+\paragraph{A second client of the tracer.} Because the loop reaches the quadratic form
+only through the operator interface, it factors into a problem-agnostic path tracer
+(\texttt{cvxcla.pathtracer.trace}) of which the \texttt{CLA} is one client. The package
+ships a second, \texttt{Lasso} (\srcfile{src/cvxcla/lasso.py}{src/cvxcla/lasso.py}),
+driven by the \emph{same} \texttt{trace} loop and the same Bland event selection; only
+the segment solve and the meaning of an event differ. It supplies the Gram matrix
+$X\trans X$ and the linear term $X\trans y$ and traces the entire LASSO regularisation
+path from $\lambda_{\max} = \lVert X\trans y\rVert_\infty$ (where $\beta = 0$) down to
+the least-squares fit at $\lambda = 0$; the same $G\beta \le h$ rows and a
+non-negativity restriction are accepted exactly as for the \texttt{CLA}. As a regression
+test that the shared engine is correct, the traced path matches scikit-learn's
+\texttt{lars\_path} \citep{scikitlearn} breakpoint by breakpoint on a standardised
+$60\times 12$ design (to $\approx 3\times 10^{-15}$ over all $13$ breakpoints,
+Listing~\ref{lst:lasso}), and the constrained and non-negative paths match a
+per-$\lambda$ QP to $\approx 2\times10^{-10}$
+(\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}).
+We carry this only as evidence that the tracer is genuinely problem-agnostic, the
+software counterpart of the operator abstraction of \S\ref{sec:operators}.
 
 \begin{lstlisting}[style=pyin,caption={The CLA path tracer drives a LASSO through
 \texttt{cvxcla.Lasso}, matched against scikit-learn's \texttt{lars\_path}.},label={lst:lasso}]
@@ -1768,76 +1640,9 @@ alphas, _active, coefs = lars_path(X, y, method="lasso")
 m = X.shape[0]
 diffs = [np.max(np.abs(lasso.solution(m * a) - coefs[:, i]))
          for i, a in enumerate(alphas)]
-print("breakpoints (cvxcla, sklearn):", len(lasso.path), len(alphas))
 print("max |beta_cvxcla - beta_sklearn|:", f"{max(diffs):.1e}")
 \end{lstlisting}
 
-\begin{lstlisting}[style=pyout]
-breakpoints (cvxcla, sklearn): 13 13
-max |beta_cvxcla - beta_sklearn|: 3.2e-15
-\end{lstlisting}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.72\textwidth]{lasso_path.pdf}
-\caption{The LASSO regularisation path of a standardised $60\times 12$ regression,
-traced by \texttt{cvxcla.Lasso} through the same parametric active-set engine as the
-efficient frontier. Each line is one coefficient $\beta_j(\lambda)$ as the penalty
-$\lambda$ decreases from $\lambda_{\max}$ (right) to $0$ (left); the markers are the
-breakpoints reported independently by scikit-learn's \texttt{lars\_path}. The two
-implementations agree to solver precision ($\approx 3\times 10^{-15}$), confirming
-that the CLA engine and the LARS/LASSO homotopy trace the identical path.}
-\label{fig:lasso}
-\end{figure}
-
-\subsection{A constrained LASSO through the same engine}
-\label{sec:lassoconstrained}
-
-The unification is not confined to the textbook LASSO. The same general linear
-inequality constraints the CLA carries, $G\beta \le h$, drop into the LASSO path
-unchanged: an active row enters the reduced system as the bordered Schur complement
-of \S\ref{sec:blockelim}, and the generalised correlation that drives the
-enter/leave events simply carries the active-row multipliers,
-$X\trans(y - X\beta(\lambda)) - G_{\Sset}\trans\eta(\lambda)$. The path stays
-piecewise linear (a quadratic loss under a polyhedral penalty \emph{and} polyhedral
-constraints, the criterion of \citet{rosset2007}), and \texttt{cvxcla.Lasso} accepts
-$G,h$ exactly as the \texttt{CLA} does. We require $h > 0$ so the path can start from
-the feasible $\beta = 0$ with every row slack, the same first vertex as the
-unconstrained LASSO; an equality system $A\beta = b$, or a zero entry of $h$, would
-need the linear-programming feasibility seed of \S\ref{sec:first} and is left to
-future work. On a standardised $60\times 12$ regression with per-group exposure caps
-$G\beta \le h$ ($15$ breakpoints, a cap active at $9$ of the $14$ interior segments),
-every segment midpoint matches a per-$\lambda$ constrained QP solve (CVXPY/Clarabel)
-to $\approx 2\times 10^{-10}$ in coefficients and to machine precision in feasibility
-(\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}),
-so the one path-tracing engine returns the exact \emph{constrained} regularisation
-path as well as the exact constrained frontier.
-
-The sign restriction $\beta \ge 0$ (the non-negative LASSO) is where the unification
-is most literal. With $\beta \ge 0$ the penalty $\lVert\beta\rVert_1 =
-\mathbf{1}\trans\beta$ becomes \emph{linear}, so the problem is exactly the CLA's
-box-bounded parametric quadratic program: Hessian $H = X\trans X$, lower bound $0$,
-and the $\lambda$-linear term $X\trans y - \lambda\mathbf{1}$. The homotopy is then
-the standard path restricted to positive signs (only the $+\lambda$ entry event,
-started from $\beta = 0$ at $\lambda_{\max} = \max_j (X\trans y)_j$). \texttt{cvxcla}
-traces it with \texttt{nonneg=True}, and every segment midpoint matches the
-per-$\lambda$ non-negative QP to $\approx 3\times10^{-11}$
-(\srcfile{experiments/validate_lasso_constraints.py}{validate\_lasso\_constraints.py}).
-The fluent builder of \S\ref{sec:usage} carries over unchanged for both, so a
-constrained or non-negative path reads the same way as the constrained frontier
-(Listing~\ref{lst:lassobuilder}).
-
-\begin{lstlisting}[style=pyin,caption={The constrained LASSO through the same fluent
-builder as the CLA: \texttt{.inequality(G, h)} then \texttt{.trace()}.},label={lst:lassobuilder}]
-from cvxcla import Lasso
-
-# per-group exposure caps G beta <= h on a standardised regression
-lasso = Lasso.problem(X, y).inequality(G, h).trace()
-print("breakpoints:", len(lasso.path))
-
-# the non-negative LASSO (beta >= 0) is the same builder with one more step
-nonneg = Lasso.problem(X, y).non_negative().trace()
-\end{lstlisting}
 
 \section{Conclusion}
 
@@ -1881,11 +1686,6 @@ optimization.
 A.~Bemporad, M.~Morari, V.~Dua, and E.~N. Pistikopoulos.
 \newblock The explicit linear quadratic regulator for constrained systems.
 \newblock \emph{Automatica}, 38(1):3--20, 2002.
-
-\bibitem[Brodie et~al.(2009)]{brodie2009}
-J.~Brodie, I.~Daubechies, C.~De~Mol, D.~Giannone, and I.~Loris.
-\newblock Sparse and stable Markowitz portfolios.
-\newblock \emph{Proceedings of the National Academy of Sciences}, 106(30):12267--12272, 2009.
 
 \bibitem[Cajas(2021)]{riskfolio}
 D.~Cajas.
@@ -1963,11 +1763,6 @@ A.~Niedermayer and D.~Niedermayer.
 \newblock Applying Markowitz's critical line algorithm.
 \newblock In \emph{Handbook of Portfolio Construction}, pages 383--400. Springer, 2010.
 
-\bibitem[Osborne et~al.(2000)]{osborne2000}
-M.~R. Osborne, B.~Presnell, and B.~A. Turlach.
-\newblock A new approach to variable selection in least squares problems.
-\newblock \emph{IMA Journal of Numerical Analysis}, 20(3):389--403, 2000.
-
 \bibitem[Pedregosa et~al.(2011)]{scikitlearn}
 F.~Pedregosa, G.~Varoquaux, A.~Gramfort, V.~Michel, B.~Thirion, O.~Grisel,
 M.~Blondel, P.~Prettenhofer, R.~Weiss, V.~Dubourg, J.~Vanderplas, A.~Passos,
@@ -1980,10 +1775,11 @@ A.~F. Perold.
 \newblock Large-scale portfolio optimization.
 \newblock \emph{Management Science}, 30(10):1143--1160, 1984.
 
-\bibitem[Rosset and Zhu(2007)]{rosset2007}
-S.~Rosset and J.~Zhu.
-\newblock Piecewise linear regularized solution paths.
-\newblock \emph{The Annals of Statistics}, 35(3):1012--1030, 2007.
+\bibitem[Schmelzer(2026)]{schmelzer2026perspective}
+T.~Schmelzer.
+\newblock Parametric active-set homotopies: a common computational structure across
+statistics, optimization, and finance.
+\newblock Companion working paper, 2026.
 
 \bibitem[Sharpe(1963)]{sharpe1963}
 W.~F. Sharpe.
@@ -1995,21 +1791,6 @@ M.~Stein, J.~Branke, and H.~Schmeck.
 \newblock Efficient implementation of an active set algorithm for large-scale
 portfolio selection.
 \newblock \emph{Computers \& Operations Research}, 35(12):3945--3961, 2008.
-
-\bibitem[Tibshirani(1996)]{tibshirani1996}
-R.~Tibshirani.
-\newblock Regression shrinkage and selection via the lasso.
-\newblock \emph{Journal of the Royal Statistical Society, Series B}, 58(1):267--288, 1996.
-
-\bibitem[T\o ndel et~al.(2003)]{tondel2003}
-P.~T\o ndel, T.~A. Johansen, and A.~Bemporad.
-\newblock An algorithm for multi-parametric quadratic programming and explicit MPC solutions.
-\newblock \emph{Automatica}, 39(3):489--497, 2003.
-
-\bibitem[Wolfe(1959)]{wolfe1959}
-P.~Wolfe.
-\newblock The simplex method for quadratic programming.
-\newblock \emph{Econometrica}, 27(3):382--398, 1959.
 
 \bibitem[W\"urtz et~al.(2009)]{fportfolio}
 D.~W\"urtz, Y.~Chalabi, W.~Chen, and A.~Ellis.
