@@ -129,6 +129,22 @@ class TestSourceFolderVariable:
         proc = run_make(logger, ["deptry", "SOURCE_FOLDER=mypackage"])
         assert "mypackage" in proc.stdout, "deptry should reference SOURCE_FOLDER; got:\n" + proc.stdout[:400]
 
+    def test_deptry_accumulates_marimo_and_source_in_one_call(self, logger, tmp_path) -> None:
+        """The marimo bundle must contribute its folder (and DEP004 ignore) to the single deptry scan.
+
+        This locks in the accumulator design: each bundle appends to DEPTRY_FOLDERS /
+        DEPTRY_IGNORE rather than the core target hard-coding knowledge of marimo.
+        """
+        (tmp_path / "mypackage").mkdir(exist_ok=True)
+        (tmp_path / "notebooks").mkdir(exist_ok=True)
+
+        proc = run_make(logger, ["deptry", "SOURCE_FOLDER=mypackage", "MARIMO_FOLDER=notebooks"])
+        out = strip_ansi(proc.stdout)
+        # marimo.mk is included before quality.mk, so its folder is appended first.
+        assert "deptry notebooks mypackage --ignore DEP004" in out, (
+            "deptry should scan marimo + source folders in a single call with DEP004 ignored; got:\n" + out[:600]
+        )
+
 
 class TestUvNoModifyPath:
     """UV_NO_MODIFY_PATH must always be exported to 1 to avoid uv touching PATH."""

@@ -12,13 +12,16 @@ post-release:: ; @:
 
 # DRY_RUN support: pass DRY_RUN=1 to preview changes without applying them
 _DRY_RUN_FLAG := $(if $(DRY_RUN),--dry-run,)
+# BUMP support: pass BUMP=major|minor|patch to choose the bump type explicitly
+# (omit BUMP to select the bump type interactively, the default behaviour)
+_BUMP_FLAG := $(if $(BUMP),--bump $(BUMP),)
 _VERSION=0.7.1
 
 ##@ Releasing and Versioning
-bump: pre-bump ## bump version of the project (supports DRY_RUN=1)
+bump: pre-bump ## bump version of the project (supports DRY_RUN=1, BUMP=major|minor|patch)
 	@if [ -f "pyproject.toml" ]; then \
 		$(MAKE) install; \
-		PATH="$(abspath ${VENV})/bin:$$PATH" ${UVX_BIN} "rhiza-tools>=$(_VERSION)" bump $(_DRY_RUN_FLAG); \
+		PATH="$(abspath ${VENV})/bin:$$PATH" ${UVX_BIN} "rhiza-tools>=$(_VERSION)" bump $(_DRY_RUN_FLAG) $(_BUMP_FLAG); \
 		if [ -z "$(DRY_RUN)" ]; then \
 			printf "${BLUE}[INFO] Checking uv.lock file...${RESET}\n"; \
 			${UV_BIN} lock; \
@@ -28,8 +31,8 @@ bump: pre-bump ## bump version of the project (supports DRY_RUN=1)
 	fi
 	@$(MAKE) post-bump
 
-release: pre-release install-uv ## bump version, create tag and push to trigger the release workflow (supports DRY_RUN=1)
-	${UVX_BIN} "rhiza-tools>=$(_VERSION)" release $(_DRY_RUN_FLAG);
+release: pre-release install-uv ## bump version, create tag and push to trigger the release workflow (supports DRY_RUN=1, BUMP=major|minor|patch)
+	${UVX_BIN} "rhiza-tools>=$(_VERSION)" release $(_DRY_RUN_FLAG) $(_BUMP_FLAG);
 	@$(MAKE) post-release
 
 release-status: ## show release workflow status and latest release information
