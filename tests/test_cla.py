@@ -566,6 +566,101 @@ class TestDegenerateProblems:
         assert len(cla) > 2  # a real frontier, not an immediate stop
         self._assert_valid_frontier(cla, cap)
 
+    def _assert_lambda_non_increasing(self, cla):
+        """Assert lambda never steps back beyond round-off along the trace.
+
+        ``pathtracer.select_next_event`` clamps each accepted lambda to
+        ``min(current, candidate)``, so the sequence is non-increasing by
+        construction up to round-off. The slack is scaled to the lambda
+        magnitude because a regression to an *absolute* event window (the bug in
+        ``fix/event-selection-tolerance``) reintroduces backward steps of order
+        ``1e-4`` -- far above this round-off bound, well below ``cla.tol`` only
+        for small lambda -- which this check is sized to catch.
+        """
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        backward = np.diff(lambdas)  # negative when lambda decreases (the norm)
+        slack = 1e-9 * (1.0 + np.abs(lambdas[:-1]))
+        assert np.all(backward <= slack)
+
+    @pytest.mark.parametrize("n", [800, 2000])
+    def test_large_n_frontier_lambda_monotone(self, n):
+        """A large frontier completes with a non-increasing lambda (issue #790).
+
+        Pins the relative event-selection window of
+        ``pathtracer.select_next_event`` at scale. Breakpoint spacing shrinks as
+        ``n`` grows (relative gaps reach ~1e-6 by ``n ~ 1600``), so the former
+        *absolute* tol window merged distinct events, mis-broke the tie, and let
+        lambda step backward -- a silently slightly-wrong, non-monotone frontier
+        with no error, emerging only for ``n`` in the high hundreds and up. The
+        regime is otherwise unguarded here: the next-largest trace test is
+        ``n = 200``. We assert the full trace is reached, lambda is non-increasing
+        to round-off, and every turning point is feasible on the budget.
+
+        The covariance is the ``FactorCovariance`` backend (positive definite by
+        construction, so no degeneracy guard is in play): its ``O(n_F k^2)`` solve
+        keeps even ``n = 2000`` well under a second, where a dense ``O(n^3)``
+        per-step solve at this size would blow the per-test timeout. The event
+        selection being pinned is backend-independent -- it sees only the lambda
+        ratios -- so the structured backend exercises the same code path.
+        """
+        rng = np.random.default_rng(n)
+        k = 20
+        u = rng.standard_normal((n, k))
+        d = rng.uniform(0.5, 1.5, n)
+        delta = rng.uniform(0.5, 2.0, k)
+        covariance = FactorCovariance(d=d, u=u, delta=delta)
+        mean = rng.uniform(0.0, 1.0, n)
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+
+        assert len(cla) > n // 2  # a real, long frontier rather than an early stop
+        self._assert_lambda_non_increasing(cla)
+        weights = np.array([tp.weights for tp in cla.turning_points])
+        assert np.all(weights >= -1e-9)
+        assert np.all(weights <= 1.0 + 1e-9)
+        assert np.max(np.abs(weights.sum(axis=1) - 1.0)) < 1e-9
+
+    def test_exact_duplicate_assets_trace_completes(self):
+        """Exact duplicate assets (perfectly coincident events) trace cleanly (issue #790).
+
+        The strongest tie: blocks of assets share an *identical* covariance row
+        and mean, so their box events coincide to the last bit and several weights
+        reach the cap at exactly the same lambda. The existing tie tests only
+        repeat the *mean* (distinct covariance rows) or use an equicorrelation
+        matrix, so this perfectly-coincident case was unpinned. With a tight cap
+        the duplicates must all be admitted at the shared breakpoint; the trace
+        must complete with a non-increasing lambda and feasible weights rather
+        than aborting or stepping lambda backward across the coincident events.
+        """
+        reps, block = 50, 5
+        n = reps * block
+        rng = np.random.default_rng(7)
+        base_u = rng.standard_normal((reps, 8))
+        u = np.repeat(base_u, block, axis=0)  # exact duplicate risk rows
+        covariance = u @ u.T + 0.5 * np.eye(n)
+        mean = np.repeat(rng.standard_normal(reps), block)  # and duplicate means
+        cap = 2.0 / n
+
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, cap),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+
+        assert len(cla) > 2
+        self._assert_lambda_non_increasing(cla)
+        self._assert_valid_frontier(cla, cap)
+
     def test_project_feasible_respects_box_under_heavy_capping(self):
         """The projection never returns a point outside the box (issue #708).
 
