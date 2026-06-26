@@ -582,9 +582,9 @@ class TestDegenerateProblems:
         slack = 1e-9 * (1.0 + np.abs(lambdas[:-1]))
         assert np.all(backward <= slack)
 
-    @pytest.mark.parametrize("n", [400, 900])
+    @pytest.mark.parametrize("n", [800, 2000])
     def test_large_n_frontier_lambda_monotone(self, n):
-        """A large full-rank frontier completes with a non-increasing lambda (issue #790).
+        """A large frontier completes with a non-increasing lambda (issue #790).
 
         Pins the relative event-selection window of
         ``pathtracer.select_next_event`` at scale. Breakpoint spacing shrinks as
@@ -595,11 +595,20 @@ class TestDegenerateProblems:
         regime is otherwise unguarded here: the next-largest trace test is
         ``n = 200``. We assert the full trace is reached, lambda is non-increasing
         to round-off, and every turning point is feasible on the budget.
+
+        The covariance is the ``FactorCovariance`` backend (positive definite by
+        construction, so no degeneracy guard is in play): its ``O(n_F k^2)`` solve
+        keeps even ``n = 2000`` well under a second, where a dense ``O(n^3)``
+        per-step solve at this size would blow the per-test timeout. The event
+        selection being pinned is backend-independent -- it sees only the lambda
+        ratios -- so the structured backend exercises the same code path.
         """
         rng = np.random.default_rng(n)
-        u = rng.standard_normal((n, 20))
+        k = 20
+        u = rng.standard_normal((n, k))
         d = rng.uniform(0.5, 1.5, n)
-        covariance = u @ u.T + np.diag(d)  # full-rank, well-conditioned factor model
+        delta = rng.uniform(0.5, 2.0, k)
+        covariance = FactorCovariance(d=d, u=u, delta=delta)
         mean = rng.uniform(0.0, 1.0, n)
 
         cla = CLA(
