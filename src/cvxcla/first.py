@@ -68,7 +68,7 @@ def init_algo(
             break
 
     if not np.any(free):
-        #    # We have not reached the target sum of weights...
+        # No asset ended up interior: the bounds cannot sum to the target.
         msg = "Could not construct a fully invested portfolio"
         raise ValueError(msg)
 
