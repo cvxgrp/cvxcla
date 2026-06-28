@@ -47,7 +47,8 @@ Synced from the template — treat as read-only. Highlights from
 ### Locally owned (edit freely — this is the actual project)
 
 - `src/cvxcla/` — the library. Modules: `cla.py` (the CLA solver), `lasso.py`,
-  `operators.py` (matrix/Cholesky update operators), `builder.py`, `types.py`,
+  the `operators/` package (`_core.py`, `dense.py`, `factor.py`, `gram.py` —
+  the covariance/quadratic-form backends), `builder.py`, `types.py`,
   `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
   fuzz `tests/fuzz/`, benchmarks `tests/benchmarks/`). **Note:**
