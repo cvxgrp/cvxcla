@@ -132,6 +132,12 @@ class Lasso(InequalityConstrained):
         g: Optional inequality matrix ``(p, n)`` of ``G beta <= h``; ``None`` means
             the plain LASSO.
         h: Optional inequality right-hand side ``(p,)``; must be strictly positive.
+        nonneg: When ``True``, restrict to the non-negative LASSO ``beta >= 0``;
+            the default ``False`` traces the ordinary signed path.
+        gram: When ``True``, drive the path with the ``GramCovariance`` data-matrix
+            backend (Woodbury solves in the ``m``-dimensional observation space),
+            never materialising the ``n x n`` Gram ``X^T X`` — the win in the
+            ``n >> m`` regime. The default ``False`` forms the dense Gram.
         tol: Tolerance for event selection and the validity window.
         path: The discovered breakpoints, populated on construction.
         quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
