@@ -17,7 +17,7 @@ The pin lives in `.rhiza/template.yml`:
 
 ```yaml
 repository: "jebel-quant/rhiza"
-ref: "v0.19.5"
+ref: "v0.19.9"
 profiles:
   - github-project
 ```
