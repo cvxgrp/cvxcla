@@ -15,6 +15,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.11",
+    "cvx-linalg>=0.9.3",
 ]
 
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
@@ -73,6 +74,7 @@ ignore_missing_imports = true
 DEP002 = ["kaleido"]
 
 [tool.deptry.package_module_name_map]
+cvx-linalg = "cvx"
 numpy = "numpy"
 plotly = "plotly"
 kaleido = "kaleido"
