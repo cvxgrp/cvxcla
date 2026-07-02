@@ -243,6 +243,21 @@ class TestCLAWithOperator:
         for tp_raw, tp_op in zip(cla_raw.turning_points, cla_op.turning_points, strict=True):
             np.testing.assert_allclose(tp_raw.weights, tp_op.weights, atol=1e-9)
 
+    def test_incremental_backend_matches_raw_matrix(self, problem: dict) -> None:
+        """The maintained-inverse backend warm-starts across turning points to the same frontier.
+
+        Because ``covariance_operator`` is cached (one instance per trace) and the CLA
+        changes the free set by one asset per turning point, an ``IncrementalDense``
+        backend updates its free-block inverse in place -- the CLA's warm start -- and
+        must return exactly the raw-matrix frontier.
+        """
+        cla_raw = CLA(**problem)
+        cla_inc = CLA(**{**problem, "covariance": incremental_dense_covariance(problem["covariance"])})
+        assert len(cla_raw) == len(cla_inc)
+        for tp_raw, tp_inc in zip(cla_raw.turning_points, cla_inc.turning_points, strict=True):
+            assert tp_raw.lamb == pytest.approx(tp_inc.lamb, abs=1e-12)
+            np.testing.assert_allclose(tp_raw.weights, tp_inc.weights, atol=1e-10)
+
     def test_custom_operator_subclass_supported(self, problem: dict) -> None:
         """A user SymmetricOperator subclass traces the same frontier as the raw matrix."""
 
