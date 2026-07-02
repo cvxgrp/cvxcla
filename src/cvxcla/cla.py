@@ -12,6 +12,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
+from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
@@ -761,11 +762,11 @@ class CLA(InequalityConstrained):
         lower, upper = self.lower_bounds, self.upper_bounds
         c = np.vstack([self.a, self.g_matrix[active_ineq]])
         d = np.concatenate([self.b, self.h_vector[active_ineq]])
-        gram = c @ c.T
+        affine = AffineProjection(c, d)
         projected = weights
         for _ in range(100):
             projected = np.clip(projected, lower, upper)
-            projected = projected - c.T @ np.linalg.solve(gram, c @ projected - d)
+            projected = affine.project(projected)
         return np.clip(projected, lower, upper)
 
     @property

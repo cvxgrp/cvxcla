@@ -1,4 +1,4 @@
-"""Operator protocol alias and the bordered KKT solve shared by the CLA and LASSO paths.
+"""Operator protocol alias and the parametric-path helpers built on cvx-linalg.
 
 The parametric active-set path tracer reaches its Hessian through the cvx-linalg
 symmetric-operator protocol (``matvec`` / ``block_matvec`` / ``solve_free`` /
@@ -6,14 +6,19 @@ symmetric-operator protocol (``matvec`` / ``block_matvec`` / ``solve_free`` /
 is a backward-compatible alias for the portfolio (covariance) setting. The
 concrete backends live in :mod:`cvx.linalg`; :mod:`cvxcla.operators.builders`
 assembles them from CLA / LASSO inputs.
+
+The generic linear algebra -- the bordered KKT (Schur complement) solve and the
+affine projection -- also lives in :mod:`cvx.linalg`. What remains here is the
+thin homotopy-specific glue: adapting the loop's boolean masks to the operators'
+integer-index API, and packing the constant / ``lambda``-slope pair of a
+parametric segment into the shared multi-RHS solve.
 """
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 from cvx.linalg import SymmetricOperator
+from cvx.linalg import bordered_solve as _bordered_solve
 from numpy.typing import NDArray
 
 # The Hessian contract for a parametric active-set path. In the CLA it is the
@@ -54,38 +59,20 @@ def bordered_solve(
     NDArray[np.float64],
     NDArray[np.float64],
 ]:
-    """Solve the bordered KKT system ``[[H_FF, C_F^T], [C_F, 0]] @ [x; nu] = [rhs; d]``.
+    """Solve the bordered KKT system for a parametric segment's constant and slope parts.
 
-    The shared segment solve of ``cvxcla.cla`` and ``cvxcla.lasso``. ``H_FF`` is the
-    free block of the quadratic form, ``C_F`` the constraint rows on the free columns.
-    The constant and ``lambda``-slope right-hand sides are solved together so ``H_FF``
-    is factorised once; ``mc == 0`` (no constraint rows) is the plain free-block solve.
-    ``H_FF`` is reached only through :meth:`~cvx.linalg.SymmetricOperator.solve_free`, so
-    structured backends never materialise an ``n x n`` matrix. Returns
-    ``(x_const, x_slope, nu_const, nu_slope)``: the free solution and constraint
-    multipliers per system (multipliers empty if ``mc == 0``).
+    A thin adapter over :func:`cvx.linalg.bordered_solve`: it converts the loop's
+    boolean *free* mask to integer indices and packs the constant and ``lambda``-slope
+    right-hand sides as the two columns of one multi-RHS solve, so ``H_FF`` and the
+    Schur complement are factorised once. Returns
+    ``(x_const, x_slope, nu_const, nu_slope)`` (multipliers empty when there are no
+    constraint rows).
     """
-    free_idx = np.flatnonzero(free)
-    mc = c_free.shape[0]
-    if mc == 0:
-        sol = quad.solve_free(free_idx, np.column_stack([rhs_const, rhs_slope]))
-        empty: NDArray[np.float64] = np.zeros(0)
-        return sol[:, 0], sol[:, 1], empty, empty
-
-    # One multi-RHS solve against H_FF covers the constraint columns C_F^T and both
-    # the constant and slope systems, so H_FF is factorised a single time.
-    solved = quad.solve_free(free_idx, np.column_stack([c_free.T, rhs_const, rhs_slope]))
-    y = solved[:, :mc]  # H_FF^{-1} C_F^T
-    z_const = solved[:, mc]
-    z_slope = solved[:, mc + 1]
-
-    # Schur complement C_F H_FF^{-1} C_F^T and the stacked multipliers.
-    schur = c_free @ y
-    nu = cast(
-        "NDArray[np.float64]",
-        np.linalg.solve(schur, np.column_stack([c_free @ z_const - d_const, c_free @ z_slope - d_slope])),
+    x, nu = _bordered_solve(
+        quad,
+        np.flatnonzero(free),
+        c_free,
+        np.column_stack([rhs_const, rhs_slope]),
+        np.column_stack([d_const, d_slope]),
     )
-    nu_const, nu_slope = nu[:, 0], nu[:, 1]
-
-    # Back-substitute the free solution.
-    return z_const - y @ nu_const, z_slope - y @ nu_slope, nu_const, nu_slope
+    return x[:, 0], x[:, 1], nu[:, 0], nu[:, 1]
