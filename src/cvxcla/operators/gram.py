@@ -14,6 +14,7 @@ from functools import cached_property
 from typing import cast
 
 import numpy as np
+from cvx.linalg import GramOperator
 from numpy.typing import NDArray
 
 
@@ -102,6 +103,17 @@ class GramCovariance:
         """The sample-covariance scale ``1 / (T - 1)`` (``ddof = 1``, matching ``np.cov``)."""
         return 1.0 / (self._t - 1)
 
+    @cached_property
+    def _operator(self) -> GramOperator:
+        """Shared ``cvx.linalg`` operator for ``Sigma = W.T W + ridge I``, ``W = sqrt(scale) X_c``.
+
+        Absorbing the sample-covariance scale into the factor makes this exactly
+        the centered, ``1/(T-1)``-scaled sample covariance with the optional
+        ridge; the ``n x n`` matrix is still never formed.
+        """
+        w = np.sqrt(self._scale) * self._centered
+        return GramOperator(w, ridge=self.ridge)
+
     @property
     def n(self) -> int:
         """Number of assets (the dimension of the covariance)."""
@@ -117,9 +129,7 @@ class GramCovariance:
             ``Sigma @ x`` with the same trailing shape as ``x``, in ``O(T n)`` per
             column and without forming the ``n x n`` covariance.
         """
-        xc = self._centered
-        product = self._scale * (xc.T @ (xc @ x))
-        return product + self.ridge * x
+        return cast("NDArray[np.float64]", self._operator.matvec(x))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
@@ -136,9 +146,10 @@ class GramCovariance:
             Vector of shape ``(n_free,)``.
         """
         blocked = ~free
-        xc_free = self._centered[:, free]
-        xc_blocked = self._centered[:, blocked]
-        return self._scale * (xc_free.T @ (xc_blocked @ x[blocked]))
+        return cast(
+            "NDArray[np.float64]",
+            self._operator.block_matvec(np.flatnonzero(free), np.flatnonzero(blocked), x[blocked]),
+        )
 
     def solve_free(self, free: NDArray[np.bool_], rhs: NDArray[np.float64]) -> NDArray[np.float64]:
         """Solve ``Sigma[free][:, free] @ y = rhs`` from the free columns of ``X_c``.
@@ -149,7 +160,7 @@ class GramCovariance:
         refuse). With a positive ridge the block is positive definite and, when
         there are more free assets than observations, the solve is done by the
         Woodbury identity in ``T``-space instead of inverting an ``n_F x n_F``
-        matrix.
+        matrix. Both paths live in the shared ``GramOperator``.
 
         Args:
             free: Boolean mask of shape ``(n,)`` selecting the free assets.
@@ -158,22 +169,7 @@ class GramCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        xc_free = self._centered[:, free]
-        n_free = xc_free.shape[1]
-
-        if self.ridge > 0.0 and self._t < n_free:
-            # Woodbury in the T-dimensional observation space:
-            # (ridge I + W^T W)^{-1} = (1/ridge) I - (1/ridge^2) W^T (I + W W^T / ridge)^{-1} W,
-            # with W = sqrt(scale) X_cF (shape (T, n_free)).
-            w = np.sqrt(self._scale) * xc_free
-            correction_system = np.eye(self._t) + (w @ w.T) / self.ridge
-            correction = w.T @ np.linalg.solve(correction_system, w @ rhs)
-            return cast("NDArray[np.float64]", (rhs - correction / self.ridge) / self.ridge)
-
-        block = self._scale * (xc_free.T @ xc_free)
-        if self.ridge > 0.0:
-            block = block + self.ridge * np.eye(n_free)
-        return cast("NDArray[np.float64]", np.linalg.solve(block, rhs))
+        return cast("NDArray[np.float64]", self._operator.solve_free(np.flatnonzero(free), rhs))
 
     def rcond_free(self, free: NDArray[np.bool_]) -> float:
         """Reciprocal condition number of the free block, from the SVD of ``X_cF``.

@@ -10,11 +10,13 @@ updates, trading numerical robustness for speed on dense problems.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from typing import cast
 
 import numpy as np
+from cvx.linalg import DenseOperator
 from numpy.typing import NDArray
-from scipy.linalg import cho_factor, cho_solve  # type: ignore[import-untyped]
+from scipy.linalg import cho_factor  # type: ignore[import-untyped]
 from scipy.linalg.lapack import get_lapack_funcs  # type: ignore[import-untyped]
 
 from ._core import _RCOND_ESTIMATE_MARGIN, _rcond_symmetric
@@ -56,6 +58,11 @@ class DenseCovariance:
             msg = "Covariance must be symmetric"
             raise ValueError(msg)
 
+    @cached_property
+    def _operator(self) -> DenseOperator:
+        """The shared ``cvx.linalg`` operator backing the products (never re-formed)."""
+        return DenseOperator(self.matrix)
+
     @property
     def n(self) -> int:
         """Number of assets (the dimension of the covariance)."""
@@ -70,10 +77,13 @@ class DenseCovariance:
         Returns:
             ``Sigma @ x`` with the same trailing shape as ``x``.
         """
-        return self.matrix @ x
+        return cast("NDArray[np.float64]", self._operator.matvec(x))
 
     def solve_free(self, free: NDArray[np.bool_], rhs: NDArray[np.float64]) -> NDArray[np.float64]:
         """Solve the free-block system ``Sigma[free][:, free] @ y = rhs``.
+
+        Delegates to the shared ``DenseOperator`` (Cholesky with an LU fallback);
+        the CLA's ``rcond_free`` guard keeps rank-deficient blocks away from here.
 
         Args:
             free: Boolean mask of shape ``(n,)`` selecting the free assets.
@@ -82,15 +92,7 @@ class DenseCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        block = self.matrix[np.ix_(free, free)]
-        try:
-            # The free block of a covariance/Gram matrix is symmetric positive
-            # definite, so Cholesky is ~1.5x faster than a general LU solve.
-            return cast("NDArray[np.float64]", cho_solve(cho_factor(block, overwrite_a=True, check_finite=False), rhs))
-        except np.linalg.LinAlgError:
-            # Not numerically positive definite (rank-deficient / indefinite):
-            # fall back to the general solve, which the degeneracy guards handle.
-            return cast("NDArray[np.float64]", np.linalg.solve(self.matrix[np.ix_(free, free)], rhs))
+        return cast("NDArray[np.float64]", self._operator.solve_free(np.flatnonzero(free), rhs))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
@@ -104,7 +106,10 @@ class DenseCovariance:
             Vector of shape ``(n_free,)``.
         """
         blocked = ~free
-        return self.matrix[np.ix_(free, blocked)] @ x[blocked]
+        return cast(
+            "NDArray[np.float64]",
+            self._operator.block_matvec(np.flatnonzero(free), np.flatnonzero(blocked), x[blocked]),
+        )
 
     def rcond_free(self, free: NDArray[np.bool_]) -> float:
         """Reciprocal condition number of the free block; see the protocol."""

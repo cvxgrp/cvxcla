@@ -13,6 +13,7 @@ from functools import cached_property
 from typing import cast
 
 import numpy as np
+from cvx.linalg import FactorOperator
 from numpy.typing import NDArray
 
 
@@ -103,11 +104,9 @@ class FactorCovariance:
         return self.delta
 
     @cached_property
-    def _delta_inv(self) -> NDArray[np.float64]:
-        """The inverse of the ``(k, k)`` factor covariance."""
-        if self.delta.ndim == 1:
-            return np.diag(1.0 / self.delta)
-        return cast("NDArray[np.float64]", np.linalg.inv(self.delta))
+    def _operator(self) -> FactorOperator:
+        """Shared ``cvx.linalg`` operator for ``Sigma = diag(d) + U Delta U.T`` (Woodbury solves)."""
+        return FactorOperator(self.d, self.u, self._delta_matrix)
 
     def matvec(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the matrix-vector product ``Sigma @ x``.
@@ -119,16 +118,15 @@ class FactorCovariance:
             ``Sigma @ x`` with the same trailing shape as ``x``, computed in
             ``O(n k)`` per column.
         """
-        low_rank = self.u @ (self._delta_matrix @ (self.u.T @ x))
-        diagonal = self.d * x if x.ndim == 1 else self.d[:, None] * x
-        return diagonal + low_rank
+        return cast("NDArray[np.float64]", self._operator.matvec(x))
 
     def solve_free(self, free: NDArray[np.bool_], rhs: NDArray[np.float64]) -> NDArray[np.float64]:
         """Solve the free-block system ``Sigma[free][:, free] @ y = rhs`` via Woodbury.
 
-        Forms the ``k x k`` correction matrix
-        ``W = Delta^{-1} + U_F^T D_F^{-1} U_F`` and solves against it, so the
-        cost is ``O(n_F k^2 + k^3 + n_F k r)`` for ``r`` right-hand sides.
+        Delegates to the shared ``FactorOperator``, which forms the ``k x k``
+        correction matrix ``W = Delta^{-1} + U_F^T D_F^{-1} U_F`` and solves
+        against it, so the cost is ``O(n_F k^2 + k^3 + n_F k r)`` for ``r``
+        right-hand sides.
 
         Args:
             free: Boolean mask of shape ``(n,)`` selecting the free assets.
@@ -137,16 +135,7 @@ class FactorCovariance:
         Returns:
             The solution ``y`` with the same shape as ``rhs``.
         """
-        d_free = self.d[free]
-        u_free = self.u[free]
-
-        rhs_2d = rhs if rhs.ndim == 2 else rhs[:, None]
-        dinv_rhs = rhs_2d / d_free[:, None]
-        dinv_u = u_free / d_free[:, None]
-
-        w = self._delta_inv + u_free.T @ dinv_u
-        solution = dinv_rhs - dinv_u @ np.linalg.solve(w, u_free.T @ dinv_rhs)
-        return solution if rhs.ndim == 2 else solution[:, 0]
+        return cast("NDArray[np.float64]", self._operator.solve_free(np.flatnonzero(free), rhs))
 
     def cross(self, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Compute the free-to-blocked cross product ``Sigma[free][:, ~free] @ x[~free]``.
@@ -164,7 +153,10 @@ class FactorCovariance:
             Vector of shape ``(n_free,)``.
         """
         blocked = ~free
-        return self.u[free] @ (self._delta_matrix @ (self.u[blocked].T @ x[blocked]))
+        return cast(
+            "NDArray[np.float64]",
+            self._operator.block_matvec(np.flatnonzero(free), np.flatnonzero(blocked), x[blocked]),
+        )
 
     def rcond_free(self, free: NDArray[np.bool_]) -> float:
         """Lower bound on the free block's reciprocal condition number.

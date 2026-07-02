@@ -15,6 +15,9 @@ classifiers = [
 dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.11",
+    # TODO(pre-merge): pin ">=<released cvx-linalg with operators+ridge>" and drop
+    # the [tool.uv.sources] override below once cvx-linalg is released.
+    "cvx-linalg",
 ]
 
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
@@ -48,6 +51,11 @@ lint = []
 # make a fresh `uv run pytest` work without knowing about dependency groups
 [tool.uv]
 default-groups = ["dev", "test"]
+
+# Temporary: track the operator/ridge work in cvx-linalg before it is released.
+# Remove once a release containing SymmetricOperator + GramOperator ridge is on PyPI.
+[tool.uv.sources]
+cvx-linalg = { git = "https://github.com/Jebel-Quant/linalg.git", branch = "gram-ridge" }
 
 [build-system]
 requires = ["hatchling"]

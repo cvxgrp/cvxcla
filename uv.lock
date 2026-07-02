@@ -129,10 +129,19 @@ wheels = [
 ]
 
 [[package]]
+name = "cvx-linalg"
+version = "0.8.0"
+source = { git = "https://github.com/Jebel-Quant/linalg.git?branch=gram-ridge#819c0ce238e07fc529520a967d5cc5740309bccc" }
+dependencies = [
+    { name = "numpy" },
+]
+
+[[package]]
 name = "cvxcla"
 version = "1.8.2"
 source = { editable = "." }
 dependencies = [
+    { name = "cvx-linalg" },
     { name = "numpy" },
     { name = "scipy" },
 ]
@@ -158,6 +167,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cvx-linalg", git = "https://github.com/Jebel-Quant/linalg.git?branch=gram-ridge" },
     { name = "kaleido", marker = "extra == 'plot'", specifier = "==1.3.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "plotly", marker = "extra == 'plot'", specifier = ">=6.0.1" },
