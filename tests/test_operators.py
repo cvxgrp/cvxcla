@@ -112,6 +112,12 @@ def test_dense_covariance_rejects_nonsymmetric() -> None:
         dense_covariance(np.array([[1.0, 2.0], [0.0, 1.0]]))
 
 
+def test_dense_covariance_rejects_non_square() -> None:
+    """A non-square matrix is rejected by the dense builder."""
+    with pytest.raises(ValueError, match="square"):
+        dense_covariance(np.ones((2, 3)))
+
+
 def test_gram_covariance_rejects_too_few_rows() -> None:
     """gram_covariance needs at least two observations."""
     with pytest.raises(ValueError, match="T >= 2"):

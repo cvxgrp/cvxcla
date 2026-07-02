@@ -74,6 +74,7 @@ ignore_missing_imports = true
 DEP002 = ["kaleido"]
 
 [tool.deptry.package_module_name_map]
+cvx-linalg = "cvx"
 numpy = "numpy"
 plotly = "plotly"
 kaleido = "kaleido"

@@ -16,14 +16,8 @@ from cvx.linalg import DenseOperator, FactorOperator, GramOperator, IncrementalD
 from numpy.typing import NDArray
 
 
-def dense_covariance(matrix: NDArray[np.float64]) -> DenseOperator:
-    """Build a :class:`~cvx.linalg.DenseOperator` from an explicit covariance matrix.
-
-    Args:
-        matrix: A symmetric ``(n, n)`` covariance matrix.
-
-    Returns:
-        A dense symmetric operator wrapping *matrix*.
+def _symmetric_matrix(matrix: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Return *matrix* as a float array after checking it is square and symmetric.
 
     Raises:
         ValueError: If *matrix* is not square or not symmetric to tolerance.
@@ -35,7 +29,19 @@ def dense_covariance(matrix: NDArray[np.float64]) -> DenseOperator:
     if not np.allclose(matrix, matrix.T):
         msg = "Covariance must be symmetric"
         raise ValueError(msg)
-    return DenseOperator(matrix)
+    return matrix
+
+
+def dense_covariance(matrix: NDArray[np.float64]) -> DenseOperator:
+    """Build a :class:`~cvx.linalg.DenseOperator` from an explicit symmetric covariance.
+
+    Args:
+        matrix: A symmetric ``(n, n)`` covariance matrix.
+
+    Returns:
+        A dense symmetric operator wrapping *matrix*.
+    """
+    return DenseOperator(_symmetric_matrix(matrix))
 
 
 def incremental_dense_covariance(matrix: NDArray[np.float64]) -> IncrementalDenseOperator:
@@ -49,18 +55,8 @@ def incremental_dense_covariance(matrix: NDArray[np.float64]) -> IncrementalDens
 
     Returns:
         A dense symmetric operator that maintains the free-block inverse.
-
-    Raises:
-        ValueError: If *matrix* is not square or not symmetric to tolerance.
     """
-    matrix = np.asarray(matrix, dtype=np.float64)
-    if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
-        msg = f"Covariance must be a square matrix, got shape {matrix.shape}"
-        raise ValueError(msg)
-    if not np.allclose(matrix, matrix.T):
-        msg = "Covariance must be symmetric"
-        raise ValueError(msg)
-    return IncrementalDenseOperator(matrix)
+    return IncrementalDenseOperator(_symmetric_matrix(matrix))
 
 
 def gram_covariance(returns: NDArray[np.float64], ridge: float = 0.0) -> GramOperator:
