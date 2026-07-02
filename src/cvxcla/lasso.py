@@ -22,28 +22,44 @@ it. The role played by the covariance ``Sigma`` and mean ``mu`` in the CLA is
 played here by the Gram matrix ``H = X^T X`` (wrapped in ``DenseCovariance``) and
 the vector ``X^T y``.
 
-Two coordinate-indexed event families, mirroring the CLA's "move to / leave a
-bound":
+**Constraints.** Like the CLA, the path tracer admits general linear inequality
+constraints ``G beta <= h``. An active row enters the reduced KKT system exactly as
+in the CLA (the bordered Schur complement of ``cla.py``), and the generalised
+correlation that drives the enter/leave events carries the active-row multipliers,
+``correlation(lam) = X^T y - H beta(lam) - G_S^T eta(lam)``. The constrained path is
+still piecewise linear (a quadratic loss under a polyhedral penalty *and* polyhedral
+constraints; cf. Rosset and Zhu). We require ``h > 0`` so the path can start from
+``beta = 0`` with every row slack -- the same first vertex as the unconstrained
+LASSO. (Equality constraints, or ``h`` with a zero entry, need a feasibility seed
+analogous to the CLA's linear-programming first vertex, and are left to future work.)
+
+Event families, mirroring the CLA's "move to / leave a bound":
 
 * **leave** -- an active coefficient reaches zero: ``lam = alpha_j / beta_slope_j``.
-* **enter** -- an inactive correlation reaches ``+/-lam``: ``p_j + lam q_j = +/-lam``.
+* **enter** -- an inactive (generalised) correlation reaches ``+/-lam``.
+* **activate** -- a slack inequality row's residual ``G_r beta - h_r`` reaches zero.
+* **release** -- an active row's multiplier ``eta_r`` reaches zero.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from itertools import pairwise
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import DenseCovariance, QuadraticForm
-from .pathtracer import trace
+from .operators import DenseCovariance, GramCovariance, QuadraticForm, bordered_solve
+from .pathtracer import InequalityConstrained, trace
+
+if TYPE_CHECKING:
+    from .builder import LassoBuilder
 
 
 class _LassoState(NamedTuple):
-    """The active set, sign pattern, and current penalty defining the segment.
+    """The support, sign pattern, active inequality rows, and current penalty.
 
     ``lam`` is the penalty at the segment's upper end. The event scan uses it to
     require *strict* progress to a smaller penalty: right after a coefficient
@@ -54,16 +70,24 @@ class _LassoState(NamedTuple):
 
     active: NDArray[np.bool_]
     signs: NDArray[np.float64]
+    rows_active: NDArray[np.bool_]
     lam: float
 
 
 class _LassoSegment(NamedTuple):
-    """The affine path ``beta(lam) = alpha - lam * beta_slope`` and correlation ``p + lam * q``."""
+    """The affine path ``beta(lam) = alpha - lam * beta_slope`` and its multipliers.
+
+    ``eta_alpha``/``eta_slope`` give the active-row multiplier path
+    ``eta(lam) = eta_alpha + lam * eta_slope`` (length ``p``, nonzero only on active
+    rows); ``p``/``q`` give the generalised correlation ``p + lam * q``.
+    """
 
     alpha: NDArray[np.float64]
     beta_slope: NDArray[np.float64]
     p: NDArray[np.float64]
     q: NDArray[np.float64]
+    eta_alpha: NDArray[np.float64]
+    eta_slope: NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -83,152 +107,359 @@ class Breakpoint:
 
 
 @dataclass
-class Lasso:
+class Lasso(InequalityConstrained):
     """The LASSO regularisation path, traced as a parametric active-set problem.
 
     Constructing a ``Lasso`` traces the entire path from ``lam_max`` (where
-    ``beta = 0``) down to ``lam = 0`` (the ordinary least-squares fit on the final
-    support), storing the breakpoints in ``path``. The walk is driven by the same
-    ``cvxcla.pathtracer.trace`` loop as the Critical Line Algorithm.
+    ``beta = 0``) down to ``lam = 0`` (the least-squares fit on the final support,
+    subject to any active constraints), storing the breakpoints in ``path``. The
+    walk is driven by the same ``cvxcla.pathtracer.trace`` loop as the Critical Line
+    Algorithm.
+
+    Optional linear inequality constraints ``G beta <= h`` (with ``h > 0``) are
+    traced through the same bordered solve as the CLA's ``G w <= h`` rows.
+
+    The quadratic form may be given either as a dense design ``(x, y)`` (the usual
+    case, ``H = X^T X``) or, via :meth:`from_operator`, as a ``QuadraticForm``
+    operator with the linear term ``X^T y``. The operator route lets a structured
+    form, a diagonal-plus-low-rank factor model or a kernel, drive the path in
+    ``O(nk)`` per step without forming the ``n x n`` Gram matrix, exactly as on the
+    portfolio side.
 
     Attributes:
-        x: Design matrix of shape ``(m, n)``.
-        y: Response vector of shape ``(m,)``.
+        x: Design matrix of shape ``(m, n)`` (``None`` in operator mode).
+        y: Response vector of shape ``(m,)`` (``None`` in operator mode).
+        g: Optional inequality matrix ``(p, n)`` of ``G beta <= h``; ``None`` means
+            the plain LASSO.
+        h: Optional inequality right-hand side ``(p,)``; must be strictly positive.
+        nonneg: When ``True``, restrict to the non-negative LASSO ``beta >= 0``;
+            the default ``False`` traces the ordinary signed path.
+        gram: When ``True``, drive the path with the ``GramCovariance`` data-matrix
+            backend (Woodbury solves in the ``m``-dimensional observation space),
+            never materialising the ``n x n`` Gram ``X^T X`` — the win in the
+            ``n >> m`` regime. The default ``False`` forms the dense Gram.
         tol: Tolerance for event selection and the validity window.
         path: The discovered breakpoints, populated on construction.
+        quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
+        linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
     """
 
-    x: NDArray[np.float64]
-    y: NDArray[np.float64]
+    x: NDArray[np.float64] | None = None
+    y: NDArray[np.float64] | None = None
+    g: NDArray[np.float64] | None = None
+    h: NDArray[np.float64] | None = None
+    nonneg: bool = False  # pragma: no mutate
+    gram: bool = False  # pragma: no mutate
     tol: float = 1e-9  # pragma: no mutate
     path: list[Breakpoint] = field(default_factory=list)
+    quad_form: QuadraticForm | None = None  # pragma: no mutate
+    linear: NDArray[np.float64] | None = None  # pragma: no mutate
 
     def __post_init__(self) -> None:
         """Validate shapes and trace the full LASSO path.
 
         Raises:
-            ValueError: If ``x`` is not 2d or ``y``'s length does not match the
-                number of rows of ``x``.
+            ValueError: If ``x`` is not 2d, ``y``'s length does not match ``x``, the
+                constraint shapes are inconsistent, or any ``h`` entry is not
+                strictly positive (which would make ``beta = 0`` infeasible).
         """
-        if self.x.ndim != 2:
-            msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
-            raise ValueError(msg)
-        if self.y.shape != (self.x.shape[0],):
-            msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
-            raise ValueError(msg)
+        operator_mode = self.quad_form is not None or self.linear is not None
+        if operator_mode:
+            if self.quad_form is None or self.linear is None:
+                msg = "quad_form and linear (X^T y) must be provided together"
+                raise ValueError(msg)
+            if self.x is not None or self.y is not None:
+                msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
+                raise ValueError(msg)
+            self.linear = np.asarray(self.linear, dtype=np.float64)
+            if self.linear.ndim != 1:
+                msg = f"linear must be the 1d vector X^T y, got shape {self.linear.shape}"
+                raise ValueError(msg)
+        else:
+            if self.x is None or self.y is None:
+                msg = "provide a design (x, y) or an operator (quad_form, linear)"
+                raise ValueError(msg)
+            if self.x.ndim != 2:
+                msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
+                raise ValueError(msg)
+            if self.y.shape != (self.x.shape[0],):
+                msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
+                raise ValueError(msg)
+        if self.g is not None or self.h is not None:
+            if self.g is None or self.h is None:
+                msg = "g and h must be provided together"
+                raise ValueError(msg)
+            if self.g.shape != (self.h.shape[0], self.dimension):
+                msg = f"g must have shape ({self.h.shape[0]}, {self.dimension}), got {self.g.shape}"
+                raise ValueError(msg)
+            if np.any(self.h <= self.tol):
+                msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
+                raise ValueError(msg)
         trace(self)
 
-    @property
-    def quad(self) -> QuadraticForm:
-        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend."""
-        return DenseCovariance(self.x.T @ self.x)
+    @classmethod
+    def problem(cls, x: NDArray[np.float64], y: NDArray[np.float64]) -> LassoBuilder:
+        """Start a fluent :class:`cvxcla.builder.LassoBuilder` for a LASSO path.
 
-    @property
+        The LASSO counterpart of :meth:`cvxcla.cla.CLA.problem`: chain
+        ``.inequality(G, h)`` and finish with ``.trace()``. The builder maps onto the
+        constructor arguments and adds no modelling power.
+
+        Args:
+            x: Design matrix of shape ``(m, n)``.
+            y: Response vector of shape ``(m,)``.
+
+        Returns:
+            A :class:`cvxcla.builder.LassoBuilder`.
+        """
+        from .builder import LassoBuilder
+
+        return LassoBuilder(x, y)
+
+    @classmethod
+    def from_operator(
+        cls,
+        quad: QuadraticForm,
+        xty: NDArray[np.float64],
+        *,
+        g: NDArray[np.float64] | None = None,
+        h: NDArray[np.float64] | None = None,
+        nonneg: bool = False,
+        tol: float = 1e-9,
+    ) -> Lasso:
+        """Trace a LASSO path with the quadratic form supplied as an operator.
+
+        The regression counterpart of :class:`cvxcla.cla.CLA` accepting a
+        ``QuadraticForm`` covariance. Instead of a dense design ``X``, pass the Gram
+        operator ``H`` (anything implementing :class:`QuadraticForm`, for example a
+        :class:`cvxcla.operators.FactorCovariance` or a kernel) together with the
+        linear term ``X^T y``. The homotopy reaches ``H`` only through ``matvec`` and
+        ``solve_free``, so a diagonal-plus-low-rank factor model or a kernel traces
+        the path in ``O(nk)`` per step without ever forming the ``n x n`` matrix,
+        exactly as on the portfolio side. For the path to coincide with the
+        design-matrix LASSO one needs ``H = X^T X`` and ``xty = X^T y``
+        (Theorem 1); any positive-semidefinite operator whose free blocks are
+        positive definite traces a well-defined path.
+
+        Args:
+            quad: The quadratic form ``H`` as a :class:`QuadraticForm` operator.
+            xty: The linear term ``X^T y`` of shape ``(n,)``.
+            g: Optional inequality matrix of ``G beta <= h``.
+            h: Optional inequality right-hand side; entries must be strictly positive.
+            nonneg: Restrict the path to ``beta >= 0``.
+            tol: Tolerance for event selection and the validity window.
+
+        Returns:
+            A traced :class:`Lasso` whose ``path`` holds the breakpoints.
+        """
+        return cls(
+            quad_form=quad,
+            linear=np.asarray(xty, dtype=np.float64),
+            g=g,
+            h=h,
+            nonneg=nonneg,
+            tol=tol,
+        )
+
+    @cached_property
+    def quad(self) -> QuadraticForm:
+        """The Gram matrix ``X^T X`` as a ``QuadraticForm`` backend (cached: ``X`` is fixed).
+
+        With ``gram=True`` the data-matrix backend is used instead of forming the
+        ``n x n`` Gram: it solves through the Woodbury identity in the
+        ``m``-dimensional observation space and never materialises an ``n x n``
+        matrix, the win in the high-dimensional ``p >> n`` regime (more features than
+        observations). ``GramCovariance`` represents ``X_c^T X_c / (m-1)``, so scaling
+        the data by ``sqrt(m-1)`` recovers ``X^T X`` exactly for a **centred** design
+        (the standard LASSO convention; pass a column-centred ``x``).
+        """
+        if self.quad_form is not None:
+            return self.quad_form
+        # Not operator mode, so __post_init__ guarantees a design matrix.
+        x = cast("NDArray[np.float64]", self.x)
+        if self.gram:
+            m = x.shape[0]
+            return GramCovariance(x * np.sqrt(m - 1.0))
+        return DenseCovariance(x.T @ x)
+
+    @cached_property
     def xty(self) -> NDArray[np.float64]:
-        """The linear data ``X^T y`` (the analogue of the CLA's expected returns)."""
-        return self.x.T @ self.y
+        """The linear data ``X^T y`` (the analogue of the CLA's expected returns; cached)."""
+        if self.linear is not None:
+            return self.linear
+        # Not operator mode, so __post_init__ guarantees a design (x, y).
+        x = cast("NDArray[np.float64]", self.x)
+        y = cast("NDArray[np.float64]", self.y)
+        return x.T @ y
 
     @property
     def dimension(self) -> int:
         """Number of features ``n`` (the problem dimension for the path tracer)."""
-        return int(self.x.shape[1])
+        if self.x is not None:
+            return int(self.x.shape[1])
+        return int(self.xty.shape[0])
 
     @property
     def lam_max(self) -> float:
-        """The smallest penalty at which ``beta = 0`` is optimal: ``||X^T y||_inf``."""
+        """The smallest penalty at which ``beta = 0`` is optimal: ``||X^T y||_inf``.
+
+        With ``h > 0`` every inequality row is slack at ``beta = 0`` (zero
+        multiplier), so the unconstrained threshold is unchanged.
+        """
         return float(np.max(np.abs(self.xty)))
 
     def begin(self) -> tuple[float, _LassoState]:
-        """Record the all-zero solution at ``lam_max`` and enter the first coordinate.
+        """Record the all-zero solution at the start penalty and enter the first coordinate.
 
-        Returns:
-            ``(lam_max, state)`` where ``state`` already has the most-correlated
-            coordinate in the active set, mirroring the CLA's first turning point.
+        For the plain or inequality-constrained LASSO the start is
+        ``lam_max = ||X^T y||_inf`` and the most-correlated coordinate enters with its
+        sign. Under the non-negative restriction ``beta >= 0`` the l1 penalty becomes
+        the linear term ``lam * 1^T beta``, only positive correlations can enter, so
+        the start is ``lam_max = max_j (X^T y)_j`` and the coordinate enters with sign
+        ``+``. When no coordinate can enter (e.g. every correlation is non-positive
+        under ``beta >= 0``), ``beta = 0`` is optimal for all ``lambda`` and the path
+        is the single point.
         """
         n = self.dimension
         xty = self.xty
-        lam_max = self.lam_max
-        j0 = int(np.argmax(np.abs(xty)))
-        self.path.append(Breakpoint(lam_max, np.zeros(n), np.zeros(n, dtype=bool)))
+        rows_active = np.zeros(self.g_matrix.shape[0], dtype=bool)
+        if self.nonneg:
+            lam_max = float(np.max(xty)) if n else 0.0
+            j0, s0 = int(np.argmax(xty)), 1.0
+        else:
+            lam_max = self.lam_max
+            j0 = int(np.argmax(np.abs(xty)))
+            s0 = float(np.sign(xty[j0]))
 
+        self.path.append(Breakpoint(max(lam_max, 0.0), np.zeros(n), np.zeros(n, dtype=bool)))
         active = np.zeros(n, dtype=bool)
-        active[j0] = True
         signs = np.zeros(n)
-        signs[j0] = np.sign(xty[j0])
-        return lam_max, _LassoState(active, signs, lam_max)
+        if lam_max > self.tol:
+            active[j0] = True
+            signs[j0] = s0
+        return max(lam_max, 0.0), _LassoState(active, signs, rows_active, max(lam_max, 0.0))
 
     def segment(self, state: _LassoState) -> _LassoSegment:
-        """Solve the affine segment for the current ``(active, signs)`` state.
+        """Solve the affine segment for the current support, signs, and active rows.
 
-        Both solves go through the ``QuadraticForm`` principal-submatrix solver,
-        exactly as the CLA solves against the free covariance block.
+        With no active rows this is the plain LASSO solve against the Gram
+        submatrix. With active rows it is the bordered Schur solve of the CLA: the
+        active rows ``G_S`` enter the reduced KKT system as extra equality rows.
         """
         n = self.dimension
-        active, signs = state.active, state.signs
+        active, signs, rows_active = state.active, state.signs, state.rows_active
+        xty = self.xty
         alpha = np.zeros(n)
         beta_slope = np.zeros(n)
-        alpha[active] = self.quad.solve_free(active, self.xty[active])
-        beta_slope[active] = self.quad.solve_free(active, signs[active])
+        eta_alpha = np.zeros(self.g_matrix.shape[0])
+        eta_slope = np.zeros(self.g_matrix.shape[0])
 
-        # correlation(lam) = X^T y - H beta(lam) = (xty - H alpha) + lam (H beta_slope)
-        p = self.xty - self.quad.matvec(alpha)
-        q = self.quad.matvec(beta_slope)
-        return _LassoSegment(alpha, beta_slope, p, q)
+        xty_s = xty[active]
+        signs_s = signs[active]
+        if not np.any(active):
+            # Empty support (e.g. the non-negative path when no correlation is
+            # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
+            return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
+
+        # The active rows G_RS act as equality rows in the reduced KKT system, exactly
+        # the CLA's bordered Schur solve (operators.bordered_solve). With no active rows
+        # (|R| = 0) this reduces to the plain LASSO solve beta_S(lam) = H_SS^{-1}(xty_S -
+        # lam s_S). The slope's constraint right-hand side is zero, and the slope
+        # multiplier nu carries the opposite sign convention to eta(lam) (beta = alpha -
+        # lam beta_slope here, vs w = r_alpha + lam r_beta in the CLA), hence the flip.
+        g_rs = self.g_matrix[np.ix_(rows_active, active)]  # |R| x |S|
+        h_r = self.h_vector[rows_active]
+        x_const, x_slope, eta_a, nu_slope = bordered_solve(
+            self.quad, active, g_rs, xty_s, signs_s, h_r, np.zeros(g_rs.shape[0])
+        )
+        alpha[active] = x_const
+        beta_slope[active] = x_slope
+        eta_alpha[rows_active] = eta_a
+        eta_slope[rows_active] = -nu_slope
+
+        # Generalised correlation c(lam) = xty - H beta(lam) - G_R^T eta(lam) = p + lam q.
+        g_r = self.g_matrix[rows_active]
+        eta_a_r = eta_alpha[rows_active]
+        eta_s_r = eta_slope[rows_active]
+        p = xty - self.quad.matvec(alpha) - g_r.T @ eta_a_r
+        q = self.quad.matvec(beta_slope) - g_r.T @ eta_s_r
+        return _LassoSegment(alpha, beta_slope, p, q, eta_alpha, eta_slope)
 
     def event_matrix(self, state: _LassoState, segment: _LassoSegment) -> NDArray[np.float64]:
-        """Return the ``(n, 3)`` matrix of candidate critical lambdas.
+        """Return the ``(n + p, 4)`` matrix of candidate critical lambdas.
 
-        Columns: 0 = leave (active coefficient hits zero), 1 = enter with sign
-        ``+1`` (inactive correlation reaches ``+lam``), 2 = enter with sign ``-1``
-        (reaches ``-lam``). Only events strictly above ``tol`` are kept, so the
-        trace stops cleanly as ``lam`` approaches zero.
+        Rows ``0..n-1`` are coordinate events (col 0 leave, col 1 enter ``+``, col 2
+        enter ``-``); rows ``n..n+p-1`` are inequality-row events (col 0 activate, col
+        1 release). Entries are ``-inf`` where the event cannot occur, and only
+        events strictly inside ``(tol, lam - tol)`` are kept.
         """
         n = self.dimension
+        rows = self.g_matrix.shape[0]
         active = state.active
         inactive = ~active
-        alpha, beta_slope, p, q = segment
+        alpha, beta_slope, p, q, eta_alpha, eta_slope = segment
+        rows_active = state.rows_active
 
-        l_mat = np.full((n, 3), -np.inf)
+        l_mat = np.full((n + rows, 4), -np.inf)
 
         # leave: alpha_j - lam beta_slope_j = 0
         leaves = active & (np.abs(beta_slope) > self.tol)  # pragma: no mutate
-        l_mat[leaves, 0] = alpha[leaves] / beta_slope[leaves]
+        l_mat[:n][leaves, 0] = alpha[leaves] / beta_slope[leaves]
 
         # enter (+): p_j + lam q_j = +lam -> lam = p_j / (1 - q_j)
         denom_pos = 1.0 - q
         enters_pos = inactive & (np.abs(denom_pos) > self.tol)  # pragma: no mutate
-        l_mat[enters_pos, 1] = p[enters_pos] / denom_pos[enters_pos]
+        l_mat[:n][enters_pos, 1] = p[enters_pos] / denom_pos[enters_pos]
 
-        # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j)
-        denom_neg = 1.0 + q
-        enters_neg = inactive & (np.abs(denom_neg) > self.tol)  # pragma: no mutate
-        l_mat[enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
+        # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j). Disabled under the
+        # non-negative restriction beta >= 0, where only positive entries are allowed.
+        if not self.nonneg:
+            denom_neg = 1.0 + q
+            enters_neg = inactive & (np.abs(denom_neg) > self.tol)  # pragma: no mutate
+            l_mat[:n][enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
 
-        # Keep only events that make strict progress to a smaller, positive penalty:
-        # at or above the current lam they are the spurious inverse of the coordinate
-        # just flipped (which would cycle); at or below ~0 the path is complete.
+        if rows:
+            g_mat = self.g_matrix
+            slope_row = g_mat @ beta_slope  # d/d(-lam) of the row value
+            level_row = g_mat @ alpha - self.h_vector  # G_r alpha - h_r
+            # activate: the row value G_r beta(lam) = level + h_r - lam slope rises to
+            # the cap h_r as lam decreases when its slope d(value)/d(-lam) = slope_row
+            # is positive; the crossing is lam = (G_r alpha - h_r) / (G_r beta_slope).
+            inactive_rows = ~rows_active & (slope_row > self.tol)  # pragma: no mutate
+            l_mat[n:][inactive_rows, 0] = level_row[inactive_rows] / slope_row[inactive_rows]
+            # release: eta_r(lam) = eta_alpha + lam eta_slope -> 0 from eta > 0, i.e. eta_slope > 0.
+            releasing = rows_active & (eta_slope > self.tol)  # pragma: no mutate
+            l_mat[n:][releasing, 1] = -eta_alpha[releasing] / eta_slope[releasing]
+
+        # Keep only events that make strict progress to a smaller, positive penalty.
         l_mat[(l_mat <= self.tol) | (l_mat >= state.lam - self.tol)] = -np.inf
         return l_mat
 
     def step(self, state: _LassoState, segment: _LassoSegment, sec: int, direction: int, lam: float) -> _LassoState:
-        """Record the breakpoint at ``lam`` after flipping coordinate ``sec``.
+        """Record the breakpoint at ``lam`` after flipping coordinate or row ``sec``.
 
-        ``direction`` 0 removes ``sec`` from the support; 1/2 add it with sign
-        ``+1``/``-1``. The recorded coefficients are the old segment evaluated at
-        ``lam`` (the path is continuous across the flip).
+        For a coordinate (``sec < n``): direction 0 removes it from the support, 1/2
+        add it with sign ``+1``/``-1``. For an inequality row (``sec >= n``):
+        direction 0 activates the row, 1 releases it. The path is continuous across
+        the flip, so the recorded coefficients are the old segment at ``lam``.
         """
+        n = self.dimension
         active = state.active.copy()
         signs = state.signs.copy()
-        if direction == 0:
-            active[sec] = False
-            signs[sec] = 0.0
+        rows_active = state.rows_active.copy()
+        if sec < n:
+            if direction == 0:
+                active[sec] = False
+                signs[sec] = 0.0
+            else:
+                active[sec] = True
+                signs[sec] = 1.0 if direction == 1 else -1.0
         else:
-            active[sec] = True
-            signs[sec] = 1.0 if direction == 1 else -1.0
+            rows_active[sec - n] = direction == 0
 
         beta = segment.alpha - lam * segment.beta_slope
         self.path.append(Breakpoint(lam, beta, active.copy()))
-        return _LassoState(active, signs, lam)
+        return _LassoState(active, signs, rows_active, lam)
 
     def finish(self, state: _LassoState, segment: _LassoSegment) -> None:
         """Record the ``lam = 0`` endpoint: the least-squares fit on the final support."""

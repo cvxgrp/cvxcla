@@ -10,17 +10,27 @@ LICENSE_FAIL_ON ?= GPL;LGPL;AGPL
 ##@ Quality and Formatting
 all: fmt deptry test docs-coverage security license typecheck rhiza-test ## run all CI targets locally
 
-deptry: install-uv ## Run deptry
-	@if [ -d ${SOURCE_FOLDER} ]; then \
-		$(UVX_BIN) -p ${PYTHON_VERSION} deptry ${SOURCE_FOLDER}; \
-	fi
+# deptry scans one or more folders for dependency issues. Each feature bundle
+# contributes the folders it owns to DEPTRY_FOLDERS (and any per-folder ignores
+# to DEPTRY_IGNORE), so this core target never needs to know which bundles are
+# present. Core itself contributes SOURCE_FOLDER when it exists; see e.g.
+# marimo.mk for a bundle that appends its own folder. Rhiza's own tooling and
+# test folders (.rhiza/utils, .rhiza/tests) are deliberately excluded: their
+# dependencies are declared inline via PEP 723 script metadata or shipped in
+# .rhiza/requirements/, not in the project's pyproject, so deptry (which
+# validates against pyproject) would only emit noise for them.
+DEPTRY_FOLDERS ?=
+DEPTRY_IGNORE ?=
+ifneq ($(wildcard $(SOURCE_FOLDER)),)
+DEPTRY_FOLDERS += $(SOURCE_FOLDER)
+endif
 
-	@if [ -d ${MARIMO_FOLDER} ]; then \
-		if [ -d ${SOURCE_FOLDER} ]; then \
-			$(UVX_BIN) -p ${PYTHON_VERSION} deptry ${MARIMO_FOLDER} ${SOURCE_FOLDER} --ignore DEP004; \
-		else \
-		  	$(UVX_BIN) -p ${PYTHON_VERSION} deptry ${MARIMO_FOLDER} --ignore DEP004; \
-		fi \
+deptry: install-uv ## Run deptry over the folders contributed by each bundle
+	@if [ -n "$(strip $(DEPTRY_FOLDERS))" ]; then \
+		printf "${BLUE}[INFO] Running deptry on:${RESET} $(strip $(DEPTRY_FOLDERS))\n"; \
+		$(UVX_BIN) -p ${PYTHON_VERSION} deptry $(strip $(DEPTRY_FOLDERS) $(DEPTRY_IGNORE)); \
+	else \
+		printf "${YELLOW}[WARN] no deptry folders found, skipping.${RESET}\n"; \
 	fi
 
 fmt: install-uv ## check the pre-commit hooks and the linting
@@ -44,7 +54,7 @@ todos: ## search and report all TODO/FIXME/HACK comments in the codebase
 
 suppression-audit: ## scan codebase for inline suppressions and report (grade, detail, histogram)
 	@printf "${BLUE}[INFO] Running suppression audit...${RESET}\n"
-	@${UV_BIN} run python .rhiza/utils/suppression_audit.py
+	@${UV_BIN} run .rhiza/utils/suppression_audit.py
 
 semgrep: install ## run Semgrep static analysis
 	@printf "${BLUE}[INFO] Running Semgrep...${RESET}\n"

@@ -26,6 +26,11 @@ for portfolio optimization.
 The CLA efficiently computes the entire efficient frontier for portfolio optimization
 problems with linear constraints and bounds on the weights.
 
+The same parametric active-set engine also traces the **LASSO** regularisation path
+(the `Lasso` class) — including general inequality constraints `Gβ ≤ h` and the
+non-negative LASSO `β ≥ 0` — so the Critical Line Algorithm and the LARS/LASSO
+homotopy come out as two instances of one path-following engine.
+
 The Critical Line Algorithm was introduced by Harry Markowitz
 in [The Optimization of Quadratic Functions Subject to Linear Constraints](https://www.rand.org/pubs/research_memoranda/RM1438.html)
 and further described in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
@@ -43,10 +48,12 @@ The Markowitz problem is a quadratic program parametrized by a return target λ:
 
 ```
 min  wᵀΣw - λ · μᵀw
-s.t. Aw = b,  lb ≤ w ≤ ub
+s.t. Aw = b,  Gw ≤ h,  lb ≤ w ≤ ub
 ```
 
-As λ sweeps from ∞ (maximize return) down to 0 (minimize variance), the solution
+where `Aw = b` are linear equalities (the budget, sector/factor neutrality, …) and
+`Gw ≤ h` are linear inequalities (group or sector exposure caps; a `≥` floor is the
+negated row). As λ sweeps from ∞ (maximize return) down to 0 (minimize variance), the solution
 traces the entire efficient frontier. The key insight is that **between consecutive
 events, the optimal weights are a linear function of λ**:
 
@@ -68,22 +75,35 @@ three steps:
    - a **free** asset hits its bound (leaves the free set), or
    - a **blocked** asset's KKT multiplier changes sign (enters the free set).
 
-3. **Update** the active set (exactly one asset changes status) and repeat until λ ≤ 0.
+   General inequality rows `Gw ≤ h` add the row analogue of these two events: an
+   inactive row becomes binding when its slack reaches zero, and an active row is
+   released when its multiplier reaches zero. An active row is carried through the
+   same block-eliminated solve as an extra equality row, so the structure is
+   preserved.
 
-Because only one asset changes per step and each step requires only a single linear
-solve, the algorithm traces the full frontier cheaply and exactly — no approximation
-needed.
+3. **Update** the active set (exactly one asset or constraint row changes status) and
+   repeat until λ ≤ 0.
+
+Because only one coordinate changes per step and each step requires only a single
+linear solve, the algorithm traces the full frontier cheaply and exactly — no
+approximation needed.
 
 ## ✨ Features
 
 - Efficient computation of the entire efficient frontier
-- Support for linear constraints and bounds on portfolio weights
+- Fluent builder API — `CLA.problem(mean, cov).long_only().budget().trace()` — as a
+  readable alternative to the explicit constructor
+- Box bounds on every weight, plus general linear **equality** constraints
+  `Aw = b` (budget, dollar-neutral, sector/factor neutrality) and general linear
+  **inequality** constraints `Gw ≤ h` (group or sector exposure caps)
 - Factor covariance backend: exact frontiers for diagonal-plus-low-rank
   covariances (factor models, RMT-cleaned matrices) in O(nk) memory via the
   Woodbury identity
-- Multiple implementations based on different approaches from the literature
 - Visualization of the efficient frontier using Plotly
 - Computation of the maximum Sharpe ratio portfolio
+- **LASSO regularisation path** through the same engine (`Lasso`), with the same
+  fluent builder, general inequality constraints `Gβ ≤ h`, and the non-negative
+  LASSO `β ≥ 0`
 - Fully tested and documented codebase
 
 ## 🚀 Installation
@@ -167,6 +187,21 @@ Maximum Sharpe ratio: 2.946979
 First 3 weights: [0.         0.         0.08509841]
 ```
 
+The same problem reads more declaratively through the fluent builder, reached via
+`CLA.problem(...)`. Each step maps onto one constructor argument, and the terminal
+`.trace()` returns the identical `CLA`:
+
+```python
+# Same fully-invested, long-only problem as above, assembled fluently.
+built = CLA.problem(mean, covariance).long_only().budget().trace()
+
+# Pure sugar over the constructor: it returns the identical frontier.
+assert built.frontier.max_sharpe[0] == cla.frontier.max_sharpe[0]
+```
+
+`.bounds`, `.equality`, and `.inequality` add general bounds and constraints, as in
+the examples below.
+
 For visualization, you can plot the efficient frontier:
 
 ```python
@@ -174,6 +209,46 @@ For visualization, you can plot the efficient frontier:
 fig = frontier.plot(volatility=True)
 fig.show()
 ```
+
+### Group and sector constraints
+
+Pass `g` and `h` to add general inequality rows `Gw ≤ h` on top of the box bounds and
+the budget. For example, to cap the combined weight of the first three assets (a
+sector) at 40%:
+
+```python
+import numpy as np
+from cvxcla import CLA
+
+n = 10
+rng = np.random.default_rng(42)
+mean = rng.standard_normal(n)
+factor = rng.standard_normal((n, n))
+covariance = factor @ factor.T  # symmetric positive definite
+
+# sum of the first three weights ≤ 0.40
+g = np.zeros((1, n))
+g[0, :3] = 1.0
+h = np.array([0.40])
+
+cla = CLA(
+    mean=mean,
+    covariance=covariance,
+    lower_bounds=np.zeros(n),
+    upper_bounds=np.full(n, 0.35),
+    a=np.ones((1, n)),  # fully invested
+    b=np.ones(1),
+    g=g,                # inequality matrix  G  (p x n)
+    h=h,                # inequality vector  h  (p,)
+)
+
+# every turning point now satisfies the sector cap
+assert all(tp.weights[:3].sum() <= 0.40 + cla.tol for tp in cla.turning_points)
+```
+
+`g`/`h` default to `None`, so omitting them recovers the equality-only problem
+unchanged. Stack multiple rows in `g` for several caps at once, and express a `≥`
+floor by negating a row (`-Gw ≤ -h`).
 
 ### Factor models at scale
 
@@ -197,44 +272,48 @@ covariance = FactorCovariance(
 See the [factor backend documentation](https://www.cvxgrp.org/cvxcla/factor/)
 for the protocol, the math, and benchmarks against the dense path.
 
-## 📚 Literature and Implementations
+### The LASSO through the same engine
 
-The package includes implementations based on several key papers:
+The same path-tracer drives the LASSO regularisation path. `Lasso` plays the Gram
+matrix `XᵀX` and the vector `Xᵀy` the way the CLA plays the covariance and the mean,
+and traces the whole path from `λ_max` (where `β = 0`) down to the least-squares fit:
 
-### 📝 Niedermayer and Niedermayer
+```python
+import numpy as np
+from cvxcla import Lasso
 
-They suggested a method to avoid the expensive inversion
-of the covariance matrix in [Applying Markowitz's critical line algorithm](https://www.researchgate.net/publication/226987510_Applying_Markowitz%27s_Critical_Line_Algorithm).
-Our testing shows that in Python, this approach is not significantly
-faster than explicit matrix inversion using LAPACK via `numpy.linalg.inv`.
+rng = np.random.default_rng(0)
+X = rng.standard_normal((60, 12))
+y = X @ rng.standard_normal(12) + 0.1 * rng.standard_normal(60)
 
-### 📝 Bailey and Lopez de Prado
+# plain LASSO path; .solution(lam) evaluates beta at any penalty
+lasso = Lasso(x=X, y=y)
+beta = lasso.solution(0.5 * lasso.lam_max)
 
-We initially started with their code published
-in [An Open-Source Implementation of the Critical-Line Algorithm for Portfolio Optimization](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2197616).
-We've made several improvements:
+# the same fluent builder as the CLA
+lasso = Lasso.problem(X, y).trace()
+```
 
-- Using boolean numpy arrays to indicate whether a weight is free or blocked
-- Rewriting the computation of the first turning point
-- Isolating the computation of λ and weight updates to make them testable
-- Using modern and immutable dataclasses throughout
+It carries the same constraints the CLA does. Add general inequality rows `Gβ ≤ h`
+(with `h > 0`, e.g. per-group exposure caps), or restrict to the **non-negative
+LASSO** `β ≥ 0` — where the ℓ₁ penalty collapses to the linear term `λ·1ᵀβ`, making
+it exactly the CLA's box-bounded parametric QP:
 
-Our updated implementation is included in the tests but not part of cvxcla package.
-We use it to verify our results and include it for educational purposes.
+```python
+# group-exposure caps G beta <= h (cap features 0–3 and 4–7)
+G = np.zeros((2, 12))
+G[0, :4] = 1.0
+G[1, 4:8] = 1.0
+h = np.array([1.0, 1.0])
+lasso = Lasso.problem(X, y).inequality(G, h).trace()
 
-### 📝 Markowitz et al
+# non-negative LASSO (beta >= 0)
+lasso = Lasso.problem(X, y).non_negative().trace()
+```
 
-In
-[Avoiding the Downside: A Practical Review of the Critical Line Algorithm for Mean-Semivariance Portfolio Optimization](https://www.hudsonbaycapital.com/documents/FG/hudsonbay/research/599440_paper.pdf),
-Markowitz and researchers from Hudson Bay Capital Management and Constantia Capital
-present a step-by-step tutorial.
-
-We address a problem they overlooked: after finding the first starting point,
-all variables might be blocked. We enforce that one variable
-labeled as free (even if it sits on a boundary) to avoid a singular matrix.
-
-Rather than using their sparse matrix construction, we bisect the
-weights into free and blocked parts and use a linear solver for the free part only.
+Both return the exact path, validated breakpoint-by-breakpoint against a per-λ QP
+solver. (Equality constraints `Aβ = b` need a feasibility seed and are not yet
+supported; the canonical sum-to-zero case cannot be traced one coordinate at a time.)
 
 ## 🧪 Testing
 

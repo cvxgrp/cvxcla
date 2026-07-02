@@ -154,6 +154,14 @@ line-ending = "auto"
 "experiments/**/*.py" = [
     "ANN",   # experiments prioritize quick iteration over strict annotation coverage
 ]
+# Figure-generation scripts for the docs/notes - plotting code, not shipped API.
+"docs/**/*.py" = [
+    "ANN",     # matplotlib plotting helpers prioritize readability over annotation coverage
+    "E501",    # long lines are mostly inline matplotlib annotation/style calls
+    "RUF001",  # en dashes in author names (e.g. Zou-Hastie) are intentional typography
+    "RUF002",  # ditto inside docstrings
+    "TRY003",  # literal exception messages are fine in throwaway figure drivers
+]
 # Internal utility scripts - specific exceptions for internal tooling
 ".rhiza/utils/*.py" = [
     "PLW2901",  # Allow loop variable overwriting in utility scripts
