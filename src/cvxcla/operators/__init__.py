@@ -1,28 +1,32 @@
-"""Covariance backend abstraction for the Critical Line Algorithm.
+"""Operator layer for the Critical Line Algorithm.
 
-The turning-point loop of the CLA touches the covariance matrix through a
-small number of operations: full matrix-vector products, solves against the
-free-asset block, and cross-products between free and blocked assets. This
-package defines that contract as the ``CovarianceOperator`` protocol (see
-:mod:`cvxcla.operators._core`), together with several implementations:
+The turning-point loop reaches its Hessian (the covariance ``Sigma``, or the Gram
+matrix ``X.T @ X`` for a LASSO / LARS path) through the cvx-linalg
+:class:`~cvx.linalg.SymmetricOperator` protocol: matrix-vector and sub-block
+products, a free-block solve, and a reciprocal-condition check. This package no
+longer defines its own operator classes -- the backends (dense, matrix-free Gram,
+diagonal-plus-low-rank Woodbury, and a maintained-inverse dense variant) live in
+:mod:`cvx.linalg`. What remains here is thin:
 
-- ``DenseCovariance`` / ``IncrementalDenseCovariance`` (:mod:`cvxcla.operators.dense`):
-  adapters that reproduce the behaviour of a plain ``numpy`` covariance matrix,
-  the latter maintaining the free-block inverse across turning points.
-- ``FactorCovariance`` (:mod:`cvxcla.operators.factor`): a diagonal-plus-low-rank
-  covariance ``Sigma = diag(d) + U @ Delta @ U.T`` whose solves go through the
-  Woodbury identity, so no ``n x n`` matrix is ever materialised. Memory and
-  per-solve cost are ``O(n * k)`` instead of ``O(n^2)``.
-- ``GramCovariance`` (:mod:`cvxcla.operators.gram`): a sample covariance backed by
-  the ``(T, n)`` data matrix, never forming ``Sigma``.
-
-See https://github.com/cvxgrp/cvxcla/issues/646 for the roadmap.
+- :data:`QuadraticForm` / :data:`CovarianceOperator`: aliases of
+  :class:`cvx.linalg.SymmetricOperator`, the loop's backend contract.
+- builders (:mod:`cvxcla.operators.builders`) that assemble the right cvx-linalg
+  operator from CLA / LASSO inputs, kept under the familiar ``*Covariance`` names.
+- :func:`bordered_solve` and :func:`cross`, the parametric-path helpers built on
+  the operator protocol.
 """
 
-from ._core import CovarianceOperator, QuadraticForm, bordered_solve
-from .dense import DenseCovariance, IncrementalDenseCovariance
-from .factor import FactorCovariance
-from .gram import GramCovariance
+from ._core import CovarianceOperator, QuadraticForm, bordered_solve, cross
+from .builders import (
+    DenseCovariance,
+    FactorCovariance,
+    GramCovariance,
+    IncrementalDenseCovariance,
+    dense_covariance,
+    factor_covariance,
+    gram_covariance,
+    incremental_dense_covariance,
+)
 
 __all__ = [
     "CovarianceOperator",
@@ -32,4 +36,9 @@ __all__ = [
     "IncrementalDenseCovariance",
     "QuadraticForm",
     "bordered_solve",
+    "cross",
+    "dense_covariance",
+    "factor_covariance",
+    "gram_covariance",
+    "incremental_dense_covariance",
 ]

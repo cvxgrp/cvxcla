@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .builder import ProblemBuilder
 
 from .first import first_vertex_lp, init_algo
-from .operators import DenseCovariance, QuadraticForm, bordered_solve
+from .operators import DenseCovariance, QuadraticForm, bordered_solve, cross
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
@@ -182,7 +182,7 @@ class CLA(InequalityConstrained):
         cleared = getattr(self.covariance_operator, "rcond_floor_cleared", None)
         if cleared is not None:
             return bool(cleared(_RCOND_FLOOR))
-        full = np.ones(self.dimension, dtype=bool)
+        full = np.arange(self.dimension)
         return self.covariance_operator.rcond_free(full) >= _RCOND_FLOOR
 
     def __post_init__(self) -> None:
@@ -387,7 +387,7 @@ class CLA(InequalityConstrained):
             cov,
             free_in,
             c_free,
-            -cov.cross(free_in, fixed_weights),
+            -cross(cov, free_in, fixed_weights),
             self.mean[free_in],
             d - c[:, out] @ fixed_weights[out],
             np.zeros(c.shape[0]),
@@ -655,7 +655,7 @@ class CLA(InequalityConstrained):
         # the costly per-step rcond. Only a near-singular full covariance needs the
         # check, and there it runs exactly as before.
         if not self._free_blocks_well_conditioned:
-            rcond = self.covariance_operator.rcond_free(free)
+            rcond = self.covariance_operator.rcond_free(np.flatnonzero(free))
             if rcond < _RCOND_FLOOR:
                 n_free = int(np.count_nonzero(free))
                 msg = (
