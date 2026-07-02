@@ -1,6 +1,6 @@
 [project]
 name = "cvxcla"
-version = "1.7.0"
+version = "1.8.2"
 description = "Critical line algorithm for the efficient frontier"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,6 +14,7 @@ classifiers = [
 
 dependencies = [
     "numpy>=2.0.0",
+    "scipy>=1.11",
 ]
 
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
@@ -34,7 +35,7 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 dev = [
     "loguru==0.7.3",
     "mosek==11.2.2",
-    "marimo==0.23.9",
+    "marimo==0.23.11",
     "pandas==3.0.3",
 ]
 test = [

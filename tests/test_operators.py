@@ -112,6 +112,33 @@ class TestDenseCovariance:
         cov = DenseCovariance(np.zeros((2, 2)))
         assert cov.rcond_free(np.array([True, True])) == 0.0
 
+    def test_rcond_floor_cleared_well_conditioned_fast_path(self, random_spd):
+        """A well-conditioned matrix clears the floor via the cheap Cholesky estimate."""
+        matrix, _, _ = random_spd
+        assert DenseCovariance(matrix).rcond_floor_cleared(1e-12) is True
+
+    def test_rcond_floor_cleared_non_positive_definite(self):
+        """A symmetric indefinite matrix (Cholesky fails) is below any positive floor."""
+        assert DenseCovariance(np.diag([1.0, -1.0])).rcond_floor_cleared(1e-12) is False
+
+    def test_rcond_floor_cleared_borderline_above_floor(self):
+        """An estimate within the margin of the floor defers to the exact rcond (clears)."""
+        # rcond 5e-11: below margin*floor (1e-9) so it falls back, but >= the 1e-12 floor.
+        assert DenseCovariance(np.diag([1.0, 5e-11])).rcond_floor_cleared(1e-12) is True
+
+    def test_rcond_floor_cleared_borderline_below_floor(self):
+        """An estimate within the margin of the floor defers to the exact rcond (fails)."""
+        # rcond 5e-13: positive-definite so Cholesky succeeds, but below the 1e-12 floor.
+        assert DenseCovariance(np.diag([1.0, 5e-13])).rcond_floor_cleared(1e-12) is False
+
+    @pytest.mark.parametrize("diagonal", [[1.0, 1.0], [1.0, 1e-6], [1.0, 5e-11], [1.0, 5e-13], [2.0, 0.0]])
+    def test_rcond_floor_cleared_matches_exact(self, diagonal):
+        """The fast boolean equals the exact full-mask ``rcond_free`` comparison everywhere."""
+        cov = DenseCovariance(np.diag(diagonal))
+        full = np.ones(len(diagonal), dtype=bool)
+        for floor in (1e-12, 1e-9, 1e-3):
+            assert cov.rcond_floor_cleared(floor) == (cov.rcond_free(full) >= floor)
+
     def test_rejects_non_square(self):
         """A non-square matrix is rejected."""
         with pytest.raises(ValueError, match="square"):
@@ -729,3 +756,12 @@ class TestGramCovariance:
         # The solve allocates a few copies of the (T, n) data, never an n x n block.
         assert peak < 4 * 8 * t * n
         assert peak < 0.2 * 8 * n * n  # far below a single dense n x n matrix
+
+
+def test_dense_solve_free_falls_back_when_not_positive_definite():
+    """A symmetric indefinite block makes Cholesky fail; the LU fallback still solves it."""
+    matrix = np.array([[1.0, 2.0], [2.0, 1.0]])  # symmetric; eigenvalues 3 and -1 (indefinite)
+    cov = DenseCovariance(matrix)
+    free = np.array([True, True])
+    rhs = np.array([1.0, -1.0])
+    np.testing.assert_allclose(cov.solve_free(free, rhs), np.linalg.solve(matrix, rhs))

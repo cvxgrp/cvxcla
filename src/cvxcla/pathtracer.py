@@ -23,6 +23,7 @@ by the same ``trace`` here.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
@@ -80,35 +81,98 @@ class ParametricProblem(Protocol):
         ...  # pragma: no cover
 
 
+class InequalityConstrained:
+    """Mixin: normalise optional ``G x <= h`` inequality rows for a parametric problem.
+
+    Both the CLA (``G w <= h`` exposure caps) and the LASSO (``G beta <= h``) carry an
+    optional inequality system through the same bordered machinery, so normalising the
+    raw ``g``/``h`` inputs -- and counting the resulting path-length coordinates -- lives
+    here once rather than being duplicated in each class. A concrete problem supplies the
+    ``g``/``h`` inputs (``None`` when there are no inequality rows) and a ``dimension``.
+    """
+
+    g: NDArray[np.float64] | None
+    h: NDArray[np.float64] | None
+
+    @property
+    def dimension(self) -> int:
+        """Number of coordinates ``n``; provided by the concrete problem class."""
+        raise NotImplementedError  # pragma: no cover
+
+    @cached_property
+    def g_matrix(self) -> NDArray[np.float64]:
+        """Inequality matrix ``G`` of ``G x <= h`` as a ``(p, n)`` float array.
+
+        ``None`` is normalised to an empty ``(0, n)`` matrix, so the inequality
+        machinery is a no-op and the trace reduces exactly to the unconstrained
+        problem. This is the single point where the inequality input is normalised.
+        """
+        if self.g is None:
+            return np.zeros((0, self.dimension))
+        return np.atleast_2d(np.asarray(self.g, dtype=np.float64))
+
+    @cached_property
+    def h_vector(self) -> NDArray[np.float64]:
+        """Inequality right-hand side ``h`` of ``G x <= h`` as a ``(p,)`` float array (empty if none)."""
+        if self.h is None:
+            return np.zeros(0)
+        return np.atleast_1d(np.asarray(self.h, dtype=np.float64))
+
+    @property
+    def event_dimension(self) -> int:
+        """Coordinate count for the tracer's path-length safety cap: ``n`` + ``p`` rows.
+
+        Each turning point fixes the activity of exactly one coordinate -- a box bound
+        (or LASSO coefficient) or an inequality row of ``G x <= h`` -- so the iteration
+        cap scales with ``n + p`` rather than ``n`` alone. With no inequality rows this
+        is just ``n``.
+        """
+        return self.dimension + int(self.g_matrix.shape[0])
+
+
 def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tuple[int, int, float] | None:
     """Pick the next breakpoint from the event matrix, or ``None`` to stop.
 
     The current segment is valid only for ``lambda`` at or below the current value
     (the path is traced with non-increasing ``lambda``), so ratios above it are
     spurious crossings outside the segment and are discarded; if none remain the
-    trace is complete. Among events tied (within ``tol``) for the largest valid
-    ratio, a Bland-style lowest-``(coordinate, event type)`` rule makes the choice
-    deterministic and prevents cycling on degenerate problems.
+    trace is complete. Among events tied for the largest valid ratio, a Bland-style
+    lowest-``(coordinate, event type)`` rule makes the choice deterministic and
+    prevents cycling on degenerate problems.
+
+    Two events are "the same" breakpoint only when their ``lambda`` values agree to
+    floating-point scale, so the validity window and the tie-break use a tolerance
+    *relative* to the ``lambda`` magnitude. A fixed absolute tolerance mis-ranks the
+    densely spaced breakpoints of large paths: their spacing shrinks with the problem
+    size, so an absolute window eventually merges genuinely distinct events, picks the
+    wrong one by the tie-break, and lets ``lambda`` step backwards. The caller's
+    ``tol`` is treated as an upper bound on this relative rate; event ordering needs a
+    roundoff-scale window regardless of the coarser ``tol`` used elsewhere (e.g. to
+    classify a weight as sitting on a bound). Finally, the chosen ``lambda`` is clamped
+    below the current value, so roundoff in the segment solve can never make a
+    breakpoint appear above it.
 
     Args:
         l_mat: The ``(n, k)`` matrix of candidate critical ``lambda`` values.
         lam: The current (upper) ``lambda`` bound on valid events.
-        tol: Tolerance for the validity window and the tie-break.
+        tol: Upper bound on the relative event-ordering tolerance.
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
         valid event remains.
     """
     l_mat = l_mat.copy()  # do not mutate the caller's matrix
-    l_mat[l_mat > lam + tol] = -np.inf  # pragma: no mutate
+    rate = min(tol, 1e-10)  # roundoff-scale relative window; tol is only an upper bound
+    l_mat[l_mat > lam + rate * max(1.0, abs(lam))] = -np.inf  # pragma: no mutate
 
     lam_max = np.max(l_mat)
     if lam_max < 0:  # pragma: no mutate
         return None
 
-    tied = np.argwhere(l_mat >= lam_max - tol)  # pragma: no mutate
+    tied = np.argwhere(l_mat >= lam_max - rate * max(1.0, abs(lam_max)))  # pragma: no mutate
     sec, direction = tied[0]
-    return int(sec), int(direction), float(l_mat[sec, direction])
+    # lambda is non-increasing along the path: clamp away any roundoff overshoot.
+    return int(sec), int(direction), float(min(lam, l_mat[sec, direction]))
 
 
 def trace(problem: ParametricProblem) -> None:
@@ -130,8 +194,12 @@ def trace(problem: ParametricProblem) -> None:
     lam, state = problem.begin()
 
     # Safety bound: far above any valid path length; exceeding it means the event
-    # loop failed to terminate, so we fail loudly rather than hang.
-    max_iterations = 100 * (problem.dimension + 1)  # pragma: no mutate
+    # loop failed to terminate, so we fail loudly rather than hang. Each step fixes
+    # the activity of one coordinate -- a box bound (n of them) or an inequality row
+    # (p of them) -- so the bound scales with the total n + p, not n alone; a problem
+    # that exposes only ``dimension`` (no inequality rows) falls back to n.
+    path_coords = getattr(problem, "event_dimension", problem.dimension)  # pragma: no mutate
+    max_iterations = 100 * (path_coords + 1)  # pragma: no mutate
     iterations = 0  # pragma: no mutate
 
     while True:  # pragma: no mutate

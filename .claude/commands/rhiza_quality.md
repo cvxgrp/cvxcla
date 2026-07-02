@@ -17,6 +17,13 @@ failures surface before the slow test suite — and collect results:
 
 Guidelines:
 
+- Run each gate as a single, bare `make <target>` command — one Bash call per
+  gate. Do **not** pipe (`| tee`, `| tail`), redirect (`2>&1 >`), chain
+  (`make fmt && make typecheck`), or prefix with `cd`. Bare `make <target>`
+  invocations match the allow-listed `Bash(make *)` rule and run without a
+  permission prompt; compound or piped commands do not and will prompt on every
+  gate. Read the full output directly from each call rather than capturing it to
+  a file.
 - Run all gates even after an early failure, so the full picture is visible
   rather than stopping at the first red.
 - If something fails, show the relevant output, diagnose the root cause, and
@@ -73,8 +80,19 @@ the specific file(s)/lines or config to change, and a crisp acceptance criterion
 ("done when…"). Keep them in-scope (locally-owned, per the scoping rule above) —
 flag anything Rhiza-owned as upstream rather than listing it as a local action.
 Order them by leverage (biggest score gain for least effort first). This is a
-list of recommendations only — do not create GitHub issues or change code unless
-I explicitly ask.
+list of recommendations only — do not change code unless I explicitly ask.
+
+Then offer to file the findings as issues — using a menu, not a free-text prompt.
+Present the actionable findings as a multi-select menu (the AskUserQuestion tool
+with `multiSelect: true`), one option per finding labelled by its title, so I can
+pick exactly which ones to file — including none. Create nothing without an
+explicit selection. For each finding I select, detect the hosting platform from
+the git remote (`git remote get-url origin`) and create one issue with the
+matching CLI — GitHub → `gh issue create`, GitLab → `glab issue create` (skip and
+say so if the relevant CLI is unavailable or unauthenticated). Make each issue
+self-contained: title from the finding, and a body carrying the subcategory, the
+current→target score, the specific file(s)/lines or config to change, and the
+"done when…" acceptance criterion. Report back the created issue URLs.
 
 If everything passes, say so plainly — but still produce the 1–10 subcategory
 marks. Do not fix anything unless I ask — this command only assesses.
