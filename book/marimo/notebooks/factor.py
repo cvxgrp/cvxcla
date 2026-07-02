@@ -68,7 +68,8 @@ def clip_covariance(returns):
 
     Eigenvalues above the MP upper edge are kept; the remainder are replaced
     by their average, preserving the trace. The result is the
-    diagonal-plus-low-rank model d * I + U @ diag(delta) @ U.T.
+    diagonal-plus-low-rank model d * I + U @ diag(delta) @ U.T. Returns the
+    operator and the number of factors kept.
     """
     t, n = returns.shape
     sample = returns.T @ returns / t
@@ -83,7 +84,7 @@ def clip_covariance(returns):
 
     u = eigenvectors[:, keep]
     delta = eigenvalues[keep] - d_bar
-    return FactorCovariance(d=np.full(n, d_bar), u=u, delta=delta)
+    return FactorCovariance(d=np.full(n, d_bar), u=u, delta=delta), int(keep.sum())
 
 
 @app.cell
@@ -91,8 +92,8 @@ def _(n_slider):
     rng = np.random.default_rng(42)
     n = n_slider.value
     returns = simulate_returns(rng, t=2 * n, n=n)
-    covariance = clip_covariance(returns)
-    mo.md(f"Kept **{covariance.k}** factors out of {n} sample eigenvalues.")
+    covariance, n_factors = clip_covariance(returns)
+    mo.md(f"Kept **{n_factors}** factors out of {n} sample eigenvalues.")
     return covariance, n, rng
 
 
