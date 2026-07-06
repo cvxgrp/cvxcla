@@ -12,13 +12,14 @@ from functools import cached_property
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
+from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     from .builder import ProblemBuilder
 
 from .first import first_vertex_lp, init_algo
-from .operators import DenseCovariance, QuadraticForm, bordered_solve
+from .operators import DenseCovariance, QuadraticForm, bordered_solve, cross
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
@@ -166,23 +167,16 @@ class CLA(InequalityConstrained):
         :meth:`_emit` is provably never triggered. We then skip it, paying one
         conditioning test here instead of one at every turning point (the latter
         is a full eigendecomposition of the free block, as costly as the KKT solve,
-        so it otherwise dominates the trace). The up-front test itself goes through
-        :meth:`~cvxcla.operators.QuadraticForm.rcond_floor_cleared`, which the dense
-        backend settles with a Cholesky factorisation plus a condition estimate
-        rather than its own full eigendecomposition.
+        so it otherwise dominates the trace). The up-front test computes the
+        reciprocal condition number of the full covariance once, via
+        :meth:`~cvx.linalg.SymmetricOperator.rcond_free`.
 
         When the full covariance is itself near-singular (for example a sample
         covariance from fewer observations than assets) this is ``False`` and the
         per-step guard in :meth:`_emit` runs unchanged, preserving the degeneracy
         diagnosis exactly.
         """
-        # ``rcond_floor_cleared`` is an optional fast-path hook (the dense backend
-        # answers it with a Cholesky factorisation plus a condition estimate). A
-        # backend that does not provide it falls back to the exact full-mask rcond.
-        cleared = getattr(self.covariance_operator, "rcond_floor_cleared", None)
-        if cleared is not None:
-            return bool(cleared(_RCOND_FLOOR))
-        full = np.ones(self.dimension, dtype=bool)
+        full = np.arange(self.dimension)
         return self.covariance_operator.rcond_free(full) >= _RCOND_FLOOR
 
     def __post_init__(self) -> None:
@@ -387,7 +381,7 @@ class CLA(InequalityConstrained):
             cov,
             free_in,
             c_free,
-            -cov.cross(free_in, fixed_weights),
+            -cross(cov, free_in, fixed_weights),
             self.mean[free_in],
             d - c[:, out] @ fixed_weights[out],
             np.zeros(c.shape[0]),
@@ -655,7 +649,7 @@ class CLA(InequalityConstrained):
         # the costly per-step rcond. Only a near-singular full covariance needs the
         # check, and there it runs exactly as before.
         if not self._free_blocks_well_conditioned:
-            rcond = self.covariance_operator.rcond_free(free)
+            rcond = self.covariance_operator.rcond_free(np.flatnonzero(free))
             if rcond < _RCOND_FLOOR:
                 n_free = int(np.count_nonzero(free))
                 msg = (
@@ -761,11 +755,11 @@ class CLA(InequalityConstrained):
         lower, upper = self.lower_bounds, self.upper_bounds
         c = np.vstack([self.a, self.g_matrix[active_ineq]])
         d = np.concatenate([self.b, self.h_vector[active_ineq]])
-        gram = c @ c.T
+        affine = AffineProjection(c, d)
         projected = weights
         for _ in range(100):
             projected = np.clip(projected, lower, upper)
-            projected = projected - c.T @ np.linalg.solve(gram, c @ projected - d)
+            projected = affine.project(projected)
         return np.clip(projected, lower, upper)
 
     @property
