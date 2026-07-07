@@ -17,7 +17,7 @@ The pin lives in `.rhiza/template.yml`:
 
 ```yaml
 repository: "jebel-quant/rhiza"
-ref: "v0.19.9"
+ref: "v1.0.1"
 profiles:
   - github-project
 ```
@@ -47,9 +47,11 @@ Synced from the template — treat as read-only. Highlights from
 ### Locally owned (edit freely — this is the actual project)
 
 - `src/cvxcla/` — the library. Modules: `cla.py` (the CLA solver), `lasso.py`,
-  the `operators/` package (`_core.py`, `dense.py`, `factor.py`, `gram.py` —
-  the covariance/quadratic-form backends), `builder.py`, `types.py`,
-  `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
+  the `operators/` package (`_core.py` — the `QuadraticForm`/`CovarianceOperator`
+  protocols plus the `cross`/`bordered_solve` helpers; `builders.py` — factory
+  functions that wrap the `cvx.linalg` operators, `DenseOperator`/`GramOperator`/
+  `FactorOperator`, as covariance/quadratic-form backends), `builder.py`,
+  `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
   fuzz `tests/fuzz/`, benchmarks `tests/benchmarks/`). **Note:**
   `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.

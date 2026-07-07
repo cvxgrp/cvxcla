@@ -163,39 +163,67 @@ class Lasso(InequalityConstrained):
                 constraint shapes are inconsistent, or any ``h`` entry is not
                 strictly positive (which would make ``beta = 0`` infeasible).
         """
-        operator_mode = self.quad_form is not None or self.linear is not None
-        if operator_mode:
-            if self.quad_form is None or self.linear is None:
-                msg = "quad_form and linear (X^T y) must be provided together"
-                raise ValueError(msg)
-            if self.x is not None or self.y is not None:
-                msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
-                raise ValueError(msg)
-            self.linear = np.asarray(self.linear, dtype=np.float64)
-            if self.linear.ndim != 1:
-                msg = f"linear must be the 1d vector X^T y, got shape {self.linear.shape}"
-                raise ValueError(msg)
+        if self.quad_form is not None or self.linear is not None:
+            self._validate_operator_inputs()
         else:
-            if self.x is None or self.y is None:
-                msg = "provide a design (x, y) or an operator (quad_form, linear)"
-                raise ValueError(msg)
-            if self.x.ndim != 2:
-                msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
-                raise ValueError(msg)
-            if self.y.shape != (self.x.shape[0],):
-                msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
-                raise ValueError(msg)
-        if self.g is not None or self.h is not None:
-            if self.g is None or self.h is None:
-                msg = "g and h must be provided together"
-                raise ValueError(msg)
-            if self.g.shape != (self.h.shape[0], self.dimension):
-                msg = f"g must have shape ({self.h.shape[0]}, {self.dimension}), got {self.g.shape}"
-                raise ValueError(msg)
-            if np.any(self.h <= self.tol):
-                msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
-                raise ValueError(msg)
+            self._validate_design_inputs()
+        self._validate_constraints()
         trace(self)
+
+    def _validate_operator_inputs(self) -> None:
+        """Validate the operator-mode inputs ``quad_form`` and ``linear`` (``X^T y``).
+
+        Raises:
+            ValueError: If only one of ``quad_form``/``linear`` is given, a design
+                ``(x, y)`` is also supplied, or ``linear`` is not the 1d ``X^T y``.
+        """
+        if self.quad_form is None or self.linear is None:
+            msg = "quad_form and linear (X^T y) must be provided together"
+            raise ValueError(msg)
+        if self.x is not None or self.y is not None:
+            msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
+            raise ValueError(msg)
+        self.linear = np.asarray(self.linear, dtype=np.float64)
+        if self.linear.ndim != 1:
+            msg = f"linear must be the 1d vector X^T y, got shape {self.linear.shape}"
+            raise ValueError(msg)
+
+    def _validate_design_inputs(self) -> None:
+        """Validate the dense-design inputs ``x`` and ``y``.
+
+        Raises:
+            ValueError: If ``x``/``y`` are missing, ``x`` is not a 2d design matrix,
+                or ``y``'s length does not match ``x``'s row count.
+        """
+        if self.x is None or self.y is None:
+            msg = "provide a design (x, y) or an operator (quad_form, linear)"
+            raise ValueError(msg)
+        if self.x.ndim != 2:
+            msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
+            raise ValueError(msg)
+        if self.y.shape != (self.x.shape[0],):
+            msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
+            raise ValueError(msg)
+
+    def _validate_constraints(self) -> None:
+        """Validate the optional inequality constraints ``G beta <= h``.
+
+        Raises:
+            ValueError: If only one of ``g``/``h`` is given, their shapes are
+                inconsistent with the problem dimension, or any ``h`` entry is not
+                strictly positive (which would make ``beta = 0`` infeasible).
+        """
+        if self.g is None and self.h is None:
+            return
+        if self.g is None or self.h is None:
+            msg = "g and h must be provided together"
+            raise ValueError(msg)
+        if self.g.shape != (self.h.shape[0], self.dimension):
+            msg = f"g must have shape ({self.h.shape[0]}, {self.dimension}), got {self.g.shape}"
+            raise ValueError(msg)
+        if np.any(self.h <= self.tol):
+            msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
+            raise ValueError(msg)
 
     @classmethod
     def problem(cls, x: NDArray[np.float64], y: NDArray[np.float64]) -> LassoBuilder:
@@ -212,6 +240,10 @@ class Lasso(InequalityConstrained):
         Returns:
             A :class:`cvxcla.builder.LassoBuilder`.
         """
+        # Deferred (function-local) import on purpose: ``builder`` imports ``Lasso`` at
+        # module level, so importing it at the top here would form a real import cycle.
+        # This factory only needs ``LassoBuilder`` at call time, so the import is safe to
+        # defer. See also the ``TYPE_CHECKING`` import above and ``CLA.problem``.
         from .builder import LassoBuilder
 
         return LassoBuilder(x, y)

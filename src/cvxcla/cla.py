@@ -132,6 +132,10 @@ class CLA(InequalityConstrained):
         Returns:
             A ``ProblemBuilder`` ready to accept constraints.
         """
+        # Deferred (function-local) import on purpose: ``builder`` imports ``CLA`` at
+        # module level, so importing it at the top here would form a real import cycle.
+        # This factory only needs ``ProblemBuilder`` at call time, so the import is safe
+        # to defer. See also the ``TYPE_CHECKING`` import above and ``Lasso.problem``.
         from .builder import ProblemBuilder
 
         return ProblemBuilder(mean, covariance)
