@@ -12,14 +12,16 @@ from functools import cached_property
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
-from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     from .builder import ProblemBuilder
 
+from ._events import event_ratios, ineq_event_ratios
+from ._kkt import active_set, solve_kkt
+from ._projection import project_feasible
 from .first import first_vertex_lp, init_algo
-from .operators import DenseCovariance, QuadraticForm, bordered_solve, cross
+from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
 
@@ -44,7 +46,7 @@ class _Segment(NamedTuple):
     inequality row; meaningful for *active* rows, which release when the
     multiplier crosses zero) and the active-row mask ``active_ineq``. The slacks
     that drive an *inactive* row becoming active are recomputed from
-    ``r_alpha``/``r_beta`` directly in ``_ineq_event_ratios``.
+    ``r_alpha``/``r_beta`` directly in :func:`cvxcla._events.ineq_event_ratios`.
     """
 
     r_alpha: NDArray[np.float64]
@@ -233,8 +235,20 @@ class CLA(InequalityConstrained):
 
     def segment(self, state: TurningPoint) -> _Segment:
         """Solve the reduced KKT system for the critical-line segment at ``state``."""
-        at_upper, at_lower, free_in, fixed_weights = self._active_set(state)
-        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = self._solve_kkt(free_in, fixed_weights, state.active_ineq)
+        at_upper, at_lower, free_in, fixed_weights = active_set(
+            state.free, state.weights, self.lower_bounds, self.upper_bounds, self.tol
+        )
+        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+            self.covariance_operator,
+            self.mean,
+            self.a,
+            self.b,
+            self.g_matrix,
+            self.h_vector,
+            free_in,
+            fixed_weights,
+            state.active_ineq,
+        )
         return _Segment(
             r_alpha, r_beta, gamma, delta, at_upper, at_lower, free_in, state.active_ineq, eta_alpha, eta_beta
         )
@@ -252,7 +266,7 @@ class CLA(InequalityConstrained):
         does not need it here because ``segment`` already bundles the active-set
         masks derived from it.
         """
-        box = self._event_ratios(
+        box = event_ratios(
             segment.r_alpha,
             segment.r_beta,
             segment.gamma,
@@ -260,8 +274,18 @@ class CLA(InequalityConstrained):
             segment.free_in,
             segment.at_upper,
             segment.at_lower,
+            self.lower_bounds,
+            self.upper_bounds,
         )
-        ineq = self._ineq_event_ratios(segment)
+        ineq = ineq_event_ratios(
+            segment.r_alpha,
+            segment.r_beta,
+            segment.eta_alpha,
+            segment.eta_beta,
+            segment.active_ineq,
+            self.g_matrix,
+            self.h_vector,
+        )
         return np.vstack([box, ineq])
 
     def step(self, state: TurningPoint, segment: _Segment, sec: int, direction: int, lam: float) -> TurningPoint:
@@ -289,231 +313,6 @@ class CLA(InequalityConstrained):
     def finish(self, state: TurningPoint, segment: _Segment) -> None:
         """Emit the minimum-variance endpoint at ``lambda = 0``."""
         self._emit(0.0, segment.r_alpha, state.free, state.active_ineq)
-
-    def _active_set(
-        self, last: TurningPoint
-    ) -> tuple[NDArray[np.bool_], NDArray[np.bool_], NDArray[np.bool_], NDArray[np.float64]]:
-        """Identify the active set at ``last`` and the weights pinned to bounds.
-
-        A blocked asset sitting (to tolerance) on a bound is held fixed there and
-        excluded from the reduced KKT solve; every other asset is *in*. Returns
-        the upper-bound mask, the lower-bound mask, the in-set mask, and the
-        full-length vector of weights fixed at their bounds.
-
-        Args:
-            last: The most recent turning point, whose free set and weights define
-                the active set.
-
-        Returns:
-            ``(at_upper, at_lower, free_in, fixed_weights)``.
-
-        Raises:
-            RuntimeError: If every asset is blocked, which makes the reduced
-                system singular.
-        """
-        blocked = ~last.free
-        if np.all(blocked):
-            msg = "All variables cannot be blocked"
-            raise RuntimeError(msg)
-
-        at_upper = blocked & (np.abs(last.weights - self.upper_bounds) <= self.tol)  # pragma: no mutate
-        at_lower = blocked & (np.abs(last.weights - self.lower_bounds) <= self.tol)  # pragma: no mutate
-        free_in = ~(at_upper | at_lower)
-
-        fixed_weights = np.zeros(len(self.mean))
-        fixed_weights[at_upper] = self.upper_bounds[at_upper]
-        fixed_weights[at_lower] = self.lower_bounds[at_lower]
-        return at_upper, at_lower, free_in, fixed_weights
-
-    def _solve_kkt(
-        self,
-        free_in: NDArray[np.bool_],
-        fixed_weights: NDArray[np.float64],
-        active_ineq: NDArray[np.bool_] | None = None,
-    ) -> tuple[
-        NDArray[np.float64],
-        NDArray[np.float64],
-        NDArray[np.float64],
-        NDArray[np.float64],
-        NDArray[np.float64],
-        NDArray[np.float64],
-    ]:
-        """Solve the reduced KKT system for the current critical-line segment.
-
-        Block elimination over the *stacked* constraint matrix ``C = [A ; G_S]``,
-        where ``G_S`` are the currently-active inequality rows held at equality.
-        Because an active inequality row enters the stationarity/feasibility system
-        exactly as an equality row does, the same elimination handles both: a
-        multi-right-hand-side solve against the free covariance block ``Sigma_FF``
-        (via the backend, so structured covariances never materialise an
-        ``n x n`` matrix) feeds an ``(m + |S|) x (m + |S|)`` Schur complement
-        ``C_F Sigma_FF^{-1} C_F.T``. With no active inequality rows this is the
-        plain equality solve.
-
-        Args:
-            free_in: Boolean mask of the assets in the reduced solve.
-            fixed_weights: Full-length weights of the assets held at their bounds.
-            active_ineq: Boolean mask (length ``p``) of the active inequality rows;
-                ``None`` means no inequality rows.
-
-        Returns:
-            ``(r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta)``: the affine
-            segment ``w(lam) = r_alpha + lam * r_beta``, the box-multiplier
-            gradients ``gamma``/``delta`` that drive the leave-a-bound events, and
-            the affine inequality multipliers ``eta_alpha + lam * eta_beta``
-            (length ``p``, non-zero only on active rows) that drive the
-            release-a-row events.
-        """
-        if active_ineq is None:
-            active_ineq = np.zeros(self.g_matrix.shape[0], dtype=bool)
-        m = self.a.shape[0]
-        ns = len(self.mean)
-        cov = self.covariance_operator
-        out = ~free_in
-        # Stack the active inequality rows beneath the equality rows; the active
-        # rows are held at equality (g_i w = h_i), so C/d is the equality system
-        # of the reduced QP at this vertex.
-        c = np.vstack([self.a, self.g_matrix[active_ineq]])
-        d = np.concatenate([self.b, self.h_vector[active_ineq]])
-        c_free = c[:, free_in]
-
-        # The reduced KKT system is the shared bordered solve: the constant system
-        # carries the blocked-weight shift -Sigma_FB w_B and the reduced constraint
-        # right-hand side d - C_B w_B; the slope system carries the mean with a zero
-        # constraint right-hand side (A r_beta = 0).
-        x_alpha, x_beta, nu_alpha, nu_beta = bordered_solve(
-            cov,
-            free_in,
-            c_free,
-            -cross(cov, free_in, fixed_weights),
-            self.mean[free_in],
-            d - c[:, out] @ fixed_weights[out],
-            np.zeros(c.shape[0]),
-        )
-
-        r_alpha = fixed_weights.copy()
-        r_alpha[free_in] = x_alpha
-        r_beta = np.zeros(ns)
-        r_beta[free_in] = x_beta
-
-        gamma = cov.matvec(r_alpha) + c.T @ nu_alpha
-        delta = cov.matvec(r_beta) + c.T @ nu_beta - self.mean
-
-        # The tail of the stacked multiplier is the inequality multiplier eta(lam)
-        # = eta_alpha + lam eta_beta, scattered back to full length p (zero on the
-        # inactive rows, which have no release event).
-        eta_alpha = np.zeros(self.g_matrix.shape[0])
-        eta_beta = np.zeros(self.g_matrix.shape[0])
-        eta_alpha[active_ineq] = nu_alpha[m:]
-        eta_beta[active_ineq] = nu_beta[m:]
-        return r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta
-
-    def _event_ratios(
-        self,
-        r_alpha: NDArray[np.float64],
-        r_beta: NDArray[np.float64],
-        gamma: NDArray[np.float64],
-        delta: NDArray[np.float64],
-        free_in: NDArray[np.bool_],
-        at_upper: NDArray[np.bool_],
-        at_lower: NDArray[np.bool_],
-    ) -> NDArray[np.float64]:
-        """Critical lambda for every candidate event, as an ``(n, 4)`` matrix.
-
-        Along the segment ``w(lam) = r_alpha + lam * r_beta`` a free weight can
-        reach a box bound (columns 0/1, "moves to a bound") and a blocked weight's
-        multiplier can change sign so it re-enters the free set (columns 2/3,
-        "leaves a bound"). Entries with no event are ``-inf``.
-
-        A free weight moves with even a tiny slope, so given a long enough lam
-        range it still crosses a bound; filtering slopes at ``self.tol`` would
-        miss such crossings and let weights drift out of bounds. Only slopes at
-        floating-point noise level are excluded: below ``sqrt(machine epsilon)`` a
-        slope is indistinguishable from solve noise, and the huge ratios it would
-        produce only amplify rounding errors.
-
-        Args:
-            r_alpha: Segment intercept ``w(0)``.
-            r_beta: Segment slope ``dw/dlam``.
-            gamma: Multiplier gradient for the alpha system.
-            delta: Multiplier gradient for the beta system.
-            free_in: Mask of assets in the reduced solve.
-            at_upper: Mask of assets blocked at their upper bound.
-            at_lower: Mask of assets blocked at their lower bound.
-
-        Returns:
-            The ``(n, 4)`` matrix of critical lambdas.
-        """
-        ns = len(self.mean)
-        eps = np.sqrt(np.finfo(np.float64).eps)
-        # 4 columns = the 4 event types; extra unused columns are harmless.
-        l_mat = np.full((ns, 4), -np.inf)  # pragma: no mutate
-
-        # Precompute each event mask exactly once. The <,> vs <=,>= choice at
-        # the eps boundary is numerically irrelevant — a slope/derivative
-        # landing exactly on +/-sqrt(machine-eps) never occurs with real
-        # data — so those boundary comparisons are marked no-mutate.
-        beta_down = free_in & (r_beta < -eps)  # pragma: no mutate
-        beta_up = free_in & (r_beta > +eps)  # pragma: no mutate
-        delta_down = at_upper & (delta < -eps)  # pragma: no mutate
-        delta_up = at_lower & (delta > +eps)  # pragma: no mutate
-
-        # Columns 0,1 are "moves to a bound" (free->blocked) and 2,3 are
-        # "leaves a bound" (blocked->free); the next-free update only tests
-        # dirchg >= 2, so swapping a column *within* a group (0<->1 or 2<->3) is
-        # behaviourally identical and marked no-mutate. Crossing the 1<->2 group
-        # boundary IS exercised by the frontier tests.
-        l_mat[beta_down, 0] = (  # pragma: no mutate
-            self.upper_bounds[beta_down] - r_alpha[beta_down]
-        ) / r_beta[beta_down]
-        l_mat[beta_up, 1] = (self.lower_bounds[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
-        l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]  # pragma: no mutate
-        l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
-        return l_mat
-
-    def _ineq_event_ratios(self, segment: _Segment) -> NDArray[np.float64]:
-        """Critical lambda for every inequality-row event, as a ``(p, 4)`` matrix.
-
-        The row analogue of :meth:`_event_ratios`. Along the segment an *inactive*
-        row ``i`` becomes active when its slack ``s_i(lam) = g_i w(lam) - h_i``
-        rises to zero from the feasible (negative) side (column 0); an *active*
-        row releases when its multiplier ``eta_i(lam)`` falls to zero (column 1).
-        Both are affine in ``lam``, so the critical lambda is the same
-        ``-intercept / slope`` ratio used for the box events, with the same
-        ``sqrt(machine eps)`` slope floor: a slope below noise level is
-        indistinguishable from solve round-off and would only produce a huge,
-        rounding-dominated ratio. Entries with no event are ``-inf``. Columns 2
-        and 3 are unused (kept so the block stacks onto the ``(n, 4)`` box block).
-
-        Args:
-            segment: The current segment, carrying the affine weights, the
-                inequality multipliers, and the active-row mask.
-
-        Returns:
-            The ``(p, 4)`` matrix of critical lambdas.
-        """
-        p = self.g_matrix.shape[0]
-        l_mat = np.full((p, 4), -np.inf)  # pragma: no mutate
-        if p == 0:
-            return l_mat
-
-        eps = np.sqrt(np.finfo(np.float64).eps)
-        active = segment.active_ineq
-        inactive = ~active
-
-        # Enter: an inactive row's slack rises to zero. The slope/intercept split
-        # comes straight from the affine weights; the slope sign mirrors the box
-        # "moves to a bound" event (decreasing lam must raise the slack).
-        s_alpha = self.g_matrix @ segment.r_alpha - self.h_vector
-        s_beta = self.g_matrix @ segment.r_beta
-        enter = inactive & (s_beta < -eps)  # pragma: no mutate
-        l_mat[enter, 0] = -s_alpha[enter] / s_beta[enter]
-
-        # Release: an active row's non-negative multiplier falls back to zero,
-        # the row analogue of a blocked multiplier changing sign.
-        release = active & (segment.eta_beta > +eps)  # pragma: no mutate
-        l_mat[release, 1] = -segment.eta_alpha[release] / segment.eta_beta[release]
-        return l_mat
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
@@ -599,8 +398,9 @@ class CLA(InequalityConstrained):
         Orchestrates the three steps taken at every turning point: refuse the point
         if the free-asset block is numerically singular (see
         :meth:`_guard_degeneracy`); project the candidate back onto the feasible
-        set to clear sub-tolerance round-off (see :meth:`_project_feasible`); then
-        validate and store it (see :meth:`_append`).
+        set to clear sub-tolerance round-off (see
+        :func:`cvxcla._projection.project_feasible`); then validate and store it
+        (see :meth:`_append`).
 
         On tie-heavy or near-degenerate problems (a short, near-rank-deficient
         sample covariance, duplicated assets, or many coincident events) accumulated
@@ -612,7 +412,16 @@ class CLA(InequalityConstrained):
         the well-posed turning points that are already feasible.
         """
         self._guard_degeneracy(lamb, free)
-        weights = self._project_feasible(weights, active_ineq)
+        weights = project_feasible(
+            weights,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.a,
+            self.b,
+            self.g_matrix,
+            self.h_vector,
+            active_ineq,
+        )
         self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq))
 
     def _guard_degeneracy(self, lamb: float, free: NDArray[np.bool_]) -> None:
@@ -620,7 +429,8 @@ class CLA(InequalityConstrained):
 
         We distinguish two regimes by the conditioning of the free-asset block.
         While that block stays numerically full rank its solve is reliable and any
-        box violation is round-off, which :meth:`_project_feasible` clears. Once the
+        box violation is round-off, which
+        :func:`cvxcla._projection.project_feasible` clears. Once the
         free set grows past the covariance rank the block is numerically singular
         and its solve is unreliable; whatever weights it produces (feasible or not)
         cannot be trusted, so we refuse and raise an actionable diagnosis instead of
@@ -669,102 +479,6 @@ class CLA(InequalityConstrained):
                     "(diagonal-plus-low-rank), which is positive definite by construction."
                 )
                 raise ValueError(msg)
-
-    def _project_feasible(
-        self, weights: NDArray[np.float64], active_ineq: NDArray[np.bool_] | None = None
-    ) -> NDArray[np.float64]:
-        """Project ``weights`` onto the feasible region, clearing round-off.
-
-        On tie-heavy or near-degenerate problems accumulated round-off can place a
-        candidate a hair outside its box at a well-conditioned vertex. Projecting it
-        back onto ``{w : lower <= w <= upper, C w = d}`` clears that round-off and
-        lets the trace continue. The projection is a strict no-op for well-posed,
-        already-feasible turning points (the common case), so it does not perturb
-        the exact frontier.
-
-        Dispatches to the closed-form capped-simplex projection for the canonical
-        all-ones budget with no active inequality row (see
-        :meth:`_project_capped_simplex`), and to the general alternating projection
-        otherwise (see :meth:`_project_alternating`).
-
-        Args:
-            weights: The candidate weight vector to project.
-            active_ineq: Boolean mask (length ``p``) of the active inequality rows;
-                ``None`` means no inequality rows.
-
-        Returns:
-            The projected weight vector, feasible to the box and the constraints.
-        """
-        if active_ineq is None:
-            active_ineq = np.zeros(self.g_matrix.shape[0], dtype=bool)
-        lower, upper = self.lower_bounds, self.upper_bounds
-        # Well-posed turning points are already strictly feasible: return them
-        # unchanged so the projection never perturbs the exact frontier.
-        if np.all(weights >= lower) and np.all(weights <= upper):
-            return weights
-
-        if not active_ineq.any() and self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
-            return self._project_capped_simplex(weights)
-        return self._project_alternating(weights, active_ineq)
-
-    def _project_capped_simplex(self, weights: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Euclidean projection onto the capped simplex for the all-ones budget.
-
-        Computed by water-filling a single shift ``theta`` so that
-        ``sum(clip(w - theta, lower, upper)) = b``. A plain clip-then-rescale is
-        deliberately *not* used: rescaling the clipped weights to restore the budget
-        can push capped weights back over their bound when many assets are capped at
-        once (heavy ties under a tight cap), re-introducing the very infeasibility
-        the projection is meant to clear.
-
-        Args:
-            weights: The candidate weight vector, known to violate its box.
-
-        Returns:
-            The projected weight vector, on the budget and inside the box.
-        """
-        lower, upper = self.lower_bounds, self.upper_bounds
-        # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect
-        # for the theta that hits the budget. The bracket clips to all-upper
-        # (sum at least the budget) at theta_lo and all-lower (at most the
-        # budget) at theta_hi, so a root is guaranteed for any feasible problem.
-        budget = float(self.b[0])
-        theta_lo = float((weights - upper).min()) - 1.0
-        theta_hi = float((weights - lower).max()) + 1.0
-        for _ in range(100):
-            theta = 0.5 * (theta_lo + theta_hi)
-            if float(np.clip(weights - theta, lower, upper).sum()) > budget:
-                theta_lo = theta
-            else:
-                theta_hi = theta
-        return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
-
-    def _project_alternating(self, weights: NDArray[np.float64], active_ineq: NDArray[np.bool_]) -> NDArray[np.float64]:
-        """Alternating projection onto the box and the affine set ``{C w = d}``.
-
-        ``C`` stacks the equality rows ``A`` and the active inequality rows ``G_S``
-        (held at equality ``g_i w = h_i``). The candidate already satisfies
-        ``C w = d`` (the reduced KKT solve enforces it) and the inactive inequality
-        rows keep a margin, so a few iterations alternating a box clip with the
-        affine projection converge to a point feasible to the box, the equalities,
-        and every inequality.
-
-        Args:
-            weights: The candidate weight vector, known to violate its box.
-            active_ineq: Boolean mask (length ``p``) of the active inequality rows.
-
-        Returns:
-            The projected weight vector, feasible to the box and the constraints.
-        """
-        lower, upper = self.lower_bounds, self.upper_bounds
-        c = np.vstack([self.a, self.g_matrix[active_ineq]])
-        d = np.concatenate([self.b, self.h_vector[active_ineq]])
-        affine = AffineProjection(c, d)
-        projected = weights
-        for _ in range(100):
-            projected = np.clip(projected, lower, upper)
-            projected = affine.project(projected)
-        return np.clip(projected, lower, upper)
 
     @property
     def frontier(self) -> Frontier:

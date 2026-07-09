@@ -52,6 +52,11 @@ Synced from the template — treat as read-only. Highlights from
   functions that wrap the `cvx.linalg` operators, `DenseOperator`/`GramOperator`/
   `FactorOperator`, as covariance/quadratic-form backends), `builder.py`,
   `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
+  The per-turning-point numeric kernels are factored out of `cla.py` into pure
+  private modules: `_kkt.py` (`active_set`/`solve_kkt`), `_events.py`
+  (`event_ratios`/`ineq_event_ratios`), and `_projection.py` (`project_feasible`
+  and its capped-simplex/alternating workers); `cla.py` is the orchestrator that
+  wires them into the `ParametricProblem` hooks.
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
   fuzz `tests/fuzz/`, benchmarks `tests/benchmarks/`). **Note:**
   `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.
