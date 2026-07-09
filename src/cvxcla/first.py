@@ -141,12 +141,35 @@ def first_vertex_lp(
     free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
     active_ineq = (g @ weights >= h - tol) if g.shape[0] else np.zeros(0, dtype=bool)
 
-    # The free set must span the equality rows together with the active inequality
-    # rows: C = [A ; G_active] restricted to the free assets must have full row
-    # rank, or the reduced KKT solve is singular. A degenerate maximum-return
-    # vertex (a basic asset pinned on a bound) violates this; decline it with an
-    # actionable diagnosis instead of letting it surface as an opaque "Singular
-    # matrix" error downstream.
+    _reject_degenerate_vertex(a, g, free, active_ineq)
+    return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
+
+
+def _reject_degenerate_vertex(
+    a: NDArray[np.float64],
+    g: NDArray[np.float64],
+    free: NDArray[np.bool_],
+    active_ineq: NDArray[np.bool_],
+) -> None:
+    """Decline a maximum-return vertex whose free set cannot span the active rows.
+
+    The free set must span the equality rows together with the active inequality
+    rows: ``C = [A ; G_active]`` restricted to the free assets must have full row
+    rank, or the reduced KKT solve is singular. A degenerate maximum-return
+    vertex (a basic asset pinned on a bound) violates this; decline it with an
+    actionable diagnosis instead of letting it surface as an opaque "Singular
+    matrix" error downstream.
+
+    Args:
+        a: Equality-constraint matrix (``m x n``).
+        g: Inequality-constraint matrix (``p x n``); empty ``(0, n)`` when none.
+        free: Boolean mask of the assets strictly inside their box bounds.
+        active_ineq: Boolean mask of the tight (active) inequality rows.
+
+    Raises:
+        ValueError: If the free set does not span the active equality and
+            inequality rows.
+    """
     c = np.vstack([a, g[active_ineq]])
     mc = c.shape[0]
     n_free = int(np.count_nonzero(free))
@@ -162,8 +185,6 @@ def first_vertex_lp(
             "the bounds or the constraints so the maximum-return vertex is non-degenerate."
         )
         raise ValueError(msg)
-
-    return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
 
 
 def _free(

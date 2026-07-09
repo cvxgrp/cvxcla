@@ -10,8 +10,21 @@ import numpy as np
 import pytest
 
 from cvxcla import CLA, FactorCovariance
+from cvxcla._events import event_ratios
+from cvxcla._kkt import active_set, solve_kkt
+from cvxcla._projection import project_feasible
 from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
+
+
+def _no_inequalities(n):
+    """Empty ``G w <= h`` system for an ``n``-asset problem.
+
+    Returns the ``(0, n)`` matrix, the empty right-hand side, and the empty
+    active-row mask that the projection/KKT helpers expect when a problem has no
+    inequality rows.
+    """
+    return np.zeros((0, n)), np.zeros(0), np.zeros(0, dtype=bool)
 
 
 class TestCLA:
@@ -671,14 +684,9 @@ class TestDegenerateProblems:
         """
         n = 10
         cap = 0.15
-        cla = CLA(
-            mean=np.linspace(0.1, 0.2, n),
-            covariance=np.eye(n) * 0.04,
-            lower_bounds=np.zeros(n),
-            upper_bounds=np.full(n, cap),
-            a=np.ones((1, n)),
-            b=np.ones(1),
-        )
+        lower, upper = np.zeros(n), np.full(n, cap)
+        a, b = np.ones((1, n)), np.ones(1)
+        g, h, active = _no_inequalities(n)
 
         over = cap + 1e-4
         weights = np.full(n, over)
@@ -686,14 +694,14 @@ class TestDegenerateProblems:
         assert np.isclose(weights.sum(), 1.0)
         assert weights.max() > cap  # genuinely box-infeasible
 
-        projected = cla._project_feasible(weights)
+        projected = project_feasible(weights, lower, upper, a, b, g, h, active)
         assert np.all(projected >= -1e-12)
         assert np.all(projected <= cap + 1e-12)
         assert np.isclose(projected.sum(), 1.0)
 
         # already-feasible candidates pass through untouched (exact no-op)
         feasible = np.full(n, 0.1)
-        assert np.array_equal(cla._project_feasible(feasible), feasible)
+        assert np.array_equal(project_feasible(feasible, lower, upper, a, b, g, h, active), feasible)
 
 
 class TestAppendTolerance:
@@ -805,7 +813,9 @@ class TestCLAInternals:
     def test_active_set_partitions_and_pins_bounds(self, cla):
         """at_upper/at_lower/free_in partition the assets; fixed weights sit on bounds."""
         last = cla.turning_points[0]
-        at_upper, at_lower, free_in, fixed = cla._active_set(last)
+        at_upper, at_lower, free_in, fixed = active_set(
+            last.free, last.weights, cla.lower_bounds, cla.upper_bounds, cla.tol
+        )
 
         # A blocked asset is either at its upper or lower bound, never both;
         # free_in is exactly the complement of the union.
@@ -817,11 +827,11 @@ class TestCLAInternals:
 
     def test_active_set_all_blocked_raises(self, cla):
         """An all-blocked active set makes the reduced system singular and is rejected."""
-        weights = np.zeros(cla.mean.size)
-        weights[0] = 1.0  # sum to 1 so TurningPoint validation passes
-        all_blocked = TurningPoint(lamb=0.0, weights=weights, free=np.zeros(cla.mean.size, dtype=bool))
+        n = cla.mean.size
+        weights = np.zeros(n)
+        weights[0] = 1.0
         with pytest.raises(RuntimeError, match="All variables cannot be blocked"):
-            cla._active_set(all_blocked)
+            active_set(np.zeros(n, dtype=bool), weights, cla.lower_bounds, cla.upper_bounds, cla.tol)
 
     def test_solve_kkt_is_feasible_and_optimal_segment(self, cla):
         """The KKT solve returns an affine segment satisfying the equality constraints.
@@ -830,8 +840,12 @@ class TestCLAInternals:
         null space of ``A`` (``A r_beta = 0``), so every point ``r_alpha + lam
         r_beta`` along the segment stays budget-feasible.
         """
-        _, _, free_in, fixed = cla._active_set(cla.turning_points[0])
-        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = cla._solve_kkt(free_in, fixed)
+        last = cla.turning_points[0]
+        _, _, free_in, fixed = active_set(last.free, last.weights, cla.lower_bounds, cla.upper_bounds, cla.tol)
+        _, _, active = _no_inequalities(cla.mean.size)
+        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+            cla.covariance_operator, cla.mean, cla.a, cla.b, cla.g_matrix, cla.h_vector, free_in, fixed, active
+        )
 
         np.testing.assert_allclose(cla.a @ r_alpha, cla.b, atol=1e-10)
         np.testing.assert_allclose(cla.a @ r_beta, np.zeros(cla.a.shape[0]), atol=1e-10)
@@ -843,9 +857,17 @@ class TestCLAInternals:
 
     def test_event_ratios_shape_and_inactive_entries(self, cla):
         """The event matrix is (n, 4) and respects which events each asset can fire."""
-        at_upper, at_lower, free_in, fixed = cla._active_set(cla.turning_points[0])
-        r_alpha, r_beta, gamma, delta, _, _ = cla._solve_kkt(free_in, fixed)
-        l_mat = cla._event_ratios(r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower)
+        last = cla.turning_points[0]
+        at_upper, at_lower, free_in, fixed = active_set(
+            last.free, last.weights, cla.lower_bounds, cla.upper_bounds, cla.tol
+        )
+        _, _, active = _no_inequalities(cla.mean.size)
+        r_alpha, r_beta, gamma, delta, _, _ = solve_kkt(
+            cla.covariance_operator, cla.mean, cla.a, cla.b, cla.g_matrix, cla.h_vector, free_in, fixed, active
+        )
+        l_mat = event_ratios(
+            r_alpha, r_beta, gamma, delta, free_in, at_upper, at_lower, cla.lower_bounds, cla.upper_bounds
+        )
 
         assert l_mat.shape == (cla.mean.size, 4)
         # A free asset has no "leave a bound" event (columns 2, 3); a blocked
@@ -1030,11 +1052,11 @@ class TestGeneralEqualityConstraints:
         box / affine projection used for a general A).
         """
         n = 12
-        mean, cov = self._problem(n, 3)
         half = np.r_[np.ones(n // 2), np.zeros(n - n // 2)]
         a = np.vstack([np.ones(n), half])
         b = np.array([1.0, 0.5])  # sum(w) = 1 and sum(first half) = 0.5
-        cla = CLA(mean=mean, covariance=cov, lower_bounds=np.zeros(n), upper_bounds=np.ones(n), a=a, b=b)
+        lower, upper = np.zeros(n), np.ones(n)
+        g, h, active = _no_inequalities(n)
 
         # start from the uniform feasible point, then push one weight below 0 while
         # preserving both equalities (offset within the first half)
@@ -1044,7 +1066,7 @@ class TestGeneralEqualityConstraints:
         assert np.allclose(a @ w, b, atol=1e-12)
         assert w.min() < 0.0  # box-infeasible
 
-        projected = cla._project_feasible(w)
+        projected = project_feasible(w, lower, upper, a, b, g, h, active)
         assert np.all(projected >= -1e-9)
         assert np.all(projected <= 1.0 + 1e-9)
         assert np.allclose(a @ projected, b, atol=1e-7)
@@ -1281,12 +1303,9 @@ class TestInequalityConstraints:
     def test_project_feasible_with_active_row(self):
         """The projection restores box feasibility while holding an active row at equality."""
         n = 8
-        mean, cov = self._problem(n, 3)
         g, h = self._group_cap(n, 0.5)
         a, b = np.ones((1, n)), np.ones(1)
-        cla = CLA(
-            mean=mean, covariance=cov, lower_bounds=np.zeros(n), upper_bounds=np.full(n, 0.34), a=a, b=b, g=g, h=h
-        )
+        lower, upper = np.zeros(n), np.full(n, 0.34)
 
         # Build a point on {sum(w)=1, sum(first half)=0.5} that breaches the box,
         # then project with the cap row active: it must come back inside the box
@@ -1297,7 +1316,7 @@ class TestInequalityConstraints:
         w[1] -= 0.3  # still on both affine sets, but now box-infeasible
         assert w.min() < 0.0
         active = np.array([True])
-        projected = cla._project_feasible(w, active)
+        projected = project_feasible(w, lower, upper, a, b, g, h, active)
         assert np.all(projected >= -1e-9)
         assert np.all(projected <= 0.34 + 1e-9)
         assert np.isclose(projected.sum(), 1.0, atol=1e-7)
