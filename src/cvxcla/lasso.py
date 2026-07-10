@@ -46,48 +46,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import cached_property
 from itertools import pairwise
-from typing import TYPE_CHECKING, NamedTuple, cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import DenseCovariance, GramCovariance, QuadraticForm, bordered_solve
+from ._lasso import LassoSegment, LassoState, scan_events, solve_segment
+from ._lasso_validate import validate_constraints, validate_design_inputs, validate_operator_inputs
+from .operators import DenseCovariance, GramCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 
 if TYPE_CHECKING:
     from .builder import LassoBuilder
-
-
-class _LassoState(NamedTuple):
-    """The support, sign pattern, active inequality rows, and current penalty.
-
-    ``lam`` is the penalty at the segment's upper end. The event scan uses it to
-    require *strict* progress to a smaller penalty: right after a coefficient
-    enters it sits at zero, so its leave event lies at the current ``lam``; without
-    the strict window the shared selector would re-fire it and the walk would cycle
-    between entering and leaving the same coordinate.
-    """
-
-    active: NDArray[np.bool_]
-    signs: NDArray[np.float64]
-    rows_active: NDArray[np.bool_]
-    lam: float
-
-
-class _LassoSegment(NamedTuple):
-    """The affine path ``beta(lam) = alpha - lam * beta_slope`` and its multipliers.
-
-    ``eta_alpha``/``eta_slope`` give the active-row multiplier path
-    ``eta(lam) = eta_alpha + lam * eta_slope`` (length ``p``, nonzero only on active
-    rows); ``p``/``q`` give the generalised correlation ``p + lam * q``.
-    """
-
-    alpha: NDArray[np.float64]
-    beta_slope: NDArray[np.float64]
-    p: NDArray[np.float64]
-    q: NDArray[np.float64]
-    eta_alpha: NDArray[np.float64]
-    eta_slope: NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -164,66 +134,11 @@ class Lasso(InequalityConstrained):
                 strictly positive (which would make ``beta = 0`` infeasible).
         """
         if self.quad_form is not None or self.linear is not None:
-            self._validate_operator_inputs()
+            self.linear = validate_operator_inputs(self.quad_form, self.linear, self.x, self.y)
         else:
-            self._validate_design_inputs()
-        self._validate_constraints()
+            validate_design_inputs(self.x, self.y)
+        validate_constraints(self.g, self.h, self.dimension, self.tol)
         trace(self)
-
-    def _validate_operator_inputs(self) -> None:
-        """Validate the operator-mode inputs ``quad_form`` and ``linear`` (``X^T y``).
-
-        Raises:
-            ValueError: If only one of ``quad_form``/``linear`` is given, a design
-                ``(x, y)`` is also supplied, or ``linear`` is not the 1d ``X^T y``.
-        """
-        if self.quad_form is None or self.linear is None:
-            msg = "quad_form and linear (X^T y) must be provided together"
-            raise ValueError(msg)
-        if self.x is not None or self.y is not None:
-            msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
-            raise ValueError(msg)
-        self.linear = np.asarray(self.linear, dtype=np.float64)
-        if self.linear.ndim != 1:
-            msg = f"linear must be the 1d vector X^T y, got shape {self.linear.shape}"
-            raise ValueError(msg)
-
-    def _validate_design_inputs(self) -> None:
-        """Validate the dense-design inputs ``x`` and ``y``.
-
-        Raises:
-            ValueError: If ``x``/``y`` are missing, ``x`` is not a 2d design matrix,
-                or ``y``'s length does not match ``x``'s row count.
-        """
-        if self.x is None or self.y is None:
-            msg = "provide a design (x, y) or an operator (quad_form, linear)"
-            raise ValueError(msg)
-        if self.x.ndim != 2:
-            msg = f"x must be a 2d design matrix, got shape {self.x.shape}"
-            raise ValueError(msg)
-        if self.y.shape != (self.x.shape[0],):
-            msg = f"y must have shape ({self.x.shape[0]},), got {self.y.shape}"
-            raise ValueError(msg)
-
-    def _validate_constraints(self) -> None:
-        """Validate the optional inequality constraints ``G beta <= h``.
-
-        Raises:
-            ValueError: If only one of ``g``/``h`` is given, their shapes are
-                inconsistent with the problem dimension, or any ``h`` entry is not
-                strictly positive (which would make ``beta = 0`` infeasible).
-        """
-        if self.g is None and self.h is None:
-            return
-        if self.g is None or self.h is None:
-            msg = "g and h must be provided together"
-            raise ValueError(msg)
-        if self.g.shape != (self.h.shape[0], self.dimension):
-            msg = f"g must have shape ({self.h.shape[0]}, {self.dimension}), got {self.g.shape}"
-            raise ValueError(msg)
-        if np.any(self.h <= self.tol):
-            msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
-            raise ValueError(msg)
 
     @classmethod
     def problem(cls, x: NDArray[np.float64], y: NDArray[np.float64]) -> LassoBuilder:
@@ -340,7 +255,7 @@ class Lasso(InequalityConstrained):
         """
         return float(np.max(np.abs(self.xty)))
 
-    def begin(self) -> tuple[float, _LassoState]:
+    def begin(self) -> tuple[float, LassoState]:
         """Record the all-zero solution at the start penalty and enter the first coordinate.
 
         For the plain or inequality-constrained LASSO the start is
@@ -369,105 +284,25 @@ class Lasso(InequalityConstrained):
         if lam_max > self.tol:
             active[j0] = True
             signs[j0] = s0
-        return max(lam_max, 0.0), _LassoState(active, signs, rows_active, max(lam_max, 0.0))
+        return max(lam_max, 0.0), LassoState(active, signs, rows_active, max(lam_max, 0.0))
 
-    def segment(self, state: _LassoState) -> _LassoSegment:
+    def segment(self, state: LassoState) -> LassoSegment:
         """Solve the affine segment for the current support, signs, and active rows.
 
-        With no active rows this is the plain LASSO solve against the Gram
-        submatrix. With active rows it is the bordered Schur solve of the CLA: the
-        active rows ``G_S`` enter the reduced KKT system as extra equality rows.
+        Delegates to :func:`cvxcla._lasso.solve_segment`; see there for the
+        bordered Schur solve that admits active inequality rows.
         """
-        n = self.dimension
-        active, signs, rows_active = state.active, state.signs, state.rows_active
-        xty = self.xty
-        alpha = np.zeros(n)
-        beta_slope = np.zeros(n)
-        eta_alpha = np.zeros(self.g_matrix.shape[0])
-        eta_slope = np.zeros(self.g_matrix.shape[0])
+        return solve_segment(self.quad, self.xty, self.g_matrix, self.h_vector, state)
 
-        xty_s = xty[active]
-        signs_s = signs[active]
-        if not np.any(active):
-            # Empty support (e.g. the non-negative path when no correlation is
-            # positive): beta = 0, correlation = X^T y, and there is nothing to solve.
-            return _LassoSegment(alpha, beta_slope, xty.copy(), np.zeros(n), eta_alpha, eta_slope)
-
-        # The active rows G_RS act as equality rows in the reduced KKT system, exactly
-        # the CLA's bordered Schur solve (operators.bordered_solve). With no active rows
-        # (|R| = 0) this reduces to the plain LASSO solve beta_S(lam) = H_SS^{-1}(xty_S -
-        # lam s_S). The slope's constraint right-hand side is zero, and the slope
-        # multiplier nu carries the opposite sign convention to eta(lam) (beta = alpha -
-        # lam beta_slope here, vs w = r_alpha + lam r_beta in the CLA), hence the flip.
-        g_rs = self.g_matrix[np.ix_(rows_active, active)]  # |R| x |S|
-        h_r = self.h_vector[rows_active]
-        x_const, x_slope, eta_a, nu_slope = bordered_solve(
-            self.quad, active, g_rs, xty_s, signs_s, h_r, np.zeros(g_rs.shape[0])
-        )
-        alpha[active] = x_const
-        beta_slope[active] = x_slope
-        eta_alpha[rows_active] = eta_a
-        eta_slope[rows_active] = -nu_slope
-
-        # Generalised correlation c(lam) = xty - H beta(lam) - G_R^T eta(lam) = p + lam q.
-        g_r = self.g_matrix[rows_active]
-        eta_a_r = eta_alpha[rows_active]
-        eta_s_r = eta_slope[rows_active]
-        p = xty - self.quad.matvec(alpha) - g_r.T @ eta_a_r
-        q = self.quad.matvec(beta_slope) - g_r.T @ eta_s_r
-        return _LassoSegment(alpha, beta_slope, p, q, eta_alpha, eta_slope)
-
-    def event_matrix(self, state: _LassoState, segment: _LassoSegment) -> NDArray[np.float64]:
+    def event_matrix(self, state: LassoState, segment: LassoSegment) -> NDArray[np.float64]:
         """Return the ``(n + p, 4)`` matrix of candidate critical lambdas.
 
-        Rows ``0..n-1`` are coordinate events (col 0 leave, col 1 enter ``+``, col 2
-        enter ``-``); rows ``n..n+p-1`` are inequality-row events (col 0 activate, col
-        1 release). Entries are ``-inf`` where the event cannot occur, and only
-        events strictly inside ``(tol, lam - tol)`` are kept.
+        Delegates to :func:`cvxcla._lasso.scan_events`; see there for the
+        coordinate (leave/enter) and inequality-row (activate/release) events.
         """
-        n = self.dimension
-        rows = self.g_matrix.shape[0]
-        active = state.active
-        inactive = ~active
-        alpha, beta_slope, p, q, eta_alpha, eta_slope = segment
-        rows_active = state.rows_active
+        return scan_events(self.dimension, self.g_matrix, self.h_vector, self.tol, self.nonneg, state, segment)
 
-        l_mat = np.full((n + rows, 4), -np.inf)
-
-        # leave: alpha_j - lam beta_slope_j = 0
-        leaves = active & (np.abs(beta_slope) > self.tol)  # pragma: no mutate
-        l_mat[:n][leaves, 0] = alpha[leaves] / beta_slope[leaves]
-
-        # enter (+): p_j + lam q_j = +lam -> lam = p_j / (1 - q_j)
-        denom_pos = 1.0 - q
-        enters_pos = inactive & (np.abs(denom_pos) > self.tol)  # pragma: no mutate
-        l_mat[:n][enters_pos, 1] = p[enters_pos] / denom_pos[enters_pos]
-
-        # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j). Disabled under the
-        # non-negative restriction beta >= 0, where only positive entries are allowed.
-        if not self.nonneg:
-            denom_neg = 1.0 + q
-            enters_neg = inactive & (np.abs(denom_neg) > self.tol)  # pragma: no mutate
-            l_mat[:n][enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
-
-        if rows:
-            g_mat = self.g_matrix
-            slope_row = g_mat @ beta_slope  # d/d(-lam) of the row value
-            level_row = g_mat @ alpha - self.h_vector  # G_r alpha - h_r
-            # activate: the row value G_r beta(lam) = level + h_r - lam slope rises to
-            # the cap h_r as lam decreases when its slope d(value)/d(-lam) = slope_row
-            # is positive; the crossing is lam = (G_r alpha - h_r) / (G_r beta_slope).
-            inactive_rows = ~rows_active & (slope_row > self.tol)  # pragma: no mutate
-            l_mat[n:][inactive_rows, 0] = level_row[inactive_rows] / slope_row[inactive_rows]
-            # release: eta_r(lam) = eta_alpha + lam eta_slope -> 0 from eta > 0, i.e. eta_slope > 0.
-            releasing = rows_active & (eta_slope > self.tol)  # pragma: no mutate
-            l_mat[n:][releasing, 1] = -eta_alpha[releasing] / eta_slope[releasing]
-
-        # Keep only events that make strict progress to a smaller, positive penalty.
-        l_mat[(l_mat <= self.tol) | (l_mat >= state.lam - self.tol)] = -np.inf
-        return l_mat
-
-    def step(self, state: _LassoState, segment: _LassoSegment, sec: int, direction: int, lam: float) -> _LassoState:
+    def step(self, state: LassoState, segment: LassoSegment, sec: int, direction: int, lam: float) -> LassoState:
         """Record the breakpoint at ``lam`` after flipping coordinate or row ``sec``.
 
         For a coordinate (``sec < n``): direction 0 removes it from the support, 1/2
@@ -491,9 +326,9 @@ class Lasso(InequalityConstrained):
 
         beta = segment.alpha - lam * segment.beta_slope
         self.path.append(Breakpoint(lam, beta, active.copy()))
-        return _LassoState(active, signs, rows_active, lam)
+        return LassoState(active, signs, rows_active, lam)
 
-    def finish(self, state: _LassoState, segment: _LassoSegment) -> None:
+    def finish(self, state: LassoState, segment: LassoSegment) -> None:
         """Record the ``lam = 0`` endpoint: the least-squares fit on the final support."""
         self.path.append(Breakpoint(0.0, segment.alpha.copy(), state.active.copy()))
 
