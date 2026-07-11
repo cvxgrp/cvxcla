@@ -216,9 +216,7 @@ class ProblemBuilder:
                 :meth:`long_only`), or no equality constraint was added (call
                 :meth:`budget` or :meth:`equality`).
         """
-        if self._lower is None or self._upper is None:
-            msg = "set box bounds before tracing: call .long_only() or .bounds(lower, upper)"
-            raise ValueError(msg)
+        lower, upper = self._resolved_bounds()
         if not self._a_blocks:
             msg = "a CLA problem needs an equality constraint: call .budget() or .equality(A, b)"
             raise ValueError(msg)
@@ -228,13 +226,28 @@ class ProblemBuilder:
         return CLA(
             mean=self.mean,
             covariance=self.covariance,
-            lower_bounds=self._lower,
-            upper_bounds=self._upper,
+            lower_bounds=lower,
+            upper_bounds=upper,
             a=np.vstack(self._a_blocks),
             b=np.concatenate(self._b_blocks),
             g=g,
             h=h,
         )
+
+    def _resolved_bounds(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Return the box bounds, raising if they were never set.
+
+        Returns:
+            The ``(lower, upper)`` box-bound vectors.
+
+        Raises:
+            ValueError: If no box bounds were set (call :meth:`bounds` or
+                :meth:`long_only`).
+        """
+        if self._lower is None or self._upper is None:
+            msg = "set box bounds before tracing: call .long_only() or .bounds(lower, upper)"
+            raise ValueError(msg)
+        return self._lower, self._upper
 
 
 class LassoBuilder:

@@ -371,18 +371,23 @@ class CLA(InequalityConstrained):
         """
         tol = self.tol if tol is None else tol
 
-        if not np.all(tp.weights >= (self.lower_bounds - tol)):  # pragma: no mutate
-            msg = "Weights below lower bounds"
-            raise ValueError(msg)
-        if not np.all(tp.weights <= (self.upper_bounds + tol)):  # pragma: no mutate
-            msg = "Weights above upper bounds"
-            raise ValueError(msg)
-        if not np.allclose(self.a @ tp.weights, self.b, atol=1e-7):
-            msg = "Weights violate the equality constraint A w = b"
-            raise ValueError(msg)
-        if self.g_matrix.shape[0] and not np.all(self.g_matrix @ tp.weights <= self.h_vector + tol):
-            msg = "Weights violate the inequality constraint G w <= h"
-            raise ValueError(msg)
+        # (constraint holds?, message if it does not). An empty ``g_matrix`` makes
+        # the inequality ``np.all`` vacuously true, so it never fires when absent.
+        checks: tuple[tuple[bool, str], ...] = (
+            (bool(np.all(tp.weights >= (self.lower_bounds - tol))), "Weights below lower bounds"),  # pragma: no mutate
+            (bool(np.all(tp.weights <= (self.upper_bounds + tol))), "Weights above upper bounds"),  # pragma: no mutate
+            (
+                bool(np.allclose(self.a @ tp.weights, self.b, atol=1e-7)),
+                "Weights violate the equality constraint A w = b",
+            ),
+            (
+                bool(np.all(self.g_matrix @ tp.weights <= self.h_vector + tol)),
+                "Weights violate the inequality constraint G w <= h",
+            ),
+        )
+        for ok, message in checks:
+            if not ok:
+                raise ValueError(message)
 
         self.turning_points.append(tp)
 

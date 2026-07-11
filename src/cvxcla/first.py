@@ -123,26 +123,58 @@ def first_vertex_lp(
     g = np.zeros((0, mean.shape[0])) if g is None else np.asarray(g, dtype=np.float64)
     h = np.zeros(0) if h is None else np.asarray(h, dtype=np.float64)
 
-    # maximize mean @ w  ==  minimize -mean @ w, subject to A w = b, G w <= h, box.
+    weights = _solve_max_return_lp(mean, lower_bounds, upper_bounds, a, b, g, h)
+    free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
+    active_ineq = (g @ weights >= h - tol) if g.shape[0] else np.zeros(0, dtype=bool)
+
+    _reject_degenerate_vertex(a, g, free, active_ineq)
+    return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
+
+
+def _solve_max_return_lp(
+    mean: NDArray[np.float64],
+    lower_bounds: NDArray[np.float64],
+    upper_bounds: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Solve the maximum-return linear program and return its vertex weights.
+
+    ``maximize mean @ w`` (as ``minimize -mean @ w``) subject to ``A w = b``,
+    ``G w <= h`` and the box bounds, via HiGHS. The inequality rows are passed
+    only when ``g`` is non-empty.
+
+    Args:
+        mean: Vector of expected returns.
+        lower_bounds: Lower box bounds.
+        upper_bounds: Upper box bounds.
+        a: Equality-constraint matrix (``m x n``).
+        b: Equality-constraint right-hand side (length ``m``).
+        g: Inequality-constraint matrix (``p x n``); empty ``(0, n)`` when none.
+        h: Inequality-constraint right-hand side (length ``p``).
+
+    Returns:
+        The vertex weights ``w`` as a 1d ``float64`` array.
+
+    Raises:
+        ValueError: If the linear program is infeasible or unbounded.
+    """
+    has_ineq = g.shape[0] > 0
     result = linprog(
         c=-np.asarray(mean, dtype=np.float64),
         A_eq=np.asarray(a, dtype=np.float64),
         b_eq=np.asarray(b, dtype=np.float64),
-        A_ub=g if g.shape[0] else None,
-        b_ub=h if g.shape[0] else None,
+        A_ub=g if has_ineq else None,
+        b_ub=h if has_ineq else None,
         bounds=list(zip(lower_bounds, upper_bounds, strict=True)),
         method="highs",
     )
     if not result.success:
         msg = f"Could not find a maximum-return vertex (linear program: {result.message})"
         raise ValueError(msg)
-
-    weights = np.asarray(result.x, dtype=np.float64)
-    free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
-    active_ineq = (g @ weights >= h - tol) if g.shape[0] else np.zeros(0, dtype=bool)
-
-    _reject_degenerate_vertex(a, g, free, active_ineq)
-    return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
+    return np.asarray(result.x, dtype=np.float64)
 
 
 def _reject_degenerate_vertex(
