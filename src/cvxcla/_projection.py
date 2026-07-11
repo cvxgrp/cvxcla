@@ -56,12 +56,29 @@ def project_feasible(
     if np.all(weights >= lower) and np.all(weights <= upper):
         return weights
 
-    if not active_ineq.any() and a.shape[0] == 1 and np.allclose(a, 1.0):
+    if _is_capped_simplex(active_ineq, a):
         return project_capped_simplex(weights, lower, upper, float(b[0]))
 
     c = np.vstack([a, g[active_ineq]])
     d = np.concatenate([b, h[active_ineq]])
     return project_alternating(weights, lower, upper, c, d)
+
+
+def _is_capped_simplex(active_ineq: NDArray[np.bool_], a: NDArray[np.float64]) -> bool:
+    """Whether the projection reduces to the closed-form capped simplex.
+
+    True when no inequality row is active and the equality is the canonical
+    all-ones budget (a single row of ones), the case handled by
+    :func:`project_capped_simplex`.
+
+    Args:
+        active_ineq: Boolean mask of the active inequality rows.
+        a: Equality-constraint matrix ``A``.
+
+    Returns:
+        ``True`` if the closed-form capped-simplex projection applies.
+    """
+    return not active_ineq.any() and a.shape[0] == 1 and bool(np.allclose(a, 1.0))
 
 
 def project_capped_simplex(

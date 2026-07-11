@@ -40,14 +40,27 @@ def validate_operator_inputs(
     if quad_form is None or linear is None:
         msg = "quad_form and linear (X^T y) must be provided together"
         raise ValueError(msg)
-    if x is not None or y is not None:
-        msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
-        raise ValueError(msg)
+    _reject_conflicting_design(x, y)
     linear = np.asarray(linear, dtype=np.float64)
     if linear.ndim != 1:
         msg = f"linear must be the 1d vector X^T y, got shape {linear.shape}"
         raise ValueError(msg)
     return linear
+
+
+def _reject_conflicting_design(x: NDArray[np.float64] | None, y: NDArray[np.float64] | None) -> None:
+    """Reject a dense design ``(x, y)`` supplied alongside the operator inputs.
+
+    Args:
+        x: The dense design matrix, which must be absent in operator mode.
+        y: The dense response vector, which must be absent in operator mode.
+
+    Raises:
+        ValueError: If either ``x`` or ``y`` is provided.
+    """
+    if x is not None or y is not None:
+        msg = "supply either a design (x, y) or an operator (quad_form, linear), not both"
+        raise ValueError(msg)
 
 
 def validate_design_inputs(x: NDArray[np.float64] | None, y: NDArray[np.float64] | None) -> None:
@@ -96,6 +109,27 @@ def validate_constraints(
     if g is None or h is None:
         msg = "g and h must be provided together"
         raise ValueError(msg)
+    _validate_constraint_shapes(g, h, dimension, tol)
+
+
+def _validate_constraint_shapes(
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    dimension: int,
+    tol: float,
+) -> None:
+    """Validate the shapes and positivity of a fully-provided ``G beta <= h``.
+
+    Args:
+        g: Inequality matrix ``G`` (both ``g`` and ``h`` known to be present).
+        h: Inequality right-hand side ``h``.
+        dimension: The problem dimension ``n`` (number of features).
+        tol: Tolerance below which an ``h`` entry counts as non-positive.
+
+    Raises:
+        ValueError: If ``g``'s shape is inconsistent with ``h`` and the problem
+            dimension, or any ``h`` entry is not strictly positive.
+    """
     if g.shape != (h.shape[0], dimension):
         msg = f"g must have shape ({h.shape[0]}, {dimension}), got {g.shape}"
         raise ValueError(msg)

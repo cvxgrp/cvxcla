@@ -1,12 +1,14 @@
-"""Guard the deferred ``builder`` <-> solver import invariant.
+"""Pin the acyclic ``builder`` -> solver import direction.
 
-``builder`` imports ``CLA`` and ``Lasso`` at module level, so the solver modules
-must *not* import ``builder`` at module level in return -- that would form a real
-import cycle. Both ``CLA.problem`` and ``Lasso.problem`` therefore import
-``.builder`` function-locally. These tests pin both halves of the contract:
+Each fluent builder is co-located with the object it constructs:
+:class:`ProblemBuilder` lives with ``CLA`` in ``cvxcla.cla`` and ``LassoBuilder``
+lives with ``Lasso`` in ``cvxcla.lasso``. The thin ``cvxcla.builder`` module only
+re-exports them. That makes the internal import graph acyclic -- the solver
+modules never import ``builder`` -- so no ``TYPE_CHECKING`` guard or function-local
+back-edge is needed. These tests pin both halves of the contract:
 
-* the solver modules keep the back-edge deferred (a hoisted top-level import
-  would be caught here rather than as a runtime ``ImportError``); and
+* the solver modules must not import ``builder`` at module level (a hoisted import
+  would reintroduce the cycle and is caught here); and
 * the factories still build the right object at call time.
 """
 
@@ -36,27 +38,34 @@ def _module_level_imports(module_name: str) -> set[str]:
 
 
 @pytest.mark.parametrize("module_name", ["cvxcla.cla", "cvxcla.lasso"])
-def test_solver_does_not_import_builder_at_module_level(module_name: str) -> None:
-    """Neither solver module may import ``builder`` at module level (would cycle)."""
+def test_solver_does_not_import_builder(module_name: str) -> None:
+    """Neither solver module may import ``builder`` (would form an import cycle)."""
     assert ".builder" not in _module_level_imports(module_name)
 
 
-def test_cla_problem_builds_without_import_error() -> None:
-    """``CLA.problem`` resolves its deferred import and returns a ``ProblemBuilder``."""
+def test_builder_reexports_from_solvers() -> None:
+    """``builder`` re-exports the co-located builders from the solver modules."""
+    imports = _module_level_imports("cvxcla.builder")
+    assert ".cla" in imports
+    assert ".lasso" in imports
+
+
+def test_cla_problem_returns_builder() -> None:
+    """``CLA.problem`` returns a ``ProblemBuilder``."""
     mean = np.array([0.1, 0.2, 0.3])
     covariance = np.eye(3)
     assert isinstance(CLA.problem(mean, covariance), ProblemBuilder)
 
 
-def test_lasso_problem_builds_without_import_error() -> None:
-    """``Lasso.problem`` resolves its deferred import and returns a ``LassoBuilder``."""
+def test_lasso_problem_returns_builder() -> None:
+    """``Lasso.problem`` returns a ``LassoBuilder``."""
     rng = np.random.default_rng(0)
     x = rng.standard_normal((10, 4))
     y = rng.standard_normal(10)
     assert isinstance(Lasso.problem(x, y), LassoBuilder)
 
 
-def test_lasso_from_operator_builds_without_import_error() -> None:
+def test_lasso_from_operator_builds() -> None:
     """``Lasso.from_operator`` constructs a traced ``Lasso`` in operator mode."""
     rng = np.random.default_rng(1)
     x = rng.standard_normal((10, 4))
