@@ -36,8 +36,8 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 dev = [
     "loguru==0.7.3",
     "mosek==11.2.2",
-    "marimo==0.23.14",
-    "pandas==3.0.3",
+    "marimo==0.23.15",
+    "pandas==3.0.5",
 ]
 test = [
     "pytest>=7.0",
