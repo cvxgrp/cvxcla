@@ -186,7 +186,6 @@ dev = [
     { name = "mosek", specifier = "==11.2.2" },
     { name = "pandas", specifier = "==3.0.5" },
 ]
-lint = []
 test = [
     { name = "hypothesis", specifier = ">=6.100" },
     { name = "pytest", specifier = ">=7.0" },
