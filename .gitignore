@@ -136,6 +136,9 @@ local.mk
 
 .bandit-baseline.json
 
-# mutmut mutation testing cache
-.mutmut-cache
 
+# Rust (rust-core bundle). Kept in core rather than the language layer because
+# .gitignore has one owner and git opens it with O_NOFOLLOW, so it cannot be a
+# per-layer file. These entries are inert in a Python repo.
+target/
+**/*.rs.bk
