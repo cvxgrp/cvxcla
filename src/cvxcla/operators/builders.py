@@ -40,6 +40,25 @@ def dense_covariance(matrix: NDArray[np.float64]) -> DenseOperator:
 
     Returns:
         A dense symmetric operator wrapping *matrix*.
+
+    Examples:
+        >>> import numpy as np
+        >>> from cvxcla import DenseCovariance
+        >>> sigma = np.array([[4.0, 1.0], [1.0, 9.0]])
+        >>> op = DenseCovariance(sigma)
+        >>> op.n
+        2
+        >>> op.matvec(np.array([1.0, 0.0]))
+        array([4., 1.])
+
+        A non-square or non-symmetric input is rejected rather than silently
+        symmetrised, so a transposed or half-filled matrix fails at construction
+        instead of producing a wrong frontier:
+
+        >>> DenseCovariance(np.array([[1.0, 2.0], [0.0, 1.0]]))
+        Traceback (most recent call last):
+            ...
+        ValueError: Covariance must be symmetric
     """
     return DenseOperator(_symmetric_matrix(matrix))
 
@@ -55,6 +74,22 @@ def incremental_dense_covariance(matrix: NDArray[np.float64]) -> IncrementalDens
 
     Returns:
         A dense symmetric operator that maintains the free-block inverse.
+
+    Examples:
+        >>> import numpy as np
+        >>> from cvxcla import CLA, DenseCovariance, IncrementalDenseCovariance
+        >>> sigma = np.array([[4.0, 1.0], [1.0, 9.0]])
+        >>> x = np.array([1.0, 2.0])
+        >>> incremental = IncrementalDenseCovariance(sigma)
+        >>> bool(np.allclose(incremental.matvec(x), DenseCovariance(sigma).matvec(x)))
+        True
+
+        It is a drop-in swap: the two agree on the same problem, and only the
+        cost profile of the free-block solves differs.
+
+        >>> cla = CLA.problem(np.array([0.1, 0.2]), incremental).long_only().budget().trace()
+        >>> len(cla) > 0
+        True
     """
     return IncrementalDenseOperator(_symmetric_matrix(matrix))
 
@@ -76,6 +111,34 @@ def gram_covariance(returns: NDArray[np.float64], ridge: float = 0.0) -> GramOpe
 
     Raises:
         ValueError: If *returns* is not a ``(T, n)`` matrix with ``T >= 2``.
+
+    Examples:
+        >>> import numpy as np
+        >>> from cvxcla import GramCovariance
+        >>> returns = np.array([[1.0, 2.0], [3.0, 5.0], [5.0, 4.0]])
+        >>> op = GramCovariance(returns)
+
+        The operator represents exactly the sample covariance ``np.cov`` would
+        form -- without ever building the ``(n, n)`` matrix:
+
+        >>> sample = np.cov(returns, rowvar=False)
+        >>> bool(np.allclose(op.matvec(np.array([1.0, 2.0])), sample @ np.array([1.0, 2.0])))
+        True
+        >>> bool(np.allclose(op.diag, sample.diagonal()))
+        True
+
+        ``ridge`` adds a diagonal loading, which is how a short sample (fewer
+        observations than assets) is made positive definite:
+
+        >>> float(np.round(GramCovariance(returns, ridge=0.5).diag[0] - op.diag[0], 12))
+        0.5
+
+        A single observation cannot define a covariance and is refused:
+
+        >>> GramCovariance(np.array([[1.0, 2.0]]))
+        Traceback (most recent call last):
+            ...
+        ValueError: returns must be a (T, n) matrix with T >= 2 observations, got shape (1, 2)
     """
     returns = np.asarray(returns, dtype=np.float64)
     if returns.ndim != 2 or returns.shape[0] < 2:
@@ -105,6 +168,36 @@ def factor_covariance(
 
     Raises:
         ValueError: If *delta* is neither a ``(k,)`` vector nor a ``(k, k)`` matrix.
+
+    Examples:
+        >>> import numpy as np
+        >>> from cvxcla import FactorCovariance
+        >>> d = np.array([0.5, 0.5, 0.5])
+        >>> u = np.array([[1.0], [1.0], [-1.0]])
+        >>> delta = np.array([2.0])
+        >>> op = FactorCovariance(d=d, u=u, delta=delta)
+        >>> op.n, op.k
+        (3, 1)
+
+        The operator matches its dense materialisation while storing only
+        ``d`` and ``u`` -- the point of the diagonal-plus-low-rank form:
+
+        >>> dense = np.diag(d) + u @ np.diag(delta) @ u.T
+        >>> x = np.array([1.0, 0.0, 0.0])
+        >>> bool(np.allclose(op.matvec(x), dense @ x))
+        True
+
+        ``delta`` may equally be a full ``(k, k)`` factor covariance:
+
+        >>> bool(np.allclose(FactorCovariance(d=d, u=u, delta=np.diag(delta)).matvec(x), dense @ x))
+        True
+
+        Anything else is refused:
+
+        >>> FactorCovariance(d=d, u=u, delta=np.zeros((1, 1, 1)))
+        Traceback (most recent call last):
+            ...
+        ValueError: delta must be a (k,) vector or (k, k) matrix, got ndim 3
     """
     d = np.asarray(d, dtype=np.float64)
     u = np.asarray(u, dtype=np.float64)
