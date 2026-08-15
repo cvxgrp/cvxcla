@@ -1,10 +1,10 @@
 """Backward-compatible re-export of the fluent problem builders.
 
-The builders are co-located with the objects they construct -- to keep the
-internal import graph acyclic, :class:`ProblemBuilder` lives with
-:class:`cvxcla.cla.CLA` in :mod:`cvxcla.cla` and :class:`LassoBuilder` lives with
-:class:`cvxcla.lasso.Lasso` in :mod:`cvxcla.lasso`. This module re-exports both so
-the historical import path ``cvxcla.builder.ProblemBuilder`` keeps working.
+Both builders live in the leaf module :mod:`cvxcla._builders`, which imports
+neither :mod:`cvxcla.cla` nor :mod:`cvxcla.lasso` -- each solver injects itself
+into its builder via ``.problem(...)``, so the dependency runs one way and the
+internal import graph stays acyclic. This module re-exports both so the
+historical import path ``cvxcla.builder.ProblemBuilder`` keeps working.
 
 Each builder is a thin, chainable convenience layer over its solver's explicit
 constructor. Construct one via :meth:`cvxcla.cla.CLA.problem` /
@@ -24,7 +24,6 @@ Examples:
 
 from __future__ import annotations
 
-from .cla import ProblemBuilder
-from .lasso import LassoBuilder
+from ._builders import LassoBuilder, ProblemBuilder
 
 __all__ = ["LassoBuilder", "ProblemBuilder"]
