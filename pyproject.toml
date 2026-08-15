@@ -76,7 +76,7 @@ ignore_missing_imports = true
 # regardless of what any test file is named.
 [tool.check_test_layout]
 enforce = false
-reason = "Flat behaviour-oriented tests; private kernels (_kkt, _events, _projection, _lasso, _lasso_validate) are covered through cla.py/lasso.py, and per-module coverage is enforced by the 100% COVERAGE_FAIL_UNDER gate."
+reason = "Flat behaviour-oriented tests; private kernels (_kkt, _events, _projection, _lasso, _lasso_validate) are covered through cla.py/lasso.py, and per-module coverage is enforced by the full COVERAGE_FAIL_UNDER gate."
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
