@@ -69,6 +69,15 @@ ignore-nested-classes = true
 module = ["plotly.*"]
 ignore_missing_imports = true
 
+# Tests are organised by behaviour in a flat `tests/`, not mirrored per module, and
+# the pure numeric kernels are exercised through the orchestrators that wire them up.
+# Per-module coverage is guaranteed by the stricter mechanism instead: `make test`
+# runs with COVERAGE_FAIL_UNDER=100, so a module with no exercising test fails CI
+# regardless of what any test file is named.
+[tool.check_test_layout]
+enforce = false
+reason = "Flat behaviour-oriented tests; private kernels (_kkt, _events, _projection, _lasso, _lasso_validate) are covered through cla.py/lasso.py, and per-module coverage is enforced by the 100% COVERAGE_FAIL_UNDER gate."
+
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
 

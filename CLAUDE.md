@@ -17,7 +17,7 @@ The pin lives in `.rhiza/template.yml`:
 
 ```yaml
 repository: "jebel-quant/rhiza"
-ref: "v1.0.1"
+ref: "v1.3.3"
 profiles:
   - github-project
 ```
@@ -56,7 +56,10 @@ Synced from the template — treat as read-only. Highlights from
   private modules: `_kkt.py` (`active_set`/`solve_kkt`), `_events.py`
   (`event_ratios`/`ineq_event_ratios`), and `_projection.py` (`project_feasible`
   and its capped-simplex/alternating workers); `cla.py` is the orchestrator that
-  wires them into the `ParametricProblem` hooks.
+  wires them into the `ParametricProblem` hooks. `lasso.py` is factored the same
+  way, over `_lasso.py` (the `LassoSegment`/`LassoState` kernel with
+  `scan_events`/`solve_segment`) and `_lasso_validate.py` (the design, operator
+  and constraint input validators).
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
   fuzz `tests/fuzz/`, benchmarks `tests/benchmarks/`). **Note:**
   `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.
@@ -81,9 +84,8 @@ and pass the right flags. Useful targets:
 | `make fmt` | pre-commit hooks: ruff format/check, markdownlint, bandit, actionlint, interrogate, secrets |
 | `make typecheck` | `ty` + `mypy --strict` over `src/` |
 | `make docs-coverage` | interrogate docstring coverage |
-| `make deptry` | unused/missing/misplaced dependency analysis |
+| `make deps` | unused/missing/misplaced dependency analysis (the old `make deptry` is deprecated) |
 | `make security` | pip-audit + bandit |
-| `make validate` | validate project structure against `.rhiza/template.yml` |
 | `make test` | full suite **with** the coverage gate |
 
 `make test` enforces `COVERAGE_FAIL_UNDER` (currently **100%**). Coverage on
