@@ -46,7 +46,7 @@ I gave the plenary talk at [EQD's Singapore conference](https://tschm.github.io/
 
 The Markowitz problem is a quadratic program parametrized by a return target λ:
 
-```
+```text
 min  wᵀΣw - λ · μᵀw
 s.t. Aw = b,  Gw ≤ h,  lb ≤ w ≤ ub
 ```
@@ -57,7 +57,7 @@ negated row). As λ sweeps from ∞ (maximize return) down to 0 (minimize varian
 traces the entire efficient frontier. The key insight is that **between consecutive
 events, the optimal weights are a linear function of λ**:
 
-```
+```text
 w(λ) = α + λ · β
 ```
 
