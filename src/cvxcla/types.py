@@ -74,6 +74,20 @@ class FrontierPoint:
         Returns:
             The expected variance of the portfolio.
 
+        Examples:
+            >>> import numpy as np
+            >>> fp = FrontierPoint(weights=np.array([0.5, 0.5]))
+            >>> covariance = np.array([[0.04, 0.0], [0.0, 0.09]])
+            >>> fp.variance(covariance)
+            0.0325
+
+            A ``CovarianceOperator`` backend gives the same number without
+            forming the matrix:
+
+            >>> from cvxcla import DenseCovariance
+            >>> fp.variance(DenseCovariance(covariance))
+            0.0325
+
         """
         return float(self.weights.T @ _covariance_matvec(covariance, self.weights))
 
@@ -91,6 +105,24 @@ class TurningPoint(FrontierPoint):
     active set: a free weight on a bound is a per-variable active constraint, an
     active inequality row is a per-row one. The default is an empty mask, so
     box-and-equality problems (and the LASSO path) are unaffected.
+
+    Examples:
+        >>> import numpy as np
+        >>> tp = TurningPoint(
+        ...     weights=np.array([0.5, 0.5, 0.0]),
+        ...     free=np.array([True, True, False]),
+        ...     lamb=1.25,
+        ... )
+        >>> tp.free_indices
+        array([0, 1])
+        >>> tp.blocked_indices
+        array([2])
+
+        ``free`` and ``blocked`` partition the assets, so the two index sets are
+        always complementary:
+
+        >>> len(tp.free_indices) + len(tp.blocked_indices) == len(tp.weights)
+        True
     """
 
     free: NDArray[np.bool_]
@@ -110,7 +142,40 @@ class TurningPoint(FrontierPoint):
 
 @dataclass(frozen=True)
 class Frontier:
-    """A frontier is a list of frontier points. Some of them might be turning points."""
+    """A frontier is a list of frontier points. Some of them might be turning points.
+
+    The frontier owns the ``mean`` and ``covariance`` the points are scored
+    against, so the risk/return properties below (``returns``, ``variance``,
+    ``volatility``, ``sharpe_ratio``) are vectors with one entry per point, in
+    frontier order -- from the maximum-return end towards minimum variance.
+
+    Examples:
+        >>> import numpy as np
+        >>> mean = np.array([0.1, 0.2])
+        >>> covariance = np.array([[0.04, 0.0], [0.0, 0.09]])
+        >>> frontier = Frontier(
+        ...     mean=mean,
+        ...     covariance=covariance,
+        ...     frontier=[
+        ...         FrontierPoint(weights=np.array([0.0, 1.0])),
+        ...         FrontierPoint(weights=np.array([1.0, 0.0])),
+        ...     ],
+        ... )
+        >>> len(frontier)
+        2
+        >>> frontier.returns
+        array([0.2, 0.1])
+        >>> frontier.volatility
+        array([0.3, 0.2])
+
+        Usually you get one from a solved :class:`~cvxcla.cla.CLA` rather than
+        by hand:
+
+        >>> from cvxcla import CLA
+        >>> solved = CLA.problem(mean, covariance).long_only().budget().trace()
+        >>> isinstance(solved.frontier, Frontier)
+        True
+    """
 
     mean: NDArray[np.float64]
     covariance: NDArray[np.float64] | CovarianceOperator
@@ -129,6 +194,27 @@ class Frontier:
 
         Returns:
             A new Frontier object with the interpolated points.
+
+        Examples:
+            >>> import numpy as np
+            >>> frontier = Frontier(
+            ...     mean=np.array([0.1, 0.2]),
+            ...     covariance=np.array([[0.04, 0.0], [0.0, 0.09]]),
+            ...     frontier=[
+            ...         FrontierPoint(weights=np.array([0.0, 1.0])),
+            ...         FrontierPoint(weights=np.array([1.0, 0.0])),
+            ...     ],
+            ... )
+            >>> len(frontier.interpolate(num=10))
+            9
+
+            One adjacent pair yields ``num - 1`` points, and every interpolated
+            point is a convex combination of its neighbours -- so a budget
+            constraint satisfied at the turning points still holds between them:
+
+            >>> dense = frontier.interpolate(num=10)
+            >>> bool(np.allclose(dense.weights.sum(axis=1), 1.0))
+            True
 
         """
 
@@ -188,6 +274,29 @@ class Frontier:
 
         Returns:
             Tuple of maximal Sharpe ratio and the weights to achieve it
+
+        Examples:
+            >>> import numpy as np
+            >>> frontier = Frontier(
+            ...     mean=np.array([0.1, 0.2]),
+            ...     covariance=np.array([[0.04, 0.0], [0.0, 0.09]]),
+            ...     frontier=[
+            ...         FrontierPoint(weights=np.array([0.0, 1.0])),
+            ...         FrontierPoint(weights=np.array([1.0, 0.0])),
+            ...     ],
+            ... )
+            >>> sharpe, weights = frontier.max_sharpe
+            >>> float(np.round(sharpe, 6))
+            0.833333
+            >>> bool(np.allclose(weights, [0.529412, 0.470588], atol=1e-6))
+            True
+
+            The continuous optimum sits *between* two turning points, so it
+            beats every discrete point on the frontier -- which is the reason
+            this is not simply ``argmax(sharpe_ratio)``:
+
+            >>> bool(sharpe > frontier.sharpe_ratio.max())
+            True
 
         """
         weights = self.weights
