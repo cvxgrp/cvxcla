@@ -78,6 +78,56 @@ ignore_missing_imports = true
 enforce = false
 reason = "Flat behaviour-oriented tests; private kernels (_kkt, _events, _projection, _lasso, _lasso_validate) are covered through cla.py/lasso.py, and per-module coverage is enforced by the full COVERAGE_FAIL_UNDER gate."
 
+[tool.rhiza-task]
+# Recovered from the make layer that rhiza v1.4.0 retired. Until v1.3.3 these
+# lived in the root Makefile and .rhiza/.env, which the v1.4.2 sync deletes.
+# They are NOT rhiza-task's defaults, so without this table the migration
+# would have silently weakened four gates. Defaults below are as resolved by
+# rhiza-task@0.3.1, the version .github/workflows/rhiza_ci.yml pins for every
+# gate step (a repo-level RHIZA_TASK governs local `make` only).
+
+# was: COVERAGE_FAIL_UNDER ?= 100 (root Makefile) | CLI default: 90
+# Missing => the coverage gate drops to 90% with nothing in the diff saying
+# so. There is no [tool.coverage.report] section in this file to fall back on,
+# and it would not help anyway: `test` passes --cov-fail-under on the command
+# line, which outranks the config file.
+coverage_fail_under = 100
+
+# was: TYPECHECKER ?= both (.rhiza/make.d/python.mk) | CLI default: "ty"
+# Missing => mypy --strict stops running entirely and only `ty` guards src/.
+# This is also strictly stronger than v1.3.3 was: the old shell `case` let
+# mypy's exit status win, so a `ty` failure could still pass the gate.
+typechecker = "both"
+
+# was: MARIMO_FOLDER=book/marimo/notebooks (.rhiza/.env) | default: docs/notebooks
+# Missing => the marimo gate looks in a directory that does not exist here and
+# validates none of the real notebooks (book/marimo/notebooks/{cla,factor}.py).
+marimo_folder = "book/marimo/notebooks"
+
+# was: RHIZA_CI_OS_MATRIX=[...] (.rhiza/.env) | CLI default: ["ubuntu-latest"]
+# Missing => CI silently narrows from three OSes to Linux only. This repo is
+# currently running the full matrix (macos-latest and windows-latest jobs are
+# green on main), and cvxcla ships BLAS-dependent numerics where the platform
+# is exactly what varies.
+ci_os_matrix = ["ubuntu-latest", "macos-latest", "windows-latest"]
+
+# Deliberately NOT set -- each was checked against rhiza-task@0.3.1 and needs
+# no entry. Listed so the next person does not re-add them:
+#   source_folder          .rhiza/.env said "src"; that is already the default.
+#   mkdocs_extra_packages  the Makefile said --with 'mkdocstrings[python]',
+#                          which is now the default list. Naming the setting
+#                          REPLACES that list, so a redundant line is the one
+#                          someone edits to add a package and silently drops
+#                          mkdocstrings from the book build with.
+#   license_ignore_packages  the only entry was `+= docutils` from the
+#                          template's own marimo.mk; rhiza-task appends
+#                          docutils itself whenever marimo is registered.
+#   pytest_rhiza           v1.3.3 had no RHIZA_CHECKS_VERSION pin and ran the
+#                          in-tree .rhiza/tests/ instead, so the CLI default
+#                          is an upgrade decision, not a preserved value.
+#   license_fail_on, uv_sync_args, tests_folder, zensical_version,
+#   book_output, layers, python_version  all matched the CLI default exactly.
+
 [tool.deptry.per_rule_ignores]
 DEP002 = ["kaleido"]
 
