@@ -4,10 +4,19 @@ ref: "v1.5.0"
 profiles:
   - github-project
 
+templates:
+  # SECURITY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md. LICENSE is excluded below.
+  - legal
+
 # exclude: is matched against DESTINATION paths (where the file lands here),
 # not against clone-relative paths inside the template. A `bundles/...` entry
 # matches nothing, silently.
 exclude:
+  # The template's LICENSE. `legal` is synced for SECURITY.md and the community docs,
+  # but the licence text is this repository's own: the bundle ships MIT under
+  # "Copyright (c) 2025 Jebel Quant Research", which is not this repo's holder.
+  - LICENSE
+
   # MUTATION_ENABLED is not set on this repo and the gate lives in the caller,
   # so the workflow only ever starts in order to skip. Note the file is deleted
   # too: re-enabling mutation testing later needs the workflow back, not just
