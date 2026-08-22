@@ -24,8 +24,6 @@ exclude:
   - .github/workflows/rhiza_mutation.yml
   # Repo-level GitHub metadata is owned here, not by the template.
   - .github/CONFIG.md
-  - .github/DISCUSSION_TEMPLATE
-  - .github/ISSUE_TEMPLATE
 
 # NOT excluded, on purpose:
 #   .github/workflows/rhiza_fuzzing.yml — FUZZING_ENABLED=true and
