@@ -17,15 +17,5 @@ exclude:
   # "Copyright (c) 2025 Jebel Quant Research", which is not this repo's holder.
   - LICENSE
 
-  # MUTATION_ENABLED is not set on this repo and the gate lives in the caller,
-  # so the workflow only ever starts in order to skip. Note the file is deleted
-  # too: re-enabling mutation testing later needs the workflow back, not just
-  # the repository variable.
-  - .github/workflows/rhiza_mutation.yml
   # Repo-level GitHub metadata is owned here, not by the template.
   - .github/CONFIG.md
-
-# NOT excluded, on purpose:
-#   .github/workflows/rhiza_fuzzing.yml — FUZZING_ENABLED=true and
-#   "(RHIZA) FUZZING" passes on every PR and push (~53s). Excluding it would
-#   delete a live gate; the sync bumps its pin instead.
