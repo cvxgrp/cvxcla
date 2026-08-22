@@ -61,7 +61,7 @@ Synced from the template — treat as read-only. Highlights from
   `scan_events`/`solve_segment`) and `_lasso_validate.py` (the design, operator
   and constraint input validators).
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
-  fuzz `tests/fuzz/`, benchmarks `tests/benchmarks/`). **Note:**
+  benchmarks `tests/benchmarks/`). **Note:**
   `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.
 - `pyproject.toml` — package metadata, dependencies, tool config
   (`[tool.interrogate]`, etc.).
