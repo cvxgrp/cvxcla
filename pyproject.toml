@@ -35,8 +35,8 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 [dependency-groups]
 dev = [
     "loguru==0.7.3",
-    "mosek==11.2.2",
-    "marimo==0.23.16",
+    "mosek==11.2.3",
+    "marimo==0.24.0",
     "pandas==3.0.5",
 ]
 test = [
