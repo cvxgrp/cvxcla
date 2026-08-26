@@ -8,9 +8,6 @@ templates:
   # SECURITY.md, CODE_OF_CONDUCT.md and CONTRIBUTING.md. LICENSE is excluded below.
   - legal
 
-# exclude: is matched against DESTINATION paths (where the file lands here),
-# not against clone-relative paths inside the template. A `bundles/...` entry
-# matches nothing, silently.
 exclude:
   # The template's LICENSE. `legal` is synced for SECURITY.md and the community docs,
   # but the licence text is this repository's own: the bundle ships MIT under
