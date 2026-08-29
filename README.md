@@ -12,8 +12,7 @@
 **Quick Links:**
 [📖 Documentation](https://www.cvxgrp.org/cvxcla) •
 [🐛 Report Bug](https://github.com/cvxgrp/cvxcla/issues) •
-[💡 Request Feature](https://github.com/cvxgrp/cvxcla/issues) •
-[💬 Discussions](https://github.com/cvxgrp/cvxcla/discussions)
+[💡 Request Feature](https://github.com/cvxgrp/cvxcla/issues)
 
 ---
 
@@ -339,8 +338,11 @@ make fmt
 
 ## 📖 Documentation
 
-- [Online Documentation](https://www.cvxgrp.org/cvxcla/book)
-- [API Reference](https://www.cvxgrp.org/cvxcla/pdoc/)
+- [Online Documentation](https://www.cvxgrp.org/cvxcla/)
+- [Factor backend](https://www.cvxgrp.org/cvxcla/factor/)
+- [Notebooks](https://www.cvxgrp.org/cvxcla/notebooks/cla.html)
+- [Test report](https://www.cvxgrp.org/cvxcla/reports/html-report/report.html)
+- [Coverage report](https://www.cvxgrp.org/cvxcla/reports/html-coverage/index.html)
 
 ## 👥 Contributing
 

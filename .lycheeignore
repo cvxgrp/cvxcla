@@ -1,0 +1,6 @@
+# Links the weekly link check must skip.
+#
+# rand.org sits behind CloudFront, which answers any non-browser client -- the
+# link checker included -- with 403. The Markowitz memorandum RM1438 is alive and
+# reachable in a browser, so the 403 is a bot block rather than a dead link.
+https://www\.rand\.org/
