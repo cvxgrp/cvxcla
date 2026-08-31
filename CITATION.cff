@@ -1,0 +1,61 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: cvxcla
+abstract: >-
+  A Python implementation of Markowitz's Critical Line Algorithm (CLA), which
+  computes the entire efficient frontier of a portfolio-optimization problem
+  exactly, as a finite list of turning points, under arbitrary linear equality
+  constraints and bounds on the weights. Covariance is consumed through an
+  operator protocol, so dense, Gram and diagonal-plus-low-rank factor models
+  are all traced without ever forming an n-by-n matrix. The same parametric
+  active-set engine also traces the LASSO regularisation path, including
+  general inequality constraints and the non-negative LASSO.
+type: software
+authors:
+  - given-names: Thomas
+    family-names: Schmelzer
+    email: thomas.schmelzer@gmail.com
+    affiliation: Jebel Quant Research
+  - given-names: Philipp
+    family-names: Schiele
+    email: pschiele@stanford.edu
+repository-code: "https://github.com/cvxgrp/cvxcla"
+url: "https://www.cvxgrp.org/cvxcla"
+license: MIT
+version: 2.0.0
+date-released: "2026-08-31"
+doi: 10.5281/zenodo.22209208
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22209208
+    description: >-
+      Concept DOI, which always resolves to the most recent release. Cite this
+      when referring to cvxcla in general.
+  - type: doi
+    value: 10.5281/zenodo.22209209
+    description: >-
+      Version DOI for release v2.0.0. Cite this when the exact release used
+      matters for reproducibility.
+keywords:
+  - portfolio optimization
+  - critical line algorithm
+  - efficient frontier
+  - Markowitz
+  - quadratic programming
+  - active-set method
+  - parametric programming
+  - LASSO
+  - convex optimization
+  - Python
+references:
+  - type: report
+    title: >-
+      The Optimization of Quadratic Functions Subject to Linear Constraints
+    authors:
+      - given-names: Harry
+        family-names: Markowitz
+    institution:
+      name: RAND Corporation
+    number: RM-1438
+    year: 1955
+    url: "https://www.rand.org/pubs/research_memoranda/RM1438.html"

@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Downloads](https://static.pepy.tech/personalized-badge/cvxcla?period=month&units=international_system&left_color=black&right_color=orange&left_text=PyPI%20downloads%20per%20month)](https://pepy.tech/project/cvxcla)
 [![Coverage](https://www.cvxgrp.org/cvxcla/coverage-badge.svg)](https://www.cvxgrp.org/cvxcla/reports/html-coverage/index.html)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22209209.svg)](https://doi.org/10.5281/zenodo.22209209)
 
 ---
 
