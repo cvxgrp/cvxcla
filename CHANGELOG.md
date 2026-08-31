@@ -5,6 +5,82 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.0.0] - 2026-08-31
+
+### Bug Fixes
+- Repair the dead links the weekly link check reports (#867)
+
+### Documentation
+- Add doctest examples to the operator builders and Frontier (#851)
+
+### Maintenance
+- Chore(deps)(deps): bump the github-actions group with 2 updates (#787)
+- Chore(deps-dev)(deps-dev): bump marimo in the python-dependencies group (#786)
+- Chore(deps)(deps): bump the github-actions group with 2 updates (#795)
+- Update rhiza to v1.0.1 (#805)
+- Chore(deps)(deps): bump the github-actions group with 12 updates (#813)
+- Chore(deps)(deps): bump the python-dependencies group with 3 updates (#814)
+- Update rhiza to v1.1.1 (#815)
+- Chore(deps-dev)(deps-dev): bump hypothesis (#818)
+- Update rhiza to v1.1.2 (#820)
+- *(lasso)* Extract numeric kernels and validators from lasso.py (#821) (#822)
+- Update rhiza to v1.1.3 (#823)
+- Reduce cyclomatic complexity to all-A and break import cycles (#824, #825) (#826)
+- Chore(deps)(deps): bump the python-dependencies group with 3 updates (#827)
+- Chore(deps-dev)(deps-dev): bump hypothesis (#829)
+- Chore(deps)(deps): bump the github-actions group with 14 updates (#828)
+- *(pyproject)* Modernize Python version and license metadata (#830)
+- Chore(deps)(deps): bump docker/login-action in the github-actions group (#831)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 3 updates (#832)
+- Update rhiza to v1.2.5 (#833)
+- Drop files no longer shipped by rhiza v1.2.5 (#834)
+- Chore(deps)(deps): bump the github-actions group with 3 updates (#835)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 2 updates (#836)
+- Update rhiza to v1.3.2 (#838)
+- Move bumpversion config into pyproject.toml (#839)
+- Chore(deps)(deps): bump pymdown-extensions from 10.21.3 to 11.0.1 (#840)
+- Update rhiza to v1.3.3 (#843)
+- Chore(deps)(deps): bump the github-actions group with 2 updates (#841)
+- Chore(deps-dev)(deps-dev): bump hypothesis (#842)
+- Close the three /rhiza:quality findings (#847)
+- Drop the literal % from the check_test_layout reason (#848)
+- Extract the fluent builders into a leaf module (#853)
+- Chore(deps-dev)(deps-dev): bump hypothesis (#854)
+- Migrate to rhiza v1.4.2 and recover the make layer's settings (#855)
+- Update rhiza to v1.5.0 (#856)
+- Prune exclude entries the template no longer ships (#857)
+- Sync the legal bundle, keeping this repo's LICENSE (#858)
+- Update rhiza to v1.5.1 (#859)
+- Drop the exclude entries for the retired mutation/fuzzing workflows (#860)
+- Remove the retired fuzzing workflow and its harness (#861)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 3 updates (#862)
+- Update rhiza to v1.6.0 (#863)
+- Update rhiza to v1.7.0 (#865)
+- Update rhiza to v1.7.1 (#866)
+
+### Other Changes
+- Remove `make_figures.py` script and consolidate all figure generation into `make_figures.py`.
+- Remove outdated `cla.tex` draft manuscript from the codebase.
+- Update template.yml (#783)
+- Change copyright from Jebel Quant Research to cvxgrp (#784)
+- Sync Rhiza template v0.19.3 → v0.19.5 (#785)
+- Add root CLAUDE.md documenting the Rhiza/local split (#788)
+- Split operators.py into an operators/ package (#789)
+- Split dense methods in cla.py into named helpers (#791) (#792)
+- Pin large-N and exact-duplicate degeneracy behaviour (#793)
+- Sync Rhiza template v0.19.5 → v0.19.6 (#794)
+- Sync Rhiza template v0.19.6 → v0.19.9 (#796)
+- Fix stale operators.py reference in CLAUDE.md (#800)
+- Clean up malformed leftover comment in first.py (#802)
+- Document nonneg and gram in the Lasso docstring (#801)
+- Update stale Rhiza pin in CLAUDE.md (v0.19.5 -> v0.19.9) (#804)
+- Remove operator classes; drive the CLA on cvx-linalg operators (#807)
+- Address quality findings #808–#811 (#812)
+- Reduce cla.py size/complexity; harden helper tests (#816, #817) (#819)
+- Remove the lint dependency group (#837)
+- Delete .clusterfuzzlite directory (#852)
+- Update comments in .rhiza/template.yml (#864)
+
 ## [1.8.2] - 2026-06-26
 
 ### New Features
