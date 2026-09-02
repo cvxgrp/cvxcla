@@ -38,6 +38,14 @@ dev = [
     "mosek==11.2.3",
     "marimo==0.24.0",
     "pandas==3.0.5",
+    # Portfolio analytics for the notebooks/experiments: turns a frontier
+    # portfolio's realised return series into stats and plots. Never imported
+    # from src/, hence dev-only.
+    "jquantstats==0.11.0",
+    # jquantstats is polars-native, and polars reads the committed S&P 500
+    # parquet snapshot without pulling in a pyarrow engine. Declared because
+    # experiments/frontier_stats.py imports it directly, not just transitively.
+    "polars==1.44.1",
 ]
 test = [
     "pytest>=7.0",
@@ -140,6 +148,8 @@ loguru = "loguru"
 mosek = "mosek"
 marimo = "marimo"
 pandas = "pandas"
+jquantstats = "jquantstats"
+polars = "polars"
 
 # bump-my-version only auto-discovers .bumpversion.toml, .bumpversion.cfg,
 # setup.cfg and pyproject.toml. Without a table here it falls back to
