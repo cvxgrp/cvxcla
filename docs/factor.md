@@ -20,14 +20,14 @@ n, k = 10_000, 50
 rng = np.random.default_rng(0)
 
 covariance = FactorCovariance(
-    d=rng.uniform(0.1, 0.5, n),            # idiosyncratic variances
-    u=rng.standard_normal((n, k)),         # factor loadings
-    delta=rng.uniform(0.5, 2.0, k),        # factor (co)variances, (k,) or (k, k)
+    d=rng.uniform(0.1, 0.5, n),  # idiosyncratic variances
+    u=rng.standard_normal((n, k)),  # factor loadings
+    delta=rng.uniform(0.5, 2.0, k),  # factor (co)variances, (k,) or (k, k)
 )
 
 frontier = CLA(
     mean=rng.uniform(0.0, 0.1, n),
-    covariance=covariance,                 # any ndarray still works as before
+    covariance=covariance,  # any ndarray still works as before
     lower_bounds=np.zeros(n),
     upper_bounds=np.ones(n),
     a=np.ones((1, n)),
@@ -42,9 +42,10 @@ protocol:
 ```python
 class CovarianceOperator(Protocol):
     n: int
-    def matvec(self, x): ...               # Sigma @ x
-    def solve_free(self, free, rhs): ...   # Sigma[free][:, free]^{-1} @ rhs
-    def cross(self, free, x): ...          # Sigma[free][:, ~free] @ x[~free]
+
+    def matvec(self, x): ...  # Sigma @ x
+    def solve_free(self, free, rhs): ...  # Sigma[free][:, free]^{-1} @ rhs
+    def cross(self, free, x): ...  # Sigma[free][:, ~free] @ x[~free]
 ```
 
 ## RMT-cleaned covariances

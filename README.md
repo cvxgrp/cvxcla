@@ -149,6 +149,7 @@ Here's a simple example of how to use `cvxcla` to compute the efficient frontier
 
 ```python
 import numpy as np
+
 # Set a seed for reproducibility
 np.random.seed(42)
 from cvxcla import CLA
@@ -163,12 +164,12 @@ upper_bounds = np.ones(n)  # No leverage
 
 # Create a CLA instance
 cla = CLA(
-    mean = mean,
-    covariance = covariance,
-    lower_bounds = lower_bounds,
-    upper_bounds = upper_bounds,
-    a = np.ones((1, n)),  # Fully invested constraint
-    b = np.ones(1)
+    mean=mean,
+    covariance=covariance,
+    lower_bounds=lower_bounds,
+    upper_bounds=upper_bounds,
+    a=np.ones((1, n)),  # Fully invested constraint
+    b=np.ones(1),
 )
 
 # Access the efficient frontier
@@ -179,7 +180,6 @@ max_sharpe_ratio, max_sharpe_weights = frontier.max_sharpe
 print(f"Maximum Sharpe ratio: {max_sharpe_ratio:.6f}")
 # Print first few weights to avoid long output
 print(f"First 3 weights: {max_sharpe_weights[:3]}")
-
 ```
 
 ```result
@@ -238,8 +238,8 @@ cla = CLA(
     upper_bounds=np.full(n, 0.35),
     a=np.ones((1, n)),  # fully invested
     b=np.ones(1),
-    g=g,                # inequality matrix  G  (p x n)
-    h=h,                # inequality vector  h  (p,)
+    g=g,  # inequality matrix  G  (p x n)
+    h=h,  # inequality vector  h  (p,)
 )
 
 # every turning point now satisfies the sector cap
@@ -263,8 +263,8 @@ from cvxcla import CLA, FactorCovariance
 rng = np.random.default_rng(42)
 n, k = 10_000, 50
 covariance = FactorCovariance(
-    d=rng.uniform(0.1, 0.5, n),      # idiosyncratic variances
-    u=rng.standard_normal((n, k)),   # factor loadings
+    d=rng.uniform(0.1, 0.5, n),  # idiosyncratic variances
+    u=rng.standard_normal((n, k)),  # factor loadings
     delta=rng.uniform(0.5, 2.0, k),  # factor variances, (k,) or (k, k)
 )
 ```
