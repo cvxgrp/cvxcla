@@ -38,8 +38,8 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 [dependency-groups]
 dev = [
     "loguru==0.7.3",
-    "mosek==11.2.3",
-    "marimo==0.24.0",
+    "mosek==11.2.4",
+    "marimo==0.24.2",
     "pandas==3.0.5",
     # Portfolio analytics for the notebooks/experiments: turns a frontier
     # portfolio's realised return series into stats and plots. Never imported
@@ -48,7 +48,7 @@ dev = [
     # jquantstats is polars-native, and polars reads the committed S&P 500
     # parquet snapshot without pulling in a pyarrow engine. Declared because
     # experiments/frontier_stats.py imports it directly, not just transitively.
-    "polars==1.44.1",
+    "polars==1.44.2",
 ]
 test = [
     "pytest>=7.0",
