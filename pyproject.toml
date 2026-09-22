@@ -40,7 +40,7 @@ dev = [
     "loguru==0.7.3",
     "mosek==11.2.4",
     "marimo==0.24.2",
-    "pandas==3.0.5",
+    "pandas==3.0.6",
     # Portfolio analytics for the notebooks/experiments: turns a frontier
     # portfolio's realised return series into stats and plots. Never imported
     # from src/, hence dev-only.
