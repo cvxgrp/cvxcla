@@ -43,9 +43,9 @@ Event families, mirroring the CLA's "move to / leave a bound":
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass, field
 from functools import cached_property
-from itertools import pairwise
 from typing import cast
 
 import numpy as np
@@ -343,9 +343,8 @@ class Lasso(InequalityConstrained):
             return ordered[0].beta
         if lam >= ordered[-1].lam:
             return ordered[-1].beta
-        for lo, hi in pairwise(ordered):
-            if lo.lam <= lam <= hi.lam:
-                weight = (lam - lo.lam) / (hi.lam - lo.lam)
-                return (1.0 - weight) * lo.beta + weight * hi.beta
-        msg = "lam lies within the path range but no bracketing segment was found"  # pragma: no cover
-        raise AssertionError(msg)  # pragma: no cover
+        # Strictly inside the range, so lo.lam <= lam < hi.lam and hi.lam > lo.lam.
+        idx = bisect_right([bp.lam for bp in ordered], lam)
+        lo, hi = ordered[idx - 1], ordered[idx]
+        weight = (lam - lo.lam) / (hi.lam - lo.lam)
+        return (1.0 - weight) * lo.beta + weight * hi.beta
