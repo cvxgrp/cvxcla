@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.0.1] - 2026-09-23
+
+### Bug Fixes
+- *(lasso)* Locate the bracketing segment with bisect, drop the no-cover fallback (#881)
+
+### Documentation
+- Add the Zenodo DOI badge and a CITATION.cff (#870)
+- Score frontier portfolios with jquantstats (#872)
+
+### Maintenance
+- Update rhiza to v1.7.2 (#871)
+- Chore(deps)(deps): bump the python-dependencies group with 2 updates (#874)
+- Update rhiza to v1.8.0 (#875)
+- Derive the project version from the newest git tag (#876)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 4 updates (#877)
+- Chore(deps)(deps): bump anyio from 4.13.0 to 4.14.2 (#878)
+- Chore(deps-dev)(deps-dev): bump pandas in the python-dependencies group (#879)
+
 ## [2.0.0] - 2026-08-31
 
 ### Bug Fixes
