@@ -124,6 +124,39 @@ def first_vertex_lp(
     h = np.zeros(0) if h is None else np.asarray(h, dtype=np.float64)
 
     weights = _solve_max_return_lp(mean, lower_bounds, upper_bounds, a, b, g, h)
+    return classify_vertex(weights, lower_bounds, upper_bounds, a, g, h, tol)
+
+
+def classify_vertex(
+    weights: NDArray[np.float64],
+    lower_bounds: NDArray[np.float64],
+    upper_bounds: NDArray[np.float64],
+    a: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    tol: float,
+) -> TurningPoint:
+    """Read the free set and the active rows off a maximum-return vertex.
+
+    An asset is free when it sits strictly inside its box (by more than ``tol``)
+    and an inequality row is active when it is tight to ``tol``. The vertex is
+    then checked for degeneracy (see :func:`_reject_degenerate_vertex`).
+
+    Args:
+        weights: The vertex weights.
+        lower_bounds: Lower box bounds.
+        upper_bounds: Upper box bounds.
+        a: Equality-constraint matrix (``m x n``).
+        g: Inequality-constraint matrix (``p x n``); empty ``(0, n)`` when none.
+        h: Inequality-constraint right-hand side (length ``p``).
+        tol: Classification tolerance.
+
+    Returns:
+        The vertex as a :class:`TurningPoint` carrying its active rows.
+
+    Raises:
+        ValueError: If the vertex is degenerate.
+    """
     free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
     active_ineq = (g @ weights >= h - tol) if g.shape[0] else np.zeros(0, dtype=bool)
 

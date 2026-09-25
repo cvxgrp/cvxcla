@@ -56,7 +56,11 @@ Synced from the template — treat as read-only. Highlights from
   private modules: `_kkt.py` (`active_set`/`solve_kkt`), `_events.py`
   (`event_ratios`/`ineq_event_ratios`), and `_projection.py` (`project_feasible`
   and its capped-simplex/alternating workers); `cla.py` is the orchestrator that
-  wires them into the `ParametricProblem` hooks. `lasso.py` is factored the same
+  wires them into the `ParametricProblem` hooks. Leverage caps `||w||_1 <= c`
+  (`CLA(leverage=...)`) live in `_leverage.py`: the long/short leg split
+  (`LeverageLift`), the lifted covariance `SignedLift`, and the leg-event mask;
+  `cla.py` traces the lifted problem with its private `_LeveragedCLA` subclass
+  and maps the turning points back to asset weights. `lasso.py` is factored the same
   way, over `_lasso.py` (the `LassoSegment`/`LassoState` kernel with
   `scan_events`/`solve_segment`) and `_lasso_validate.py` (the design, operator
   and constraint input validators).

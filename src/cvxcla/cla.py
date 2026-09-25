@@ -9,7 +9,7 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,8 +17,9 @@ from numpy.typing import NDArray
 from ._builders import ProblemBuilder
 from ._events import event_ratios, ineq_event_ratios
 from ._kkt import active_set, solve_kkt
+from ._leverage import LeverageLift, SignedLift, mask_leg_events
 from ._projection import project_feasible
-from .first import first_vertex_lp, init_algo
+from .first import classify_vertex, first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
@@ -101,6 +102,12 @@ class CLA(InequalityConstrained):
         turning_points: List of turning points on the efficient frontier.
         tol: Tolerance for numerical calculations.
         logger: Logger instance for logging information and errors.
+        leverage: Optional cap ``c`` on the gross exposure, ``||w||_1 <= c``.
+            ``None`` (the default) means no cap. The 1-norm is traced exactly by
+            splitting every asset whose box straddles zero into a long and a short
+            leg (see :mod:`cvxcla._leverage`); the turning points are reported in
+            the original asset weights, and ``active_ineq`` covers the rows of
+            ``g`` only.
 
     """
 
@@ -115,6 +122,7 @@ class CLA(InequalityConstrained):
     turning_points: list[TurningPoint] = field(default_factory=list)
     tol: float = 1e-5  # pragma: no mutate
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
+    leverage: float | None = None
 
     @classmethod
     def problem(
@@ -209,7 +217,8 @@ class CLA(InequalityConstrained):
             RuntimeError: If all variables are blocked, which would make the
                           system of equations singular.
             ValueError: If the inequality matrix ``g`` and vector ``h`` have
-                          mismatched or wrong shapes.
+                          mismatched or wrong shapes, or ``leverage`` is not a
+                          positive finite number.
 
         """
         if self.g_matrix.shape[1] != self.dimension:
@@ -218,7 +227,53 @@ class CLA(InequalityConstrained):
         if self.h_vector.shape[0] != self.g_matrix.shape[0]:
             msg = f"h must have {self.g_matrix.shape[0]} entries, got {self.h_vector.shape[0]}"
             raise ValueError(msg)
-        trace(self)
+        if self.leverage is None:
+            trace(self)
+            return
+        if not (np.isfinite(self.leverage) and self.leverage > 0):
+            msg = f"leverage must be a positive finite number, got {self.leverage}"
+            raise ValueError(msg)
+        self._trace_leveraged(self.leverage)
+
+    def _trace_leveraged(self, leverage: float) -> None:
+        """Trace the frontier under ``||w||_1 <= leverage`` via the signed lift.
+
+        Builds the lifted problem over the long/short legs -- the covariance as a
+        :class:`cvxcla._leverage.SignedLift` of this problem's backend, every
+        constraint matrix mapped through ``w = P x``, and the gross-exposure row
+        ``sum(x) <= leverage`` appended to ``G`` -- traces it with
+        :class:`_LeveragedCLA`, and maps its turning points back to asset weights.
+        The objective ``x.T P.T Sigma P x / 2 - lam mean.T P x`` is the original one
+        in ``w = P x``, so the lifted ``lambda`` is the original ``lambda``.
+
+        Args:
+            leverage: The gross-exposure cap ``c``.
+        """
+        lift = LeverageLift.from_bounds(self.lower_bounds, self.upper_bounds)
+        n_legs = lift.asset.shape[0]
+        lifted = _LeveragedCLA(
+            mean=self.mean[lift.asset] * lift.sign,
+            covariance=SignedLift(self.covariance_operator, lift.asset, lift.sign),
+            lower_bounds=lift.lower,
+            upper_bounds=lift.upper,
+            a=lift.columns(self.a),
+            b=self.b,
+            g=np.vstack([lift.columns(self.g_matrix), np.ones((1, n_legs))]),
+            h=np.append(self.h_vector, leverage),
+            tol=self.tol,
+            logger=self.logger,
+            lift=lift,
+        )
+        p = self.g_matrix.shape[0]
+        for tp in lifted.turning_points:
+            self._append(
+                TurningPoint(
+                    lamb=tp.lamb,
+                    weights=lift.to_assets(tp.weights, self.dimension),
+                    free=lift.any_leg(tp.free, self.dimension),
+                    active_ineq=tp.active_ineq[:p],
+                )
+            )
 
     def begin(self) -> tuple[float, TurningPoint]:
         """Record the first turning point and start the trace at ``lambda = inf``.
@@ -382,6 +437,10 @@ class CLA(InequalityConstrained):
                 bool(np.all(self.g_matrix @ tp.weights <= self.h_vector + tol)),
                 "Weights violate the inequality constraint G w <= h",
             ),
+            (
+                self.leverage is None or bool(np.abs(tp.weights).sum() <= self.leverage + tol),
+                "Weights violate the leverage constraint ||w||_1 <= leverage",
+            ),
         )
         for ok, message in checks:
             if not ok:
@@ -499,4 +558,61 @@ class CLA(InequalityConstrained):
             covariance=self.covariance,
             mean=self.mean,
             frontier=[FrontierPoint(point.weights) for point in self.turning_points],
+        )
+
+
+@dataclass(frozen=True)
+class _LeveragedCLA(CLA):
+    """The CLA over the long/short legs of a leverage-constrained problem.
+
+    Built only by :meth:`CLA._trace_leveraged`; its covariance is a
+    :class:`cvxcla._leverage.SignedLift` and its last inequality row is the
+    gross-exposure cap. It differs from the plain CLA in three places, all
+    stemming from the lifted covariance being singular along "raise both legs of
+    one asset":
+
+    * the leave-a-bound event of a leg whose partner is off its lower bound is
+      masked, so both legs of an asset are never free together (see
+      :func:`cvxcla._leverage.mask_leg_events`);
+    * a maximum-return vertex with overlapping legs is netted before the trace
+      starts (the LP can return one when the cap is tight with a zero multiplier);
+    * the up-front conditioning test is taken on the asset covariance, since the
+      lifted form is singular as a whole but never on a free block that is traced.
+
+    Attributes:
+        lift: The signed leg structure.
+    """
+
+    lift: LeverageLift | None = None
+
+    @property
+    def _legs(self) -> LeverageLift:
+        """The leg structure (always set by :meth:`CLA._trace_leveraged`)."""
+        return cast(LeverageLift, self.lift)
+
+    @cached_property
+    def _free_blocks_well_conditioned(self) -> bool:
+        """Whether the asset covariance clears the singularity floor.
+
+        A traced free block holds at most one leg per asset, so it is a signed
+        principal block of the asset covariance and interlacing applies to that.
+        """
+        base = cast(SignedLift, self.covariance)
+        return float(base.base.rcond_free(np.arange(base.base.n))) >= _RCOND_FLOOR
+
+    def event_matrix(self, state: TurningPoint, segment: _Segment) -> NDArray[np.float64]:
+        """Return the event matrix with the competing leg events masked."""
+        events = super().event_matrix(state, segment)
+        legs = self.dimension
+        events[:legs] = mask_leg_events(events[:legs], self._legs.partner, segment.at_lower)
+        return events
+
+    def _first_turning_point(self) -> TurningPoint:
+        """Return the maximum-return vertex with overlapping legs netted out."""
+        first = super()._first_turning_point()
+        netted = self._legs.net(first.weights)
+        if np.array_equal(netted, first.weights):
+            return first
+        return classify_vertex(
+            netted, self.lower_bounds, self.upper_bounds, self.a, self.g_matrix, self.h_vector, self.tol
         )

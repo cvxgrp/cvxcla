@@ -14,7 +14,8 @@ builders live apart from the solvers they build. The dependency runs one way,
 
 Neither builder adds modelling power. Each accepts exactly the polyhedral pieces
 its solver already supports -- box bounds, linear equalities ``A w = b``, linear
-inequalities ``G w <= h`` -- and maps them one-to-one onto constructor arguments.
+inequalities ``G w <= h`` and, for the CLA, a gross-exposure cap ``||w||_1 <= c``
+-- and maps them one-to-one onto constructor arguments.
 Anything the explicit constructor cannot trace, the builder cannot express either.
 """
 
@@ -111,8 +112,8 @@ class ProblemBuilder(Generic[SolverT]):
     Every method maps one-to-one onto a constructor argument, so the builder adds
     no modelling power and imposes no expression algebra: it accepts the same
     polyhedral pieces the CLA already supports (a quadratic objective, box bounds,
-    linear equalities ``A w = b``, and linear inequalities ``G w <= h``) and
-    nothing else. Anything the explicit constructor cannot trace, the builder
+    linear equalities ``A w = b``, linear inequalities ``G w <= h``, and a
+    gross-exposure cap ``||w||_1 <= c``) and nothing else. Anything the explicit constructor cannot trace, the builder
     cannot express either.
 
     Construct one via :meth:`cvxcla.cla.CLA.problem`, chain the constraint methods
@@ -161,6 +162,7 @@ class ProblemBuilder(Generic[SolverT]):
         self._b_blocks: list[NDArray[np.float64]] = []
         self._g_blocks: list[NDArray[np.float64]] = []
         self._h_blocks: list[NDArray[np.float64]] = []
+        self._leverage: float | None = None
 
     @property
     def _n(self) -> int:
@@ -278,6 +280,23 @@ class ProblemBuilder(Generic[SolverT]):
         self._h_blocks.append(h_block)
         return self
 
+    def leverage(self, limit: float) -> ProblemBuilder[SolverT]:
+        """Cap the gross exposure: ``||w||_1 = sum(|w_i|) <= limit``.
+
+        With a budget ``sum(w) = 1`` a limit of ``1.3`` is a 130/30 book; with
+        ``sum(w) = 0`` it caps the combined long and short notional. Only assets
+        whose bounds allow a short position are affected, so the cap is redundant
+        for a long-only fully-invested book. A second call replaces the first.
+
+        Args:
+            limit: The gross-exposure cap ``c``, a positive number.
+
+        Returns:
+            ``self``, for chaining.
+        """
+        self._leverage = float(limit)
+        return self
+
     def trace(self) -> SolverT:
         """Assemble the pieces, build the ``CLA``, and run the full trace.
 
@@ -305,6 +324,7 @@ class ProblemBuilder(Generic[SolverT]):
             b=np.concatenate(self._b_blocks),
             g=g,
             h=h,
+            leverage=self._leverage,
         )
 
     def _resolved_bounds(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:

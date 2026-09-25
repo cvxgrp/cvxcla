@@ -169,3 +169,24 @@ class TestValidation:
         n = len(mean)
         with pytest.raises(ValueError, match="to match the rows"):
             CLA.problem(mean, covariance).inequality(np.ones((2, n)), np.ones(3))
+
+
+class TestLeverage:
+    """The gross-exposure cap through the builder."""
+
+    def test_leverage_matches_constructor(self, problem):
+        """``.leverage(c)`` matches the explicit ``leverage=c`` argument."""
+        mean, covariance = problem
+        n = len(mean)
+        built = CLA.problem(mean, covariance).bounds(-0.3, 0.6).budget().leverage(1.3).trace()
+        explicit = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.full(n, -0.3),
+            upper_bounds=np.full(n, 0.6),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+            leverage=1.3,
+        )
+        assert built.leverage == 1.3
+        assert _same_frontier(built, explicit)
