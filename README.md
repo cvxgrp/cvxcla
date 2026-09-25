@@ -364,8 +364,28 @@ lasso = Lasso.problem(X, y).non_negative().trace()
 ```
 
 Both return the exact path, validated breakpoint-by-breakpoint against a per-λ QP
-solver. (Equality constraints `Aβ = b` need a feasibility seed and are not yet
-supported; the canonical sum-to-zero case cannot be traced one coordinate at a time.)
+solver.
+
+Homogeneous **equality** constraints `Aβ = 0` are supported too, for example
+sum-to-zero coefficients or contrasts:
+
+```python
+# sum-to-zero LASSO (1ᵀβ = 0); rows accumulate
+lasso = Lasso.problem(X, y).equality(np.ones(12)).trace()
+assert abs(lasso.solution(0.5 * lasso.lam_max).sum()) < 1e-10
+```
+
+The LASSO homotopy starts from `β = 0`, where an equality row is already active,
+so it cannot seed this path one coordinate at a time. The path is traced instead as
+one leverage-capped CLA on `Σ = XᵀX`, `μ = Xᵀy` and rescaled, `β = w / λ`, using
+the identity described next. This route has three limits:
+- the right-hand side must be zero
+- equality rows cannot be combined with `inequality` rows
+- the Gram `XᵀX` must be positive definite, so the constrained least-squares end
+  is unique
+
+Block-structured rows, such as two groups that each sum to zero, make the
+first vertex degenerate and are refused.
 
 ### One curve, two literatures
 
