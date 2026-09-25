@@ -6,6 +6,16 @@ portfolios: the *same* ``cvxcla.pathtracer.trace`` loop, the *same*
 homotopy. Only the problem-specific glue (the segment solve and what an event
 means) differs.
 
+The two are closer than analogues. Under ``Sigma = X^T X`` and ``mu = X^T y`` the
+constrained LASSO path ``beta(lam)`` solves the gross-exposure-capped Markowitz
+program ``min 1/2 w^T Sigma w - mu^T w`` s.t. ``||w||_1 <= c`` at
+``c = ||beta(lam)||_1``, under the same linear constraints, and the two paths share
+their breakpoints wherever ``c`` is strictly decreasing (Schmelzer and Hastie,
+"The Critical Line Algorithm and the Constrained LASSO: One Curve, Two
+Literatures", arXiv:2609.25704, Theorem 1). With homogeneous constraints, the
+tilt sweep of ``CLA(leverage=c)`` is that path rescaled,
+``w_c(lam) = lam * beta`` with ``||beta||_1 = c / lam`` (Corollary 2).
+
 The LASSO solves, for a response ``y`` and design matrix ``X``,
 
     minimize  1/2 ||y - X beta||^2 + lam ||beta||_1

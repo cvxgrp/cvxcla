@@ -59,3 +59,18 @@ references:
     number: RM-1438
     year: 1955
     url: "https://www.rand.org/pubs/research_memoranda/RM1438.html"
+  - type: article
+    title: >-
+      The Critical Line Algorithm and the Constrained LASSO: One Curve, Two
+      Literatures
+    authors:
+      - given-names: Thomas
+        family-names: Schmelzer
+      - given-names: Trevor
+        family-names: Hastie
+    year: 2026
+    notes: "arXiv preprint arXiv:2609.25704 [stat.ME]"
+    url: "https://arxiv.org/abs/2609.25704"
+    identifiers:
+      - type: other
+        value: "arXiv:2609.25704"

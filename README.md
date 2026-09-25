@@ -35,19 +35,22 @@ The Critical Line Algorithm was introduced by Harry Markowitz
 in [The Optimization of Quadratic Functions Subject to Linear Constraints](https://www.rand.org/pubs/research_memoranda/RM1438.html)
 and further described in his book [Portfolio Selection](https://www.wiley.com/en-us/Portfolio+Selection%3A+Efficient+Diversification+of+Investments%2C+2nd+Edition-p-9781557861085).
 
-The algorithm is based on the observation that the efficient frontier
-is a piecewise linear function when expected return is plotted against
-expected variance. The CLA computes the turning points (corners)
-of the efficient frontier, allowing for efficient representation of the entire frontier.
+The algorithm is based on the observation that the optimal *weights* are a
+piecewise linear function of the return tilt λ. The CLA computes the turning
+points (corners) where that path bends, and the whole frontier is recovered from
+them exactly. In the (variance, return) plane the frontier is a chain of parabolic
+arcs that meet with continuous slope, which is why its corners are invisible on a
+frontier plot but show up as kinks on a LASSO coefficient path.
 
 I gave the plenary talk at [EQD's Singapore conference](https://tschm.github.io/eqd_markowitz/PresentationEQDweb.pdf).
 
 ## 🧮 Why the Algorithm Works
 
-The Markowitz problem is a quadratic program parametrized by a return target λ:
+The Markowitz problem is a quadratic program parametrized by a return tilt λ
+(a weight on expected return, not a return target or a risk aversion):
 
 ```text
-min  wᵀΣw - λ · μᵀw
+min  ½ wᵀΣw - λ · μᵀw
 s.t. Aw = b,  Gw ≤ h,  lb ≤ w ≤ ub
 ```
 
@@ -86,7 +89,21 @@ three steps:
 
 Because only one coordinate changes per step and each step requires only a single
 linear solve, the algorithm traces the full frontier cheaply and exactly — no
-approximation needed.
+approximation needed. Ties are broken by a Bland-style lowest-index rule, which
+keeps the walk deterministic and finite.
+
+The four events are the same ones the LASSO homotopy uses, under different names
+(Schmelzer and Hastie, 2026, Table 2):
+
+| Event | Critical Line Algorithm | LASSO / LARS |
+|-------|-------------------------|--------------|
+| P₁ | an asset reaches a bound and leaves the free set | a coefficient crosses zero (the "leave" move) |
+| P₂ | a group or exposure row `Gw ≤ h` becomes tight | a linear inequality on β becomes tight |
+| D₁ | a blocked asset's reduced cost changes sign and it re-enters | an inactive correlation reaches λ (the "enter" move) |
+| D₂ | an active row's multiplier hits zero and it releases | an active inequality's multiplier hits zero |
+
+The only difference at the level of the algorithm is D₁: for a box the threshold is
+fixed at zero, while for the ℓ₁ penalty it moves with λ.
 
 ## ✨ Features
 
@@ -350,6 +367,65 @@ Both return the exact path, validated breakpoint-by-breakpoint against a per-λ 
 solver. (Equality constraints `Aβ = b` need a feasibility seed and are not yet
 supported; the canonical sum-to-zero case cannot be traced one coordinate at a time.)
 
+### One curve, two literatures
+
+The link between the two classes is more than a shared engine. Under `Σ = XᵀX` and
+`μ = Xᵀy`, the gross-exposure-capped Markowitz program and the constrained LASSO
+trace **the same piecewise-linear curve**, under arbitrary linear equality and
+inequality constraints
+([Schmelzer and Hastie, 2026](https://arxiv.org/abs/2609.25704)):
+
+```text
+M_c:  min ½ wᵀΣw − μᵀw        s.t. ‖w‖₁ ≤ c,  Aw = b,  Gw ≤ h
+L_λ:  min ½‖y − Xβ‖² + λ‖β‖₁  s.t.          Aβ = b,  Gβ ≤ h
+```
+
+- **Theorem 1.** Given general position and a constraint qualification, `β(λ)` solves
+  `M_c` at `c(λ) = ‖β(λ)‖₁`. Wherever `c` is strictly decreasing, the two paths
+  share the same breakpoints, visited in the same order.
+- **Budget versus tilt (Corollary 2).** With homogeneous constraints (`b = 0`,
+  `h = 0`), sweeping the tilt λ at a fixed leverage cap `c` (which is what
+  `CLA(leverage=c)` does) gives the budget-indexed path rescaled:
+  `w_c(λ) = λ · w^M(c/λ)`.
+- **The frontier is a LASSO path (Proposition 3).** The long-only, fully invested
+  frontier is the non-negative LASSO path, rescaled radially by `t = 1/λ`.
+- **Degrees of freedom (Proposition 4).** A turning point's fit has
+  `df = E[|F| − rank M_F]`, where `F` is the free set and `M_F` stacks the active
+  constraint rows on it. For a long-only, fully invested frontier this is the
+  expected number of holdings away from a bound, less one.
+
+In cvxcla terms, a `CLA` with `mean = Xᵀy`, `covariance = XᵀX` and
+`leverage = c` reproduces the rescaled LASSO path, and so does a `Lasso` fitted on
+`(X, y)`:
+
+```python
+import numpy as np
+from cvxcla import CLA, Lasso
+
+rng = np.random.default_rng(0)
+X = rng.standard_normal((40, 8))
+y = X @ rng.standard_normal(8) + 0.3 * rng.standard_normal(40)
+
+lasso = Lasso(x=X, y=y)
+c = 0.8 * np.abs(lasso.path[-1].beta).sum()  # a binding leverage cap
+cla = CLA(
+    mean=X.T @ y,
+    covariance=X.T @ X,
+    lower_bounds=np.full(8, -50.0),
+    upper_bounds=np.full(8, 50.0),
+    a=np.zeros((0, 8)),
+    b=np.zeros(0),
+    leverage=c,
+)
+# every turning point w at tilt lam is lam * beta, where ||beta||_1 = c / lam
+```
+
+The identity carries statements about the curve, such as the breakpoints, the
+order in which coordinates enter, and the path length. It does not carry
+statements averaged over the response at a fixed parameter, such as
+post-selection intervals, because a fixed λ and a fixed `c` are different
+experiments.
+
 ## 🧪 Testing
 
 Run the test suite with:
@@ -379,6 +455,27 @@ make fmt
 - [Notebooks](https://www.cvxgrp.org/cvxcla/notebooks/cla.html)
 - [Test report](https://www.cvxgrp.org/cvxcla/reports/html-report/report.html)
 - [Coverage report](https://www.cvxgrp.org/cvxcla/reports/html-coverage/index.html)
+- [The Critical Line Algorithm and the Constrained LASSO: One Curve, Two Literatures](https://arxiv.org/abs/2609.25704)
+  (Schmelzer and Hastie, 2026)
+
+## 📚 Citing
+
+If you use `cvxcla`, please cite the software through its
+[Zenodo DOI](https://doi.org/10.5281/zenodo.22209208) (see [`CITATION.cff`](CITATION.cff)).
+If you use the CLA–LASSO correspondence, please also cite:
+
+```bibtex
+@misc{schmelzer2026onecurve,
+  title         = {The Critical Line Algorithm and the Constrained {LASSO}:
+                   One Curve, Two Literatures},
+  author        = {Schmelzer, Thomas and Hastie, Trevor},
+  year          = {2026},
+  eprint        = {2609.25704},
+  archivePrefix = {arXiv},
+  primaryClass  = {stat.ME},
+  url           = {https://arxiv.org/abs/2609.25704}
+}
+```
 
 ## 👥 Contributing
 
