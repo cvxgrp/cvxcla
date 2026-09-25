@@ -96,6 +96,8 @@ approximation needed.
 - Box bounds on every weight, plus general linear **equality** constraints
   `Aw = b` (budget, dollar-neutral, sector/factor neutrality) and general linear
   **inequality** constraints `Gw ≤ h` (group or sector exposure caps)
+- Leverage (gross-exposure) caps `‖w‖₁ ≤ c`, traced exactly (130/30 books,
+  capped dollar-neutral books)
 - Factor covariance backend: exact frontiers for diagonal-plus-low-rank
   covariances (factor models, RMT-cleaned matrices) in O(nk) memory via the
   Woodbury identity
@@ -249,6 +251,39 @@ assert all(tp.weights[:3].sum() <= 0.40 + cla.tol for tp in cla.turning_points)
 `g`/`h` default to `None`, so omitting them recovers the equality-only problem
 unchanged. Stack multiple rows in `g` for several caps at once, and express a `≥`
 floor by negating a row (`-Gw ≤ -h`).
+
+### Leverage (gross-exposure) caps
+
+Pass `leverage=c` (or chain `.leverage(c)` on the builder) to cap the gross
+exposure `‖w‖₁ = Σ|wᵢ| ≤ c`. With a fully-invested budget, `c = 1.3` is a 130/30
+book:
+
+```python
+import numpy as np
+from cvxcla import CLA
+
+n = 10
+rng = np.random.default_rng(42)
+mean = rng.standard_normal(n)
+factor = rng.standard_normal((n, n))
+covariance = factor @ factor.T  # symmetric positive definite
+
+cla = (
+    CLA.problem(mean, covariance)
+    .bounds(-0.2, 0.45)  # shorts allowed down to -20% per asset
+    .budget()  # fully invested
+    .leverage(1.3)  # at most 130% long + short
+    .trace()
+)
+
+assert all(np.abs(tp.weights).sum() <= 1.3 + cla.tol for tp in cla.turning_points)
+```
+
+The 1-norm is polyhedral, so the frontier is still traced exactly. Internally each
+asset whose box straddles zero is split into a long and a short leg, `wᵢ = uᵢ − vᵢ`,
+and the cap becomes one extra inequality row `Σuᵢ + Σvᵢ ≤ c`. The turning points
+are reported in the original weights. Assets that can only be long (or only short)
+are not split, so the cap is redundant for a long-only, fully-invested book.
 
 ### Factor models at scale
 
