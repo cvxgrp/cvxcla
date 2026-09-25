@@ -37,6 +37,7 @@ from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .operators import QuadraticForm
+from .types import TurningPoint
 
 
 def _scale_rows(sign: NDArray[np.float64], v: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -194,6 +195,28 @@ class LeverageLift:
     def any_leg(self, mask: NDArray[np.bool_], n: int) -> NDArray[np.bool_]:
         """Return, per asset, whether any of its legs is set in ``mask``."""
         return np.bincount(self.asset, weights=mask.astype(np.float64), minlength=n) > 0
+
+    def with_cap(
+        self, g: NDArray[np.float64], h: NDArray[np.float64], cap: float | None
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Return the lifted ``G P``, ``h`` with the gross-exposure row ``sum(x) <= cap`` appended.
+
+        ``cap=None`` maps the rows without appending the cap (a cap already
+        resolved into tightened bounds).
+        """
+        lifted = self.columns(g)
+        if cap is None:
+            return lifted, h
+        return np.vstack([lifted, np.ones((1, self.asset.shape[0]))]), np.append(h, cap)
+
+    def to_turning_point(self, tp: TurningPoint, n: int, p: int) -> TurningPoint:
+        """Map a lifted turning point back to the ``n`` asset weights and the first ``p`` rows."""
+        return TurningPoint(
+            lamb=tp.lamb,
+            weights=self.to_assets(tp.weights, n),
+            free=self.any_leg(tp.free, n),
+            active_ineq=tp.active_ineq[:p],
+        )
 
     def net(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
         """Net out overlapping legs: subtract ``min(u_i, v_i)`` from both legs of each asset.

@@ -282,7 +282,7 @@ class TestFirstVertexNetting:
             weights[:2] += 0.1  # both legs of asset 0 (legs 0 and 1)
             return TurningPoint(weights=weights, free=tp.free, active_ineq=tp.active_ineq)
 
-        with patch("cvxcla.cla.first_vertex_lp", overlapping):
+        with patch("cvxcla.first.first_vertex_lp", overlapping):
             perturbed = CLA(**kwargs)
         assert len(clean) == len(perturbed)
         for p, q in zip(clean.turning_points, perturbed.turning_points, strict=True):

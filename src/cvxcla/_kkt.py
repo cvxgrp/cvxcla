@@ -11,10 +11,13 @@ materialise an ``n x n`` matrix.
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 import numpy as np
 from numpy.typing import NDArray
 
 from .operators import QuadraticForm, bordered_solve, cross
+from .types import TurningPoint
 
 
 def active_set(
@@ -150,3 +153,71 @@ def solve_kkt(
     eta_alpha[active_ineq] = nu_alpha[m:]
     eta_beta[active_ineq] = nu_beta[m:]
     return r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta
+
+
+class Segment(NamedTuple):
+    """The affine critical-line segment valid at one turning point.
+
+    Bundles the affine path ``w(lam) = r_alpha + lam * r_beta``, the multiplier
+    gradients ``gamma``/``delta`` that drive the leave-a-bound events, and the
+    active-set masks the event scan needs. This is what ``CLA.segment`` returns
+    to the generic path tracer.
+
+    For general inequality constraints ``G w <= h`` the segment also carries the
+    affine inequality multipliers ``eta_alpha + lam * eta_beta`` (one entry per
+    inequality row; meaningful for *active* rows, which release when the
+    multiplier crosses zero) and the active-row mask ``active_ineq``. The slacks
+    that drive an *inactive* row becoming active are recomputed from
+    ``r_alpha``/``r_beta`` directly in :func:`cvxcla._events.ineq_event_ratios`.
+    """
+
+    r_alpha: NDArray[np.float64]
+    r_beta: NDArray[np.float64]
+    gamma: NDArray[np.float64]
+    delta: NDArray[np.float64]
+    at_upper: NDArray[np.bool_]
+    at_lower: NDArray[np.bool_]
+    free_in: NDArray[np.bool_]
+    active_ineq: NDArray[np.bool_]
+    eta_alpha: NDArray[np.float64]
+    eta_beta: NDArray[np.float64]
+
+
+def critical_segment(
+    cov: QuadraticForm,
+    mean: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+    tol: float,
+    state: TurningPoint,
+) -> Segment:
+    """Solve the reduced KKT system for the critical-line segment at ``state``.
+
+    Composes :func:`active_set` (which bounds are held at the turning point) with
+    :func:`solve_kkt` (the block-eliminated reduced solve) and bundles the result
+    with the masks the event scan needs.
+
+    Args:
+        cov: The covariance as a ``QuadraticForm`` backend.
+        mean: Vector of expected returns.
+        a: Equality-constraint matrix ``A`` of ``A w = b``.
+        b: Equality-constraint right-hand side ``b``.
+        g: Inequality-constraint matrix ``G`` of ``G w <= h`` (``(p, n)``).
+        h: Inequality-constraint right-hand side ``h`` (length ``p``).
+        lower: Per-asset lower bounds.
+        upper: Per-asset upper bounds.
+        tol: Tolerance for classifying a weight as sitting on a bound.
+        state: The turning point the segment starts from.
+
+    Returns:
+        The :class:`Segment` valid below ``state``.
+    """
+    at_upper, at_lower, free_in, fixed_weights = active_set(state.free, state.weights, lower, upper, tol)
+    r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+        cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq
+    )
+    return Segment(r_alpha, r_beta, gamma, delta, at_upper, at_lower, free_in, state.active_ineq, eta_alpha, eta_beta)

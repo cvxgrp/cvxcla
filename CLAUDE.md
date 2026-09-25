@@ -43,9 +43,13 @@ despite living under `tests/`.
   (the `ProblemBuilder`/`LassoBuilder` fluent builders; `builder.py` is its
   public re-export), `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
   The per-turning-point numeric kernels are factored out of `cla.py` into pure
-  private modules: `_kkt.py` (`active_set`/`solve_kkt`), `_events.py`
-  (`event_ratios`/`ineq_event_ratios`), and `_projection.py` (`project_feasible`
-  and its capped-simplex/alternating workers); `cla.py` is the orchestrator that
+  private modules: `_kkt.py` (`active_set`/`solve_kkt`, composed with the
+  `Segment` bundle by `critical_segment`), `_events.py`
+  (`event_ratios`/`ineq_event_ratios`, stacked by `segment_events`),
+  `_projection.py` (`project_feasible` and its capped-simplex/alternating
+  workers), and `_checks.py` (the `well_conditioned`/`guard_degeneracy`
+  conditioning tests and the `check_feasible` constraint validation); the
+  first-vertex dispatch is `first.first_turning_point`. `cla.py` is the orchestrator that
   wires them into the `ParametricProblem` hooks. Leverage caps `||w||_1 <= c`
   (`CLA(leverage=...)`) live in `_leverage.py`: the long/short leg split
   (`LeverageLift`), the lifted covariance `SignedLift`, and the leg-event mask;
