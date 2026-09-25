@@ -159,14 +159,18 @@ def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tup
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
-        valid event remains.
+        valid event remains above ``lambda = 0``.
     """
     l_mat = l_mat.copy()  # do not mutate the caller's matrix
     rate = min(tol, 1e-10)  # roundoff-scale relative window; tol is only an upper bound
     l_mat[l_mat > lam + rate * max(1.0, abs(lam))] = -np.inf  # pragma: no mutate
 
     lam_max = np.max(l_mat)
-    if lam_max < 0:  # pragma: no mutate
+    # An event at lambda = 0 coincides with the endpoint ``finish`` records, so it
+    # ends the trace rather than firing: under homogeneous constraints the path runs
+    # along a ray into the origin and every free coordinate reaches its bound there
+    # at once, which would otherwise emit one copy of the endpoint per coordinate.
+    if lam_max <= 0:
         return None
 
     tied = np.argwhere(l_mat >= lam_max - rate * max(1.0, abs(lam_max)))  # pragma: no mutate
