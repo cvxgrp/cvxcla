@@ -21,6 +21,11 @@ off its lower bound, the other leg's multiplier equals twice the leverage row's
 multiplier, which is non-negative, so the other leg can only become free at the
 same ``lambda`` as the row releases. :func:`mask_leg_events` drops that
 competing leg event so the row release wins the tie.
+
+Under ``Sigma = X^T X`` and ``mu = X^T y`` the capped program is the constrained
+LASSO read as a portfolio: its budget-indexed path is the LASSO path, and the tilt
+sweep traced here is that path rescaled (Schmelzer and Hastie, arXiv:2609.25704,
+Theorem 1 and Corollary 2). See :mod:`cvxcla.lasso`.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .operators import QuadraticForm
 
@@ -226,3 +232,97 @@ def mask_leg_events(
     box = box.copy()
     box[suppress, 2:] = -np.inf
     return box
+
+
+def _gross_lp(
+    lift: LeverageLift,
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    sense: float,
+) -> tuple[float, NDArray[np.float64]] | None:
+    """Optimise the gross exposure ``sum(x)`` over the lifted feasible set.
+
+    Minimises ``sense * sum(x)`` subject to ``A P x = b``, ``G P x <= h`` and the leg
+    box, via HiGHS.
+
+    Returns:
+        ``(sum(x), reduced costs of the leg lower bounds)`` at the optimum, or
+        ``None`` if the linear program has no solution (the caller's own first
+        vertex then reports the infeasibility).
+    """
+    n_legs = lift.asset.shape[0]
+    has_ineq = g.shape[0] > 0
+    result = linprog(
+        c=np.full(n_legs, sense),
+        A_eq=lift.columns(a),
+        b_eq=b,
+        A_ub=lift.columns(g) if has_ineq else None,
+        b_ub=h if has_ineq else None,
+        bounds=list(zip(lift.lower, lift.upper, strict=True)),
+        method="highs",
+    )
+    if not result.success:
+        return None
+    return float(np.sum(result.x)), np.asarray(result.lower.marginals, dtype=np.float64)
+
+
+def tighten_at_minimum_gross(
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    leverage: float,
+    tol: float,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], bool]:
+    """Resolve a cap sitting at the smallest feasible gross exposure.
+
+    When ``leverage`` equals ``c_min = min ||w||_1`` over the feasible set, the cap
+    row is tight at every feasible point and implies a set of zero legs through the
+    other rows. With a fully-invested budget, ``leverage = 1`` forces every short leg
+    to zero. Carrying the cap row alongside those rows makes the maximum-return vertex
+    degenerate: the free set cannot span them all. This is also the one cap at which
+    Slater's condition fails.
+
+    The feasible set is then the optimal face of ``min sum(x)``. By complementary
+    slackness, a leg whose lower bound carries a positive reduced cost is zero on
+    that whole face. Pinning it there is therefore exact: the short leg of a split
+    asset pins ``lower = 0``, and its long leg pins ``upper = 0``. If the cap is
+    then implied by the tightened box, because ``max sum(x)`` over it is at most
+    ``leverage``, the row is dropped.
+
+    Args:
+        lower: Asset lower bounds.
+        upper: Asset upper bounds.
+        a: Equality-constraint matrix over the assets.
+        b: Equality-constraint right-hand side.
+        g: Inequality-constraint matrix over the assets.
+        h: Inequality-constraint right-hand side.
+        leverage: The gross-exposure cap ``c``.
+        tol: Tolerance for comparing the cap with ``c_min`` and for a positive
+            reduced cost.
+
+    Returns:
+        ``(lower, upper, keep_cap)``: the (possibly tightened) asset bounds and
+        whether the cap row is still needed. Unchanged bounds and ``True`` when the
+        cap exceeds ``c_min``.
+    """
+    lift = LeverageLift.from_bounds(lower, upper)
+    minimum = _gross_lp(lift, a, b, g, h, sense=1.0)
+    if minimum is None or leverage > minimum[0] + tol * max(1.0, minimum[0]):
+        return lower, upper, True
+
+    pinned = minimum[1] > tol
+    lower, upper = lower.copy(), upper.copy()
+    split = lift.partner >= 0
+    short = split & (lift.sign < 0) & pinned
+    long = split & (lift.sign > 0) & pinned
+    lower[lift.asset[short]] = 0.0
+    upper[lift.asset[long]] = 0.0
+
+    maximum = _gross_lp(LeverageLift.from_bounds(lower, upper), a, b, g, h, sense=-1.0)
+    keep_cap = maximum is None or maximum[0] > leverage + tol * max(1.0, leverage)
+    return lower, upper, keep_cap

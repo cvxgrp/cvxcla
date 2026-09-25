@@ -47,6 +47,13 @@ class TestSelectNextEvent:
         l_mat[0, 0] = 5.0
         assert select_next_event(l_mat, lam=1.0, tol=1e-9) is None
 
+    def test_returns_none_when_best_event_is_at_zero(self):
+        """An event at lambda = 0 coincides with the endpoint, so the trace stops."""
+        l_mat = np.full((3, 2), -np.inf)
+        l_mat[0, 0] = 0.0
+        l_mat[2, 1] = 0.0
+        assert select_next_event(l_mat, lam=0.5, tol=1e-9) is None
+
     def test_returns_none_when_all_neg_inf(self):
         """An all -inf matrix means no candidate events remain."""
         assert select_next_event(np.full((3, 2), -np.inf), lam=np.inf, tol=1e-9) is None

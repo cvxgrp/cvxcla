@@ -17,7 +17,7 @@ from numpy.typing import NDArray
 from ._builders import ProblemBuilder
 from ._events import event_ratios, ineq_event_ratios
 from ._kkt import active_set, solve_kkt
-from ._leverage import LeverageLift, SignedLift, mask_leg_events
+from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
 from ._projection import project_feasible
 from .first import classify_vertex, first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
@@ -243,14 +243,23 @@ class CLA(InequalityConstrained):
         constraint matrix mapped through ``w = P x``, and the gross-exposure row
         ``sum(x) <= leverage`` appended to ``G`` -- traces it with
         :class:`_LeveragedCLA`, and maps its turning points back to asset weights.
+        A cap at the smallest feasible gross exposure is first resolved into
+        tightened bounds (see :func:`cvxcla._leverage.tighten_at_minimum_gross`),
+        which keeps the maximum-return vertex non-degenerate.
         The objective ``x.T P.T Sigma P x / 2 - lam mean.T P x`` is the original one
         in ``w = P x``, so the lifted ``lambda`` is the original ``lambda``.
 
         Args:
             leverage: The gross-exposure cap ``c``.
         """
-        lift = LeverageLift.from_bounds(self.lower_bounds, self.upper_bounds)
+        lower, upper, keep_cap = tighten_at_minimum_gross(
+            self.lower_bounds, self.upper_bounds, self.a, self.b, self.g_matrix, self.h_vector, leverage, self.tol
+        )
+        lift = LeverageLift.from_bounds(lower, upper)
         n_legs = lift.asset.shape[0]
+        g, h = lift.columns(self.g_matrix), self.h_vector
+        if keep_cap:
+            g, h = np.vstack([g, np.ones((1, n_legs))]), np.append(h, leverage)
         lifted = _LeveragedCLA(
             mean=self.mean[lift.asset] * lift.sign,
             covariance=SignedLift(self.covariance_operator, lift.asset, lift.sign),
@@ -258,8 +267,8 @@ class CLA(InequalityConstrained):
             upper_bounds=lift.upper,
             a=lift.columns(self.a),
             b=self.b,
-            g=np.vstack([lift.columns(self.g_matrix), np.ones((1, n_legs))]),
-            h=np.append(self.h_vector, leverage),
+            g=g,
+            h=h,
             tol=self.tol,
             logger=self.logger,
             lift=lift,

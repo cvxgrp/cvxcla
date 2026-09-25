@@ -108,6 +108,40 @@ class TestLeverageFrontier:
         a, b = np.ones((1, n)), np.zeros(1)
         cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, leverage=1.0)
         _assert_optimal_path(cla, mean, cov, lower, upper, a, b, 1.0)
+        lams = [tp.lamb for tp in cla.turning_points]
+        assert np.all(np.diff(lams) < 0)  # no repeated endpoint at lambda = 0
+        assert lams[-1] == 0.0
+        assert np.allclose(cla.turning_points[-1].weights, 0.0)
+
+    def test_homogeneous_lasso_endpoint_is_recorded_once(self):
+        """Under Sigma = X^T X, mu = X^T y and no budget, the path ends once at the origin."""
+        rng = np.random.default_rng(0)
+        n = 8
+        x = rng.standard_normal((40, n))
+        y = x @ rng.standard_normal(n) + 0.3 * rng.standard_normal(40)
+        cla = CLA(
+            mean=x.T @ y,
+            covariance=x.T @ x,
+            lower_bounds=np.full(n, -50.0),
+            upper_bounds=np.full(n, 50.0),
+            a=np.zeros((0, n)),
+            b=np.zeros(0),
+            leverage=5.0,
+        )
+        lams = [tp.lamb for tp in cla.turning_points]
+        assert np.all(np.diff(lams) < 0)
+        assert lams.count(0.0) == 1
+
+    def test_cap_at_budget_is_the_long_only_frontier(self):
+        """With a fully-invested budget, leverage = 1 forbids shorts: the long-only frontier."""
+        n = 7
+        mean, cov = _problem(n, 11)
+        kwargs = {"mean": mean, "covariance": cov, "a": np.ones((1, n)), "b": np.ones(1)}
+        capped = CLA(**kwargs, lower_bounds=np.full(n, -0.4), upper_bounds=np.full(n, 0.4), leverage=1.0)
+        long_only = CLA(**kwargs, lower_bounds=np.zeros(n), upper_bounds=np.full(n, 0.4))
+        assert len(capped) == len(long_only)
+        for p, q in zip(capped.turning_points, long_only.turning_points, strict=True):
+            assert np.allclose(p.weights, q.weights)
 
     def test_mixed_long_only_short_only_and_two_sided_assets(self):
         """Long-only, short-only and two-sided assets together, plus a group cap."""
@@ -287,6 +321,21 @@ class TestLeverageValidation:
                 a=np.ones((1, n)),
                 b=np.ones(1),
                 leverage=0.5,
+            )
+
+    def test_infeasible_budget_raises_through_the_first_vertex(self):
+        """Constraints infeasible before any cap still fail with the first-vertex message."""
+        n = 3
+        mean, cov = _problem(n, 0)
+        with pytest.raises(ValueError, match="Could not find a maximum-return vertex"):
+            CLA(
+                mean=mean,
+                covariance=cov,
+                lower_bounds=np.full(n, -1.0),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.array([10.0]),  # more than the boxes allow
+                leverage=20.0,
             )
 
     def test_append_rejects_leverage_violation(self):
