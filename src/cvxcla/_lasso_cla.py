@@ -36,8 +36,9 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
-from .cla import _RCOND_FLOOR, CLA
+from .cla import CLA
 from .operators import QuadraticForm
+from .operators._core import _RCOND_FLOOR
 
 #: One LASSO breakpoint as ``(lam, beta, active)``; :mod:`cvxcla.lasso` wraps it.
 BreakpointData = tuple[float, NDArray[np.float64], NDArray[np.bool_]]
