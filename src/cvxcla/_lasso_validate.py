@@ -3,7 +3,7 @@
 The LASSO accepts its quadratic form either as a dense design ``(x, y)`` or as a
 ``QuadraticForm`` operator plus the linear term ``X^T y``, optionally with linear
 inequality constraints ``G beta <= h``. The shape and consistency checks for those
-two input modes, plus the constraint check, are pure functions here so
+two input modes, plus the constraint checks, are pure functions here so
 ``Lasso.__post_init__`` reduces to dispatching to them before handing off to the
 tracer.
 """
@@ -136,3 +136,34 @@ def _validate_constraint_shapes(
     if np.any(h <= tol):
         msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
         raise ValueError(msg)
+
+
+def validate_equality(
+    a: NDArray[np.float64],
+    g: NDArray[np.float64] | None,
+    dimension: int,
+) -> NDArray[np.float64]:
+    """Validate the homogeneous equality constraints ``A beta = 0``.
+
+    Args:
+        a: Equality matrix ``A`` of ``A beta = 0``.
+        g: The inequality matrix, which must be absent alongside ``a``.
+        dimension: The problem dimension ``n`` (number of features).
+
+    Returns:
+        ``a`` as a 2d ``float64`` array.
+
+    Raises:
+        ValueError: If ``a`` is not a 2d matrix with ``n`` columns, or ``g`` is
+            also given (the leverage-CLA route needs homogeneous rows, and
+            ``G beta <= 0`` rows are all tight at ``beta = 0``, which makes the
+            first vertex degenerate).
+    """
+    a = np.asarray(a, dtype=np.float64)
+    if a.ndim != 2 or a.shape[1] != dimension:
+        msg = f"a must have shape (m, {dimension}), got {a.shape}"
+        raise ValueError(msg)
+    if g is not None:
+        msg = "equality rows a cannot be combined with inequality rows g"
+        raise ValueError(msg)
+    return a

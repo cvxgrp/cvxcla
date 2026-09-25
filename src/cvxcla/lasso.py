@@ -40,8 +40,8 @@ correlation that drives the enter/leave events carries the active-row multiplier
 still piecewise linear (a quadratic loss under a polyhedral penalty *and* polyhedral
 constraints; cf. Rosset and Zhu). We require ``h > 0`` so the path can start from
 ``beta = 0`` with every row slack -- the same first vertex as the unconstrained
-LASSO. (Equality constraints, or ``h`` with a zero entry, need a feasibility seed
-analogous to the CLA's linear-programming first vertex, and are left to future work.)
+LASSO. Homogeneous equality constraints ``A beta = 0`` are traced by a different
+route: one leverage-capped CLA, rescaled (see :mod:`cvxcla._lasso_cla`).
 
 Event families, mirroring the CLA's "move to / leave a bound":
 
@@ -63,7 +63,13 @@ from numpy.typing import NDArray
 
 from ._builders import LassoBuilder
 from ._lasso import LassoSegment, LassoState, scan_events, solve_segment
-from ._lasso_validate import validate_constraints, validate_design_inputs, validate_operator_inputs
+from ._lasso_cla import equality_path
+from ._lasso_validate import (
+    validate_constraints,
+    validate_design_inputs,
+    validate_equality,
+    validate_operator_inputs,
+)
 from .operators import DenseCovariance, GramCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 
@@ -96,6 +102,10 @@ class Lasso(InequalityConstrained):
 
     Optional linear inequality constraints ``G beta <= h`` (with ``h > 0``) are
     traced through the same bordered solve as the CLA's ``G w <= h`` rows.
+    Homogeneous equality constraints ``A beta = 0`` (sum-to-zero, contrasts) are
+    traced instead through one leverage-capped CLA under ``Sigma = X^T X`` and
+    ``mu = X^T y``, which traces the same curve (Schmelzer and Hastie,
+    arXiv:2609.25704, Theorem 1 and Corollary 2); see :mod:`cvxcla._lasso_cla`.
 
     The quadratic form may be given either as a dense design ``(x, y)`` (the usual
     case, ``H = X^T X``) or, via :meth:`from_operator`, as a ``QuadraticForm``
@@ -120,6 +130,9 @@ class Lasso(InequalityConstrained):
         path: The discovered breakpoints, populated on construction.
         quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
         linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
+        a: Optional equality matrix ``(m, n)`` of ``A beta = 0``. It cannot be
+            combined with ``g``/``h``, and it needs a positive-definite Gram, so that
+            the constrained least-squares end of the path is unique.
     """
 
     x: NDArray[np.float64] | None = None
@@ -132,20 +145,27 @@ class Lasso(InequalityConstrained):
     path: list[Breakpoint] = field(default_factory=list)
     quad_form: QuadraticForm | None = None  # pragma: no mutate
     linear: NDArray[np.float64] | None = None  # pragma: no mutate
+    a: NDArray[np.float64] | None = None  # pragma: no mutate
 
     def __post_init__(self) -> None:
         """Validate shapes and trace the full LASSO path.
 
         Raises:
             ValueError: If ``x`` is not 2d, ``y``'s length does not match ``x``, the
-                constraint shapes are inconsistent, or any ``h`` entry is not
-                strictly positive (which would make ``beta = 0`` infeasible).
+                constraint shapes are inconsistent, any ``h`` entry is not strictly
+                positive (which would make ``beta = 0`` infeasible), or equality
+                rows ``a`` are combined with ``g`` or cannot be traced.
         """
         if self.quad_form is not None or self.linear is not None:
             self.linear = validate_operator_inputs(self.quad_form, self.linear, self.x, self.y)
         else:
             validate_design_inputs(self.x, self.y)
         validate_constraints(self.g, self.h, self.dimension, self.tol)
+        if self.a is not None:
+            self.a = validate_equality(self.a, self.g, self.dimension)
+            path = equality_path(self.quad, self.xty, self.a, self.nonneg, self.tol)
+            self.path.extend(Breakpoint(lam, beta, active) for lam, beta, active in path)
+            return
         trace(self)
 
     @classmethod
@@ -153,7 +173,7 @@ class Lasso(InequalityConstrained):
         """Start a fluent :class:`cvxcla._builders.LassoBuilder` for a LASSO path.
 
         The LASSO counterpart of :meth:`cvxcla.cla.CLA.problem`: chain
-        ``.inequality(G, h)`` and finish with ``.trace()``. The builder maps onto the
+        ``.inequality(G, h)`` or ``.equality(A)`` and finish with ``.trace()``. The builder maps onto the
         constructor arguments and adds no modelling power.
 
         ``cls`` is handed to the builder as the class it should construct, which is
@@ -177,6 +197,7 @@ class Lasso(InequalityConstrained):
         *,
         g: NDArray[np.float64] | None = None,
         h: NDArray[np.float64] | None = None,
+        a: NDArray[np.float64] | None = None,
         nonneg: bool = False,
         tol: float = 1e-9,
     ) -> Lasso:
@@ -199,6 +220,7 @@ class Lasso(InequalityConstrained):
             xty: The linear term ``X^T y`` of shape ``(n,)``.
             g: Optional inequality matrix of ``G beta <= h``.
             h: Optional inequality right-hand side; entries must be strictly positive.
+            a: Optional equality matrix of ``A beta = 0`` (not combined with ``g``).
             nonneg: Restrict the path to ``beta >= 0``.
             tol: Tolerance for event selection and the validity window.
 
@@ -210,6 +232,7 @@ class Lasso(InequalityConstrained):
             linear=np.asarray(xty, dtype=np.float64),
             g=g,
             h=h,
+            a=a,
             nonneg=nonneg,
             tol=tol,
         )
@@ -257,8 +280,13 @@ class Lasso(InequalityConstrained):
         """The smallest penalty at which ``beta = 0`` is optimal: ``||X^T y||_inf``.
 
         With ``h > 0`` every inequality row is slack at ``beta = 0`` (zero
-        multiplier), so the unconstrained threshold is unchanged.
+        multiplier), so the unconstrained threshold is unchanged. Equality rows
+        ``A beta = 0`` do change it: the correlation that can enter is the part of
+        ``X^T y`` outside the row space of ``A``, so the threshold is read off the
+        traced path instead.
         """
+        if self.a is not None:
+            return self.path[0].lam
         return float(np.max(np.abs(self.xty)))
 
     def begin(self) -> tuple[float, LassoState]:

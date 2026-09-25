@@ -15,7 +15,8 @@ builders live apart from the solvers they build. The dependency runs one way,
 Neither builder adds modelling power. Each accepts exactly the polyhedral pieces
 its solver already supports -- box bounds, linear equalities ``A w = b``, linear
 inequalities ``G w <= h`` and, for the CLA, a gross-exposure cap ``||w||_1 <= c``
--- and maps them one-to-one onto constructor arguments.
+(for the LASSO, only homogeneous equalities ``A beta = 0``) -- and maps them
+one-to-one onto constructor arguments.
 Anything the explicit constructor cannot trace, the builder cannot express either.
 """
 
@@ -348,10 +349,11 @@ class LassoBuilder(Generic[SolverT]):
 
     The LASSO counterpart of :class:`ProblemBuilder`. Construct one via
     :meth:`cvxcla.lasso.Lasso.problem`, optionally add inequality constraints with
-    :meth:`inequality`, and finish with :meth:`trace`, which builds the
-    :class:`cvxcla.lasso.Lasso` and traces the entire regularisation path. Like the
-    CLA builder it adds no modelling power: it accepts the same ``G beta <= h``
-    rows the ``Lasso`` already supports and nothing else.
+    :meth:`inequality` or homogeneous equality constraints with :meth:`equality`,
+    and finish with :meth:`trace`, which builds the :class:`cvxcla.lasso.Lasso` and
+    traces the entire regularisation path. Like the CLA builder it adds no modelling
+    power: it accepts the same ``G beta <= h`` and ``A beta = 0`` rows the ``Lasso``
+    already supports and nothing else.
 
     Examples:
         >>> import numpy as np
@@ -383,6 +385,7 @@ class LassoBuilder(Generic[SolverT]):
         self._solver = solver
         self._g_blocks: list[NDArray[np.float64]] = []
         self._h_blocks: list[NDArray[np.float64]] = []
+        self._a_blocks: list[NDArray[np.float64]] = []
         self._nonneg = False
 
     def non_negative(self) -> LassoBuilder[SolverT]:
@@ -423,6 +426,29 @@ class LassoBuilder(Generic[SolverT]):
         self._h_blocks.append(h_block)
         return self
 
+    def equality(self, a: NDArray[np.float64]) -> LassoBuilder[SolverT]:
+        """Add one or more homogeneous equality rows ``A beta = 0`` (calls accumulate).
+
+        A row of ones is the sum-to-zero constraint. Only a zero right-hand side is
+        supported: the path is traced through the leverage CLA, whose rescaling
+        needs homogeneous rows. Equality rows cannot be combined with
+        :meth:`inequality`.
+
+        Args:
+            a: A length-``n`` row vector or an ``(m, n)`` matrix.
+
+        Returns:
+            ``self``, for chaining.
+
+        Raises:
+            ValueError: If ``a``'s column count is not ``n``.
+        """
+        a_block, b_block = _as_block(a, np.zeros(np.atleast_2d(a).shape[0]))
+        n = int(self.x.shape[1]) if self.x.ndim == 2 else None
+        _validate_block(a_block, b_block, n, "equality", "b")
+        self._a_blocks.append(a_block)
+        return self
+
     def trace(self) -> SolverT:
         """Assemble the pieces, build the ``Lasso``, and trace the full path.
 
@@ -431,4 +457,5 @@ class LassoBuilder(Generic[SolverT]):
             breakpoints of the (constrained) regularisation path.
         """
         g, h = _stack(self._g_blocks, self._h_blocks)
-        return self._solver(x=self.x, y=self.y, g=g, h=h, nonneg=self._nonneg)
+        a = np.vstack(self._a_blocks) if self._a_blocks else None
+        return self._solver(x=self.x, y=self.y, g=g, h=h, a=a, nonneg=self._nonneg)

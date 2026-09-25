@@ -63,7 +63,10 @@ Synced from the template — treat as read-only. Highlights from
   and maps the turning points back to asset weights. `lasso.py` is factored the same
   way, over `_lasso.py` (the `LassoSegment`/`LassoState` kernel with
   `scan_events`/`solve_segment`) and `_lasso_validate.py` (the design, operator
-  and constraint input validators).
+  and constraint input validators). Equality-constrained LASSO paths
+  (`Lasso(a=...)`, `A beta = 0`) bypass the homotopy: `_lasso_cla.py` traces one
+  leverage-capped `CLA` on `X^T X`, `X^T y` and rescales its turning points
+  (`beta = w / lam`), reading the penalty off the KKT system.
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
   benchmarks `tests/benchmarks/`). **Note:**
   `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.
