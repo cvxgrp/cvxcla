@@ -13,36 +13,25 @@ development infrastructure synced from the Rhiza template.
 
 This repo syncs its development infrastructure (CI workflows, Makefile, linters,
 test harness, release tooling) from the **mother repo `jebel-quant/rhiza`**.
-The pin lives in `.rhiza/template.yml`:
-
-```yaml
-repository: "jebel-quant/rhiza"
-ref: "v1.3.3"
-profiles:
-  - github-project
-```
-
-The authoritative, machine-generated list of synced files is the `files:` block
-of `.rhiza/template.lock`. **Do not hand-edit any file in that list** — your
-change will be silently overwritten on the next `make rhiza-update` /
-`rhiza_sync` run. Fix Rhiza-owned problems upstream in `jebel-quant/rhiza`, or
-adjust `.rhiza/template.yml` and re-sync.
+The pinned template version, profile and exclusions live in
+`.rhiza/template.yml` — read it there rather than trusting a copy in prose,
+which drifts on every sync.
 
 ### Rhiza-owned (do NOT edit locally)
 
-Synced from the template — treat as read-only. Highlights from
-`.rhiza/template.lock`:
+The authoritative, machine-generated list of synced files is the `files:` block
+of `.rhiza/template.lock`:
 
-- **All of `.rhiza/`** except `.rhiza/template.yml` (its tests, `make.d/*.mk`,
-  requirements, utils, completions, semgrep/bandit config).
-- `Makefile`, `pytest.ini`, `ruff.toml`, `.pre-commit-config.yaml`, `.bandit`,
-  `.editorconfig`, `.python-version`, `cliff.toml`.
-- **All `.github/workflows/rhiza_*.yml`**, plus issue/PR/discussion templates,
-  `dependabot.yml`, rulesets, and `secret_scanning.yml`.
-- `.claude/commands/rhiza_*.md` (the `rhiza_quality`, `rhiza_book`,
-  `rhiza_update` slash commands).
-- `docs/index.md`, `docs/mkdocs-base.yml`, `docs/development/TESTS.md`,
-  `docs/development/MARIMO.md`, `docs/assets/`.
+```bash
+sed -n '/^files:/,/^[a-z_]*:/p' .rhiza/template.lock
+```
+
+**Do not hand-edit any file in that list** — your change will be silently
+overwritten on the next template sync (`/rhiza:update`). Fix Rhiza-owned
+problems upstream in `jebel-quant/rhiza`, or adjust `.rhiza/template.yml`
+(e.g. its `exclude:` list) and re-sync. Two entries are easy to miss: the
+`Makefile` is template-owned, and so is `tests/test_rhiza_packaging.py`
+despite living under `tests/`.
 
 ### Locally owned (edit freely — this is the actual project)
 
@@ -50,8 +39,9 @@ Synced from the template — treat as read-only. Highlights from
   the `operators/` package (`_core.py` — the `QuadraticForm`/`CovarianceOperator`
   protocols plus the `cross`/`bordered_solve` helpers; `builders.py` — factory
   functions that wrap the `cvx.linalg` operators, `DenseOperator`/`GramOperator`/
-  `FactorOperator`, as covariance/quadratic-form backends), `builder.py`,
-  `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
+  `FactorOperator`, as covariance/quadratic-form backends), `_builders.py`
+  (the `ProblemBuilder`/`LassoBuilder` fluent builders; `builder.py` is its
+  public re-export), `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
   The per-turning-point numeric kernels are factored out of `cla.py` into pure
   private modules: `_kkt.py` (`active_set`/`solve_kkt`), `_events.py`
   (`event_ratios`/`ineq_event_ratios`), and `_projection.py` (`project_feasible`
@@ -68,8 +58,9 @@ Synced from the template — treat as read-only. Highlights from
   leverage-capped `CLA` on `X^T X`, `X^T y` and rescales its turning points
   (`beta = w / lam`), reading the penalty off the KKT system.
 - `tests/` — the project test suite (unit, property-based `test_properties.py`,
-  benchmarks `tests/benchmarks/`). **Note:**
-  `.rhiza/tests/` is Rhiza-owned and tests the template itself, not this library.
+  benchmarks `tests/benchmarks/`). **Note:** `tests/test_rhiza_packaging.py`
+  is Rhiza-owned; `make rhiza-test` runs the template's own structure,
+  README and docstring checks, not this library's suite.
 - `pyproject.toml` — package metadata, dependencies, tool config
   (`[tool.interrogate]`, etc.).
 - `.rhiza/template.yml` — the one file under `.rhiza/` you may edit; it pins the
@@ -83,22 +74,28 @@ it's in the `files:` block, it's Rhiza-owned.
 ## Command policy
 
 Always drive tooling through `make <target>`. **Never invoke `.venv/bin/...`
-directly** — the Make targets bootstrap the environment, install pinned tools,
-and pass the right flags. Useful targets:
+directly** — the targets bootstrap the environment, install pinned tools, and
+pass the right flags. The `Makefile` is a thin shim that forwards every target
+to the pinned `rhiza-task` runner; repo-specific settings (thresholds, paths)
+live in the `[tool.rhiza-task]` table of `pyproject.toml`. `make help` lists
+every task. Useful targets:
 
 | Target | Purpose |
 |--------|---------|
 | `make fmt` | pre-commit hooks: ruff format/check, markdownlint, bandit, actionlint, interrogate, secrets |
 | `make typecheck` | `ty` + `mypy --strict` over `src/` |
 | `make docs-coverage` | interrogate docstring coverage |
-| `make deps` | unused/missing/misplaced dependency analysis (the old `make deptry` is deprecated) |
-| `make security` | pip-audit + bandit |
+| `make deps` | unused/missing/misplaced dependency analysis (deptry) |
+| `make security` | bandit security scan over `src/` |
+| `make rhiza-test` | the template's structure, README and docstring checks |
 | `make test` | full suite **with** the coverage gate |
 
-`make test` enforces `COVERAGE_FAIL_UNDER` (currently **100%**). Coverage on
+`make test` enforces `coverage_fail_under` from `[tool.rhiza-task]` in
+`pyproject.toml` (currently **100%**). Coverage on
 `src/` must stay at 100%; the only acceptable exclusions are the existing
 `# pragma: no cover` on Protocol/abstract stubs and untyped-import
 `# type: ignore[import-untyped]` on scipy.
 
-To assess overall repo quality against Rhiza standards, run the `/rhiza_quality`
-slash command. To bump the Rhiza pin and re-sync, use `/rhiza_update`.
+To assess overall repo quality against Rhiza standards, run the `/rhiza:quality`
+slash command (from the rhiza Claude Code plugin). To bump the Rhiza pin and
+re-sync, use `/rhiza:update`.
