@@ -127,6 +127,42 @@ def first_vertex_lp(
     return classify_vertex(weights, lower_bounds, upper_bounds, a, g, h, tol)
 
 
+def first_turning_point(
+    mean: NDArray[np.float64],
+    lower_bounds: NDArray[np.float64],
+    upper_bounds: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    tol: float,
+) -> TurningPoint:
+    """Calculate the first turning point on the efficient frontier.
+
+    The first turning point is the maximum-return vertex of the feasible
+    polytope. For the all-ones budget constraint with no inequality rows it is
+    found by the greedy fill of :func:`init_algo`; for a general equality system
+    ``A w = b`` or any ``G w <= h`` it is found by solving the linear program
+    in :func:`first_vertex_lp`, which also reports the initially-active rows.
+
+    Args:
+        mean: Vector of expected returns.
+        lower_bounds: Lower box bounds.
+        upper_bounds: Upper box bounds.
+        a: Equality-constraint matrix ``A`` of ``A w = b``.
+        b: Equality-constraint right-hand side ``b``.
+        g: Inequality-constraint matrix ``G`` of ``G w <= h`` (``(p, n)``).
+        h: Inequality-constraint right-hand side ``h`` (length ``p``).
+        tol: Tolerance for the linear-programming vertex classification.
+
+    Returns:
+        A TurningPoint object representing the first point on the efficient frontier.
+    """
+    if g.shape[0] == 0 and a.shape[0] == 1 and np.allclose(a, 1.0):
+        return init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, total=float(b[0]))
+    return first_vertex_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b, tol=tol, g=g, h=h)
+
+
 def classify_vertex(
     weights: NDArray[np.float64],
     lower_bounds: NDArray[np.float64],

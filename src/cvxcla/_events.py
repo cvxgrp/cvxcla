@@ -5,7 +5,7 @@ events end the segment's validity: a *box* event (a free weight reaching a bound
 or a blocked weight's multiplier changing sign) and an *inequality-row* event (an
 inactive ``G w <= h`` row's slack reaching zero, or an active row's multiplier
 changing sign). Both reduce to the same ``-intercept / slope`` critical-lambda
-ratio, computed here as pure functions and stacked by ``CLA.event_matrix`` into
+ratio, computed here as pure functions and stacked by :func:`segment_events` into
 the ``(n + p, 4)`` matrix the generic path tracer scans.
 """
 
@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
+
+from ._kkt import Segment
 
 
 def event_ratios(
@@ -135,3 +137,46 @@ def ineq_event_ratios(
     release = active_ineq & (eta_beta > +eps)  # pragma: no mutate
     l_mat[release, 1] = -eta_alpha[release] / eta_beta[release]
     return l_mat
+
+
+def segment_events(
+    segment: Segment,
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Return the ``(n + p, 4)`` matrix of candidate critical lambdas for ``segment``.
+
+    The first ``n`` rows are the box events of :func:`event_ratios` (a free weight
+    reaching a bound, a blocked multiplier changing sign); the trailing ``p`` rows
+    are the inequality-row events of :func:`ineq_event_ratios` (an inactive row's
+    slack reaching zero, an active row's multiplier changing sign). The generic
+    tracer treats the two blocks uniformly; ``CLA.step`` decodes a row index
+    ``>= n`` as a row event.
+
+    Args:
+        segment: The critical-line segment to scan.
+        lower: Per-asset lower bounds.
+        upper: Per-asset upper bounds.
+        g: Inequality-constraint matrix ``G`` of ``G w <= h`` (``(p, n)``).
+        h: Inequality-constraint right-hand side ``h`` (length ``p``).
+
+    Returns:
+        The stacked ``(n + p, 4)`` event matrix.
+    """
+    box = event_ratios(
+        segment.r_alpha,
+        segment.r_beta,
+        segment.gamma,
+        segment.delta,
+        segment.free_in,
+        segment.at_upper,
+        segment.at_lower,
+        lower,
+        upper,
+    )
+    ineq = ineq_event_ratios(
+        segment.r_alpha, segment.r_beta, segment.eta_alpha, segment.eta_beta, segment.active_ineq, g, h
+    )
+    return np.vstack([box, ineq])

@@ -9,49 +9,21 @@ set of assets at their bounds changes.
 import logging
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import NamedTuple, cast
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ._builders import ProblemBuilder
-from ._events import event_ratios, ineq_event_ratios
-from ._kkt import active_set, solve_kkt
+from ._checks import check_feasible, guard_degeneracy, well_conditioned
+from ._events import segment_events
+from ._kkt import Segment, critical_segment
 from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
 from ._projection import project_feasible
-from .first import classify_vertex, first_vertex_lp, init_algo
+from .first import classify_vertex, first_turning_point
 from .operators import DenseCovariance, QuadraticForm
-from .operators._core import _RCOND_FLOOR
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
-
-
-class _Segment(NamedTuple):
-    """The affine critical-line segment valid at one turning point.
-
-    Bundles the affine path ``w(lam) = r_alpha + lam * r_beta``, the multiplier
-    gradients ``gamma``/``delta`` that drive the leave-a-bound events, and the
-    active-set masks the event scan needs. This is what ``CLA.segment`` returns
-    to the generic path tracer.
-
-    For general inequality constraints ``G w <= h`` the segment also carries the
-    affine inequality multipliers ``eta_alpha + lam * eta_beta`` (one entry per
-    inequality row; meaningful for *active* rows, which release when the
-    multiplier crosses zero) and the active-row mask ``active_ineq``. The slacks
-    that drive an *inactive* row becoming active are recomputed from
-    ``r_alpha``/``r_beta`` directly in :func:`cvxcla._events.ineq_event_ratios`.
-    """
-
-    r_alpha: NDArray[np.float64]
-    r_beta: NDArray[np.float64]
-    gamma: NDArray[np.float64]
-    delta: NDArray[np.float64]
-    at_upper: NDArray[np.bool_]
-    at_lower: NDArray[np.bool_]
-    free_in: NDArray[np.bool_]
-    active_ineq: NDArray[np.bool_]
-    eta_alpha: NDArray[np.float64]
-    eta_beta: NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -161,29 +133,12 @@ class CLA(InequalityConstrained):
 
     @cached_property
     def _free_blocks_well_conditioned(self) -> bool:
-        """Whether every free-block solve along the trace is numerically safe.
+        """Whether every free-block solve is numerically safe (see :func:`cvxcla._checks.well_conditioned`).
 
-        Decided once, up front. By Cauchy's interlacing theorem every principal
-        submatrix of the symmetric PSD covariance is at least as well conditioned
-        as the whole matrix -- deleting rows/columns cannot decrease the smallest
-        eigenvalue nor increase the largest -- so the reciprocal condition number
-        of any free block is ``>=`` that of the full covariance. Hence if the full
-        covariance clears the singularity floor, no free block encountered along
-        the trace can be singular, and the per-turning-point conditioning guard in
-        :meth:`_emit` is provably never triggered. We then skip it, paying one
-        conditioning test here instead of one at every turning point (the latter
-        is a full eigendecomposition of the free block, as costly as the KKT solve,
-        so it otherwise dominates the trace). The up-front test computes the
-        reciprocal condition number of the full covariance once, via
-        :meth:`~cvx.linalg.SymmetricOperator.rcond_free`.
-
-        When the full covariance is itself near-singular (for example a sample
-        covariance from fewer observations than assets) this is ``False`` and the
-        per-step guard in :meth:`_emit` runs unchanged, preserving the degeneracy
-        diagnosis exactly.
+        Decided once, up front: when ``True`` the per-turning-point guard in
+        :meth:`_emit` is provably redundant and skipped.
         """
-        full = np.arange(self.dimension)
-        return self.covariance_operator.rcond_free(full) >= _RCOND_FLOOR
+        return well_conditioned(self.covariance_operator)
 
     def __post_init__(self) -> None:
         """Initialize the CLA object and compute the efficient frontier.
@@ -250,10 +205,7 @@ class CLA(InequalityConstrained):
             self.lower_bounds, self.upper_bounds, self.a, self.b, self.g_matrix, self.h_vector, leverage, self.tol
         )
         lift = LeverageLift.from_bounds(lower, upper)
-        n_legs = lift.asset.shape[0]
-        g, h = lift.columns(self.g_matrix), self.h_vector
-        if keep_cap:
-            g, h = np.vstack([g, np.ones((1, n_legs))]), np.append(h, leverage)
+        g, h = lift.with_cap(self.g_matrix, self.h_vector, leverage if keep_cap else None)
         lifted = _LeveragedCLA(
             mean=self.mean[lift.asset] * lift.sign,
             covariance=SignedLift(self.covariance_operator, lift.asset, lift.sign),
@@ -269,14 +221,7 @@ class CLA(InequalityConstrained):
         )
         p = self.g_matrix.shape[0]
         for tp in lifted.turning_points:
-            self._append(
-                TurningPoint(
-                    lamb=tp.lamb,
-                    weights=lift.to_assets(tp.weights, self.dimension),
-                    free=lift.any_leg(tp.free, self.dimension),
-                    active_ineq=tp.active_ineq[:p],
-                )
-            )
+            self._append(lift.to_turning_point(tp, self.dimension, p))
 
     def begin(self) -> tuple[float, TurningPoint]:
         """Record the first turning point and start the trace at ``lambda = inf``.
@@ -289,62 +234,32 @@ class CLA(InequalityConstrained):
         self._append(first)
         return np.inf, first
 
-    def segment(self, state: TurningPoint) -> _Segment:
+    def segment(self, state: TurningPoint) -> Segment:
         """Solve the reduced KKT system for the critical-line segment at ``state``."""
-        at_upper, at_lower, free_in, fixed_weights = active_set(
-            state.free, state.weights, self.lower_bounds, self.upper_bounds, self.tol
-        )
-        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+        return critical_segment(
             self.covariance_operator,
             self.mean,
             self.a,
             self.b,
             self.g_matrix,
             self.h_vector,
-            free_in,
-            fixed_weights,
-            state.active_ineq,
-        )
-        return _Segment(
-            r_alpha, r_beta, gamma, delta, at_upper, at_lower, free_in, state.active_ineq, eta_alpha, eta_beta
-        )
-
-    def event_matrix(self, state: TurningPoint, segment: _Segment) -> NDArray[np.float64]:  # noqa: ARG002
-        """Return the ``(n + p, 4)`` matrix of candidate critical lambdas for ``segment``.
-
-        The first ``n`` rows are the box events (a free weight reaching a bound, a
-        blocked multiplier changing sign); the trailing ``p`` rows are the
-        inequality-row events (an inactive row's slack reaching zero, an active
-        row's multiplier changing sign). The generic tracer treats the two blocks
-        uniformly; ``step`` decodes a row index ``>= n`` as a row event.
-
-        ``state`` is part of the uniform ``ParametricProblem`` signature; the CLA
-        does not need it here because ``segment`` already bundles the active-set
-        masks derived from it.
-        """
-        box = event_ratios(
-            segment.r_alpha,
-            segment.r_beta,
-            segment.gamma,
-            segment.delta,
-            segment.free_in,
-            segment.at_upper,
-            segment.at_lower,
             self.lower_bounds,
             self.upper_bounds,
+            self.tol,
+            state,
         )
-        ineq = ineq_event_ratios(
-            segment.r_alpha,
-            segment.r_beta,
-            segment.eta_alpha,
-            segment.eta_beta,
-            segment.active_ineq,
-            self.g_matrix,
-            self.h_vector,
-        )
-        return np.vstack([box, ineq])
 
-    def step(self, state: TurningPoint, segment: _Segment, sec: int, direction: int, lam: float) -> TurningPoint:
+    def event_matrix(self, state: TurningPoint, segment: Segment) -> NDArray[np.float64]:  # noqa: ARG002
+        """Return the ``(n + p, 4)`` event matrix for ``segment`` (see :func:`cvxcla._events.segment_events`).
+
+        The first ``n`` rows are box events and the trailing ``p`` rows are
+        inequality-row events; ``step`` decodes a row index ``>= n`` as a row
+        event. ``state`` is part of the uniform ``ParametricProblem`` signature;
+        the CLA does not need it because ``segment`` already bundles the masks.
+        """
+        return segment_events(segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector)
+
+    def step(self, state: TurningPoint, segment: Segment, sec: int, direction: int, lam: float) -> TurningPoint:
         """Emit the turning point at ``lam`` after flipping the activity at ``sec``.
 
         ``sec < n`` is a box event on asset ``sec``: a "leaves a bound" event
@@ -366,7 +281,7 @@ class CLA(InequalityConstrained):
         self._emit(lam, segment.r_alpha + lam * segment.r_beta, free, active_ineq)
         return self.turning_points[-1]
 
-    def finish(self, state: TurningPoint, segment: _Segment) -> None:
+    def finish(self, state: TurningPoint, segment: Segment) -> None:
         """Emit the minimum-variance endpoint at ``lambda = 0``."""
         self._emit(0.0, segment.r_alpha, state.free, state.active_ineq)
 
@@ -380,41 +295,16 @@ class CLA(InequalityConstrained):
         return len(self.turning_points)
 
     def _first_turning_point(self) -> TurningPoint:
-        """Calculate the first turning point on the efficient frontier.
-
-        The first turning point is the maximum-return vertex of the feasible
-        polytope. For the all-ones budget constraint with no inequality rows it is
-        found by the greedy fill of ``init_algo``; for a general equality system
-        ``A w = b`` or any ``G w <= h`` it is found by solving the linear program
-        in ``first_vertex_lp``, which also reports the initially-active rows.
-
-        Returns:
-            A TurningPoint object representing the first point on the efficient frontier.
-
-        """
-        if self.g_matrix.shape[0] == 0 and self.a.shape[0] == 1 and np.allclose(self.a, 1.0):
-            return init_algo(
-                mean=self.mean,
-                lower_bounds=self.lower_bounds,
-                upper_bounds=self.upper_bounds,
-                total=float(self.b[0]),
-            )
-        return first_vertex_lp(
-            mean=self.mean,
-            lower_bounds=self.lower_bounds,
-            upper_bounds=self.upper_bounds,
-            a=self.a,
-            b=self.b,
-            tol=self.tol,
-            g=self.g_matrix,
-            h=self.h_vector,
+        """Return the maximum-return vertex (see :func:`cvxcla.first.first_turning_point`)."""
+        return first_turning_point(
+            self.mean, self.lower_bounds, self.upper_bounds, self.a, self.b, self.g_matrix, self.h_vector, self.tol
         )
 
     def _append(self, tp: TurningPoint, tol: float | None = None) -> None:
         """Append a turning point to the list of turning points.
 
         This method validates that the turning point satisfies the constraints
-        before adding it to the list.
+        (see :func:`cvxcla._checks.check_feasible`) before adding it to the list.
 
         Args:
             tp: The turning point to append.
@@ -426,29 +316,17 @@ class CLA(InequalityConstrained):
 
         """
         tol = self.tol if tol is None else tol
-
-        # (constraint holds?, message if it does not). An empty ``g_matrix`` makes
-        # the inequality ``np.all`` vacuously true, so it never fires when absent.
-        checks: tuple[tuple[bool, str], ...] = (
-            (bool(np.all(tp.weights >= (self.lower_bounds - tol))), "Weights below lower bounds"),  # pragma: no mutate
-            (bool(np.all(tp.weights <= (self.upper_bounds + tol))), "Weights above upper bounds"),  # pragma: no mutate
-            (
-                bool(np.allclose(self.a @ tp.weights, self.b, atol=1e-7)),
-                "Weights violate the equality constraint A w = b",
-            ),
-            (
-                bool(np.all(self.g_matrix @ tp.weights <= self.h_vector + tol)),
-                "Weights violate the inequality constraint G w <= h",
-            ),
-            (
-                self.leverage is None or bool(np.abs(tp.weights).sum() <= self.leverage + tol),
-                "Weights violate the leverage constraint ||w||_1 <= leverage",
-            ),
+        check_feasible(
+            tp.weights,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.a,
+            self.b,
+            self.g_matrix,
+            self.h_vector,
+            self.leverage,
+            tol,
         )
-        for ok, message in checks:
-            if not ok:
-                raise ValueError(message)
-
         self.turning_points.append(tp)
 
     def _emit(
@@ -462,7 +340,7 @@ class CLA(InequalityConstrained):
 
         Orchestrates the three steps taken at every turning point: refuse the point
         if the free-asset block is numerically singular (see
-        :meth:`_guard_degeneracy`); project the candidate back onto the feasible
+        :func:`cvxcla._checks.guard_degeneracy`); project the candidate back onto the feasible
         set to clear sub-tolerance round-off (see
         :func:`cvxcla._projection.project_feasible`); then validate and store it
         (see :meth:`_append`).
@@ -476,7 +354,8 @@ class CLA(InequalityConstrained):
         but not exactly feasible; the projection clears it and is a strict no-op for
         the well-posed turning points that are already feasible.
         """
-        self._guard_degeneracy(lamb, free)
+        if not self._free_blocks_well_conditioned:
+            guard_degeneracy(self.covariance_operator, lamb, free)
         weights = project_feasible(
             weights,
             self.lower_bounds,
@@ -488,62 +367,6 @@ class CLA(InequalityConstrained):
             active_ineq,
         )
         self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq))
-
-    def _guard_degeneracy(self, lamb: float, free: NDArray[np.bool_]) -> None:
-        """Refuse the turning point when the free-asset block is numerically singular.
-
-        We distinguish two regimes by the conditioning of the free-asset block.
-        While that block stays numerically full rank its solve is reliable and any
-        box violation is round-off, which
-        :func:`cvxcla._projection.project_feasible` clears. Once the
-        free set grows past the covariance rank the block is numerically singular
-        and its solve is unreliable; whatever weights it produces (feasible or not)
-        cannot be trusted, so we refuse and raise an actionable diagnosis instead of
-        silently returning a possibly-suboptimal frontier.
-
-        The discriminator is the free block's reciprocal condition number, read
-        from its symmetric eigenvalues. Unlike the magnitude of the box violation,
-        which is the residual of a singular solve and therefore varies with the
-        BLAS/LAPACK build, the conditioning is deterministic and portable, so the
-        completed-vs-declined boundary is the same on every platform.
-
-        The per-turning-point conditioning check is skipped entirely when the full
-        covariance is well conditioned: by interlacing no free block can then be
-        singular, so the check is provably redundant (see
-        :attr:`_free_blocks_well_conditioned`). It runs only when the full
-        covariance is itself near-singular, which is exactly the regime that can
-        produce an untrustworthy free-block solve.
-
-        Args:
-            lamb: Lambda value of the candidate turning point, used in the message.
-            free: Boolean mask of the free assets at the candidate.
-
-        Raises:
-            ValueError: With a degeneracy-specific message when the free-asset
-                block is numerically singular (an unreliable solve); otherwise
-                returns without effect.
-        """
-        # When the full covariance clears the floor, interlacing guarantees every
-        # free block does too, so the per-step guard can never fire -- skip it and
-        # the costly per-step rcond. Only a near-singular full covariance needs the
-        # check, and there it runs exactly as before.
-        if not self._free_blocks_well_conditioned:
-            rcond = self.covariance_operator.rcond_free(np.flatnonzero(free))
-            if rcond < _RCOND_FLOOR:
-                n_free = int(np.count_nonzero(free))
-                msg = (
-                    f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
-                    f"(free-set size {n_free}): the free-asset covariance block is "
-                    f"numerically singular (reciprocal condition number {rcond:.2g}), "
-                    "so its solve is unreliable and the turning point cannot be "
-                    "trusted. The trace was stopped rather than risk silently "
-                    "returning a suboptimal frontier. This happens when the free set "
-                    "grows past the covariance rank (for example a sample covariance "
-                    "from far fewer days than assets). Use a well-conditioned, "
-                    "full-rank estimate (ample history), or a FactorCovariance backend "
-                    "(diagonal-plus-low-rank), which is positive definite by construction."
-                )
-                raise ValueError(msg)
 
     @property
     def frontier(self) -> Frontier:
@@ -600,10 +423,9 @@ class _LeveragedCLA(CLA):
         A traced free block holds at most one leg per asset, so it is a signed
         principal block of the asset covariance and interlacing applies to that.
         """
-        base = cast(SignedLift, self.covariance)
-        return float(base.base.rcond_free(np.arange(base.base.n))) >= _RCOND_FLOOR
+        return well_conditioned(cast(SignedLift, self.covariance).base)
 
-    def event_matrix(self, state: TurningPoint, segment: _Segment) -> NDArray[np.float64]:
+    def event_matrix(self, state: TurningPoint, segment: Segment) -> NDArray[np.float64]:
         """Return the event matrix with the competing leg events masked."""
         events = super().event_matrix(state, segment)
         legs = self.dimension
