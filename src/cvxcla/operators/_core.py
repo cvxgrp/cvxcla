@@ -26,6 +26,14 @@ from numpy.typing import NDArray
 QuadraticForm = SymmetricOperator
 CovarianceOperator = SymmetricOperator
 
+# The singularity threshold for ``rcond_free``. A genuinely rank-deficient free
+# block has a reciprocal condition number at round-off level (~1e-16); a
+# well-posed or merely near-degenerate block sits many orders above it (>= ~1e-4
+# across the degeneracy sweep in experiments/degeneracy_boundary.py). The 1e-12
+# cut sits in the wide gap between the two and is the conventional
+# numerical-singularity scale.
+_RCOND_FLOOR = 1e-12  # pragma: no mutate
+
 
 def cross(operator: SymmetricOperator, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
     """Free-to-blocked cross product ``H[free][:, ~free] @ x[~free]`` from a boolean mask.

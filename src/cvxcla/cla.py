@@ -21,15 +21,9 @@ from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_min
 from ._projection import project_feasible
 from .first import classify_vertex, first_vertex_lp, init_algo
 from .operators import DenseCovariance, QuadraticForm
+from .operators._core import _RCOND_FLOOR
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
-
-# A genuinely rank-deficient free block has a reciprocal condition number at
-# round-off level (~1e-16); a well-posed or merely near-degenerate block sits
-# many orders above it (>= ~1e-4 across the degeneracy sweep in
-# experiments/degeneracy_boundary.py). The 1e-12 cut sits in the wide gap between
-# the two and is the conventional numerical-singularity scale.
-_RCOND_FLOOR = 1e-12  # pragma: no mutate
 
 
 class _Segment(NamedTuple):
