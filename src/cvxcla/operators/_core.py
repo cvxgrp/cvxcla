@@ -38,8 +38,11 @@ _RCOND_FLOOR = 1e-12  # pragma: no mutate
 def cross(operator: SymmetricOperator, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:
     """Free-to-blocked cross product ``H[free][:, ~free] @ x[~free]`` from a boolean mask.
 
-    Adapts the boolean-mask indexing the path tracers use to the integer-index
-    :meth:`~cvx.linalg.SymmetricOperator.block_matvec` of a symmetric operator.
+    Taken as one full product on ``x`` with its free entries zeroed,
+    ``(H @ x_B)[free]``, which equals the cross block since the zeroed entries
+    contribute nothing. A dense backend then runs a single contiguous matvec
+    instead of first copying the ``(free, ~free)`` block out by fancy indexing,
+    which dominated this product along the trace.
 
     Args:
         operator: The symmetric operator (Hessian) backend.
@@ -49,7 +52,7 @@ def cross(operator: SymmetricOperator, free: NDArray[np.bool_], x: NDArray[np.fl
     Returns:
         Vector of shape ``(n_free,)``.
     """
-    result: NDArray[np.float64] = operator.block_matvec(np.flatnonzero(free), np.flatnonzero(~free), x[~free])
+    result: NDArray[np.float64] = operator.matvec(np.where(free, 0.0, x))[free]
     return result
 
 
