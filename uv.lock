@@ -130,14 +130,14 @@ wheels = [
 
 [[package]]
 name = "cvx-linalg"
-version = "1.1.0"
+version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/55/ac/ed0f941345535d0d3d011d2ba7ae7bab146afbcee56fa59acde144fd277d/cvx_linalg-1.1.0.tar.gz", hash = "sha256:cc74e1454395d6b0f35187c9bb879085b8282d3de66f3ed9b06cd2b04a36ccdd", size = 41564, upload-time = "2026-09-30T15:17:36.758Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/df/cf829ad90b518a0bd89cfb74ad5fa07783b14e8626a5fe3b5d3694f4fbad/cvx_linalg-1.1.1.tar.gz", hash = "sha256:849bf0aed71a7c0f95a0bddfcc516fb9f86b7ecc548839a12f14002005c3fd8f", size = 43388, upload-time = "2026-09-30T19:43:05.055Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/f7/63883b3a3674faefcb7092ff4891b81f91fd994ed3486c116c12f7289d62/cvx_linalg-1.1.0-py3-none-any.whl", hash = "sha256:3dc3b0171bb4e781862de35feb80e0e5df13345fc849d20154f78ecf541aa81e", size = 54609, upload-time = "2026-09-30T15:17:35.235Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/08/a32545cdc9d406ee7d40d1a0d621cb665660d7368382e05db6d9bd3971a4/cvx_linalg-1.1.1-py3-none-any.whl", hash = "sha256:8e793ffb4ac29cdfe015620a7a37e0275594930df5ef5993176b2394de20a242", size = 56439, upload-time = "2026-09-30T19:43:03.741Z" },
 ]
 
 [[package]]
@@ -172,7 +172,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cvx-linalg", specifier = ">=1.1.0" },
+    { name = "cvx-linalg", specifier = ">=1.1.1" },
     { name = "kaleido", marker = "extra == 'plot'", specifier = "==1.4.0" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "plotly", marker = "extra == 'plot'", specifier = ">=6.0.1" },

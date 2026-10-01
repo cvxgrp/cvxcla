@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.11",
-    "cvx-linalg>=1.1.0",
+    "cvx-linalg>=1.1.1",
 ]
 
 authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"},
