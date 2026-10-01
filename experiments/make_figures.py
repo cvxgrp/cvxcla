@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "cvxcla @ git+https://github.com/cvxgrp/cvxcla@889f952fb9e23a4edbd57106a4fd87afadf4476c",
+#     "cvxcla @ git+https://github.com/cvxgrp/cvxcla@49b5c732106aa85a7810a014bfd127f6c23fdadb",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
@@ -74,11 +74,9 @@ import typer
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
-from numpy.typing import NDArray
 
 import cvxcla.cla as cla_module
-from cvxcla import CLA, FactorCovariance
-from cvxcla.first import init_algo
+from cvxcla import CLA, FactorCovariance, IncrementalDenseCovariance
 
 # Default output directory: ``experiments/figures/``, so artefacts land there
 # regardless of the working directory the command is run from.
@@ -217,147 +215,6 @@ def _cla_weight_at(cla: CLA, lam: float) -> np.ndarray:
             return (1.0 - t) * lo.weights + t * hi.weights
     msg = "lam within range but no bracketing segment found"  # pragma: no cover
     raise AssertionError(msg)  # pragma: no cover
-
-
-# ======================================================================================
-# Incremental-inverse CLA baseline (from inverse_cla.py); used by figure_scaling
-# ======================================================================================
-class InverseCLA:
-    """Vectorised CLA that maintains an explicit free-block inverse.
-
-    Restricted to the budget constraint ``1^T w = 1`` (m = 1) with box bounds.
-    Traces the same turning points as ``cvxcla.CLA`` but with PyPortfolioOpt's
-    incremental-inverse linear algebra, so a timing comparison isolates the cost of
-    the linear-algebra strategy from vectorisation.
-    """
-
-    def __init__(
-        self,
-        mean: NDArray[np.float64],
-        covariance: NDArray[np.float64],
-        lower_bounds: NDArray[np.float64],
-        upper_bounds: NDArray[np.float64],
-        tol: float = 1e-5,
-    ) -> None:
-        """Trace the frontier on construction (mirrors ``cvxcla.CLA``)."""
-        self.mean = mean
-        self.cov = covariance
-        self.lower_bounds = lower_bounds
-        self.upper_bounds = upper_bounds
-        self.tol = tol
-        self.weights: list[NDArray[np.float64]] = []
-        self._solve()
-
-    def __len__(self) -> int:
-        """Return the number of turning points traced."""
-        return len(self.weights)
-
-    def _solve(self) -> None:
-        mean, cov = self.mean, self.cov
-        lb, ub, tol = self.lower_bounds, self.upper_bounds, self.tol
-        ns = len(mean)
-        eps = np.sqrt(np.finfo(np.float64).eps)
-
-        first = init_algo(mean=mean, lower_bounds=lb, upper_bounds=ub)
-        free = first.free.copy()
-        self.weights.append(first.weights)
-
-        # Explicit inverse of the free covariance block, aligned with the
-        # ordered index list ``order`` (not necessarily ascending: inserts
-        # append at the end, deletes preserve relative order).
-        order = list(np.where(free)[0])
-        sinv = np.linalg.inv(cov[np.ix_(order, order)])
-
-        lam = np.inf
-        max_iterations = 100 * (ns + 1)
-        iterations = 0
-        r_alpha = first.weights
-
-        while lam > 0:
-            iterations += 1
-            if iterations > max_iterations:
-                msg = "InverseCLA failed to converge: too many iterations"
-                raise RuntimeError(msg)
-
-            blocked = ~free
-            if np.all(blocked):
-                msg = "All variables cannot be blocked"
-                raise RuntimeError(msg)
-
-            at_upper = blocked & (np.abs(self.weights[-1] - ub) <= tol)
-            at_lower = blocked & (np.abs(self.weights[-1] - lb) <= tol)
-            fixed = np.zeros(ns)
-            fixed[at_upper] = ub[at_upper]
-            fixed[at_lower] = lb[at_lower]
-
-            idx = np.array(order, dtype=int)
-            # Budget constraint: a_free is a row of ones, so A_F Sinv A_F.T is
-            # the total sum of Sinv and the multipliers are scalars.
-            y = sinv.sum(axis=1)  # Sinv @ 1
-            cross = cov[np.ix_(idx, np.where(blocked)[0])] @ fixed[blocked]
-            z_alpha = sinv @ (-cross)
-            z_beta = sinv @ mean[idx]
-            schur = y.sum()
-            r2_alpha = 1.0 - fixed[blocked].sum()
-            nu_alpha = (z_alpha.sum() - r2_alpha) / schur
-            nu_beta = z_beta.sum() / schur
-
-            r_alpha = fixed.copy()
-            r_alpha[idx] = z_alpha - y * nu_alpha
-            r_beta = np.zeros(ns)
-            r_beta[idx] = z_beta - y * nu_beta
-
-            gamma = cov @ r_alpha + nu_alpha
-            delta = cov @ r_beta + nu_beta - mean
-
-            free_in = free
-            l_mat = np.full((ns, 4), -np.inf)
-            beta_down = free_in & (r_beta < -eps)
-            beta_up = free_in & (r_beta > +eps)
-            delta_down = at_upper & (delta < -eps)
-            delta_up = at_lower & (delta > +eps)
-            l_mat[beta_down, 0] = (ub[beta_down] - r_alpha[beta_down]) / r_beta[beta_down]
-            l_mat[beta_up, 1] = (lb[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
-            l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]
-            l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
-            l_mat[l_mat > lam + tol] = -np.inf
-
-            lam_max = np.max(l_mat)
-            if lam_max < 0:
-                break
-
-            tied = np.argwhere(l_mat >= lam_max - tol)
-            secchg, dirchg = tied[0]
-            lam = l_mat[secchg, dirchg]
-            enters = dirchg >= 2
-
-            self.weights.append(r_alpha + lam * r_beta)
-
-            # --- Incremental update of Sigma_FF^{-1} for the one-asset flip ---
-            if enters:
-                # Bordered inverse: append asset ``secchg`` at the end.
-                c = cov[idx, secchg]
-                s = cov[secchg, secchg]
-                v = sinv @ c
-                schur_i = s - c @ v
-                top = sinv + np.outer(v, v) / schur_i
-                col = (-v / schur_i).reshape(-1, 1)
-                sinv = np.block([[top, col], [col.T, np.array([[1.0 / schur_i]])]])
-                order.append(int(secchg))
-            else:
-                # Deletion: drop the row/col of ``secchg`` from the inverse.
-                p = order.index(int(secchg))
-                mask = np.ones(len(order), dtype=bool)
-                mask[p] = False
-                b1p = sinv[mask, p]
-                bpp = sinv[p, p]
-                sinv = sinv[np.ix_(mask, mask)] - np.outer(b1p, b1p) / bpp
-                order.pop(p)
-
-            free = free.copy()
-            free[secchg] = enters
-
-        self.weights.append(r_alpha)
 
 
 # ======================================================================================
@@ -520,25 +377,23 @@ def _scale_median_trace(covariance: object, problem: dict) -> tuple[int, float, 
     return (len(cla), *_scale_stats(times))
 
 
-def _scale_median_trace_inverse(dense: np.ndarray, problem: dict) -> tuple[int, float, float, float] | None:
-    """Time the vectorised explicit-inverse baseline over REPEATS repetitions.
+def _scale_median_trace_inverse(dense: np.ndarray, problem: dict) -> tuple[int, float, float, float]:
+    """Time cvxcla's opt-in IncrementalDenseCovariance backend over REPEATS repetitions.
 
-    Returns (turning points, median, min, max) seconds. Mirrors ``_scale_median_trace``
-    so the protocol is identical.
+    The same loop and event logic as the dense backend, differing only in the
+    linear algebra: a maintained free-block inverse, updated by a rank-one border or
+    deletion at each turning point, in place of a fresh factorisation. The operator
+    is rebuilt per repetition so each trace starts with no cached inverse. Returns
+    (turning points, median, min, max) seconds.
     """
-    kw = {
-        "mean": problem["mean"],
-        "covariance": dense,
-        "lower_bounds": problem["lower_bounds"],
-        "upper_bounds": problem["upper_bounds"],
-    }
-    inv = InverseCLA(**kw)
+    cla = CLA(covariance=IncrementalDenseCovariance(dense), **problem)
     times = []
     for _ in range(_SCALE_REPEATS):
+        covariance = IncrementalDenseCovariance(dense)
         start = time.perf_counter()
-        inv = InverseCLA(**kw)
+        cla = CLA(covariance=covariance, **problem)
         times.append(time.perf_counter() - start)
-    return (len(inv), *_scale_stats(times))
+    return (len(cla), *_scale_stats(times))
 
 
 def _scale_pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, float, float, float] | None:
@@ -588,28 +443,61 @@ def _scale_osqp_grid(dense: np.ndarray, problem: dict) -> tuple[int, float, floa
     return (len(lams), *_scale_stats(times))
 
 
+def _scale_measure(method: str, n: int) -> object:
+    """Rebuild the size-n problem and time one method on it (run in a fresh process)."""
+    rng = np.random.default_rng(_SCALE_SEED)
+    dense, factor, problem = _scale_make_problem(rng, n, _SCALE_N_FACTORS)
+    if method == "dense":
+        return _scale_median_trace(dense, problem)
+    if method == "factor":
+        return _scale_median_trace(factor, problem)
+    if method == "inverse":
+        return _scale_median_trace_inverse(dense, problem)
+    if method == "pypfopt":
+        return _scale_pypfopt_trace(dense, problem["mean"])
+    if method == "osqp":
+        return _scale_osqp_grid(dense, problem)
+    if method == "free":
+        return _scale_free_sizes(factor, problem)
+    msg = f"unknown scaling method {method!r}"
+    raise ValueError(msg)
+
+
+def _scale_fresh(method: str, n: int) -> object:
+    """Time one method in its own freshly spawned interpreter.
+
+    Run in one process, the external baselines (PyPortfolioOpt, OSQP) leave the
+    interpreter in a state that slows the cvxcla timings taken after them: the dense
+    trace at n=640 took 1.16 s inside the sweep against 0.62 s alone. A fresh process
+    per (method, n) keeps every measurement independent of what ran before it.
+    """
+    import multiprocessing
+    from concurrent.futures import ProcessPoolExecutor
+
+    with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+        return pool.submit(_scale_measure, method, n).result()
+
+
 def figure_scaling(out_dir: Path) -> None:
     """Run the scaling sweep, print a table, and write the figure."""
     ns, dense_times, factor_times, ppo_times, inv_times, clar_times, points = [], [], [], [], [], [], []
     dense_band, factor_band, ppo_band, inv_band, clar_band = [], [], [], [], []
     for n in _SCALE_SIZES:
-        rng = np.random.default_rng(_SCALE_SEED)
-        dense, factor, problem = _scale_make_problem(rng, n, _SCALE_N_FACTORS)
-        n_pts, t_dense, d_lo, d_hi = _scale_median_trace(dense, problem)
-        n_pts_f, t_factor, f_lo, f_hi = _scale_median_trace(factor, problem)
+        n_pts, t_dense, d_lo, d_hi = _scale_fresh("dense", n)
+        n_pts_f, t_factor, f_lo, f_hi = _scale_fresh("factor", n)
         if n_pts != n_pts_f:
             msg = f"backends disagree at n={n}: {n_pts} vs {n_pts_f}"
             raise RuntimeError(msg)
-        inv = _scale_median_trace_inverse(dense, problem)
+        inv = _scale_fresh("inverse", n)
         if inv and inv[0] != n_pts:
-            # The incremental-inverse baseline diverges by a turning point on this
-            # tie-heavy size (the documented degeneracy limitation, not a cvxcla
-            # error). Drop its point rather than abort, so the figure still completes.
-            print(f"  [note] inverse baseline disagrees at n={n}: {inv[0]} vs {n_pts}; skipping its point")
+            # A maintained inverse accumulates round-off over the trace, so on a
+            # near-tied size it can split or merge a turning point. Drop its point
+            # rather than abort, so the figure still completes.
+            print(f"  [note] incremental backend disagrees at n={n}: {inv[0]} vs {n_pts}; skipping its point")
             inv = None
-        ppo = _scale_pypfopt_trace(dense, problem["mean"])
-        clar = _scale_osqp_grid(dense, problem)
-        free_max, free_med = _scale_free_sizes(factor, problem)
+        ppo = _scale_fresh("pypfopt", n)
+        clar = _scale_fresh("osqp", n)
+        free_max, free_med = _scale_fresh("free", n)
         ns.append(n)
         points.append(n_pts)
         dense_times.append(t_dense)
@@ -690,7 +578,7 @@ def figure_scaling(out_dir: Path) -> None:
         vn = [n for n, t in zip(ns, inv_times, strict=True) if t is not None]
         vt = [t for t in inv_times if t is not None]
         band(ns, inv_band, "#2ca02c")
-        ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="vectorised explicit-inverse baseline")
+        ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="cvxcla, incremental dense backend")
     band(ns, dense_band, "#c00000")
     ax.loglog(ns, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense backend")
     band(ns, factor_band, "#1f4e79")
