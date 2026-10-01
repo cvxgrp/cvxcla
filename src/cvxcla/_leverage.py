@@ -73,9 +73,16 @@ class SignedLift(QuadraticForm):
         return int(self.asset.shape[0])
 
     def matvec(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
-        """Return ``P.T @ base @ P @ x``."""
-        legs = np.arange(self.n)
-        return self.block_matvec(legs, legs, x)
+        """Return ``P.T @ base @ P @ x``.
+
+        The legs are summed onto their assets, one full ``base`` product is taken,
+        and the result is spread back onto the legs -- no ``np.unique`` over the
+        legs, as the general :meth:`block_matvec` needs.
+        """
+        x = np.asarray(x, dtype=np.float64)
+        collapsed = np.zeros((self.base.n, *x.shape[1:]))
+        np.add.at(collapsed, self.asset, _scale_rows(self.sign, x))
+        return _scale_rows(self.sign, np.asarray(self.base.matvec(collapsed))[self.asset])
 
     def block_matvec(self, rows: object, cols: object, v: NDArray[np.float64]) -> NDArray[np.float64]:
         """Return the ``(rows, cols)`` block of the lifted form applied to ``v``.
