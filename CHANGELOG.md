@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.1.0] - 2026-10-01
+
+### New Features
+- *(cla)* Trace leverage (gross-exposure) caps ||w||_1 <= c exactly (#883)
+- *(lasso)* Trace the equality-constrained LASSO A beta = 0 via the leverage CLA (#885)
+
+### Bug Fixes
+- *(leverage)* Stop at lambda = 0, resolve a cap at the minimum gross exposure; document the CLA-LASSO identity (#884)
+
+### Documentation
+- Make CLAUDE.md drift-proof and refresh stale Rhiza facts (#886) (#889)
+- *(experiments)* Add make_figures.py, the paper's reproduction script (#896)
+- *(experiments)* Isolate scaling timings and time the shipped incremental backend (#897)
+
+### Performance
+- Take the KKT cross product and the lifted matvec as full products (#894)
+
+### Dependencies
+- *(deps)* Bump cvx-linalg to >=1.1.0 (#893)
+- *(deps)* Bump cvx-linalg to >=1.1.1 (#895)
+
+### Maintenance
+- Move _RCOND_FLOOR from cla.py into operators/_core.py (#887) (#890)
+- Factor the turning-point checks, segment and first-vertex dispatch out of cla.py (#888) (#891)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 2 updates (#892)
+
 ## [2.0.1] - 2026-09-23
 
 ### Bug Fixes
