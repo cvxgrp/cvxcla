@@ -237,7 +237,7 @@ class TestFrontier:
     def test_max_sharpe_not_at_last_point(self):
         """Test max Sharpe when the maximum is not at the last point.
 
-        This test ensures that the right-side optimization branch is covered.
+        The continuous maximum then lies on the first segment.
         """
         # Create a frontier where max Sharpe is at the first point
         # Use high return, low variance for first point
@@ -257,7 +257,7 @@ class TestFrontier:
         sr_position = np.argmax(frontier.sharpe_ratio)
         assert sr_position == 0, f"Expected max Sharpe at position 0, got {sr_position}"
 
-        # Call max_sharpe - this should exercise the right > sr_position_max branch
+        # The first segment must be searched even though it starts the frontier
         max_sr, max_weights = frontier.max_sharpe
         assert isinstance(max_sr, float)
         assert np.isclose(np.sum(max_weights), 1.0)
@@ -367,13 +367,12 @@ class TestFrontierMutationHardening:
 
 
 class TestMaxSharpeNeighbourSelection:
-    """max_sharpe must search the segments adjacent to the best discrete point.
+    """max_sharpe must find the continuous optimum wherever it lies.
 
     Each frontier places the true (continuous) maximum-Sharpe portfolio inside a
-    specific segment next to the discrete argmax. If the neighbour-index
-    arithmetic is perturbed (wrong side, wrong clamp, off-by-one), the optimiser
-    searches the wrong segment and returns a strictly worse ratio — so asserting
-    that max_sharpe attains the global optimum pins that arithmetic.
+    specific segment next to the discrete argmax -- on its right, at the right
+    end, and on its left. Missing that segment returns a strictly worse ratio, so
+    asserting that max_sharpe attains the global optimum pins the segment scan.
     """
 
     @staticmethod
@@ -469,3 +468,95 @@ class TestPlotFigure:
         fig = frontier.plot(markers=False)
 
         assert fig.data[0].mode == "lines"
+
+
+class TestMaxSharpeDegenerate:
+    """max_sharpe on frontiers with zero-variance points or no positive return (#919)."""
+
+    @staticmethod
+    def _brute_force(frontier, n=2001):
+        """Best Sharpe ratio over a dense grid of every segment, skipping zero variance."""
+        best = -np.inf
+        for w_a, w_b in itertools.pairwise(frontier.weights):
+            for t in np.linspace(0.0, 1.0, n):
+                w = t * w_a + (1 - t) * w_b
+                variance = float(w @ frontier.covariance @ w)
+                if variance > 0:
+                    best = max(best, float(frontier.mean @ w) / np.sqrt(variance))
+        return best
+
+    def test_dollar_neutral_frontier(self):
+        """A dollar-neutral frontier ends at w = 0; the maximum elsewhere is still found."""
+        from cvxcla import CLA
+
+        rng = np.random.default_rng(0)
+        n = 4
+        f = rng.standard_normal((n, n))
+        covariance = f @ f.T / n + 0.1 * np.eye(n)
+        mean = np.array([0.3, 0.1, -0.1, -0.2])
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.full(n, -1.0),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.zeros(1),
+        )
+        frontier = cla.frontier
+        assert frontier.variance[-1] == 0.0
+        ratios = frontier.sharpe_ratio
+        assert np.isnan(ratios[-1])
+        assert np.all(np.isfinite(ratios[:-1]))
+
+        max_sr, weights = frontier.max_sharpe
+        assert np.isfinite(max_sr)
+        assert max_sr >= np.nanmax(ratios) - 1e-12
+        assert np.isclose(max_sr, self._brute_force(frontier), atol=1e-6)
+        assert np.isclose(float(mean @ weights) / np.sqrt(float(weights @ covariance @ weights)), max_sr)
+
+    def test_zero_variance_point_inside_frontier(self):
+        """A zero-variance point between two others neither wins nor poisons its segments."""
+        mean = np.array([0.1, -0.05])
+        covariance = np.diag([0.04, 0.09])
+        points = [
+            FrontierPoint(weights=np.array([1.0, 0.0])),
+            FrontierPoint(weights=np.array([0.0, 0.0])),
+            FrontierPoint(weights=np.array([0.0, -1.0])),
+        ]
+        frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
+        max_sr, weights = frontier.max_sharpe
+        assert np.isclose(max_sr, 0.5)
+        assert np.allclose(weights, [1.0, 0.0])
+
+    def test_no_positive_variance_raises(self):
+        """A frontier made only of zero-variance points has no Sharpe ratio."""
+        frontier = Frontier(
+            mean=np.array([0.1, 0.2]),
+            covariance=np.eye(2),
+            frontier=[FrontierPoint(weights=np.zeros(2)), FrontierPoint(weights=np.zeros(2))],
+        )
+        with pytest.raises(ValueError, match="no frontier point has positive variance"):
+            _ = frontier.max_sharpe
+
+    def test_no_positive_return_warns(self):
+        """Without a positive expected return the result is the least negative ratio, with a warning."""
+        from cvxcla import CLA
+
+        mean = -np.array([0.1, 0.2, 0.3, 0.4])
+        covariance = np.diag([0.04, 0.05, 0.06, 0.07])
+        frontier = CLA.problem(mean, covariance).long_only().budget().trace().frontier
+        with pytest.warns(UserWarning, match="No frontier portfolio has a positive expected return"):
+            max_sr, _ = frontier.max_sharpe
+        assert max_sr < 0
+        assert np.isclose(max_sr, self._brute_force(frontier), atol=1e-6)
+
+    def test_positive_frontier_does_not_warn(self, recwarn):
+        """An ordinary frontier raises no warning."""
+        frontier = Frontier(
+            mean=np.array([0.1, 0.2]),
+            covariance=np.diag([0.04, 0.09]),
+            frontier=[FrontierPoint(weights=np.array([0.0, 1.0])), FrontierPoint(weights=np.array([1.0, 0.0]))],
+        )
+        _ = frontier.max_sharpe
+        _ = frontier.sharpe_ratio
+        assert not recwarn.list
