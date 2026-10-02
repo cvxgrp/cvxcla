@@ -327,6 +327,7 @@ def figure_frontier(out_dir: Path) -> None:
     frontier = cla.frontier
     returns_f = frontier.returns
     vol_f = frontier.volatility
+    var_f = frontier.variance
     max_sharpe, _ = frontier.max_sharpe
     cond = float(np.linalg.cond(dense_cov))
 
@@ -338,21 +339,19 @@ def figure_frontier(out_dir: Path) -> None:
     print(f"factor speedup          : {dense_time / factor_time:.2f}x")
     print(f"expected-return range   : [{returns_f.min():.4f}, {returns_f.max():.4f}]")
     print(f"volatility range        : [{vol_f.min():.4f}, {vol_f.max():.4f}]")
+    print(f"variance range          : [{var_f.min():.4f}, {var_f.max():.4f}]")
     print(f"max Sharpe (model units): {max_sharpe:.4f}")
 
-    # Draw the exact curve between turning points and mark only the turning points.
-    curve_w = _along_segments(frontier.weights)
-    curve_vol = np.sqrt(np.einsum("ij,jk,ik->i", curve_w, dense_cov, curve_w))
-    curve_ret = curve_w @ mean
+    # Figure 1 as printed in the paper: variance on the x-axis, straight lines through
+    # the turning points. (The exact segment curve is drawn in Figures 4 and 9.)
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
-    ax.plot(curve_vol, curve_ret, "-", lw=1.0, color="#1f4e79", label="Efficient frontier")
-    ax.plot(vol_f, returns_f, "o", ms=2.5, color="#1f4e79", label="Turning points")
-    ax.scatter(vol_f[[0, -1]], returns_f[[0, -1]], color="#c00000", zorder=5, s=18)
+    ax.plot(var_f, returns_f, "-o", ms=2.5, lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.scatter(var_f[[0, -1]], returns_f[[0, -1]], color="#c00000", zorder=5, s=18)
     ax.annotate(
-        "max return", (vol_f[0], returns_f[0]), textcoords="offset points", xytext=(-6, 4), ha="right", fontsize=8
+        "max return", (var_f[0], returns_f[0]), textcoords="offset points", xytext=(-6, 4), ha="right", fontsize=8
     )
-    ax.annotate("min variance", (vol_f[-1], returns_f[-1]), textcoords="offset points", xytext=(8, -2), fontsize=8)
-    ax.set_xlabel("Volatility (model units)")
+    ax.annotate("min variance", (var_f[-1], returns_f[-1]), textcoords="offset points", xytext=(8, -2), fontsize=8)
+    ax.set_xlabel("Variance (model units)")
     ax.set_ylabel("Expected return (model units)")
     ax.set_title(
         f"Efficient frontier: {_FR20_N_ASSETS} assets, {_FR20_N_DAYS} days ({len(cla)} turning points)", fontsize=9
