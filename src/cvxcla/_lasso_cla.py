@@ -37,6 +37,7 @@ from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .cla import CLA
+from .errors import CLAError
 from .operators import RCOND_FLOOR, QuadraticForm
 
 #: One LASSO breakpoint as ``(lam, beta, active)``; :mod:`cvxcla.lasso` wraps it.
@@ -137,7 +138,8 @@ def equality_path(
         )
     except ValueError as err:
         msg = f"the equality-constrained LASSO could not be traced through the leverage CLA: {err}"
-        raise ValueError(msg) from err
+        # Keep the error's kind (infeasible, degenerate, ...) when the CLA classified it.
+        raise (type(err) if isinstance(err, CLAError) else ValueError)(msg) from err
 
     tps = cla.turning_points
     path: list[BreakpointData] = []

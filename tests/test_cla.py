@@ -13,6 +13,7 @@ from cvxcla import CLA, FactorCovariance
 from cvxcla._events import event_ratios
 from cvxcla._kkt import active_set, solve_kkt
 from cvxcla._projection import project_feasible
+from cvxcla.errors import DegenerateProblemError
 from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
 
@@ -1021,28 +1022,22 @@ class TestGeneralEqualityConstraints:
                 b=np.array([10.0, 0.5]),
             )
 
-    def test_degenerate_first_vertex_declined_with_diagnosis(self):
-        """A degenerate general-A max-return vertex is declined with a clear error.
+    def test_degenerate_general_a_first_vertex_traced(self):
+        """A degenerate general-A max-return vertex is resolved by the LP duals.
 
-        With a = [budget; e_0] (so w_0 is pinned by the second row), the
-        maximum-return vertex pins a basic asset on a box bound: the free set does
-        not span the two equalities and the reduced KKT system is singular. This
-        must be declined at the first vertex with an actionable message, not left
-        to surface as an opaque "Singular matrix" error later in the trace.
+        With a = [budget; e_0] (so w_0 is pinned by the second row) and caps of 0.4,
+        the maximum-return vertex has a basic asset on a box bound, so the strictly
+        interior assets do not span the two equalities. Freeing the degenerate basic
+        asset restores the rank, and the frontier is feasible and optimal.
         """
         n = 8
         mean, cov = self._problem(n, 6)
         a = np.vstack([np.ones(n), np.eye(n)[0]])
         b = np.array([1.0, 0.2])
-        with pytest.raises(ValueError, match="maximum-return vertex is degenerate"):
-            CLA(
-                mean=mean,
-                covariance=cov,
-                lower_bounds=np.zeros(n),
-                upper_bounds=np.full(n, 0.4),
-                a=a,
-                b=b,
-            )
+        lower, upper = np.zeros(n), np.full(n, 0.4)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b)
+        self._assert_feasible_monotone(cla, a, b, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, lower, upper)
 
     def test_project_feasible_general_constraint(self):
         """The general (multi-row) projection restores box feasibility on A w = b.
@@ -1322,15 +1317,14 @@ class TestInequalityConstraints:
         assert np.isclose(projected.sum(), 1.0, atol=1e-7)
         assert np.isclose(g @ projected, h, atol=1e-7)
 
-    def test_degenerate_inequality_first_vertex_declined(self):
-        """A degenerate max-return vertex with an inequality present is declined.
+    def test_degenerate_inequality_first_vertex_traced(self):
+        """A max-return vertex with every weight on a bound is resolved, not declined.
 
         With a loose box and a single best asset that the cap does not touch, the
-        max-return LP puts the whole budget on that one asset: the free set is
-        empty, so it cannot span the budget row and the bordered KKT system is
-        singular. The inequality machinery must not mask this; it is declined at
-        the first vertex with the actionable diagnosis rather than surfacing as an
-        opaque singular-matrix error later in the trace.
+        max-return LP puts the whole budget on that one asset: no weight is
+        strictly interior. The asset is a degenerate basic variable of the LP (zero
+        reduced cost), so it is freed, as the greedy fill frees its last asset, and
+        the trace proceeds; every turning point is feasible and optimal.
         """
         n = 8
         # asset n-1 has the strictly highest return and lies in the uncapped
@@ -1338,14 +1332,29 @@ class TestInequalityConstraints:
         mean = np.arange(n, dtype=float)
         _, cov = self._problem(n, 6)
         g, h = self._group_cap(n, 0.5)
-        with pytest.raises(ValueError, match="maximum-return vertex is degenerate"):
+        lower, upper, a, b = np.zeros(n), np.ones(n), np.ones((1, n)), np.ones(1)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+
+    def test_overdetermined_first_vertex_declined(self):
+        """Pairwise caps that over-determine the vertex are declined as degenerate.
+
+        Five cyclic caps ``w_i + w_{i+1} <= 0.5`` are all tight at the maximum-return
+        vertex, together with the budget: more independent active rows than the
+        free set can span. That is outside the supported domain and is reported as
+        a :class:`~cvxcla.errors.DegenerateProblemError` before the trace starts.
+        """
+        n = 5
+        g = np.array([np.isin(np.arange(n), [i, (i + 1) % n]).astype(float) for i in range(n)])
+        with pytest.raises(DegenerateProblemError, match="maximum-return vertex is degenerate"):
             CLA(
-                mean=mean,
-                covariance=cov,
+                mean=np.linspace(1.0, 0.5, n),
+                covariance=np.eye(n) + 0.1,
                 lower_bounds=np.zeros(n),
                 upper_bounds=np.ones(n),
                 a=np.ones((1, n)),
                 b=np.ones(1),
                 g=g,
-                h=h,
+                h=np.full(n, 0.5),
             )

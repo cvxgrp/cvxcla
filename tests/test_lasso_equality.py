@@ -15,6 +15,7 @@ import pytest
 from scipy.optimize import minimize
 
 from cvxcla import CLA, DenseCovariance, Lasso
+from cvxcla.errors import DegenerateProblemError
 
 
 def _data(m, n, seed):
@@ -183,12 +184,44 @@ class TestValidation:
         with pytest.raises(ValueError, match="positive-definite Gram"):
             Lasso(x=x, y=y, a=np.ones((1, 20)))
 
-    def test_degenerate_first_vertex_is_reported(self):
-        """Block-structured rows (two groups, each summing to zero) make the first vertex degenerate."""
+    def test_block_rows_trace_and_are_optimal(self):
+        """Block-structured rows (two groups, each summing to zero) are traced.
+
+        Their first vertex used to be declined as degenerate; the LP duals now
+        resolve it, and the path is optimal and ends at the constrained fit.
+        """
         x, y = _data(40, 8, 0)
         groups = np.kron(np.eye(2), np.ones((1, 4)))
-        with pytest.raises(ValueError, match="could not be traced through the leverage CLA"):
-            Lasso(x=x, y=y, a=groups)
+        lasso = Lasso(x=x, y=y, a=groups)
+        _assert_optimal(lasso, x, y, groups)
+        assert np.allclose(lasso.path[-1].beta, _constrained_least_squares(x, y, groups))
+
+    def test_cla_failure_keeps_its_kind(self, monkeypatch):
+        """A classified CLA failure is re-raised with the LASSO context and its own type."""
+        import cvxcla._lasso_cla as lasso_cla
+
+        def failing_cla(**_kwargs):
+            msg = "the maximum-return vertex is degenerate"
+            raise DegenerateProblemError(msg)
+
+        monkeypatch.setattr(lasso_cla, "CLA", failing_cla)
+        x, y = _data(40, 8, 0)
+        with pytest.raises(DegenerateProblemError, match="could not be traced through the leverage CLA"):
+            Lasso(x=x, y=y, a=np.ones((1, 8)))
+
+    def test_unclassified_cla_failure_is_a_value_error(self, monkeypatch):
+        """A plain ValueError from the CLA (malformed input) stays a plain ValueError."""
+        import cvxcla._lasso_cla as lasso_cla
+
+        def failing_cla(**_kwargs):
+            msg = "bad shape"
+            raise ValueError(msg)
+
+        monkeypatch.setattr(lasso_cla, "CLA", failing_cla)
+        x, y = _data(40, 8, 0)
+        with pytest.raises(ValueError, match="could not be traced through the leverage CLA") as info:
+            Lasso(x=x, y=y, a=np.ones((1, 8)))
+        assert type(info.value) is ValueError
 
 
 class TestLongOnlyFrontierIsNonnegativeLasso:
