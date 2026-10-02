@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.2.0] - 2026-10-02
+
+### New Features
+- *(errors)* Classify failures; resolve degenerate first vertices and redundant rows (#907)
+
+### Bug Fixes
+- *(events)* Make the slope floors and the event window scale-aware (#900)
+- *(projection)* Stop alternating projections on convergence; raise ProjectionError on failure (#901)
+- *(operators)* Require a symmetric positive-definite factor covariance (#908)
+
+### Documentation
+- *(experiments)* Sync make_figures.py with the paper's reproduction script (#899)
+- *(experiments)* Add validate-kkt, a KKT-residual certificate of every segment (#902)
+- *(experiments)* Add validate-scaling and validate-projection (#903)
+- How to write a covariance backend, with a tested block-diagonal example (#909)
+
+### Maintenance
+- Give ProjectionError and RCOND_FLOOR public homes (#905)
+
 ## [2.1.0] - 2026-10-01
 
 ### New Features

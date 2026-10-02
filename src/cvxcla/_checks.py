@@ -15,8 +15,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import QuadraticForm
-from .operators._core import _RCOND_FLOOR
+from .errors import DegenerateProblemError, FeasibilityError
+from .operators import RCOND_FLOOR, QuadraticForm
 
 
 def check_feasible(
@@ -49,7 +49,8 @@ def check_feasible(
         tol: Tolerance for the box, inequality and leverage checks.
 
     Raises:
-        ValueError: Naming the first violated constraint.
+        FeasibilityError: Naming the first violated constraint. A turning point
+            that fails here after projection signals a numerical failure.
     """
     # (constraint holds?, message if it does not).
     checks: tuple[tuple[bool, str], ...] = (
@@ -64,7 +65,7 @@ def check_feasible(
     )
     for ok, message in checks:
         if not ok:
-            raise ValueError(message)
+            raise FeasibilityError(message)
 
 
 def well_conditioned(cov: QuadraticForm) -> bool:
@@ -91,7 +92,7 @@ def well_conditioned(cov: QuadraticForm) -> bool:
     Returns:
         Whether the full covariance clears the singularity floor.
     """
-    return float(cov.rcond_free(np.arange(cov.n))) >= _RCOND_FLOOR
+    return float(cov.rcond_free(np.arange(cov.n))) >= RCOND_FLOOR
 
 
 def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -> None:
@@ -121,12 +122,12 @@ def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -
         free: Boolean mask of the free assets at the candidate.
 
     Raises:
-        ValueError: With a degeneracy-specific message when the free-asset
-            block is numerically singular (an unreliable solve); otherwise
-            returns without effect.
+        DegenerateProblemError: With a degeneracy-specific message when the
+            free-asset block is numerically singular (an unreliable solve);
+            otherwise returns without effect.
     """
     rcond = cov.rcond_free(np.flatnonzero(free))
-    if rcond < _RCOND_FLOOR:
+    if rcond < RCOND_FLOOR:
         n_free = int(np.count_nonzero(free))
         msg = (
             f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
@@ -140,4 +141,4 @@ def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -
             "full-rank estimate (ample history), or a FactorCovariance backend "
             "(diagonal-plus-low-rank), which is positive definite by construction."
         )
-        raise ValueError(msg)
+        raise DegenerateProblemError(msg)

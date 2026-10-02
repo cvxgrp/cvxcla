@@ -41,7 +41,8 @@ despite living under `tests/`.
   functions that wrap the `cvx.linalg` operators, `DenseOperator`/`GramOperator`/
   `FactorOperator`, as covariance/quadratic-form backends), `_builders.py`
   (the `ProblemBuilder`/`LassoBuilder` fluent builders; `builder.py` is its
-  public re-export), `types.py`, `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
+  public re-export), `types.py`, `errors.py` (the public exceptions, e.g.
+  `ProjectionError`), `pathtracer.py`, `first.py` (first turning point), `__init__.py`.
   The per-turning-point numeric kernels are factored out of `cla.py` into pure
   private modules: `_kkt.py` (`active_set`/`solve_kkt`, composed with the
   `Segment` bundle by `critical_segment`), `_events.py`

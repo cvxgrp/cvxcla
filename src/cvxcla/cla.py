@@ -20,10 +20,46 @@ from ._events import segment_events
 from ._kkt import Segment, critical_segment
 from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
 from ._projection import project_feasible
+from .errors import InfeasibleProblemError
 from .first import classify_vertex, first_turning_point
 from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
+
+
+def _independent_equalities(
+    a: NDArray[np.float64], b: NDArray[np.float64]
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Drop the rows of ``A w = b`` that are linear combinations of earlier rows.
+
+    A redundant row leaves the feasible set unchanged but makes every Schur
+    complement of the reduced KKT system singular. Rows are taken in order and kept
+    while they raise the rank; each dropped row must then agree with the kept ones on
+    the right-hand side, or the system is inconsistent.
+
+    Args:
+        a: Equality-constraint matrix (``m x n``).
+        b: Equality-constraint right-hand side (length ``m``).
+
+    Returns:
+        The independent rows ``(a, b)``; the input itself when none is redundant.
+
+    Raises:
+        InfeasibleProblemError: If a dependent row contradicts the rows it depends on.
+    """
+    kept: list[int] = []
+    for i in range(a.shape[0]):
+        if int(np.linalg.matrix_rank(a[[*kept, i]])) > len(kept):
+            kept.append(i)
+    if len(kept) == a.shape[0]:
+        return a, b
+    dropped = [i for i in range(a.shape[0]) if i not in kept]
+    coef = np.linalg.lstsq(a[kept].T, a[dropped].T, rcond=None)[0]
+    scale = 1.0 + float(np.max(np.abs(b), initial=0.0))
+    if np.max(np.abs(coef.T @ b[kept] - b[dropped])) > 1e-9 * scale:  # pragma: no mutate
+        msg = "The equality constraints are inconsistent: a dependent row of A w = b contradicts the others"
+        raise InfeasibleProblemError(msg)
+    return a[kept], b[kept]
 
 
 @dataclass(frozen=True)
@@ -162,12 +198,19 @@ class CLA(InequalityConstrained):
         the ``QuadraticForm`` interface, so structured backends (e.g.
         ``FactorCovariance``) never materialise an n x n matrix.
 
+        Redundant equality rows (a row in the span of the others, such as a
+        repeated budget) are dropped first, keeping the earliest independent rows;
+        ``a`` and ``b`` then hold the reduced system.
+
         Raises:
-            RuntimeError: If all variables are blocked, which would make the
-                          system of equations singular.
             ValueError: If the inequality matrix ``g`` and vector ``h`` have
-                          mismatched or wrong shapes, or ``leverage`` is not a
-                          positive finite number.
+                mismatched or wrong shapes, or ``leverage`` is not a positive finite
+                number.
+            InfeasibleProblemError: If the constraints admit no portfolio, including
+                an equality system whose dependent rows contradict the others.
+            DegenerateProblemError: If the problem is feasible but outside the
+                supported domain (see :mod:`cvxcla.errors`).
+            NumericalError: If the trace breaks down numerically.
 
         """
         if self.g_matrix.shape[1] != self.dimension:
@@ -176,6 +219,9 @@ class CLA(InequalityConstrained):
         if self.h_vector.shape[0] != self.g_matrix.shape[0]:
             msg = f"h must have {self.g_matrix.shape[0]} entries, got {self.h_vector.shape[0]}"
             raise ValueError(msg)
+        a, b = _independent_equalities(np.atleast_2d(np.asarray(self.a, dtype=np.float64)), np.atleast_1d(self.b))
+        object.__setattr__(self, "a", a)  # frozen dataclass: normalise once, before tracing
+        object.__setattr__(self, "b", b)
         if self.leverage is None:
             trace(self)
             return
@@ -249,6 +295,34 @@ class CLA(InequalityConstrained):
             state,
         )
 
+    @cached_property
+    def _scales(self) -> tuple[float, float]:
+        """Return ``(lambda_scale, mu_scale)``, the natural units of the problem.
+
+        ``mu_scale`` is ``max |mu|`` and the covariance scale is ``max |Sigma 1| / n``,
+        one product with the equal-weight portfolio, so it is available for any
+        backend. Their ratio is the scale of ``lambda``, at which risk and return
+        balance. Both are positively homogeneous: rescaling ``mu`` by ``c`` and
+        ``Sigma`` by ``s`` rescales them by ``c`` and ``s / c``, which is what makes
+        the event tests invariant under a change of units. A zero scale (``mu = 0``
+        or ``Sigma = 0``) falls back to ``1``.
+        """
+        n = self.dimension
+        mu_scale = float(np.max(np.abs(self.mean))) if n else 0.0
+        cov_scale = float(np.max(np.abs(self.covariance_operator.matvec(np.ones(n))))) / n if n else 0.0
+        mu_scale = mu_scale if mu_scale > 0 else 1.0
+        cov_scale = cov_scale if cov_scale > 0 else 1.0
+        return cov_scale / mu_scale, mu_scale
+
+    @property
+    def lambda_scale(self) -> float:
+        """The natural scale of ``lambda`` (covariance scale over return scale).
+
+        The path tracer takes its event-ordering window relative to this scale near
+        ``lambda = 0`` (see :func:`cvxcla.pathtracer.select_next_event`).
+        """
+        return self._scales[0]
+
     def event_matrix(self, state: TurningPoint, segment: Segment) -> NDArray[np.float64]:  # noqa: ARG002
         """Return the ``(n + p, 4)`` event matrix for ``segment`` (see :func:`cvxcla._events.segment_events`).
 
@@ -257,7 +331,10 @@ class CLA(InequalityConstrained):
         event. ``state`` is part of the uniform ``ParametricProblem`` signature;
         the CLA does not need it because ``segment`` already bundles the masks.
         """
-        return segment_events(segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector)
+        lam_scale, mu_scale = self._scales
+        return segment_events(
+            segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector, lam_scale, mu_scale
+        )
 
     def step(self, state: TurningPoint, segment: Segment, sec: int, direction: int, lam: float) -> TurningPoint:
         """Emit the turning point at ``lam`` after flipping the activity at ``sec``.

@@ -32,7 +32,7 @@ CovarianceOperator = SymmetricOperator
 # across the degeneracy sweep in experiments/degeneracy_boundary.py). The 1e-12
 # cut sits in the wide gap between the two and is the conventional
 # numerical-singularity scale.
-_RCOND_FLOOR = 1e-12  # pragma: no mutate
+RCOND_FLOOR = 1e-12  # pragma: no mutate
 
 
 def cross(operator: SymmetricOperator, free: NDArray[np.bool_], x: NDArray[np.float64]) -> NDArray[np.float64]:

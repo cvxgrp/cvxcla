@@ -16,7 +16,8 @@ from typing import NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import QuadraticForm, bordered_solve, cross
+from .errors import DegenerateProblemError, NumericalError
+from .operators import RCOND_FLOOR, QuadraticForm, bordered_solve, cross
 from .types import TurningPoint
 
 
@@ -45,13 +46,13 @@ def active_set(
         ``(at_upper, at_lower, free_in, fixed_weights)``.
 
     Raises:
-        RuntimeError: If every asset is blocked, which makes the reduced system
+        NumericalError: If every asset is blocked, which makes the reduced system
             singular.
     """
     blocked = ~free
     if np.all(blocked):
         msg = "All variables cannot be blocked"
-        raise RuntimeError(msg)
+        raise NumericalError(msg)
 
     at_upper = blocked & (np.abs(weights - upper) <= tol)  # pragma: no mutate
     at_lower = blocked & (np.abs(weights - lower) <= tol)  # pragma: no mutate
@@ -183,6 +184,46 @@ class Segment(NamedTuple):
     eta_beta: NDArray[np.float64]
 
 
+def guard_active_rows(c: NDArray[np.float64], free_in: NDArray[np.bool_], lamb: float) -> None:
+    """Refuse a partition whose active rows are linearly dependent on the free set.
+
+    The Schur complement ``C_F Sigma_FF^{-1} C_F^T`` of the reduced solve is singular
+    when ``C_F`` (the equality rows and the active inequality rows, restricted to the
+    free assets) loses row rank: more active rows than free assets, or rows that
+    coincide on the free set (several caps binding at once in the same direction).
+    The partition is then outside the algorithm's domain -- the linear-independence
+    assumption of its termination argument fails -- and the solve cannot be trusted,
+    so it is declined here instead of producing an infeasible turning point. The
+    rows are normalised first, so the test does not depend on their scaling.
+
+    Args:
+        c: The active constraint rows ``[A ; G_active]`` (``(m + |S|) x n``).
+        free_in: Boolean mask of the assets in the reduced solve.
+        lamb: The lambda of the turning point, for the diagnosis.
+
+    Raises:
+        DegenerateProblemError: If ``c[:, free_in]`` has fewer columns than rows, or
+            a reciprocal condition number below the singularity floor.
+    """
+    rows = c.shape[0]
+    if rows == 0:
+        return
+    block = c[:, free_in]
+    n_free = block.shape[1]
+    norms = np.linalg.norm(block, axis=1)
+    if n_free >= rows and np.all(norms > 0):
+        sv = np.linalg.svd(block / norms[:, None], compute_uv=False)
+        if sv[-1] >= RCOND_FLOOR * sv[0]:
+            return
+    msg = (
+        f"The active constraints are linearly dependent on the free set at lambda={lamb:.4g} "
+        f"({rows} active rows, {n_free} free assets): the reduced KKT system is singular. This "
+        "happens when several constraints bind at once in the same direction; remove redundant "
+        "rows or loosen one of the caps."
+    )
+    raise DegenerateProblemError(msg)
+
+
 def critical_segment(
     cov: QuadraticForm,
     mean: NDArray[np.float64],
@@ -215,8 +256,13 @@ def critical_segment(
 
     Returns:
         The :class:`Segment` valid below ``state``.
+
+    Raises:
+        DegenerateProblemError: If the active rows do not have full row rank on the
+            free set (see :func:`guard_active_rows`).
     """
     at_upper, at_lower, free_in, fixed_weights = active_set(state.free, state.weights, lower, upper, tol)
+    guard_active_rows(np.vstack([a, g[state.active_ineq]]), free_in, state.lamb)
     r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
         cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq
     )

@@ -27,6 +27,8 @@ def event_ratios(
     at_lower: NDArray[np.bool_],
     lower: NDArray[np.float64],
     upper: NDArray[np.float64],
+    beta_floor: float | None = None,
+    delta_floor: float | None = None,
 ) -> NDArray[np.float64]:
     """Critical lambda for every candidate box event, as an ``(n, 4)`` matrix.
 
@@ -52,12 +54,18 @@ def event_ratios(
         at_lower: Mask of assets blocked at their lower bound.
         lower: Per-asset lower bounds.
         upper: Per-asset upper bounds.
+        beta_floor: Smallest weight slope treated as genuine; ``None`` uses
+            ``sqrt(machine eps)``. :func:`segment_events` scales it with the problem.
+        delta_floor: Smallest multiplier slope treated as genuine; ``None`` uses
+            ``sqrt(machine eps)``.
 
     Returns:
         The ``(n, 4)`` matrix of critical lambdas.
     """
     ns = len(r_alpha)
     eps = np.sqrt(np.finfo(np.float64).eps)
+    beta_eps = eps if beta_floor is None else beta_floor
+    delta_eps = eps if delta_floor is None else delta_floor
     # 4 columns = the 4 event types; extra unused columns are harmless.
     l_mat = np.full((ns, 4), -np.inf)  # pragma: no mutate
 
@@ -65,10 +73,10 @@ def event_ratios(
     # the eps boundary is numerically irrelevant — a slope/derivative
     # landing exactly on +/-sqrt(machine-eps) never occurs with real
     # data — so those boundary comparisons are marked no-mutate.
-    beta_down = free_in & (r_beta < -eps)  # pragma: no mutate
-    beta_up = free_in & (r_beta > +eps)  # pragma: no mutate
-    delta_down = at_upper & (delta < -eps)  # pragma: no mutate
-    delta_up = at_lower & (delta > +eps)  # pragma: no mutate
+    beta_down = free_in & (r_beta < -beta_eps)  # pragma: no mutate
+    beta_up = free_in & (r_beta > +beta_eps)  # pragma: no mutate
+    delta_down = at_upper & (delta < -delta_eps)  # pragma: no mutate
+    delta_up = at_lower & (delta > +delta_eps)  # pragma: no mutate
 
     # Columns 0,1 are "moves to a bound" (free->blocked) and 2,3 are
     # "leaves a bound" (blocked->free); the next-free update only tests
@@ -90,6 +98,8 @@ def ineq_event_ratios(
     active_ineq: NDArray[np.bool_],
     g: NDArray[np.float64],
     h: NDArray[np.float64],
+    slack_floor: float | None = None,
+    eta_floor: float | None = None,
 ) -> NDArray[np.float64]:
     """Critical lambda for every inequality-row event, as a ``(p, 4)`` matrix.
 
@@ -112,6 +122,10 @@ def ineq_event_ratios(
         active_ineq: Boolean mask (length ``p``) of the active inequality rows.
         g: Inequality-constraint matrix ``G`` of ``G w <= h`` (``(p, n)``).
         h: Inequality-constraint right-hand side ``h`` (length ``p``).
+        slack_floor: Smallest slack slope treated as genuine; ``None`` uses
+            ``sqrt(machine eps)``.
+        eta_floor: Smallest row-multiplier slope treated as genuine; ``None`` uses
+            ``sqrt(machine eps)``.
 
     Returns:
         The ``(p, 4)`` matrix of critical lambdas.
@@ -122,6 +136,8 @@ def ineq_event_ratios(
         return l_mat
 
     eps = np.sqrt(np.finfo(np.float64).eps)
+    slack_eps = eps if slack_floor is None else slack_floor
+    eta_eps = eps if eta_floor is None else eta_floor
     inactive = ~active_ineq
 
     # Enter: an inactive row's slack rises to zero. The slope/intercept split
@@ -129,12 +145,12 @@ def ineq_event_ratios(
     # "moves to a bound" event (decreasing lam must raise the slack).
     s_alpha = g @ r_alpha - h
     s_beta = g @ r_beta
-    enter = inactive & (s_beta < -eps)  # pragma: no mutate
+    enter = inactive & (s_beta < -slack_eps)  # pragma: no mutate
     l_mat[enter, 0] = -s_alpha[enter] / s_beta[enter]
 
     # Release: an active row's non-negative multiplier falls back to zero,
     # the row analogue of a blocked multiplier changing sign.
-    release = active_ineq & (eta_beta > +eps)  # pragma: no mutate
+    release = active_ineq & (eta_beta > +eta_eps)  # pragma: no mutate
     l_mat[release, 1] = -eta_alpha[release] / eta_beta[release]
     return l_mat
 
@@ -145,6 +161,8 @@ def segment_events(
     upper: NDArray[np.float64],
     g: NDArray[np.float64],
     h: NDArray[np.float64],
+    lam_scale: float = 1.0,
+    mu_scale: float = 1.0,
 ) -> NDArray[np.float64]:
     """Return the ``(n + p, 4)`` matrix of candidate critical lambdas for ``segment``.
 
@@ -161,10 +179,21 @@ def segment_events(
         upper: Per-asset upper bounds.
         g: Inequality-constraint matrix ``G`` of ``G w <= h`` (``(p, n)``).
         h: Inequality-constraint right-hand side ``h`` (length ``p``).
+        lam_scale: The natural scale of ``lambda`` (covariance scale over return
+            scale). Weight slopes ``dw/dlam`` carry units of ``1/lambda``, so their
+            noise floor is ``sqrt(eps) / lam_scale``.
+        mu_scale: The scale of the expected returns. Multiplier slopes carry the
+            units of ``mu``, so their noise floor is ``sqrt(eps) * mu_scale``.
+            With both scales the event test is invariant under rescaling the
+            returns and the covariance; ``1.0`` and ``1.0`` give the unscaled
+            ``sqrt(eps)`` floor.
 
     Returns:
         The stacked ``(n + p, 4)`` event matrix.
     """
+    eps = np.sqrt(np.finfo(np.float64).eps)
+    weight_floor = eps / lam_scale
+    multiplier_floor = eps * mu_scale
     box = event_ratios(
         segment.r_alpha,
         segment.r_beta,
@@ -175,8 +204,18 @@ def segment_events(
         segment.at_lower,
         lower,
         upper,
+        beta_floor=weight_floor,
+        delta_floor=multiplier_floor,
     )
     ineq = ineq_event_ratios(
-        segment.r_alpha, segment.r_beta, segment.eta_alpha, segment.eta_beta, segment.active_ineq, g, h
+        segment.r_alpha,
+        segment.r_beta,
+        segment.eta_alpha,
+        segment.eta_beta,
+        segment.active_ineq,
+        g,
+        h,
+        slack_floor=weight_floor,
+        eta_floor=multiplier_floor,
     )
     return np.vstack([box, ineq])
