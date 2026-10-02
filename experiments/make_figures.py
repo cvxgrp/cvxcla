@@ -1,7 +1,8 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "cvxcla @ git+https://github.com/cvxgrp/cvxcla@49b5c732106aa85a7810a014bfd127f6c23fdadb",
+#     "casadi==3.8.1",
+#     "cvxcla==2.1.0",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
@@ -31,7 +32,8 @@ Targets (artefact in parentheses):
   * ``frontier``        -- Figure 1: the 20-asset factor-model efficient frontier
     (frontier.pdf).
   * ``scaling``         -- Figure 2 + Table 1: runtime vs problem size, dense vs
-    factor (Woodbury) backend, with baselines (scaling.pdf).  SLOW.
+    factor (Woodbury) backend, with baselines, and the memory table (scaling.pdf).
+    SLOW: the dense backend at n=5120 takes several minutes per trace.
   * ``rank-scaling``    -- Figure 3 + Table 2: runtime vs factor rank at fixed n
     (rank_scaling.pdf).  SLOW.
   * ``validate-exact``  -- Section 10.5 exactness numbers (no figure).
@@ -46,13 +48,14 @@ Targets (artefact in parentheses):
   * ``checks``          -- all four numerical checks.
   * ``all``             -- every figure and every check.
 
-Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib``
-(all figures), ``pandas``/``pyarrow`` (the S&P 500 data), ``osqp`` (the reference QP
-and the warm-started grid baseline), ``PyPortfolioOpt`` (the external baseline in
-``scaling``), ``scipy`` (sparse matrices), and ``scikit-learn`` (the Ledoit--Wolf
-estimate). All are pinned in this script's inline (PEP 723) metadata,
-so ``uv run`` provisions them automatically. A step whose optional dependency is
-missing, or which raises, is reported and skipped rather than aborting the whole run.
+Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib`` (all
+figures), ``pandas``/``pyarrow`` (the S&P 500 data), ``osqp`` (the reference QP and the
+warm-started grid baseline), ``PyPortfolioOpt`` and ``casadi`` (the external baselines
+in ``scaling``; ``casadi`` ships the qpOASES parametric QP solver), ``scipy`` (sparse
+matrices), and ``scikit-learn`` (the Ledoit--Wolf estimate). All are pinned in this
+script's inline (PEP 723) metadata, so ``uv run`` provisions them automatically. A step
+whose optional dependency is missing, or which raises, is reported and skipped rather
+than aborting the whole run.
 
 Pass ``--quick`` to ``all``/``figures`` to skip the two long-running scaling sweeps
 (``scaling`` and ``rank-scaling``); selecting either explicitly always runs it.
@@ -62,6 +65,8 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import io
+import itertools
 import time
 from dataclasses import dataclass
 from itertools import pairwise
@@ -333,7 +338,13 @@ def figure_frontier(out_dir: Path) -> None:
 # ======================================================================================
 # Figure: scaling (from runtime_scaling.py)  ->  scaling.pdf  (SLOW)
 # ======================================================================================
-_SCALE_SIZES = [20, 40, 80, 160, 320, 640]
+_SCALE_SIZES = [20, 40, 80, 160, 320, 640, 1280, 2560, 5120]
+# The external baselines are timed only up to here: PyPortfolioOpt already takes
+# minutes at n=640, and both grow like n^3 or faster.
+_SCALE_BASELINE_MAX_N = 640
+# qpOASES follows the same parametric path as the CLA, so it is the closest external
+# comparison and is timed further, until it too takes minutes per trace.
+_SCALE_QPOASES_MAX_N = 2560
 _SCALE_N_FACTORS = 10
 _SCALE_SEED = 7
 _SCALE_REPEATS = 3
@@ -419,6 +430,45 @@ def _scale_pypfopt_trace(dense: np.ndarray, mean: np.ndarray) -> tuple[int, floa
     return (n_pts, *_scale_stats(times))
 
 
+def _scale_qpoases_path(dense: np.ndarray, problem: dict) -> tuple[int, float, float, float, float] | None:
+    """Time qpOASES following the whole frontier in one hot-started call, if installed.
+
+    qpOASES (shipped with CasADi) is a parametric active-set solver: a hot start from
+    one QP to the next follows the homotopy between them, changing the working set at
+    every breakpoint on the way. Solving at the maximum-return end, above the first
+    finite turning point, and hot-starting to lambda = 0 therefore walks the same path
+    as the CLA, but returns only its endpoint, the minimum-variance portfolio. Each
+    repetition starts from a fresh solver (a cold start), and the two calls are timed
+    together; one call per trace keeps CasADi's per-call overhead out of the figure.
+    Returns (working-set changes, median, min, max seconds, endpoint gap to the CLA) or
+    None when CasADi is absent.
+    """
+    try:
+        import casadi as ca
+    except ImportError:
+        return None
+
+    cla = CLA(covariance=dense, **problem)
+    lam_top = 2.0 * max(tp.lamb for tp in cla.turning_points if np.isfinite(tp.lamb))
+    n = len(problem["mean"])
+    h, a = ca.DM(dense), ca.DM(problem["a"])
+    bounds = {"lba": problem["b"], "uba": problem["b"], "lbx": problem["lower_bounds"], "ubx": problem["upper_bounds"]}
+    times, changes, endpoint = [], 0, np.zeros(n)
+    # qpOASES prints its licence banner through CasADi, which writes to Python's
+    # sys.stdout; keep it out of the sweep's log.
+    with contextlib.redirect_stdout(io.StringIO()):
+        for _ in range(_SCALE_REPEATS):
+            solver = ca.conic("S", "qpoases", {"h": h.sparsity(), "a": a.sparsity()}, {"printLevel": "none"})
+            start = time.perf_counter()
+            solver(h=h, g=-lam_top * problem["mean"], a=a, **bounds)
+            result = solver(h=h, g=np.zeros(n), a=a, **bounds)
+            times.append(time.perf_counter() - start)
+            changes = int(solver.stats()["iter_count"])
+            endpoint = np.asarray(result["x"]).ravel()
+    gap = float(np.max(np.abs(endpoint - cla.turning_points[-1].weights)))
+    return (changes, *_scale_stats(times), gap)
+
+
 def _scale_free_sizes(covariance: object, problem: dict) -> tuple[int, float]:
     """Return (max, median) free-set size |F| over the turning points of one trace.
 
@@ -443,6 +493,23 @@ def _scale_osqp_grid(dense: np.ndarray, problem: dict) -> tuple[int, float, floa
     return (len(lams), *_scale_stats(times))
 
 
+def _scale_memory(covariance: object, problem: dict, cov_bytes: int) -> tuple[int, int]:
+    """Return (covariance storage, trace working memory) in bytes for one trace.
+
+    The stored frontier is n weights per turning point, O(n^2) for any backend, so the
+    working memory is the tracemalloc peak during the trace less what the finished
+    trace retains: the transient allocations of the loop itself.
+    """
+    import tracemalloc
+
+    tracemalloc.start()
+    cla = CLA(covariance=covariance, **problem)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    del cla
+    return cov_bytes, peak - current
+
+
 def _scale_measure(method: str, n: int) -> object:
     """Rebuild the size-n problem and time one method on it (run in a fresh process)."""
     rng = np.random.default_rng(_SCALE_SEED)
@@ -457,8 +524,14 @@ def _scale_measure(method: str, n: int) -> object:
         return _scale_pypfopt_trace(dense, problem["mean"])
     if method == "osqp":
         return _scale_osqp_grid(dense, problem)
+    if method == "qpoases":
+        return _scale_qpoases_path(dense, problem)
     if method == "free":
         return _scale_free_sizes(factor, problem)
+    if method == "memory-dense":
+        return _scale_memory(dense, problem, dense.nbytes)
+    if method == "memory-factor":
+        return _scale_memory(factor, problem, 8 * (n * (_SCALE_N_FACTORS + 1) + _SCALE_N_FACTORS))
     msg = f"unknown scaling method {method!r}"
     raise ValueError(msg)
 
@@ -482,6 +555,8 @@ def figure_scaling(out_dir: Path) -> None:
     """Run the scaling sweep, print a table, and write the figure."""
     ns, dense_times, factor_times, ppo_times, inv_times, clar_times, points = [], [], [], [], [], [], []
     dense_band, factor_band, ppo_band, inv_band, clar_band = [], [], [], [], []
+    qpo_times, qpo_band = [], []
+    memory = []
     for n in _SCALE_SIZES:
         n_pts, t_dense, d_lo, d_hi = _scale_fresh("dense", n)
         n_pts_f, t_factor, f_lo, f_hi = _scale_fresh("factor", n)
@@ -495,9 +570,12 @@ def figure_scaling(out_dir: Path) -> None:
             # rather than abort, so the figure still completes.
             print(f"  [note] incremental backend disagrees at n={n}: {inv[0]} vs {n_pts}; skipping its point")
             inv = None
-        ppo = _scale_fresh("pypfopt", n)
-        clar = _scale_fresh("osqp", n)
+        baselines = n <= _SCALE_BASELINE_MAX_N
+        ppo = _scale_fresh("pypfopt", n) if baselines else None
+        clar = _scale_fresh("osqp", n) if baselines else None
+        qpo = _scale_fresh("qpoases", n) if n <= _SCALE_QPOASES_MAX_N else None
         free_max, free_med = _scale_fresh("free", n)
+        memory.append((n, *_scale_fresh("memory-dense", n), *_scale_fresh("memory-factor", n)))
         ns.append(n)
         points.append(n_pts)
         dense_times.append(t_dense)
@@ -510,13 +588,20 @@ def figure_scaling(out_dir: Path) -> None:
         ppo_band.append((ppo[2], ppo[3]) if ppo else None)
         inv_band.append((inv[2], inv[3]) if inv else None)
         clar_band.append((clar[2], clar[3]) if clar else None)
+        qpo_times.append(qpo[1] if qpo else None)
+        qpo_band.append((qpo[2], qpo[3]) if qpo else None)
         inv_str = f"  inverse={inv[1] * 1e3:9.1f} ms" if inv else "  inverse=n/a"
         ppo_str = f"  pypfopt={ppo[1] * 1e3:9.1f} ms (pts={ppo[0]})" if ppo else "  pypfopt=n/a"
         clar_str = f"  osqp={clar[1] * 1e3:9.1f} ms ({clar[0]} solves)" if clar else "  osqp=n/a"
+        qpo_str = (
+            f"  qpoases={qpo[1] * 1e3:9.1f} ms ({qpo[0]} working-set changes, endpoint gap {qpo[4]:.1e})"
+            if qpo
+            else "  qpoases=n/a"
+        )
         print(
             f"n={n:4d}  points={n_pts:4d}  dense={t_dense * 1e3:8.1f} ms  "
             f"factor={t_factor * 1e3:8.1f} ms  speedup={t_dense / t_factor:5.2f}x  "
-            f"|F| max={free_max:3d} median={free_med:5.1f}{inv_str}{ppo_str}{clar_str}"
+            f"|F| max={free_max:4d} median={free_med:6.1f}{inv_str}{ppo_str}{clar_str}{qpo_str}"
         )
 
     # The clean comparison is the incremental-inverse baseline vs the dense
@@ -531,24 +616,49 @@ def figure_scaling(out_dir: Path) -> None:
             f"\nat n={n_last}: incremental inverse is {strategy:.2f}x the speed of the "
             f"dense fresh-solve backend; factor/dense = {dense_times[-1] / factor_times[-1]:.1f}x"
         )
-        if ppo_times[-1] is not None:
-            line += f"; dense/pypfopt (overall) = {ppo_times[-1] / dense_times[-1]:.0f}x"
         print(line)
 
-    # Empirical log-log slope (runtime ~ n^p) over the largest few sizes.
-    def slope(times: list[float]) -> float:
-        x = np.log(np.array(ns[-4:], dtype=float))
-        y = np.log(np.array(times[-4:]))
-        return float(np.polyfit(x, y, 1)[0])
+    # Empirical log-log slope (runtime ~ n^p) over the largest four sizes a series
+    # was timed at, plus the local slope of its last doubling.
+    def slope(times: list[float | None]) -> tuple[float, float]:
+        pairs = [(n, t) for n, t in zip(ns, times, strict=True) if t is not None][-4:]
+        x = np.log(np.array([p[0] for p in pairs], dtype=float))
+        y = np.log(np.array([p[1] for p in pairs]))
+        return float(np.polyfit(x, y, 1)[0]), float((y[-1] - y[-2]) / (x[-1] - x[-2]))
 
-    print(f"\ndense   empirical exponent p (time ~ n^p): {slope(dense_times):.2f}")
-    print(f"factor  empirical exponent p (time ~ n^p): {slope(factor_times):.2f}")
-    if all(t is not None for t in inv_times):
-        print(f"inverse empirical exponent p (time ~ n^p): {slope([t for t in inv_times if t]):.2f}")
-    if all(t is not None for t in ppo_times):
-        print(f"pypfopt empirical exponent p (time ~ n^p): {slope([t for t in ppo_times if t]):.2f}")
-    if all(t is not None for t in clar_times):
-        print(f"osqp    empirical exponent p (time ~ n^p): {slope([t for t in clar_times if t]):.2f}")
+    print()
+    for name, series in [
+        ("dense", dense_times),
+        ("factor", factor_times),
+        ("inverse", inv_times),
+        ("pypfopt", ppo_times),
+        ("osqp", clar_times),
+        ("qpoases", qpo_times),
+    ]:
+        if sum(t is not None for t in series) >= 4:
+            fit, last = slope(series)
+            print(f"{name:7s} exponent p (time ~ n^p): {fit:.2f} over the largest four sizes, {last:.2f} last doubling")
+    n_base = _SCALE_BASELINE_MAX_N
+    i_base = ns.index(n_base)
+    if ppo_times[i_base] is not None:
+        print(f"at n={n_base}: pypfopt/dense = {ppo_times[i_base] / dense_times[i_base]:.0f}x")
+    if clar_times[i_base] is not None:
+        print(f"at n={n_base}: osqp/dense = {clar_times[i_base] / dense_times[i_base]:.0f}x")
+    for n_q, t_q in zip(ns, qpo_times, strict=True):
+        if t_q is not None:
+            i_q = ns.index(n_q)
+            print(
+                f"at n={n_q}: qpoases/dense = {t_q / dense_times[i_q]:.1f}x, "
+                f"qpoases/factor = {t_q / factor_times[i_q]:.1f}x"
+            )
+
+    mib = 2.0**20
+    print("\nmemory: covariance storage and trace working memory (beyond the stored frontier), MiB")
+    for n, d_cov, d_work, f_cov, f_work in memory:
+        print(
+            f"n={n:4d}  dense: storage={d_cov / mib:8.2f} working={d_work / mib:8.2f}   "
+            f"factor: storage={f_cov / mib:6.3f} working={f_work / mib:7.3f}"
+        )
 
     from matplotlib.ticker import NullFormatter, ScalarFormatter
 
@@ -566,25 +676,28 @@ def figure_scaling(out_dir: Path) -> None:
         pn = [n for n, t in zip(ns, ppo_times, strict=True) if t is not None]
         pt = [t for t in ppo_times if t is not None]
         band(ns, ppo_band, "#7f7f7f")
-        ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA (Bailey–López de Prado)")  # noqa: RUF001
+        ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA")
     if any(t is not None for t in clar_times):
         # General-solver baseline: drawn here for context, discussed in the paper's
         # grid-baseline section (a warm-started QP swept over lambda).
         cn = [n for n, t in zip(ns, clar_times, strict=True) if t is not None]
         ct = [t for t in clar_times if t is not None]
         band(ns, clar_band, "#ff7f0e")
-        ax.loglog(cn, ct, "-v", ms=4, color="#ff7f0e", label=f"OSQP, warm-started $\\lambda$-grid of {_SCALE_GRID} QPs")
+        ax.loglog(cn, ct, "-v", ms=4, color="#ff7f0e", label=f"OSQP, {_SCALE_GRID}-point $\\lambda$-grid")
+    if any(t is not None for t in qpo_times):
+        qn = [n for n, t in zip(ns, qpo_times, strict=True) if t is not None]
+        qt = [t for t in qpo_times if t is not None]
+        band(ns, qpo_band, "#9467bd")
+        ax.loglog(qn, qt, "-P", ms=4, color="#9467bd", label="qpOASES, hot-started path")
     if any(t is not None for t in inv_times):
         vn = [n for n, t in zip(ns, inv_times, strict=True) if t is not None]
         vt = [t for t in inv_times if t is not None]
         band(ns, inv_band, "#2ca02c")
-        ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="cvxcla, incremental dense backend")
+        ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="cvxcla, incremental dense")
     band(ns, dense_band, "#c00000")
-    ax.loglog(ns, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense backend")
+    ax.loglog(ns, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense")
     band(ns, factor_band, "#1f4e79")
-    ax.loglog(
-        ns, factor_times, "-s", ms=4, color="#1f4e79", label=f"cvxcla, factor backend (Woodbury, K={_SCALE_N_FACTORS})"
-    )
+    ax.loglog(ns, factor_times, "-s", ms=4, color="#1f4e79", label=f"cvxcla, factor ($K={_SCALE_N_FACTORS}$)")
     ax.set_xlabel("Number of assets $n$")
     ax.set_ylabel("Frontier trace time [s]")
     ax.set_title("CLA runtime vs problem size", fontsize=9)
@@ -596,10 +709,13 @@ def figure_scaling(out_dir: Path) -> None:
     ax.xaxis.set_major_formatter(ScalarFormatter())
     ax.xaxis.set_minor_formatter(NullFormatter())
     ax.set_xlim(ns[0] * 0.85, ns[-1] * 1.18)
-    ax.tick_params(axis="x", labelsize=8)
+    ax.tick_params(axis="x", labelsize=7)
 
+    # Headroom above the slowest series keeps the legend clear of every curve.
+    slowest = max(t for series in (dense_times, ppo_times, clar_times, qpo_times) for t in series if t is not None)
+    ax.set_ylim(top=slowest * 300)
     ax.grid(True, which="both", alpha=0.3)
-    ax.legend(fontsize=7.5)
+    ax.legend(fontsize=7.5, loc="upper left")
     fig.tight_layout()
     out = out_dir / "scaling.pdf"
     fig.savefig(out)
@@ -1348,14 +1464,18 @@ def _tie_tied_means(rng: np.random.Generator, n: int) -> dict:
 
 
 def _tie_duplicated_assets(rng: np.random.Generator, n: int) -> dict:
-    """The second half duplicates the first: singular covariance and tied means."""
+    """The second half copies the first: exchangeable pairs with tied means and events.
+
+    Each pair shares its mean and its covariance row, but the idiosyncratic diagonal
+    keeps the covariance positive definite, so the pair's events tie exactly.
+    """
     half = n // 2
     u = rng.standard_normal((half, _TIE_N_FACTORS)) / np.sqrt(half)
     delta = rng.uniform(0.5, 2.0, _TIE_N_FACTORS) * half
     d = rng.uniform(0.5, 2.0, half)
     u_full = np.vstack([u, u])[:n]
     d_full = np.concatenate([d, d])[:n]
-    cov = np.diag(d_full) + (u_full * delta) @ u_full.T  # singular: duplicated columns
+    cov = np.diag(d_full) + (u_full * delta) @ u_full.T  # positive definite: d_full > 0
     mean_half = rng.uniform(0.0, 1.0, half)
     mean = np.concatenate([mean_half, mean_half])[:n]
     return _tie_long_only(mean, cov)
@@ -1382,8 +1502,37 @@ def _tie_overlapping_caps(rng: np.random.Generator, n: int) -> dict:
     return _tie_long_only(mean, cov, g, h)
 
 
-def _tie_outcome(kwargs: dict) -> tuple[str, int, int, int]:
-    """Trace one instance; return (status, turning_points, cap, max_active_rows).
+def _tie_points(cla: CLA, kwargs: dict) -> tuple[int, int]:
+    """Return (tie points, tie points without linearly independent active constraints).
+
+    A tie point is a turning point at the same lambda as the one before it (within the
+    relative window of the event selection), skipping the first vertex, which the CLA
+    lists twice. Proposition 1 of the paper needs the gradients of the constraints that
+    hold with equality there -- the rows of A, the binding rows of G, the bounds a weight
+    sits on -- to be linearly independent; the second count is the points where they are not.
+    """
+    n = len(kwargs["mean"])
+    a = np.atleast_2d(kwargs["a"])
+    g, h = kwargs.get("g"), kwargs.get("h")
+    lower, upper = kwargs["lower_bounds"], kwargs["upper_bounds"]
+    tps = cla.turning_points[1:]
+    ties = dependent = 0
+    for prev, tp in itertools.pairwise(tps):
+        if not (np.isfinite(prev.lamb) and abs(tp.lamb - prev.lamb) <= 1e-10 * max(1.0, abs(prev.lamb))):
+            continue
+        ties += 1
+        w = tp.weights
+        at_bound = np.flatnonzero((np.abs(w - lower) <= 1e-9) | (np.abs(w - upper) <= 1e-9))
+        rows = [a, np.eye(n)[at_bound]]
+        if g is not None:
+            rows.append(np.atleast_2d(g)[np.abs(np.atleast_2d(g) @ w - h) <= 1e-7])
+        grads = np.vstack(rows)
+        dependent += int(np.linalg.matrix_rank(grads) < grads.shape[0])
+    return ties, dependent
+
+
+def _tie_outcome(kwargs: dict) -> tuple[str, int, int, int, int, int]:
+    """Trace one instance; return (status, turning_points, cap, max_active_rows, ties, dependent ties).
 
     status in {completed, declined, cap_hit}. The CLA traces in its constructor, so
     a decline (ValueError) or a cap hit (RuntimeError) surfaces here.
@@ -1395,21 +1544,21 @@ def _tie_outcome(kwargs: dict) -> tuple[str, int, int, int]:
     try:
         cla = CLA(**kwargs)
     except ValueError:
-        return "declined", 0, cap, 0
+        return "declined", 0, cap, 0, 0, 0
     except RuntimeError:
-        return "cap_hit", 0, cap, 0
+        return "cap_hit", 0, cap, 0, 0, 0
     active = 0
     if g is not None:
         h = kwargs["h"]
         active = max(int(np.sum(np.abs(g @ tp.weights - h) <= 1e-7)) for tp in cla.turning_points)
-    return "completed", len(cla.turning_points), cap, active
+    return "completed", len(cla.turning_points), cap, active, *_tie_points(cla, kwargs)
 
 
 def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
     """Run every family over the size/seed grid and report the robustness envelope."""
     families = {
         "tied means": _tie_tied_means,
-        "duplicated assets": _tie_duplicated_assets,
+        "exchangeable pairs": _tie_duplicated_assets,
         "group caps (p~n/3)": _tie_group_caps,
         "overlapping caps (p=n)": _tie_overlapping_caps,
     }
@@ -1417,14 +1566,17 @@ def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared ru
     print(f"{len(grid)} instances per family; sizes {_TIE_SIZES}, seeds {_TIE_SEEDS.start}..{_TIE_SEEDS.stop - 1}\n")
     head = (
         f"{'family':<24}{'completed':>10}{'declined':>9}{'cap hits':>9}{'max tps':>8}{'tps/cap':>9}{'max active':>11}"
+        f"{'ties':>7}{'ties dep.':>10}"
     )
     print(head)
     for name, build in families.items():
         completed = declined = cap_hit = 0
-        max_tps = max_active = 0
+        max_tps = max_active = ties = dependent = 0
         worst_ratio = 0.0
         for n, seed in grid:
-            status, tps, cap, active = _tie_outcome(build(np.random.default_rng(seed), n))
+            status, tps, cap, active, n_ties, n_dep = _tie_outcome(build(np.random.default_rng(seed), n))
+            ties += n_ties
+            dependent += n_dep
             if status == "completed":
                 completed += 1
                 max_tps = max(max_tps, tps)
@@ -1434,11 +1586,16 @@ def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared ru
                 declined += 1
             else:
                 cap_hit += 1
-        print(f"{name:<24}{completed:>10}{declined:>9}{cap_hit:>9}{max_tps:>8}{worst_ratio:>8.1%}{max_active:>11}")
+        print(
+            f"{name:<24}{completed:>10}{declined:>9}{cap_hit:>9}{max_tps:>8}{worst_ratio:>8.1%}{max_active:>11}"
+            f"{ties:>7}{dependent:>10}"
+        )
 
     print("\nNo cap hits: every completing trace stays far below 100(n+p+1), and the")
     print("over-constrained family is declined at the first vertex with a diagnosis,")
     print("not run into the cap. Declines are the two documented boundaries.")
+    print("'ties' counts turning points at the lambda of the one before (a tie); 'ties dep.'")
+    print("those where the active constraint gradients are dependent, outside Proposition 1.")
 
 
 # ======================================================================================
