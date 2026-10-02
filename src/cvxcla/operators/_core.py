@@ -20,6 +20,7 @@ import numpy as np
 from cvx.linalg import SymmetricOperator
 from cvx.linalg import bordered_solve as _bordered_solve
 from numpy.typing import NDArray
+from scipy.linalg import solve_triangular  # type: ignore[import-untyped]
 
 # The Hessian contract for a parametric active-set path. In the CLA it is the
 # covariance ``Sigma``; in a LASSO / LARS path it is the Gram matrix ``X.T @ X``.
@@ -78,12 +79,57 @@ def bordered_solve(
     Schur complement are factorised once. Returns
     ``(x_const, x_slope, nu_const, nu_slope)`` (multipliers empty when there are no
     constraint rows).
+
+    The constraint rows are first replaced by an orthonormal basis of their span,
+    ``C^T = Q R``, so the system solved is ``[[H_FF, Q], [Q^T, 0]]`` with target
+    ``R^{-T} d`` and the multipliers are recovered as ``R^{-1} nu'``. Both describe
+    the same solution, but the Schur complement ``C H_FF^{-1} C^T`` has condition
+    number up to ``cond(H_FF) cond(C)^2``, so nearly dependent rows (several caps
+    almost parallel on the free set) lose accuracy twice over, while
+    ``Q^T H_FF^{-1} Q`` is no worse conditioned than ``H_FF`` itself. The weights
+    are then accurate to about ``cond(C)`` times the round-off, the sensitivity of
+    the constraint data, and the two factors are exactly what the free-block and
+    active-row guards bound. With more rows than free coordinates the rows cannot
+    be independent; the plain solve is used and reports the singular system. A
+    single row is its own orthogonal basis, so it too takes the plain solve.
     """
-    x, nu = _bordered_solve(
-        quad,
-        np.flatnonzero(free),
-        c_free,
-        np.column_stack([rhs_const, rhs_slope]),
-        np.column_stack([d_const, d_slope]),
-    )
+    rhs = np.column_stack([rhs_const, rhs_slope])
+    d = np.column_stack([d_const, d_slope])
+    mc, n_free = c_free.shape
+    if mc <= 1 or mc > n_free:
+        x, nu = _bordered_solve(quad, np.flatnonzero(free), c_free, rhs, d)
+    else:
+        q, r = np.linalg.qr(c_free.T)
+        x, nu_q = _bordered_solve(quad, np.flatnonzero(free), q.T, rhs, solve_triangular(r.T, d, lower=True))
+        nu = solve_triangular(r, nu_q)
     return x[:, 0], x[:, 1], nu[:, 0], nu[:, 1]
+
+
+def orthonormal_rows(a: NDArray[np.float64], b: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Rewrite ``A w = b`` with orthonormal rows spanning the same space, ``Q^T w = R^{-T} b``.
+
+    The affine set is unchanged, but nearly dependent rows stop hurting. Two nearly
+    parallel rows (``1^T w = 1`` and ``(1 + eps v)^T w = 1`` encode ``v^T w = 0`` at
+    scale ``eps``) give a linear program with an absolute feasibility tolerance that
+    enforces the hidden row only to ``tol / eps``, and a projection whose Gram matrix
+    ``C C^T`` has condition number ``cond(C)^2``; in the orthonormal form every
+    direction of the span is enforced to the same tolerance and the Gram matrix is
+    the identity. ``CLA`` drops redundant rows before tracing, so ``R`` is
+    invertible there; rows that are dependent to round-off are passed through
+    unchanged, for the caller to judge.
+
+    Args:
+        a: Equality-constraint matrix (``m x n``).
+        b: Equality-constraint right-hand side (length ``m``).
+
+    Returns:
+        ``(Q^T, R^{-T} b)``; the input itself when there are no rows or they are
+        dependent.
+    """
+    if a.shape[0] == 0 or a.shape[0] > a.shape[1]:
+        return a, b
+    q, r = np.linalg.qr(a.T)
+    diag = np.abs(np.diag(r))
+    if diag.min() <= a.shape[1] * np.finfo(np.float64).eps * diag.max():  # pragma: no mutate
+        return a, b
+    return q.T, solve_triangular(r.T, b, lower=True)

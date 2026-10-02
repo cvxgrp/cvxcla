@@ -12,6 +12,7 @@ from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .errors import DegenerateProblemError, InfeasibleProblemError, NumericalError
+from .operators import orthonormal_rows
 from .types import TurningPoint
 
 
@@ -333,10 +334,11 @@ def _solve_max_return_lp(
         NumericalError: If HiGHS stops for another reason.
     """
     has_ineq = g.shape[0] > 0
+    a_eq, b_eq = orthonormal_rows(np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64))
     result = linprog(
         c=-np.asarray(mean, dtype=np.float64),
-        A_eq=np.asarray(a, dtype=np.float64),
-        b_eq=np.asarray(b, dtype=np.float64),
+        A_eq=a_eq,
+        b_eq=b_eq,
         A_ub=g if has_ineq else None,
         b_ub=h if has_ineq else None,
         bounds=list(zip(lower_bounds, upper_bounds, strict=True)),

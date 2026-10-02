@@ -13,12 +13,13 @@ diagonal-plus-low-rank Woodbury, and a maintained-inverse dense variant) live in
 - builders (:mod:`cvxcla.operators.builders`) that assemble the right cvx-linalg
   operator from CLA / LASSO inputs, kept under the familiar ``*Covariance`` names.
 - :func:`bordered_solve` and :func:`cross`, the parametric-path helpers built on
-  the operator protocol.
+  the operator protocol, and :func:`orthonormal_rows`, which restates a constraint
+  system in an orthonormal basis of its rows.
 - :data:`RCOND_FLOOR`, the reciprocal-condition threshold below which a free
   block counts as singular.
 """
 
-from ._core import RCOND_FLOOR, CovarianceOperator, QuadraticForm, bordered_solve, cross
+from ._core import RCOND_FLOOR, CovarianceOperator, QuadraticForm, bordered_solve, cross, orthonormal_rows
 from .builders import (
     DenseCovariance,
     FactorCovariance,
@@ -44,4 +45,5 @@ __all__ = [
     "factor_covariance",
     "gram_covariance",
     "incremental_dense_covariance",
+    "orthonormal_rows",
 ]

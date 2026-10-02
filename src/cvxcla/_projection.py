@@ -19,6 +19,7 @@ from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
 from .errors import ProjectionError
+from .operators import orthonormal_rows
 
 # Alternating projections stop once the iterate violates its box by at most this
 # much (weights are portfolio fractions, so the scale is 1); the affine step keeps
@@ -166,7 +167,9 @@ def project_alternating(
             A stall between ``_PROJECTION_TOL`` and ``_PROJECTION_ACCEPT`` is
             round-off, and the clipped point is returned.
     """
-    affine = AffineProjection(c, d)
+    # The same affine set in orthonormal rows: nearly dependent active rows would
+    # otherwise make the Gram matrix C C^T singular to working precision.
+    affine = AffineProjection(*orthonormal_rows(c, d))
     projected = weights
     for _ in range(_PROJECTION_MAX_ITER):
         projected = affine.project(np.clip(projected, lower, upper))
