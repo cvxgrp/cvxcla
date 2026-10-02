@@ -50,10 +50,12 @@ Targets (artefact in parentheses):
     and how large its corrections are (no figure).
   * ``validate-factor`` -- Section 5: the factor backend against the dense trace on
     ill-conditioned and degenerate factor models (no figure).
+  * ``validate-conditioning`` -- Appendix A: problems of prescribed condition number
+    across the singularity guard, each trace and its reference QP certified (no figure).
   * ``estimators``      -- Figure 8 + Section 11.1 estimator table (estimator_shrinkage.pdf).
   * ``michaud``         -- Figure 9 + Section 12 resampling table (michaud_frontier.pdf).
   * ``figures``         -- all seven figures.
-  * ``checks``          -- all eight numerical checks.
+  * ``checks``          -- all nine numerical checks.
   * ``all``             -- every figure and every check.
 
 Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib`` (all
@@ -2167,6 +2169,106 @@ def check_validate_factor(out_dir: Path) -> None:  # noqa: ARG001 - the shared r
 
 
 # ======================================================================================
+# Check: validate-conditioning  (Appendix A conditioning study)
+# ======================================================================================
+_VCOND_N = 60
+_VCOND_SEED = 5
+_VCOND_KAPPAS = (1e2, 1e4, 1e6, 1e8, 1e10, 1e11, 3e11, 1e12, 3e12, 1e13, 1e14, 1e16)
+_VCOND_POINTS = 6  # segment midpoints compared with the reference QP per trace
+_VCOND_CERTIFIED = 1e-8  # KKT residual at or below which a solution counts as certified
+
+
+def _vcond_problem(kappa: float, rotated: bool) -> tuple[np.ndarray, np.ndarray, dict]:
+    """A long-only, fully-invested problem whose covariance has condition number ``kappa``.
+
+    The spectrum is prescribed, ``Sigma = Q diag(lambda) Q'`` with eigenvalues spread
+    geometrically from 1 down to 1/kappa, so conditioning is varied on its own,
+    independently of the sample size that drives the rank-deficiency sweep of the
+    degeneracy target. With ``rotated`` Q is a random orthogonal matrix and the free
+    blocks see only part of the spectrum; otherwise Q = I, Sigma is diagonal, and a free
+    block inherits the full spread once its assets are free together.
+    """
+    rng = np.random.default_rng(_VCOND_SEED)
+    q, _ = np.linalg.qr(rng.standard_normal((_VCOND_N, _VCOND_N)))
+    if not rotated:
+        q = np.eye(_VCOND_N)
+    cov = (q * np.geomspace(1.0, 1.0 / kappa, _VCOND_N)) @ q.T
+    cov = 0.5 * (cov + cov.T)
+    mean = rng.uniform(0.0, 1.0, _VCOND_N)
+    kwargs = {
+        "lower_bounds": np.zeros(_VCOND_N),
+        "upper_bounds": np.ones(_VCOND_N),
+        "a": np.ones((1, _VCOND_N)),
+        "b": np.ones(1),
+    }
+    return mean, cov, kwargs
+
+
+def _vcond_reference(cla: CLA, mean: np.ndarray, cov: np.ndarray, kwargs: dict) -> tuple[float, float, int]:
+    """Compare the trace with OSQP at segment midpoints; certify OSQP's own solutions.
+
+    Returns (max |w_CLA - w_QP|, largest KKT residual of the QP solutions, QP failures).
+    The QP solutions are judged by the same KKT certificate as the trace, so a reference
+    that struggles shows up in its own residual, not only as a disagreement.
+    """
+    tps = cla.turning_points
+    segments = [(hi, lo) for hi, lo in pairwise(tps) if np.isfinite(hi.lamb) and hi.lamb > lo.lamb]
+    picks = np.unique(np.linspace(0, len(segments) - 1, _VCOND_POINTS).round().astype(int)) if segments else []
+    gap, ref_kkt, failures = 0.0, 0.0, 0
+    zero_g, zero_h = np.zeros((0, _VCOND_N)), np.zeros(0)
+    for i in picks:
+        hi, lo = segments[i]
+        lam = 0.5 * (hi.lamb + lo.lamb)
+        w_cla = 0.5 * (hi.weights + lo.weights)
+        try:
+            w_qp = _vexact_qp_solution(mean, cov, lam)
+        except Exception:  # noqa: BLE001 - any solver failure is recorded, not raised
+            failures += 1
+            continue
+        gap = max(gap, float(np.max(np.abs(w_cla - w_qp))))
+        lower, upper, a, b = kwargs["lower_bounds"], kwargs["upper_bounds"], kwargs["a"], kwargs["b"]
+        ref_kkt = max(ref_kkt, max(_kkt_point(w_qp, lam, mean, cov, lower, upper, a, b, zero_g, zero_h)[:4]))
+    return gap, ref_kkt, failures
+
+
+def check_validate_conditioning(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
+    """Trace problems of prescribed condition number across the singularity guard."""
+    print(f"n = {_VCOND_N}, long-only budget; Sigma with eigenvalues spread from 1 to 1/kappa")
+    for rotated in (True, False):
+        print(f"\n{'random eigenvectors' if rotated else 'eigenvectors aligned with the assets (Sigma diagonal)'}:")
+        _vcond_family(rotated)
+    print(
+        f"\ncertified: every KKT residual of the trace <= {_VCOND_CERTIFIED:.0e} (see validate-kkt);"
+        "\nmax|dw|: largest gap to OSQP at segment midpoints; QP KKT: the same certificate applied"
+        "\nto OSQP's own solutions, so a large value means the reference, not the trace, is unreliable."
+    )
+
+
+def _vcond_family(rotated: bool) -> None:
+    """Print one row per condition number for one eigenvector family."""
+    print(
+        f"{'kappa':>8}{'outcome':>26}{'points':>8}{'cond(S_FF)':>12}{'KKT':>10}"
+        f"{'max|dw|':>10}{'QP KKT':>10}{'QP fails':>9}"
+    )
+    for kappa in _VCOND_KAPPAS:
+        mean, cov, kwargs = _vcond_problem(kappa, rotated)
+        try:
+            cla = CLA(mean=mean, covariance=cov, **kwargs)
+        except (ValueError, RuntimeError) as exc:
+            print(f"{kappa:>8.0e}{'declined: ' + type(exc).__name__:>26}")
+            continue
+        res = _kkt_check(cla, mean, cov, kwargs)
+        kkt = max(res.primal, res.stationarity, res.dual, res.complementarity)
+        worst = max(float(np.linalg.cond(cov[np.ix_(tp.free, tp.free)])) for tp in cla.turning_points if tp.free.any())
+        gap, ref_kkt, failures = _vcond_reference(cla, mean, cov, kwargs)
+        outcome = "completed, certified" if kkt <= _VCOND_CERTIFIED else "completed, not certified"
+        print(
+            f"{kappa:>8.0e}{outcome:>26}{len(cla):>8d}{worst:>12.1e}{kkt:>10.1e}"
+            f"{gap:>10.1e}{ref_kkt:>10.1e}{failures:>9d}"
+        )
+
+
+# ======================================================================================
 # Orchestration
 # ======================================================================================
 @dataclass
@@ -2195,6 +2297,7 @@ class Target(enum.StrEnum):
     validate_scaling = "validate-scaling"
     validate_projection = "validate-projection"
     validate_factor = "validate-factor"
+    validate_conditioning = "validate-conditioning"
     estimators = "estimators"
     michaud = "michaud"
     figures = "figures"
@@ -2217,6 +2320,7 @@ STEPS: list[Step] = [
     Step(Target.validate_scaling, "Section 8.6 units and the slope floor", check_validate_scaling, False),
     Step(Target.validate_projection, "Appendix A feasibility corrections", check_validate_projection, False),
     Step(Target.validate_factor, "Section 5 factor-model conditioning", check_validate_factor, False),
+    Step(Target.validate_conditioning, "Appendix A conditioning study", check_validate_conditioning, False),
     Step(Target.estimators, "Figure 8 (estimator_shrinkage.pdf) + estimator table", figure_estimators, False),
     Step(Target.michaud, "Figure 9 (michaud_frontier.pdf) + Section 12 resampling table", figure_michaud, False),
 ]
@@ -2242,6 +2346,7 @@ _CHECK_TARGETS = [
     Target.validate_scaling,
     Target.validate_projection,
     Target.validate_factor,
+    Target.validate_conditioning,
 ]
 
 
@@ -2301,7 +2406,7 @@ _DESCRIPTIONS: dict[Target, str] = {
     Target.estimators: "Fig 8: covariance-estimator shrinkage -> estimator_shrinkage.pdf",
     Target.michaud: "Fig 9: Michaud resampled frontier     -> michaud_frontier.pdf",
     Target.figures: "all seven figures",
-    Target.checks: "all eight numerical checks",
+    Target.checks: "all nine numerical checks",
     Target.all: "every figure and every check",
 }
 
