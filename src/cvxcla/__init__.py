@@ -13,7 +13,14 @@ import importlib.metadata
 
 from .builder import LassoBuilder, ProblemBuilder
 from .cla import CLA
-from .errors import ProjectionError
+from .errors import (
+    CLAError,
+    DegenerateProblemError,
+    FeasibilityError,
+    InfeasibleProblemError,
+    NumericalError,
+    ProjectionError,
+)
 from .lasso import Lasso
 from .operators import (
     CovarianceOperator,
@@ -27,13 +34,18 @@ from .pathtracer import ParametricProblem, trace
 
 __all__ = [
     "CLA",
+    "CLAError",
     "CovarianceOperator",
+    "DegenerateProblemError",
     "DenseCovariance",
     "FactorCovariance",
+    "FeasibilityError",
     "GramCovariance",
     "IncrementalDenseCovariance",
+    "InfeasibleProblemError",
     "Lasso",
     "LassoBuilder",
+    "NumericalError",
     "ParametricProblem",
     "ProblemBuilder",
     "ProjectionError",

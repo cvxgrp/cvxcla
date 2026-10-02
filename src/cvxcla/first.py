@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
+from .errors import DegenerateProblemError, InfeasibleProblemError, NumericalError
 from .types import TurningPoint
 
 
@@ -47,10 +48,14 @@ def init_algo(
         total: Target sum of weights (the right-hand side ``b`` of the all-ones
             budget constraint ``sum(w) = total``; ``1`` for fully-invested,
             ``0`` for dollar-neutral, ``> 1`` for a leveraged total).
+
+    Raises:
+        InfeasibleProblemError: If a lower bound exceeds its upper bound, or the
+            bounds cannot sum to ``total``.
     """
     if np.any(lower_bounds > upper_bounds):
         msg = "Lower bounds must be less than or equal to upper bounds"
-        raise ValueError(msg)
+        raise InfeasibleProblemError(msg)
 
     # Initialize weights to lower bounds
     weights = np.copy(lower_bounds).astype(np.float64)
@@ -70,7 +75,7 @@ def init_algo(
     if not np.any(free):
         # No asset ended up interior: the bounds cannot sum to the target.
         msg = "Could not construct a fully invested portfolio"
-        raise ValueError(msg)
+        raise InfeasibleProblemError(msg)
 
     # Return first turning point, the point with the highest expected return.
     return TurningPoint(free=free, weights=weights)
@@ -112,19 +117,33 @@ def first_vertex_lp(
         The maximum-return vertex as a :class:`TurningPoint`, carrying the active
         inequality rows in ``active_ineq``.
 
+    A degenerate vertex (every weight on a bound, or a duplicated active row) is
+    resolved with the linear program's duals, as the greedy fill of
+    :func:`init_algo` resolves it for the budget: see :func:`classify_vertex`.
+
     Raises:
-        ValueError: If the linear program is infeasible or unbounded (the
-            constraints admit no maximum-return vertex), or if that vertex is
-            degenerate: the free set does not span the equality rows together with
-            the active inequality rows, so the reduced KKT system would be
-            singular. That case is declined here rather than left to surface as an
-            opaque singular-matrix error later in the trace.
+        InfeasibleProblemError: If the linear program is infeasible.
+        DegenerateProblemError: If it is unbounded, or its vertex is degenerate
+            beyond what its duals resolve: the free set cannot be completed to span
+            the equality rows together with the active inequality rows.
+        NumericalError: If the linear program fails for another reason.
     """
     g = np.zeros((0, mean.shape[0])) if g is None else np.asarray(g, dtype=np.float64)
     h = np.zeros(0) if h is None else np.asarray(h, dtype=np.float64)
 
-    weights = _solve_max_return_lp(mean, lower_bounds, upper_bounds, a, b, g, h)
-    return classify_vertex(weights, lower_bounds, upper_bounds, a, g, h, tol)
+    weights, reduced_cost = _solve_max_return_lp(mean, lower_bounds, upper_bounds, a, b, g, h)
+    # Duals carry the units of mu, so their zero test is relative to its scale.
+    dual_tol = float(np.sqrt(np.finfo(np.float64).eps)) * max(float(np.max(np.abs(mean), initial=0.0)), 1e-300)
+    return classify_vertex(
+        weights,
+        lower_bounds,
+        upper_bounds,
+        a,
+        g,
+        h,
+        tol,
+        duals=(reduced_cost, -np.asarray(mean, dtype=np.float64), dual_tol),
+    )
 
 
 def first_turning_point(
@@ -140,8 +159,8 @@ def first_turning_point(
     """Calculate the first turning point on the efficient frontier.
 
     The first turning point is the maximum-return vertex of the feasible
-    polytope. For the all-ones budget constraint with no inequality rows it is
-    found by the greedy fill of :func:`init_algo`; for a general equality system
+    polytope. For the all-ones budget constraint with no inequality rows and finite
+    bounds it is found by the greedy fill of :func:`init_algo`; for a general equality system
     ``A w = b`` or any ``G w <= h`` it is found by solving the linear program
     in :func:`first_vertex_lp`, which also reports the initially-active rows.
 
@@ -158,7 +177,10 @@ def first_turning_point(
     Returns:
         A TurningPoint object representing the first point on the efficient frontier.
     """
-    if g.shape[0] == 0 and a.shape[0] == 1 and np.allclose(a, 1.0):
+    # The greedy fill needs finite bounds (it starts every weight at its lower bound);
+    # infinite ones go to the linear program, which reports an unbounded problem.
+    finite = bool(np.all(np.isfinite(lower_bounds)) and np.all(np.isfinite(upper_bounds)))
+    if g.shape[0] == 0 and a.shape[0] == 1 and np.allclose(a, 1.0) and finite:
         return init_algo(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, total=float(b[0]))
     return first_vertex_lp(mean=mean, lower_bounds=lower_bounds, upper_bounds=upper_bounds, a=a, b=b, tol=tol, g=g, h=h)
 
@@ -171,12 +193,25 @@ def classify_vertex(
     g: NDArray[np.float64],
     h: NDArray[np.float64],
     tol: float,
+    duals: tuple[NDArray[np.float64], NDArray[np.float64], float] | None = None,
 ) -> TurningPoint:
     """Read the free set and the active rows off a maximum-return vertex.
 
     An asset is free when it sits strictly inside its box (by more than ``tol``)
     and an inequality row is active when it is tight to ``tol``. The vertex is
     then checked for degeneracy (see :func:`_reject_degenerate_vertex`).
+
+    With the linear program's ``duals`` (reduced costs, an ordering key and a zero
+    tolerance) a degenerate vertex is resolved first. Of
+    the tight rows only those independent of the equalities and of each other are
+    kept active (a duplicated row adds nothing and would make every Schur
+    complement singular). If the free set still cannot span the active rows, assets on
+    a bound with zero reduced cost -- degenerate basic variables of the linear
+    program -- are freed, in order of the key, until it does. Freeing such an asset
+    keeps the partition dual feasible, and with exactly as many free assets as
+    active rows the free weights are fixed by the constraints, so the segment
+    reproduces the vertex. This generalises the greedy fill of :func:`init_algo`,
+    which marks its last asset free even when it lands on a bound.
 
     Args:
         weights: The vertex weights.
@@ -186,18 +221,82 @@ def classify_vertex(
         g: Inequality-constraint matrix (``p x n``); empty ``(0, n)`` when none.
         h: Inequality-constraint right-hand side (length ``p``).
         tol: Classification tolerance.
+        duals: ``(reduced_cost, key, dual_tol)`` from the linear program, or
+            ``None`` to classify without resolving degeneracy.
 
     Returns:
         The vertex as a :class:`TurningPoint` carrying its active rows.
 
     Raises:
-        ValueError: If the vertex is degenerate.
+        DegenerateProblemError: If the vertex is degenerate and cannot be resolved.
     """
     free = (weights > lower_bounds + tol) & (weights < upper_bounds - tol)
     active_ineq = (g @ weights >= h - tol) if g.shape[0] else np.zeros(0, dtype=bool)
 
+    if duals is not None:
+        reduced_cost, key, dual_tol = duals
+        active_ineq = _independent_rows(a, g, active_ineq)
+        degenerate_basic = ~free & (np.abs(reduced_cost) <= dual_tol)
+        free = _complete_free_set(np.vstack([a, g[active_ineq]]), free, degenerate_basic, key)
+
     _reject_degenerate_vertex(a, g, free, active_ineq)
     return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
+
+
+def _independent_rows(a: NDArray[np.float64], g: NDArray[np.float64], active: NDArray[np.bool_]) -> NDArray[np.bool_]:
+    """Keep only the active rows of ``g`` that are independent of ``a`` and of each other.
+
+    Rows are taken in order; a row in the span of those already kept (a duplicate,
+    or a combination of the equalities) is left inactive. It is still tight, so
+    the event scan re-activates it if the path needs it.
+
+    Args:
+        a: Equality-constraint matrix (``m x n``).
+        g: Inequality-constraint matrix (``p x n``).
+        active: Boolean mask of the candidate active rows of ``g``.
+
+    Returns:
+        The reduced mask.
+    """
+    kept = np.zeros_like(active)
+    rank = int(np.linalg.matrix_rank(a)) if a.shape[0] else 0
+    for j in np.flatnonzero(active):
+        trial = kept.copy()
+        trial[j] = True
+        rows = np.vstack([a, g[trial]])
+        if int(np.linalg.matrix_rank(rows)) > rank:
+            kept, rank = trial, rank + 1
+    return kept
+
+
+def _complete_free_set(
+    c: NDArray[np.float64],
+    free: NDArray[np.bool_],
+    candidates: NDArray[np.bool_],
+    key: NDArray[np.float64],
+) -> NDArray[np.bool_]:
+    """Free candidate assets, in order of ``key``, until ``c[:, free]`` has full row rank.
+
+    Args:
+        c: The active constraint rows (``[A ; G_active]``).
+        free: Boolean mask of the assets strictly inside their box.
+        candidates: Assets that may be freed (on a bound, zero reduced cost).
+        key: Ordering key; smaller values are freed first.
+
+    Returns:
+        The completed free mask (unchanged when no candidate raises the rank).
+    """
+    target = c.shape[0]
+    free = free.copy()
+    rank = int(np.linalg.matrix_rank(c[:, free])) if free.any() else 0
+    for i in np.flatnonzero(candidates)[np.argsort(key[candidates], kind="stable")]:
+        if rank >= target:
+            break
+        trial = free.copy()
+        trial[i] = True
+        if int(np.linalg.matrix_rank(c[:, trial])) > rank:
+            free, rank = trial, rank + 1
+    return free
 
 
 def _solve_max_return_lp(
@@ -208,7 +307,7 @@ def _solve_max_return_lp(
     b: NDArray[np.float64],
     g: NDArray[np.float64],
     h: NDArray[np.float64],
-) -> NDArray[np.float64]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
     """Solve the maximum-return linear program and return its vertex weights.
 
     ``maximize mean @ w`` (as ``minimize -mean @ w``) subject to ``A w = b``,
@@ -225,10 +324,13 @@ def _solve_max_return_lp(
         h: Inequality-constraint right-hand side (length ``p``).
 
     Returns:
-        The vertex weights ``w`` as a 1d ``float64`` array.
+        ``(w, reduced_cost)``: the vertex weights and the reduced cost of each
+        variable (the bound marginals, zero for a basic variable).
 
     Raises:
-        ValueError: If the linear program is infeasible or unbounded.
+        InfeasibleProblemError: If the linear program is infeasible.
+        DegenerateProblemError: If it is unbounded (no maximum-return vertex).
+        NumericalError: If HiGHS stops for another reason.
     """
     has_ineq = g.shape[0] > 0
     result = linprog(
@@ -242,8 +344,12 @@ def _solve_max_return_lp(
     )
     if not result.success:
         msg = f"Could not find a maximum-return vertex (linear program: {result.message})"
-        raise ValueError(msg)
-    return np.asarray(result.x, dtype=np.float64)
+        error = {2: InfeasibleProblemError, 3: DegenerateProblemError}.get(result.status, NumericalError)
+        raise error(msg)
+    reduced_cost = np.asarray(result.lower.marginals, dtype=np.float64) + np.asarray(
+        result.upper.marginals, dtype=np.float64
+    )
+    return np.asarray(result.x, dtype=np.float64), reduced_cost
 
 
 def _reject_degenerate_vertex(
@@ -268,8 +374,8 @@ def _reject_degenerate_vertex(
         active_ineq: Boolean mask of the tight (active) inequality rows.
 
     Raises:
-        ValueError: If the free set does not span the active equality and
-            inequality rows.
+        DegenerateProblemError: If the free set does not span the active equality
+            and inequality rows.
     """
     c = np.vstack([a, g[active_ineq]])
     mc = c.shape[0]
@@ -282,10 +388,10 @@ def _reject_degenerate_vertex(
             f"The maximum-return vertex is degenerate (free-set size {n_free}, "
             f"active constraints {mc}): a basic asset sits exactly on a box bound, so the free set "
             "does not span the active equality and inequality rows and the reduced KKT system is "
-            "singular. Tracing a frontier from a degenerate first vertex is not yet supported; perturb "
-            "the bounds or the constraints so the maximum-return vertex is non-degenerate."
+            "singular, even after freeing the vertex's degenerate basic assets. Perturb the bounds or "
+            "the constraints so the maximum-return vertex is non-degenerate."
         )
-        raise ValueError(msg)
+        raise DegenerateProblemError(msg)
 
 
 def _free(

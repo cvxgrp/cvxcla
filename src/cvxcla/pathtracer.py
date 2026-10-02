@@ -29,6 +29,8 @@ from typing import Any, Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
+from .errors import NumericalError
+
 
 @runtime_checkable
 class ParametricProblem(Protocol):
@@ -196,7 +198,7 @@ def trace(problem: ParametricProblem) -> None:
             ``step``/``finish`` hooks record the discovered vertices.
 
     Raises:
-        RuntimeError: If the event loop fails to terminate within the safety cap
+        NumericalError: If the event loop fails to terminate within the safety cap
             (each step fixes the activity of at least one coordinate, so a correct
             trace runs ``O(n)`` times; vastly exceeding this signals cycling).
     """
@@ -216,7 +218,7 @@ def trace(problem: ParametricProblem) -> None:
         iterations += 1  # pragma: no mutate
         if iterations > max_iterations:  # pragma: no mutate
             msg = "path tracer failed to converge: too many iterations"  # pragma: no mutate
-            raise RuntimeError(msg)  # pragma: no mutate
+            raise NumericalError(msg)  # pragma: no mutate
 
         segment = problem.segment(state)
         event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale)
