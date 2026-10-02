@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "casadi==3.8.1",
-#     "cvxcla==2.2.0",
+#     "cvxcla==2.3.2",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
@@ -34,7 +34,7 @@ Targets (artefact in parentheses):
   * ``scaling``         -- Figure 2 + Table 1: runtime vs problem size, dense vs
     factor (Woodbury) backend, with baselines, and the memory table (scaling.pdf), plus
     the same timings for n <= 320 (scaling_small.pdf).
-    SLOW: the dense backend at n=5120 takes several minutes per trace.
+    SLOW: the dense backend at n=2560 dominates the sweep.
   * ``rank-scaling``    -- Figure 3 + Table 2: runtime vs factor rank at fixed n
     (rank_scaling.pdf).  SLOW.
   * ``validate-exact``  -- Section 10.5 exactness numbers (no figure).
@@ -348,7 +348,7 @@ def figure_frontier(out_dir: Path) -> None:
 # ======================================================================================
 # Figure: scaling (from runtime_scaling.py)  ->  scaling.pdf  (SLOW)
 # ======================================================================================
-_SCALE_SIZES = [20, 40, 80, 160, 320, 640, 1280, 2560, 5120]
+_SCALE_SIZES = [20, 40, 80, 160, 320, 640, 1280, 2560]
 # The external baselines are timed only up to here: PyPortfolioOpt already takes
 # minutes at n=640, and both grow like n^3 or faster.
 _SCALE_BASELINE_MAX_N = 640
