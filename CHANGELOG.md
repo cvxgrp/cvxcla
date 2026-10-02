@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.3.3] - 2026-10-02
+
+### Maintenance
+- *(experiments)* Stop the scaling sweep at n=2560 and keep the cvxcla pin current (#926)
+- *(experiments)* Trim scaling sweep, keep cvxcla pin current, draw exact frontier curves (#927)
+
 ## [2.3.2] - 2026-10-02
 
 ### Bug Fixes
