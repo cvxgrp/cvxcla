@@ -18,22 +18,13 @@ import numpy as np
 from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
+from .errors import ProjectionError
+
 # Alternating projections stop once the iterate violates its box by at most this
 # much (weights are portfolio fractions, so the scale is 1); the affine step keeps
 # C w = d to round-off throughout.
 _PROJECTION_TOL = 1e-12  # pragma: no mutate
 _PROJECTION_MAX_ITER = 100  # pragma: no mutate
-
-
-class ProjectionError(RuntimeError):
-    """The feasibility projection of a turning point did not converge.
-
-    The candidate lay outside its box by more than round-off, or the box and the
-    active constraints barely intersect, so clipping and re-projecting onto
-    ``{w : C w = d}`` did not reach a feasible point. This signals a numerical
-    failure, not an infeasible problem; the remedy is usually a better-conditioned
-    covariance (a small ridge, or a factor model).
-    """
 
 
 def project_feasible(

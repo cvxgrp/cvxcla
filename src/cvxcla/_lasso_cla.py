@@ -37,8 +37,7 @@ from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .cla import CLA
-from .operators import QuadraticForm
-from .operators._core import _RCOND_FLOOR
+from .operators import RCOND_FLOOR, QuadraticForm
 
 #: One LASSO breakpoint as ``(lam, beta, active)``; :mod:`cvxcla.lasso` wraps it.
 BreakpointData = tuple[float, NDArray[np.float64], NDArray[np.bool_]]
@@ -116,7 +115,7 @@ def equality_path(
             cannot trace the problem (e.g. a degenerate first vertex).
     """
     n = xty.shape[0]
-    if quad.rcond_free(np.arange(n)) < _RCOND_FLOOR:
+    if quad.rcond_free(np.arange(n)) < RCOND_FLOOR:
         msg = (
             "the equality-constrained LASSO needs a positive-definite Gram X^T X "
             "(more observations than features in general position), so that the "

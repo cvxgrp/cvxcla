@@ -11,9 +11,9 @@ methods to compute and analyze the efficient frontier.
 
 import importlib.metadata
 
-from ._projection import ProjectionError
 from .builder import LassoBuilder, ProblemBuilder
 from .cla import CLA
+from .errors import ProjectionError
 from .lasso import Lasso
 from .operators import (
     CovarianceOperator,

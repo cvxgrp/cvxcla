@@ -6,7 +6,8 @@ import numpy as np
 import pytest
 
 import cvxcla
-from cvxcla._projection import ProjectionError, project_alternating
+from cvxcla._projection import project_alternating
+from cvxcla.errors import ProjectionError
 
 
 def test_alternating_projection_returns_a_feasible_point():

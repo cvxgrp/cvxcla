@@ -15,8 +15,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from .operators import QuadraticForm
-from .operators._core import _RCOND_FLOOR
+from .operators import RCOND_FLOOR, QuadraticForm
 
 
 def check_feasible(
@@ -91,7 +90,7 @@ def well_conditioned(cov: QuadraticForm) -> bool:
     Returns:
         Whether the full covariance clears the singularity floor.
     """
-    return float(cov.rcond_free(np.arange(cov.n))) >= _RCOND_FLOOR
+    return float(cov.rcond_free(np.arange(cov.n))) >= RCOND_FLOOR
 
 
 def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -> None:
@@ -126,7 +125,7 @@ def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -
             returns without effect.
     """
     rcond = cov.rcond_free(np.flatnonzero(free))
-    if rcond < _RCOND_FLOOR:
+    if rcond < RCOND_FLOOR:
         n_free = int(np.count_nonzero(free))
         msg = (
             f"Critical Line Algorithm hit a degeneracy at lambda={lamb:.4g} "
