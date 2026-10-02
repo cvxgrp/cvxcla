@@ -62,6 +62,43 @@ def _independent_equalities(
     return a[kept], b[kept]
 
 
+def _owned(value: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Return a read-only float copy of ``value``, owned by the problem.
+
+    The frontier is traced in the constructor, so an input changed afterwards would
+    leave the stored turning points out of step with the arrays the object exposes
+    (``frontier`` evaluates returns and variances from them). Copying decouples the
+    object from the caller's arrays, and the read-only flag keeps its own copy fixed.
+
+    Args:
+        value: An array-like input (``mean``, a bound, a constraint, a dense covariance).
+
+    Returns:
+        A new, non-writeable ``float64`` array with the same shape and values.
+    """
+    owned = np.array(value, dtype=np.float64, copy=True)
+    owned.setflags(write=False)
+    return owned
+
+
+def _own_inputs(cla: "CLA") -> None:
+    """Replace every array input of ``cla`` by a read-only copy (see :func:`_owned`).
+
+    A ``QuadraticForm`` backend is passed through unchanged: it may hold structured
+    or large data, and keeping it fixed is the backend's responsibility.
+
+    Args:
+        cla: The problem being constructed.
+    """
+    for name in ("mean", "lower_bounds", "upper_bounds", "a", "b"):
+        object.__setattr__(cla, name, _owned(getattr(cla, name)))  # frozen dataclass
+    for name in ("g", "h"):
+        if getattr(cla, name) is not None:
+            object.__setattr__(cla, name, _owned(getattr(cla, name)))
+    if not isinstance(cla.covariance, QuadraticForm):
+        object.__setattr__(cla, "covariance", _owned(cla.covariance))
+
+
 def _check_finite_inputs(cla: "CLA") -> None:
     """Refuse non-finite data before anything is traced.
 
@@ -137,6 +174,10 @@ class CLA(InequalityConstrained):
             leg (see :mod:`cvxcla._leverage`); the turning points are reported in
             the original asset weights, and ``active_ineq`` covers the rows of
             ``g`` only.
+
+    The array inputs (and a dense ``covariance``) are copied into read-only
+    ``float64`` arrays when the object is built, so changing the caller's arrays
+    afterwards does not affect it. A ``QuadraticForm`` backend is used as given.
 
     """
 
@@ -225,8 +266,9 @@ class CLA(InequalityConstrained):
         the ``QuadraticForm`` interface, so structured backends (e.g.
         ``FactorCovariance``) never materialise an n x n matrix.
 
-        Redundant equality rows (a row in the span of the others, such as a
-        repeated budget) are dropped first, keeping the earliest independent rows;
+        The array inputs are first copied into read-only arrays owned by the object
+        (see :func:`_own_inputs`). Redundant equality rows (a row in the span of the
+        others, such as a repeated budget) are then dropped, keeping the earliest independent rows;
         ``a`` and ``b`` then hold the reduced system.
 
         Raises:
@@ -240,6 +282,7 @@ class CLA(InequalityConstrained):
             NumericalError: If the trace breaks down numerically.
 
         """
+        _own_inputs(self)
         _check_finite_inputs(self)
         if self.g_matrix.shape[1] != self.dimension:
             msg = f"g must have {self.dimension} columns, got shape {self.g_matrix.shape}"
@@ -248,6 +291,8 @@ class CLA(InequalityConstrained):
             msg = f"h must have {self.g_matrix.shape[0]} entries, got {self.h_vector.shape[0]}"
             raise ValueError(msg)
         a, b = _independent_equalities(np.atleast_2d(np.asarray(self.a, dtype=np.float64)), np.atleast_1d(self.b))
+        a.setflags(write=False)
+        b.setflags(write=False)
         object.__setattr__(self, "a", a)  # frozen dataclass: normalise once, before tracing
         object.__setattr__(self, "b", b)
         if self.leverage is None:
