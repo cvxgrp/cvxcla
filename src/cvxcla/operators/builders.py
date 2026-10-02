@@ -157,23 +157,34 @@ def factor_covariance(
 ) -> FactorOperator:
     """Build a :class:`~cvx.linalg.FactorOperator` for ``Sigma = diag(d) + U Delta U.T``.
 
+    ``Delta`` is folded into the loadings before the operator is built: with
+    ``Delta = V Lambda V.T`` the operator stores ``U' = U V_+ Lambda_+^{1/2}`` (the
+    directions of positive variance) and an identity inner matrix, which is the same
+    ``Sigma``. The Woodbury solve then never inverts ``Delta``, so a singular factor
+    covariance -- a factor with zero variance, or more factors than the covariance
+    spans -- is admissible, and an ill-conditioned one costs no accuracy. ``d > 0``
+    is required (and checked by the operator): it makes every principal block of
+    ``Sigma`` positive definite, which is what lets the Woodbury capacitance matrix
+    ``I + U_F'.T D_F^{-1} U_F'`` be factorised by Cholesky and ``rcond_free`` be
+    bounded from ``min(d_F)``.
+
     Args:
         d: Positive idiosyncratic variances of shape ``(n,)``.
         u: Factor loadings of shape ``(n, k)``.
-        delta: Factor covariance, either ``(k,)`` positive variances (a diagonal
-            ``Delta``) or a symmetric positive-definite ``(k, k)`` matrix.
+        delta: Factor covariance, either ``(k,)`` non-negative variances (a diagonal
+            ``Delta``) or a symmetric positive-semidefinite ``(k, k)`` matrix.
 
     Returns:
-        A diagonal-plus-low-rank operator with Woodbury free-block solves.
+        A diagonal-plus-low-rank operator with Woodbury free-block solves, whose
+        rank ``k`` is the number of positive-variance factor directions (at least 1).
 
     Raises:
         ValueError: If *delta* is neither a ``(k,)`` vector nor a ``(k, k)``
-            matrix, is not symmetric, or is not positive definite. The Woodbury
-            solve inverts ``Delta``, so a singular factor covariance cannot be used
-            as given: drop the factor directions it does not span (rotate ``U`` onto
-            the eigenvectors of ``Delta`` with nonzero eigenvalues), which leaves
-            ``Sigma`` unchanged. A tiny positive variance is fine; it only makes
-            that factor's contribution small.
+            matrix, is not symmetric, or has a negative eigenvalue. A signed
+            low-rank term can still give a positive-definite ``Sigma``, but then
+            the capacitance matrix is indefinite and positive definiteness of
+            ``Sigma`` would need a separate check; pass such a covariance as a
+            dense matrix.
 
     Examples:
         >>> import numpy as np
@@ -198,17 +209,27 @@ def factor_covariance(
         >>> bool(np.allclose(FactorCovariance(d=d, u=u, delta=np.diag(delta)).matvec(x), dense @ x))
         True
 
-        Anything else is refused, as is a factor covariance that is not positive
-        definite:
+        A singular factor covariance is folded away: two perfectly correlated
+        factors are one factor.
+
+        >>> two = np.column_stack([u, 2 * u])
+        >>> op2 = FactorCovariance(d=d, u=two, delta=np.ones((2, 2)))
+        >>> op2.k
+        1
+        >>> bool(np.allclose(op2.matvec(x), (np.diag(d) + two @ np.ones((2, 2)) @ two.T) @ x))
+        True
+
+        Anything else is refused, as is a factor covariance with a negative
+        eigenvalue:
 
         >>> FactorCovariance(d=d, u=u, delta=np.zeros((1, 1, 1)))
         Traceback (most recent call last):
             ...
         ValueError: delta must be a (k,) vector or (k, k) matrix, got ndim 3
-        >>> FactorCovariance(d=d, u=u, delta=np.array([0.0]))
+        >>> FactorCovariance(d=d, u=u, delta=np.array([-1.0]))
         Traceback (most recent call last):
             ...
-        ValueError: delta must be positive definite (smallest eigenvalue 0): drop its non-positive directions
+        ValueError: delta must be positive semidefinite (smallest eigenvalue -1); pass such a Sigma densely
     """
     d = np.asarray(d, dtype=np.float64)
     u = np.asarray(u, dtype=np.float64)
@@ -223,11 +244,18 @@ def factor_covariance(
     if not np.allclose(inner, inner.T):
         msg = "delta must be symmetric"
         raise ValueError(msg)
-    smallest = float(np.linalg.eigvalsh(inner)[0]) if inner.size else 1.0
-    if smallest <= 0.0:
-        msg = f"delta must be positive definite (smallest eigenvalue {smallest:.3g}): drop its non-positive directions"
+    variances, directions = np.linalg.eigh(inner) if inner.size else (np.ones(0), inner)
+    # Eigenvalues within round-off of zero are zero; below that, Delta is indefinite.
+    floor = max(inner.shape[0], 1) * np.finfo(np.float64).eps * float(np.max(np.abs(variances), initial=0.0))
+    smallest = float(variances[0]) if variances.size else 0.0
+    if smallest < -floor:
+        msg = f"delta must be positive semidefinite (smallest eigenvalue {smallest:.3g}); pass such a Sigma densely"
         raise ValueError(msg)
-    return FactorOperator(d, u, inner)
+    keep = variances > floor
+    folded = (u @ directions[:, keep]) * np.sqrt(variances[keep])
+    if folded.shape[1] == 0:  # Delta = 0: Sigma = diag(d), kept as one zero factor
+        folded = np.zeros((u.shape[0], 1))
+    return FactorOperator(d, folded, np.eye(folded.shape[1]))
 
 
 # Backward-compatible names: the operator *classes* are gone, but the familiar
