@@ -11,6 +11,7 @@ methods to compute and analyze the efficient frontier.
 
 import importlib.metadata
 
+from ._projection import ProjectionError
 from .builder import LassoBuilder, ProblemBuilder
 from .cla import CLA
 from .lasso import Lasso
@@ -35,6 +36,7 @@ __all__ = [
     "LassoBuilder",
     "ParametricProblem",
     "ProblemBuilder",
+    "ProjectionError",
     "QuadraticForm",
     "trace",
 ]

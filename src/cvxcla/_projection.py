@@ -18,6 +18,23 @@ import numpy as np
 from cvx.linalg import AffineProjection
 from numpy.typing import NDArray
 
+# Alternating projections stop once the iterate violates its box by at most this
+# much (weights are portfolio fractions, so the scale is 1); the affine step keeps
+# C w = d to round-off throughout.
+_PROJECTION_TOL = 1e-12  # pragma: no mutate
+_PROJECTION_MAX_ITER = 100  # pragma: no mutate
+
+
+class ProjectionError(RuntimeError):
+    """The feasibility projection of a turning point did not converge.
+
+    The candidate lay outside its box by more than round-off, or the box and the
+    active constraints barely intersect, so clipping and re-projecting onto
+    ``{w : C w = d}`` did not reach a feasible point. This signals a numerical
+    failure, not an infeasible problem; the remedy is usually a better-conditioned
+    covariance (a small ridge, or a factor model).
+    """
+
 
 def project_feasible(
     weights: NDArray[np.float64],
@@ -132,9 +149,10 @@ def project_alternating(
     ``C`` stacks the equality rows ``A`` and the active inequality rows ``G_S``
     (held at equality ``g_i w = h_i``). The candidate already satisfies
     ``C w = d`` (the reduced KKT solve enforces it) and the inactive inequality
-    rows keep a margin, so a few iterations alternating a box clip with the
-    affine projection converge to a point feasible to the box, the equalities,
-    and every inequality.
+    rows keep a margin, so alternating a box clip with the affine projection
+    converges to a point feasible to the box, the equalities, and every
+    inequality, usually in one iteration. The loop stops as soon as the iterate
+    violates its box by at most ``_PROJECTION_TOL``.
 
     Args:
         weights: The candidate weight vector, known to violate its box.
@@ -145,10 +163,28 @@ def project_alternating(
 
     Returns:
         The projected weight vector, feasible to the box and the constraints.
+
+    Raises:
+        ProjectionError: If ``_PROJECTION_MAX_ITER`` iterations leave the iterate
+            outside its box by more than ``_PROJECTION_TOL``; the message reports
+            the remaining box violation and equality residual.
     """
     affine = AffineProjection(c, d)
     projected = weights
-    for _ in range(100):
-        projected = np.clip(projected, lower, upper)
-        projected = affine.project(projected)
-    return np.clip(projected, lower, upper)
+    for _ in range(_PROJECTION_MAX_ITER):
+        projected = affine.project(np.clip(projected, lower, upper))
+        if _box_violation(projected, lower, upper) <= _PROJECTION_TOL:
+            return np.clip(projected, lower, upper)
+    violation = _box_violation(projected, lower, upper)
+    residual = float(np.max(np.abs(c @ projected - d), initial=0.0))
+    msg = (
+        f"feasibility projection did not converge in {_PROJECTION_MAX_ITER} iterations: "
+        f"box violation {violation:.1e}, equality residual {residual:.1e}. The free block is "
+        "likely near-singular; a small ridge or a factor model usually cures it."
+    )
+    raise ProjectionError(msg)
+
+
+def _box_violation(weights: NDArray[np.float64], lower: NDArray[np.float64], upper: NDArray[np.float64]) -> float:
+    """Return how far ``weights`` lie outside ``[lower, upper]`` (``0`` inside the box)."""
+    return float(np.max(np.maximum(np.maximum(lower - weights, weights - upper), 0.0), initial=0.0))
