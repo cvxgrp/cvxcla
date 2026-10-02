@@ -32,7 +32,8 @@ Targets (artefact in parentheses):
   * ``frontier``        -- Figure 1: the 20-asset factor-model efficient frontier
     (frontier.pdf).
   * ``scaling``         -- Figure 2 + Table 1: runtime vs problem size, dense vs
-    factor (Woodbury) backend, with baselines, and the memory table (scaling.pdf).
+    factor (Woodbury) backend, with baselines, and the memory table (scaling.pdf), plus
+    the same timings for n <= 320 (scaling_small.pdf).
     SLOW: the dense backend at n=5120 takes several minutes per trace.
   * ``rank-scaling``    -- Figure 3 + Table 2: runtime vs factor rank at fixed n
     (rank_scaling.pdf).  SLOW.
@@ -349,6 +350,8 @@ _SCALE_SIZES = [20, 40, 80, 160, 320, 640, 1280, 2560, 5120]
 # The external baselines are timed only up to here: PyPortfolioOpt already takes
 # minutes at n=640, and both grow like n^3 or faster.
 _SCALE_BASELINE_MAX_N = 640
+# The second, small-problem figure (scaling_small.pdf) shows the sizes up to here.
+_SCALE_SMALL_MAX_N = 320
 # qpOASES follows the same parametric path as the CLA, so it is the closest external
 # comparison and is timed further, until it too takes minutes per trace.
 _SCALE_QPOASES_MAX_N = 2560
@@ -669,65 +672,57 @@ def figure_scaling(out_dir: Path) -> None:
 
     from matplotlib.ticker import NullFormatter, ScalarFormatter
 
-    def band(xs: list[int], bands: list[tuple[float, float] | None], color: str) -> None:
-        """Shade the min--max range across repetitions for one series."""
-        xb = [x for x, b in zip(xs, bands, strict=True) if b is not None]
-        lo = [b[0] for b in bands if b is not None]
-        hi = [b[1] for b in bands if b is not None]
-        if xb:
-            ax.fill_between(xb, lo, hi, color=color, alpha=0.18, linewidth=0)
+    series = [
+        # (times, bands, marker, colour, label); external baselines first, cvxcla last
+        (ppo_times, ppo_band, "-^", "#7f7f7f", "PyPortfolioOpt CLA"),
+        (clar_times, clar_band, "-v", "#ff7f0e", f"OSQP, {_SCALE_GRID}-point $\\lambda$-grid"),
+        (qpo_times, qpo_band, "-P", "#9467bd", "qpOASES, hot-started path"),
+        (inv_times, inv_band, "-D", "#2ca02c", "cvxcla, incremental dense"),
+        (dense_times, dense_band, "-o", "#c00000", "cvxcla, dense"),
+        (factor_times, factor_band, "-s", "#1f4e79", f"cvxcla, factor ($K={_SCALE_N_FACTORS}$)"),
+    ]
 
-    fig, ax = plt.subplots(figsize=(5.0, 3.4))
-    have_ppo = any(t is not None for t in ppo_times)
-    if have_ppo:
-        pn = [n for n, t in zip(ns, ppo_times, strict=True) if t is not None]
-        pt = [t for t in ppo_times if t is not None]
-        band(ns, ppo_band, "#7f7f7f")
-        ax.loglog(pn, pt, "-^", ms=4, color="#7f7f7f", label="PyPortfolioOpt CLA")
-    if any(t is not None for t in clar_times):
-        # General-solver baseline: drawn here for context, discussed in the paper's
-        # grid-baseline section (a warm-started QP swept over lambda).
-        cn = [n for n, t in zip(ns, clar_times, strict=True) if t is not None]
-        ct = [t for t in clar_times if t is not None]
-        band(ns, clar_band, "#ff7f0e")
-        ax.loglog(cn, ct, "-v", ms=4, color="#ff7f0e", label=f"OSQP, {_SCALE_GRID}-point $\\lambda$-grid")
-    if any(t is not None for t in qpo_times):
-        qn = [n for n, t in zip(ns, qpo_times, strict=True) if t is not None]
-        qt = [t for t in qpo_times if t is not None]
-        band(ns, qpo_band, "#9467bd")
-        ax.loglog(qn, qt, "-P", ms=4, color="#9467bd", label="qpOASES, hot-started path")
-    if any(t is not None for t in inv_times):
-        vn = [n for n, t in zip(ns, inv_times, strict=True) if t is not None]
-        vt = [t for t in inv_times if t is not None]
-        band(ns, inv_band, "#2ca02c")
-        ax.loglog(vn, vt, "-D", ms=4, color="#2ca02c", label="cvxcla, incremental dense")
-    band(ns, dense_band, "#c00000")
-    ax.loglog(ns, dense_times, "-o", ms=4, color="#c00000", label="cvxcla, dense")
-    band(ns, factor_band, "#1f4e79")
-    ax.loglog(ns, factor_times, "-s", ms=4, color="#1f4e79", label=f"cvxcla, factor ($K={_SCALE_N_FACTORS}$)")
-    ax.set_xlabel("Number of assets $n$")
-    ax.set_ylabel("Frontier trace time [s]")
-    ax.set_title("CLA runtime vs problem size", fontsize=9)
+    def draw(n_max: int, name: str, title: str, headroom: float) -> None:
+        """Plot every series over the sizes n <= n_max, with min--max bands, to ``name``."""
+        fig, ax = plt.subplots(figsize=(5.0, 3.4))
+        sizes = [n for n in ns if n <= n_max]
+        for times, bands, marker, colour, label in series:
+            keep = [i for i, n in enumerate(ns) if n <= n_max and times[i] is not None]
+            if not keep:
+                continue
+            xs = [ns[i] for i in keep]
+            spans = [bands[i] for i in keep if bands[i] is not None]
+            if spans:
+                ax.fill_between(xs, [b[0] for b in spans], [b[1] for b in spans], color=colour, alpha=0.18, linewidth=0)
+            ax.loglog(xs, [times[i] for i in keep], marker, ms=4, color=colour, label=label)
+        ax.set_xlabel("Number of assets $n$")
+        ax.set_ylabel("Frontier trace time [s]")
+        ax.set_title(title, fontsize=9)
+        # Label the x-axis at the actual problem sizes as plain integers, not the
+        # default powers of ten (which never coincide with 20, 40, ..., 640 and
+        # leave cluttered minor-tick labels on a log axis).
+        ax.set_xticks(sizes)
+        ax.xaxis.set_major_formatter(ScalarFormatter())
+        ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.set_xlim(sizes[0] * 0.85, sizes[-1] * 1.18)
+        ax.tick_params(axis="x", labelsize=7)
+        # Headroom above the slowest series keeps the legend clear of every curve.
+        slowest = max(t for times, *_ in series for i, t in enumerate(times) if t is not None and ns[i] <= n_max)
+        ax.set_ylim(top=slowest * headroom)
+        ax.grid(True, which="both", alpha=0.3)
+        ax.legend(fontsize=7.5, loc="upper left")
+        fig.tight_layout()
+        out = out_dir / name
+        fig.savefig(out)
+        plt.close(fig)
+        print(f"wrote {out}")
 
-    # Label the x-axis at the actual problem sizes as plain integers, not the
-    # default powers of ten (which never coincide with 20, 40, ..., 640 and
-    # leave cluttered minor-tick labels on a log axis).
-    ax.set_xticks(ns)
-    ax.xaxis.set_major_formatter(ScalarFormatter())
-    ax.xaxis.set_minor_formatter(NullFormatter())
-    ax.set_xlim(ns[0] * 0.85, ns[-1] * 1.18)
-    ax.tick_params(axis="x", labelsize=7)
-
-    # Headroom above the slowest series keeps the legend clear of every curve.
-    slowest = max(t for series in (dense_times, ppo_times, clar_times, qpo_times) for t in series if t is not None)
-    ax.set_ylim(top=slowest * 300)
-    ax.grid(True, which="both", alpha=0.3)
-    ax.legend(fontsize=7.5, loc="upper left")
-    fig.tight_layout()
-    out = out_dir / "scaling.pdf"
-    fig.savefig(out)
-    plt.close(fig)
-    print(f"wrote {out}")
+    draw(ns[-1], "scaling.pdf", "CLA runtime vs problem size", 300.0)
+    # The practically common range of a few hundred assets, where per-step overhead
+    # still matters and qpOASES is faster than cvxcla.
+    draw(
+        _SCALE_SMALL_MAX_N, "scaling_small.pdf", f"CLA runtime vs problem size, $n \\leq {_SCALE_SMALL_MAX_N}$", 1000.0
+    )
 
 
 # ======================================================================================
