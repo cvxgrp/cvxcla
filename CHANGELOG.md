@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.3.1] - 2026-10-02
+
+### Bug Fixes
+- Refuse non-finite returns, constraints and covariance at construction (#920)
+- Max_sharpe skips zero-variance points and scans every segment (#921)
+- Resolve a degenerate maximum-return vertex from the optimal dual set, not HiGHS's reported duals (#922)
+
 ## [2.3.0] - 2026-10-02
 
 ### Documentation
