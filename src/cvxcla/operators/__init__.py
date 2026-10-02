@@ -14,9 +14,11 @@ diagonal-plus-low-rank Woodbury, and a maintained-inverse dense variant) live in
   operator from CLA / LASSO inputs, kept under the familiar ``*Covariance`` names.
 - :func:`bordered_solve` and :func:`cross`, the parametric-path helpers built on
   the operator protocol.
+- :data:`RCOND_FLOOR`, the reciprocal-condition threshold below which a free
+  block counts as singular.
 """
 
-from ._core import CovarianceOperator, QuadraticForm, bordered_solve, cross
+from ._core import RCOND_FLOOR, CovarianceOperator, QuadraticForm, bordered_solve, cross
 from .builders import (
     DenseCovariance,
     FactorCovariance,
@@ -29,6 +31,7 @@ from .builders import (
 )
 
 __all__ = [
+    "RCOND_FLOOR",
     "CovarianceOperator",
     "DenseCovariance",
     "FactorCovariance",
