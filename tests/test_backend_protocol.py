@@ -51,6 +51,7 @@ class _ExplicitBlockSolve(QuadraticForm):
     """Shared ``block_matvec`` / ``solve_free`` / ``rcond_free`` for backends that can form one entry block."""
 
     def _block(self, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:  # pragma: no cover - abstract
+        """The explicit entry block ``Sigma[rows, cols]``; subclasses supply it."""
         raise NotImplementedError
 
     def block_matvec(self, rows, cols, v):
@@ -96,6 +97,7 @@ class BlockDiagonal(QuadraticForm):
         return self.matvec(x)[np.asarray(rows)]
 
     def _pieces(self, free: np.ndarray):
+        """Yield each diagonal block touched by ``free`` with the positions of its free entries."""
         for k in np.unique(self._owner[free]):
             pos = np.flatnonzero(self._owner[free] == k)
             local = free[pos] - self._starts[k]
@@ -207,6 +209,7 @@ class PermutedDense(_ExplicitBlockSolve):
         return (self._stored @ stored_x)[self._pos]
 
     def _block(self, rows, cols):
+        """Entries of ``Sigma[rows, cols]`` read from the shuffled storage."""
         return self._stored[np.ix_(self._pos[rows], self._pos[cols])]
 
 

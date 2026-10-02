@@ -45,6 +45,7 @@ def _trace(problem: dict, eps: float | None) -> CLA:
 
 
 def _weights(cla: CLA) -> np.ndarray:
+    """Turning-point weights stacked row by row."""
     return np.array([tp.weights for tp in cla.turning_points])
 
 
