@@ -17,6 +17,7 @@ theme:
 nav:
   - Home: index.md
   - Factor backend: factor.md
+  - Custom backends: custom-backend.md
   - Notebooks:
     - CLA: notebooks/cla.html
     - Factor: notebooks/factor.html
