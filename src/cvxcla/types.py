@@ -10,6 +10,8 @@ It also defines type aliases for commonly used types.
 
 from __future__ import annotations
 
+import itertools
+import warnings
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -253,8 +255,15 @@ class Frontier:
 
     @property
     def sharpe_ratio(self) -> np.ndarray:
-        """Vector of expected Sharpe ratios."""
-        ratios: np.ndarray = self.returns / self.volatility
+        """Vector of expected Sharpe ratios.
+
+        The ratio is undefined at a zero-variance point (``w = 0`` at the end of a
+        dollar-neutral frontier, say) and is NaN there, without a warning.
+        """
+        returns = self.returns
+        volatility = self.volatility
+        ratios: np.ndarray = np.full_like(returns, np.nan)
+        np.divide(returns, volatility, out=ratios, where=volatility > 0)
         return ratios
 
     @property
@@ -267,13 +276,22 @@ class Frontier:
     def max_sharpe(self) -> tuple[float, np.ndarray]:
         """Maximal Sharpe ratio on the frontier.
 
-        The maximiser lies on one of the two affine segments adjacent to the
-        turning point of largest discrete Sharpe ratio. On each segment the Sharpe
-        ratio has a closed-form maximiser (see :meth:`_segment_max_sharpe`), so the
-        result is exact rather than the product of a numerical line search.
+        The frontier is piecewise affine in the weights, and on each segment the
+        Sharpe ratio has a closed-form maximiser (see :meth:`_segment_max_sharpe`).
+        Every segment is scanned, so the result is the exact maximum over the whole
+        frontier and relies on no unimodality argument. Points of zero variance,
+        where the ratio is undefined, are skipped.
 
         Returns:
             Tuple of maximal Sharpe ratio and the weights to achieve it
+
+        Raises:
+            ValueError: If no point of the frontier has positive variance.
+
+        Warns:
+            UserWarning: If the maximum is not positive -- no frontier portfolio
+                has a positive expected return, so the result is the least negative
+                ratio rather than a meaningful tangency portfolio.
 
         Examples:
             >>> import numpy as np
@@ -300,31 +318,21 @@ class Frontier:
 
         """
         weights = self.weights
-        sharpe_ratios = self.sharpe_ratio
+        points = [(float(ratio), w) for ratio, w in zip(self.sharpe_ratio, weights, strict=True)]
+        segments = [self._segment_max_sharpe(w0, w1) for w0, w1 in itertools.pairwise(weights)]
+        candidates = [(ratio, w) for ratio, w in points + segments if not np.isnan(ratio)]
+        if not candidates:
+            msg = "The Sharpe ratio is undefined: no frontier point has positive variance"
+            raise ValueError(msg)
 
-        # The discrete maximum brackets the continuous one: the optimum sits on a
-        # segment touching the turning point of largest Sharpe ratio.
-        sr_position_max = int(np.argmax(sharpe_ratios))
-        right = min(sr_position_max + 1, len(self) - 1)
-        left = max(0, sr_position_max - 1)
-
-        # Look to the left and to the right of the discrete maximum.
-        if right > sr_position_max:
-            sharpe_ratio_right, w_right = self._segment_max_sharpe(weights[sr_position_max], weights[right])
-        else:
-            w_right = weights[sr_position_max]
-            sharpe_ratio_right = sharpe_ratios[sr_position_max]
-
-        if left < sr_position_max:
-            sharpe_ratio_left, w_left = self._segment_max_sharpe(weights[left], weights[sr_position_max])
-        else:
-            w_left = weights[sr_position_max]
-            sharpe_ratio_left = sharpe_ratios[sr_position_max]
-
-        if sharpe_ratio_left > sharpe_ratio_right:
-            return sharpe_ratio_left, w_left
-
-        return sharpe_ratio_right, w_right
+        sharpe, best = max(candidates, key=lambda item: item[0])
+        if sharpe <= 0.0:
+            warnings.warn(
+                f"No frontier portfolio has a positive expected return; the maximum Sharpe ratio is {sharpe:.6g}",
+                UserWarning,
+                stacklevel=2,
+            )
+        return sharpe, best
 
     def _segment_max_sharpe(self, w0: np.ndarray, w1: np.ndarray) -> tuple[float, np.ndarray]:
         """Closed-form maximum Sharpe ratio on the affine segment between two points.
@@ -340,13 +348,15 @@ class Frontier:
         ``t* = (a0 c1 - 2 a1 c0) / (a1 c1 - 2 a0 c2)``. The maximiser over the
         segment is therefore whichever of ``{0, 1, clamp(t*)}`` yields the largest
         Sharpe ratio, evaluated in closed form rather than by a bounded line search.
+        A candidate of zero variance is skipped.
 
         Args:
             w0: Weights at the ``t = 0`` end of the segment.
             w1: Weights at the ``t = 1`` end of the segment.
 
         Returns:
-            Tuple of the maximal Sharpe ratio on the segment and its weights.
+            Tuple of the maximal Sharpe ratio on the segment and its weights; the
+            ratio is NaN if the variance vanishes at every candidate.
 
         """
         delta = w1 - w0
@@ -358,12 +368,6 @@ class Frontier:
         c1 = 2.0 * float(w0 @ sigma_delta)
         c2 = float(delta @ sigma_delta)
 
-        def sharpe_at(t: float) -> tuple[float, np.ndarray]:
-            """Sharpe ratio and weights at position ``t`` along the segment."""
-            weight = w0 + t * delta
-            sharpe = (a0 + a1 * t) / np.sqrt(c0 + c1 * t + c2 * t * t)
-            return float(sharpe), weight
-
         # Candidate positions: the two endpoints and the interior stationary point
         # (only when it falls strictly inside the segment).
         candidates = [0.0, 1.0]
@@ -373,7 +377,14 @@ class Frontier:
             if 0.0 < t_star < 1.0:
                 candidates.append(t_star)
 
-        return max((sharpe_at(t) for t in candidates), key=lambda item: item[0])
+        best: tuple[float, np.ndarray] = (np.nan, w0)
+        for t in candidates:
+            variance = c0 + c1 * t + c2 * t * t
+            if variance > 0.0:
+                sharpe = (a0 + a1 * t) / np.sqrt(variance)
+                if np.isnan(best[0]) or sharpe > best[0]:
+                    best = (float(sharpe), w0 + t * delta)
+        return best
 
     def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
         """Plot the efficient frontier.
