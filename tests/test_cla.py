@@ -13,7 +13,6 @@ from cvxcla import CLA, FactorCovariance
 from cvxcla._events import event_ratios
 from cvxcla._kkt import active_set, solve_kkt
 from cvxcla._projection import project_feasible
-from cvxcla.errors import DegenerateProblemError
 from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
 
@@ -1337,24 +1336,21 @@ class TestInequalityConstraints:
         self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
         self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
 
-    def test_overdetermined_first_vertex_declined(self):
-        """Pairwise caps that over-determine the vertex are declined as degenerate.
+    def test_overdetermined_first_vertex_traced(self):
+        """Pairwise caps that over-determine the vertex are resolved from the optimal duals.
 
-        Five cyclic caps ``w_i + w_{i+1} <= 0.5`` are all tight at the maximum-return
-        vertex, together with the budget: more independent active rows than the
-        free set can span. That is outside the supported domain and is reported as
-        a :class:`~cvxcla.errors.DegenerateProblemError` before the trace starts.
+        Five cyclic caps ``w_i + w_{i+1} <= 0.5`` are tight at the maximum-return
+        vertex together with the budget: more tight rows than the interior assets
+        can span. Used to be declined (issue #918); at a vertex of the optimal dual
+        set the rows with a zero multiplier stay inactive and the remaining ones are
+        spanned by freeing zero-reduced-cost assets, so the trace proceeds and every
+        turning point is feasible and optimal.
         """
         n = 5
         g = np.array([np.isin(np.arange(n), [i, (i + 1) % n]).astype(float) for i in range(n)])
-        with pytest.raises(DegenerateProblemError, match="maximum-return vertex is degenerate"):
-            CLA(
-                mean=np.linspace(1.0, 0.5, n),
-                covariance=np.eye(n) + 0.1,
-                lower_bounds=np.zeros(n),
-                upper_bounds=np.ones(n),
-                a=np.ones((1, n)),
-                b=np.ones(1),
-                g=g,
-                h=np.full(n, 0.5),
-            )
+        h = np.full(n, 0.5)
+        mean, cov = np.linspace(1.0, 0.5, n), np.eye(n) + 0.1
+        lower, upper, a, b = np.zeros(n), np.ones(n), np.ones((1, n)), np.ones(1)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
+        self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
+        self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
