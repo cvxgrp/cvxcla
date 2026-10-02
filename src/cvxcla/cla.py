@@ -62,6 +62,33 @@ def _independent_equalities(
     return a[kept], b[kept]
 
 
+def _check_finite_inputs(cla: "CLA") -> None:
+    """Refuse non-finite data before anything is traced.
+
+    ``mean``, ``a``, ``b``, ``g`` and ``h`` must be finite, and the bounds must not be
+    NaN; an infinite bound is allowed (an unbounded box, which the linear program of
+    the first vertex handles). A dense covariance is checked when it is wrapped (see
+    :func:`cvxcla.operators.dense_covariance`); a user-supplied backend is responsible
+    for its own data. Without this check a NaN in ``mean`` traced a meaningless
+    frontier without complaint and an infinite covariance entry failed deep inside
+    the first solve.
+
+    Args:
+        cla: The problem being constructed.
+
+    Raises:
+        ValueError: Naming the first offending input.
+    """
+    for name, value in [("mean", cla.mean), ("a", cla.a), ("b", cla.b), ("g", cla.g_matrix), ("h", cla.h_vector)]:
+        if not np.all(np.isfinite(np.asarray(value, dtype=np.float64))):
+            msg = f"{name} must be finite (no NaN or infinite entries)"
+            raise ValueError(msg)
+    for name, value in [("lower_bounds", cla.lower_bounds), ("upper_bounds", cla.upper_bounds)]:
+        if np.any(np.isnan(np.asarray(value, dtype=np.float64))):
+            msg = f"{name} must not contain NaN (infinite bounds are allowed)"
+            raise ValueError(msg)
+
+
 @dataclass(frozen=True)
 class CLA(InequalityConstrained):
     """Critical Line Algorithm implementation based on Markowitz's approach.
@@ -204,8 +231,8 @@ class CLA(InequalityConstrained):
 
         Raises:
             ValueError: If the inequality matrix ``g`` and vector ``h`` have
-                mismatched or wrong shapes, or ``leverage`` is not a positive finite
-                number.
+                mismatched or wrong shapes, ``leverage`` is not a positive finite
+                number, or an input is not finite (see :func:`_check_finite_inputs`).
             InfeasibleProblemError: If the constraints admit no portfolio, including
                 an equality system whose dependent rows contradict the others.
             DegenerateProblemError: If the problem is feasible but outside the
@@ -213,6 +240,7 @@ class CLA(InequalityConstrained):
             NumericalError: If the trace breaks down numerically.
 
         """
+        _check_finite_inputs(self)
         if self.g_matrix.shape[1] != self.dimension:
             msg = f"g must have {self.dimension} columns, got shape {self.g_matrix.shape}"
             raise ValueError(msg)

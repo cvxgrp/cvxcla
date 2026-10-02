@@ -20,11 +20,14 @@ def _symmetric_matrix(matrix: NDArray[np.float64]) -> NDArray[np.float64]:
     """Return *matrix* as a float array after checking it is square and symmetric.
 
     Raises:
-        ValueError: If *matrix* is not square or not symmetric to tolerance.
+        ValueError: If *matrix* is not square, not finite, or not symmetric to tolerance.
     """
     matrix = np.asarray(matrix, dtype=np.float64)
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         msg = f"Covariance must be a square matrix, got shape {matrix.shape}"
+        raise ValueError(msg)
+    if not np.all(np.isfinite(matrix)):
+        msg = "Covariance must be finite (no NaN or infinite entries)"
         raise ValueError(msg)
     if not np.allclose(matrix, matrix.T):
         msg = "Covariance must be symmetric"
