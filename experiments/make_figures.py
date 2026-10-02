@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "casadi==3.8.1",
-#     "cvxcla==2.1.0",
+#     "cvxcla==2.2.0",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
@@ -47,10 +47,12 @@ Targets (artefact in parentheses):
     sensitivity of the trace to the slope floor (no figure).
   * ``validate-projection`` -- Appendix A: how often the feasibility projection fires
     and how large its corrections are (no figure).
+  * ``validate-factor`` -- Section 5: the factor backend against the dense trace on
+    ill-conditioned and degenerate factor models (no figure).
   * ``estimators``      -- Figure 8 + Section 11.1 estimator table (estimator_shrinkage.pdf).
   * ``michaud``         -- Figure 9 + Section 12 resampling table (michaud_frontier.pdf).
   * ``figures``         -- all seven figures.
-  * ``checks``          -- all seven numerical checks.
+  * ``checks``          -- all eight numerical checks.
   * ``all``             -- every figure and every check.
 
 Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib`` (all
@@ -2110,6 +2112,66 @@ def check_validate_projection(out_dir: Path) -> None:  # noqa: ARG001 - the shar
 
 
 # ======================================================================================
+# Check: validate-factor  (Section 5 factor-model conditioning)
+# ======================================================================================
+_VFACTOR_N = 120
+_VFACTOR_K = 10
+_VFACTOR_SEED = 1
+
+
+def _vfactor_compare(d: np.ndarray, u: np.ndarray, delta: np.ndarray, mean: np.ndarray) -> str:
+    """Trace with the factor backend and with the dense Sigma it represents; summarise the gap."""
+    n = len(d)
+    dense = np.diag(d) + (u * delta) @ u.T
+    kwargs = {"lower_bounds": np.zeros(n), "upper_bounds": np.ones(n), "a": np.ones((1, n)), "b": np.ones(1)}
+    factor = CLA(mean=mean, covariance=FactorCovariance(d=d, u=u, delta=delta), **kwargs)
+    res = _kkt_check(factor, mean, dense, kwargs)
+    kkt = max(res.primal, res.stationarity, res.dual, res.complementarity)
+    w_factor = np.array([tp.weights for tp in factor.turning_points])
+    w_dense = np.array([tp.weights for tp in CLA(mean=mean, covariance=dense, **kwargs).turning_points])
+    gap = f"{np.max(np.abs(w_factor - w_dense)):9.1e}" if w_factor.shape == w_dense.shape else f"{len(w_dense):>6} pts"
+    return f"{len(w_factor):>7d}{len(w_dense):>7d}{gap}{kkt:>10.1e}{np.linalg.cond(dense):>11.1e}"
+
+
+def check_validate_factor(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
+    """Factor backend against the dense trace on ill-conditioned and degenerate factor models.
+
+    The Woodbury solve inverts Delta and the capacitance matrix Delta^{-1} + U_F' D_F^{-1} U_F.
+    With d > 0 the latter is positive definite, so neither an ill-conditioned Delta, nor nearly
+    collinear loadings, nor a full rank K = n should cost accuracy; this checks it.
+    """
+    rng = np.random.default_rng(_VFACTOR_SEED)
+    n, k = _VFACTOR_N, _VFACTOR_K
+    d = rng.uniform(0.5, 2.0, n)
+    u = rng.standard_normal((n, k)) / np.sqrt(n)
+    mean = rng.uniform(0.0, 1.0, n)
+    cases = [(f"cond(Delta) = {c:.0e}", d, u, np.geomspace(float(n), n / c, k)) for c in (1e0, 1e4, 1e8, 1e12, 1e14)]
+    for gap in (1e-2, 1e-6, 1e-10):
+        collinear = u.copy()
+        collinear[:, 1] = collinear[:, 0] + gap * rng.standard_normal(n)
+        cases.append((f"collinear loadings, gap {gap:.0e}", d, collinear, np.full(k, float(n))))
+    for rank in (n // 2, n):
+        cases.append((f"rank K = {rank}", d, rng.standard_normal((n, rank)) / np.sqrt(n), np.full(rank, float(n))))
+
+    print(f"n = {n}; columns: turning points (factor, dense), max |w_factor - w_dense|, KKT residual, cond(Sigma)")
+    print(f"{'factor model':<34}{'factor':>7}{'dense':>7}{'max|dw|':>9}{'KKT':>10}{'cond':>11}")
+    for label, d_i, u_i, delta in cases:
+        print(f"{label:<34}{_vfactor_compare(d_i, u_i, delta, mean)}")
+
+    print("\nnot positive definite (refused at construction by a cvxcla newer than 2.1.0):")
+    for label, delta in (
+        ("singular", np.ones((k, k))),
+        ("indefinite", np.r_[1.0, -0.5, np.ones(k - 2)]),
+    ):
+        try:
+            FactorCovariance(d=d, u=u, delta=delta)
+            outcome = "accepted"
+        except ValueError as exc:
+            outcome = f"ValueError: {exc}"
+        print(f"  {label:<12}{outcome}")
+
+
+# ======================================================================================
 # Orchestration
 # ======================================================================================
 @dataclass
@@ -2137,6 +2199,7 @@ class Target(enum.StrEnum):
     validate_kkt = "validate-kkt"
     validate_scaling = "validate-scaling"
     validate_projection = "validate-projection"
+    validate_factor = "validate-factor"
     estimators = "estimators"
     michaud = "michaud"
     figures = "figures"
@@ -2158,6 +2221,7 @@ STEPS: list[Step] = [
     Step(Target.validate_kkt, "Section 8.6 KKT residuals on every segment", check_validate_kkt, False),
     Step(Target.validate_scaling, "Section 8.6 units and the slope floor", check_validate_scaling, False),
     Step(Target.validate_projection, "Appendix A feasibility corrections", check_validate_projection, False),
+    Step(Target.validate_factor, "Section 5 factor-model conditioning", check_validate_factor, False),
     Step(Target.estimators, "Figure 8 (estimator_shrinkage.pdf) + estimator table", figure_estimators, False),
     Step(Target.michaud, "Figure 9 (michaud_frontier.pdf) + Section 12 resampling table", figure_michaud, False),
 ]
@@ -2182,6 +2246,7 @@ _CHECK_TARGETS = [
     Target.validate_kkt,
     Target.validate_scaling,
     Target.validate_projection,
+    Target.validate_factor,
 ]
 
 
@@ -2241,7 +2306,7 @@ _DESCRIPTIONS: dict[Target, str] = {
     Target.estimators: "Fig 8: covariance-estimator shrinkage -> estimator_shrinkage.pdf",
     Target.michaud: "Fig 9: Michaud resampled frontier     -> michaud_frontier.pdf",
     Target.figures: "all seven figures",
-    Target.checks: "all seven numerical checks",
+    Target.checks: "all eight numerical checks",
     Target.all: "every figure and every check",
 }
 
