@@ -108,6 +108,21 @@ DATA = (
     / "sp500_pct_returns.parquet"
 )
 
+# Samples per segment when drawing a frontier curve between turning points.
+_CURVE_POINTS = 50
+
+
+def _along_segments(weights: np.ndarray, num: int = _CURVE_POINTS) -> np.ndarray:
+    """Return weights at ``num`` evenly spaced points along each segment between turning points.
+
+    The weights move linearly between adjacent turning points, so their volatility traces
+    a hyperbola there, not the chord a line plot through the corners draws. Every turning
+    point is included exactly once, in order.
+    """
+    t = np.linspace(0.0, 1.0, num)[:-1, None]
+    dense = [w0 + t * (w1 - w0) for w0, w1 in pairwise(weights)]
+    return np.vstack([*dense, weights[-1:]])
+
 
 # ======================================================================================
 # OSQP: the reference QP and the warm-started grid baseline
@@ -325,8 +340,13 @@ def figure_frontier(out_dir: Path) -> None:
     print(f"volatility range        : [{vol_f.min():.4f}, {vol_f.max():.4f}]")
     print(f"max Sharpe (model units): {max_sharpe:.4f}")
 
+    # Draw the exact curve between turning points and mark only the turning points.
+    curve_w = _along_segments(frontier.weights)
+    curve_vol = np.sqrt(np.einsum("ij,jk,ik->i", curve_w, dense_cov, curve_w))
+    curve_ret = curve_w @ mean
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
-    ax.plot(vol_f, returns_f, "-o", ms=2.5, lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.plot(curve_vol, curve_ret, "-", lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.plot(vol_f, returns_f, "o", ms=2.5, color="#1f4e79", label="Turning points")
     ax.scatter(vol_f[[0, -1]], returns_f[[0, -1]], color="#c00000", zorder=5, s=18)
     ax.annotate(
         "max return", (vol_f[0], returns_f[0]), textcoords="offset points", xytext=(-6, 4), ha="right", fontsize=8
@@ -896,8 +916,13 @@ def figure_real_frontier(out_dir: Path) -> None:
     except Exception as exc:  # noqa: BLE001 - we are demonstrating the failure
         print(f"short window W={_REAL_SHORT_WINDOW}     : rank(S)={rank} < N={n} -> {type(exc).__name__}: {exc}")
 
+    # Draw the exact curve between turning points and mark only the turning points.
+    curve_w = _along_segments(frontier.weights)
+    curve_vol = np.sqrt(np.einsum("ij,jk,ik->i", curve_w, sample_cov, curve_w) * ann)
+    curve_ret = (curve_w @ mean) * ann
     fig, ax = plt.subplots(figsize=(5.0, 3.4))
-    ax.plot(vol, ret, "-o", ms=2.5, lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.plot(curve_vol, curve_ret, "-", lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.plot(vol, ret, "o", ms=2.5, color="#1f4e79", label="Turning points")
     ax.scatter(vol[[0, -1]], ret[[0, -1]], color="#c00000", zorder=5, s=18)
     ax.annotate("max return", (vol[0], ret[0]), textcoords="offset points", xytext=(-6, 4), ha="right", fontsize=8)
     ax.annotate("min variance", (vol[-1], ret[-1]), textcoords="offset points", xytext=(8, -2), fontsize=8)
@@ -995,10 +1020,11 @@ _MICHAUD_ANN = 252.0
 def _michaud_frontier(mean: np.ndarray, cov: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Trace one frontier and return its annualised vol, return and holdings.
 
-    The three arrays are ordered by volatility, each evaluated under its own (mean, cov).
+    The three arrays are ordered by volatility, each evaluated under its own (mean, cov),
+    and sampled along each segment so interpolating them follows the exact curve.
     """
     tp = CLA(mean=mean, covariance=cov, **_real_problem(len(mean))).turning_points
-    w = np.array([t.weights for t in tp])
+    w = _along_segments(np.array([t.weights for t in tp]), num=10)
     vol = np.sqrt(np.einsum("ij,jk,ik->i", w, cov, w)) * np.sqrt(_MICHAUD_ANN)
     ret = (w @ mean) * _MICHAUD_ANN
     held = (w > _MICHAUD_TOL).sum(axis=1).astype(float)
