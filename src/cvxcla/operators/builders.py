@@ -160,14 +160,20 @@ def factor_covariance(
     Args:
         d: Positive idiosyncratic variances of shape ``(n,)``.
         u: Factor loadings of shape ``(n, k)``.
-        delta: Factor covariance, either ``(k,)`` eigenvalues (a diagonal ``Delta``)
-            or a symmetric positive-definite ``(k, k)`` matrix.
+        delta: Factor covariance, either ``(k,)`` positive variances (a diagonal
+            ``Delta``) or a symmetric positive-definite ``(k, k)`` matrix.
 
     Returns:
         A diagonal-plus-low-rank operator with Woodbury free-block solves.
 
     Raises:
-        ValueError: If *delta* is neither a ``(k,)`` vector nor a ``(k, k)`` matrix.
+        ValueError: If *delta* is neither a ``(k,)`` vector nor a ``(k, k)``
+            matrix, is not symmetric, or is not positive definite. The Woodbury
+            solve inverts ``Delta``, so a singular factor covariance cannot be used
+            as given: drop the factor directions it does not span (rotate ``U`` onto
+            the eigenvectors of ``Delta`` with nonzero eigenvalues), which leaves
+            ``Sigma`` unchanged. A tiny positive variance is fine; it only makes
+            that factor's contribution small.
 
     Examples:
         >>> import numpy as np
@@ -192,12 +198,17 @@ def factor_covariance(
         >>> bool(np.allclose(FactorCovariance(d=d, u=u, delta=np.diag(delta)).matvec(x), dense @ x))
         True
 
-        Anything else is refused:
+        Anything else is refused, as is a factor covariance that is not positive
+        definite:
 
         >>> FactorCovariance(d=d, u=u, delta=np.zeros((1, 1, 1)))
         Traceback (most recent call last):
             ...
         ValueError: delta must be a (k,) vector or (k, k) matrix, got ndim 3
+        >>> FactorCovariance(d=d, u=u, delta=np.array([0.0]))
+        Traceback (most recent call last):
+            ...
+        ValueError: delta must be positive definite (smallest eigenvalue 0): drop its non-positive directions
     """
     d = np.asarray(d, dtype=np.float64)
     u = np.asarray(u, dtype=np.float64)
@@ -208,6 +219,13 @@ def factor_covariance(
         inner = delta
     else:
         msg = f"delta must be a (k,) vector or (k, k) matrix, got ndim {delta.ndim}"
+        raise ValueError(msg)
+    if not np.allclose(inner, inner.T):
+        msg = "delta must be symmetric"
+        raise ValueError(msg)
+    smallest = float(np.linalg.eigvalsh(inner)[0]) if inner.size else 1.0
+    if smallest <= 0.0:
+        msg = f"delta must be positive definite (smallest eigenvalue {smallest:.3g}): drop its non-positive directions"
         raise ValueError(msg)
     return FactorOperator(d, u, inner)
 
