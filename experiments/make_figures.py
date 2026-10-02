@@ -43,10 +43,14 @@ Targets (artefact in parentheses):
   * ``tie-degeneracy``  -- Section 10.6 tie-heavy stress envelope (no figure).
   * ``osqp``            -- S&P 500 trace vs a warm-started OSQP grid (no figure).
   * ``validate-kkt``    -- Section 8.6 KKT residuals on every segment (no figure).
+  * ``validate-scaling`` -- Section 8.6 invariance under a change of units, and the
+    sensitivity of the trace to the slope floor (no figure).
+  * ``validate-projection`` -- Appendix A: how often the feasibility projection fires
+    and how large its corrections are (no figure).
   * ``estimators``      -- Figure 8 + Section 11.1 estimator table (estimator_shrinkage.pdf).
   * ``michaud``         -- Figure 9 + Section 12 resampling table (michaud_frontier.pdf).
   * ``figures``         -- all seven figures.
-  * ``checks``          -- all five numerical checks.
+  * ``checks``          -- all seven numerical checks.
   * ``all``             -- every figure and every check.
 
 Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib`` (all
@@ -1920,6 +1924,192 @@ def check_validate_kkt(out_dir: Path) -> None:  # noqa: ARG001 - the shared runn
 
 
 # ======================================================================================
+# Check: validate-scaling  (Section 8.6 units and the slope floor)
+# ======================================================================================
+_VSCALE_FACTORS = (1e-6, 1e-3, 1.0, 1e3, 1e6)  # rescalings of mu and of Sigma
+_VSCALE_FLOORS = (1e-6, 1e-4, 1e-2, 1.0, 1e2, 1e4, 1e6)  # multiples of the slope floors
+
+
+def _vscale_weights(cla: CLA) -> np.ndarray:
+    """The turning-point weights of a trace, stacked row by row."""
+    return np.array([tp.weights for tp in cla.turning_points])
+
+
+def _vscale_floor_trace(mean: np.ndarray, cov: np.ndarray, kwargs: dict, factor: float) -> np.ndarray | str:
+    """Trace with both slope floors multiplied by ``factor``; return the weights or the error.
+
+    The floors are ``sqrt(eps) / lambda_scale`` for weight slopes and ``sqrt(eps) *
+    mu_scale`` for multiplier slopes; passing ``lambda_scale / factor`` and
+    ``mu_scale * factor`` to the event scan multiplies both by ``factor`` and leaves
+    the event-ordering window alone.
+    """
+    original = cla_module.segment_events
+
+    def scaled(segment, lower, upper, g, h, lam_scale=1.0, mu_scale=1.0):
+        return original(segment, lower, upper, g, h, lam_scale / factor, mu_scale * factor)
+
+    cla_module.segment_events = scaled
+    try:
+        return _vscale_weights(CLA(mean=mean, covariance=cov, **kwargs))
+    except (RuntimeError, ValueError) as exc:
+        return type(exc).__name__
+    finally:
+        cla_module.segment_events = original
+
+
+def check_validate_scaling(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
+    """Invariance under a change of units, and the sensitivity of the trace to the slope floor."""
+    import pandas as pd
+
+    if not hasattr(CLA, "lambda_scale"):
+        print("needs a cvxcla whose event tests are scale-aware (newer than 2.1.0); skipped")
+        return
+    returns = pd.read_parquet(DATA)
+
+    def long_only(n: int) -> dict:
+        return {"lower_bounds": np.zeros(n), "upper_bounds": np.ones(n), "a": np.ones((1, n)), "b": np.ones(1)}
+
+    sub = returns.iloc[:, :_VEXACT_N_ASSETS]
+    mean40, cov40 = sub.mean(axis=0).to_numpy(), np.cov(sub.to_numpy(), rowvar=False)
+    kwargs40 = long_only(_VEXACT_N_ASSETS)
+    reference = CLA(mean=mean40, covariance=cov40, **kwargs40)
+    ref_w = _vscale_weights(reference)
+    ref_lam = np.array([tp.lamb for tp in reference.turning_points])
+    finite = np.isfinite(ref_lam) & (ref_lam > 0)
+
+    print(f"rescaling mu by c and Sigma by s ({_VEXACT_N_ASSETS} S&P 500 assets, {len(ref_w)} turning points):")
+    worst_w = worst_lam = 0.0
+    failures = []
+    for c in _VSCALE_FACTORS:
+        for s in _VSCALE_FACTORS:
+            try:
+                cla = CLA(mean=c * mean40, covariance=s * cov40, **kwargs40)
+            except (RuntimeError, ValueError) as exc:
+                failures.append(f"c={c:.0e}, s={s:.0e}: {type(exc).__name__}")
+                continue
+            w = _vscale_weights(cla)
+            lam = np.array([tp.lamb for tp in cla.turning_points])
+            if w.shape != ref_w.shape:
+                failures.append(f"c={c:.0e}, s={s:.0e}: {len(w)} turning points")
+                continue
+            worst_w = max(worst_w, float(np.max(np.abs(w - ref_w))))
+            worst_lam = max(worst_lam, float(np.max(np.abs(lam[finite] * c / s - ref_lam[finite]) / ref_lam[finite])))
+    print(
+        f"  {len(_VSCALE_FACTORS) ** 2} rescalings, c and s from {_VSCALE_FACTORS[0]:.0e} to {_VSCALE_FACTORS[-1]:.0e}"
+    )
+    print(f"  failures: {', '.join(failures) if failures else 'none'}")
+    print(f"  max |w - w_ref| = {worst_w:.1e}, max relative error of lambda * c / s = {worst_lam:.1e}")
+
+    full_mean, full_cov = returns.mean(axis=0).to_numpy(), np.cov(returns.to_numpy(), rowvar=False)
+    short = returns.iloc[-_KKT_SHORT_WINDOW:]
+    dense, _, problem = _scale_make_problem(np.random.default_rng(_SCALE_SEED), 320, _SCALE_N_FACTORS)
+    cases = [
+        (f"S&P 500, {_VEXACT_N_ASSETS} assets", mean40, cov40, kwargs40),
+        ("S&P 500, 494 assets", full_mean, full_cov, long_only(len(full_mean))),
+        (
+            f"S&P 500, 494 assets, last {_KKT_SHORT_WINDOW} days",
+            short.mean(axis=0).to_numpy(),
+            np.cov(short.to_numpy(), rowvar=False),
+            long_only(len(full_mean)),
+        ),
+        ("factor market, 320 assets", problem["mean"], dense, {k: v for k, v in problem.items() if k != "mean"}),
+    ]
+    print("\nslope floors multiplied by k: max |w - w(k=1)|, or the changed turning-point count")
+    print(f"{'problem':<42}" + "".join(f"{k:>9.0e}" for k in _VSCALE_FLOORS))
+    for label, mean, cov, kwargs in cases:
+        ref = _vscale_floor_trace(mean, cov, kwargs, 1.0)
+        cells = []
+        for factor in _VSCALE_FLOORS:
+            w = _vscale_floor_trace(mean, cov, kwargs, factor)
+            if isinstance(w, str):
+                cells.append(w[:8])
+            elif w.shape != ref.shape:
+                cells.append(f"{len(w)} pts")
+            else:
+                cells.append(f"{np.max(np.abs(w - ref)):.0e}")
+        print(f"{label + f' ({len(ref)})':<42}" + "".join(f"{c:>9}" for c in cells))
+
+
+# ======================================================================================
+# Check: validate-projection  (Appendix A feasibility corrections)
+# ======================================================================================
+def _vproj_trace(mean: np.ndarray, cov: np.ndarray) -> tuple[str, list[tuple[float, float, float]]]:
+    """Trace a long-only problem, recording every feasibility projection that changes a point.
+
+    Returns the outcome and, per correction, (max |w' - w|, relative change of the
+    objective 1/2 w'Sw - lam mu'w, largest constraint residual of w').
+    """
+    n = len(mean)
+    kwargs = {"lower_bounds": np.zeros(n), "upper_bounds": np.ones(n), "a": np.ones((1, n)), "b": np.ones(1)}
+    records: list[tuple[float, float, float]] = []
+    current = [0.0]
+    original_project, original_emit = cla_module.project_feasible, cla_module.CLA._emit
+
+    def objective(w: np.ndarray) -> float:
+        return 0.5 * float(w @ cov @ w) - current[0] * float(mean @ w)
+
+    def recording_project(weights, lower, upper, a, b, g, h, active_ineq):
+        out = original_project(weights, lower, upper, a, b, g, h, active_ineq)
+        if not np.array_equal(out, weights):
+            change = abs(objective(out) - objective(weights)) / max(1.0, abs(objective(weights)))
+            residual = max(
+                float(np.max(np.maximum(lower - out, 0.0))),
+                float(np.max(np.maximum(out - upper, 0.0))),
+                float(np.max(np.abs(a @ out - b))),
+            )
+            records.append((float(np.max(np.abs(out - weights))), change, residual))
+        return out
+
+    def recording_emit(self, lamb, weights, free, active_ineq):
+        current[0] = 0.0 if not np.isfinite(lamb) else float(lamb)
+        original_emit(self, lamb, weights, free, active_ineq)
+
+    cla_module.project_feasible, cla_module.CLA._emit = recording_project, recording_emit
+    try:
+        outcome = f"{len(CLA(mean=mean, covariance=cov, **kwargs))} points"
+    except (RuntimeError, ValueError) as exc:
+        outcome = f"declined ({type(exc).__name__})"
+    finally:
+        cla_module.project_feasible, cla_module.CLA._emit = original_project, original_emit
+    return outcome, records
+
+
+def check_validate_projection(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
+    """Report how often the feasibility projection fires and how large its corrections are."""
+    import pandas as pd
+
+    problems = []
+    for t_obs in _DEGEN_WINDOWS:
+        rng = np.random.default_rng(_DEGEN_SEED)
+        returns = rng.standard_normal((t_obs, _DEGEN_N_ASSETS)) * 0.01 + rng.uniform(0.0, 1e-3, _DEGEN_N_ASSETS)
+        problems.append(
+            (f"synthetic n={_DEGEN_N_ASSETS}, T={t_obs}", returns.mean(axis=0), np.cov(returns, rowvar=False))
+        )
+    sp500 = pd.read_parquet(DATA)
+    for t_obs in _EST_WINDOWS:
+        window = sp500.iloc[-t_obs:]
+        problems.append(
+            (f"S&P 500 n=494, T={t_obs}", window.mean(axis=0).to_numpy(), np.cov(window.to_numpy(), rowvar=False))
+        )
+
+    print(f"{'problem':<28}{'outcome':>22}{'proj.':>7}{'max |dw|':>11}{'max dobj':>11}{'residual':>11}")
+    worst = (0.0, 0.0, 0.0)
+    for label, mean, cov in problems:
+        outcome, records = _vproj_trace(mean, cov)
+        if records:
+            stats = tuple(max(r[i] for r in records) for i in range(3))
+            worst = tuple(max(a, b) for a, b in zip(worst, stats, strict=True))
+            cells = "".join(f"{x:>11.1e}" for x in stats)
+        else:
+            cells = f"{'-':>11}" * 3
+        print(f"{label:<28}{outcome:>22}{len(records):>7d}{cells}")
+    print(
+        f"\nlargest correction {worst[0]:.1e}, objective change {worst[1]:.1e} (relative), "
+        f"constraint residual after projection {worst[2]:.1e}"
+    )
+
+
+# ======================================================================================
 # Orchestration
 # ======================================================================================
 @dataclass
@@ -1945,6 +2135,8 @@ class Target(enum.StrEnum):
     tie_degeneracy = "tie-degeneracy"
     osqp = "osqp"
     validate_kkt = "validate-kkt"
+    validate_scaling = "validate-scaling"
+    validate_projection = "validate-projection"
     estimators = "estimators"
     michaud = "michaud"
     figures = "figures"
@@ -1964,6 +2156,8 @@ STEPS: list[Step] = [
     Step(Target.tie_degeneracy, "Section 10.6 tie-heavy stress envelope", check_tie_degeneracy, False),
     Step(Target.osqp, "Section 10.4 warm-started OSQP grid on the S&P 500", check_osqp, False),
     Step(Target.validate_kkt, "Section 8.6 KKT residuals on every segment", check_validate_kkt, False),
+    Step(Target.validate_scaling, "Section 8.6 units and the slope floor", check_validate_scaling, False),
+    Step(Target.validate_projection, "Appendix A feasibility corrections", check_validate_projection, False),
     Step(Target.estimators, "Figure 8 (estimator_shrinkage.pdf) + estimator table", figure_estimators, False),
     Step(Target.michaud, "Figure 9 (michaud_frontier.pdf) + Section 12 resampling table", figure_michaud, False),
 ]
@@ -1986,6 +2180,8 @@ _CHECK_TARGETS = [
     Target.tie_degeneracy,
     Target.osqp,
     Target.validate_kkt,
+    Target.validate_scaling,
+    Target.validate_projection,
 ]
 
 
@@ -2045,7 +2241,7 @@ _DESCRIPTIONS: dict[Target, str] = {
     Target.estimators: "Fig 8: covariance-estimator shrinkage -> estimator_shrinkage.pdf",
     Target.michaud: "Fig 9: Michaud resampled frontier     -> michaud_frontier.pdf",
     Target.figures: "all seven figures",
-    Target.checks: "all five numerical checks",
+    Target.checks: "all seven numerical checks",
     Target.all: "every figure and every check",
 }
 
