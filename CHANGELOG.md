@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.1.1] - 2026-10-02
+
+### Bug Fixes
+- *(events)* Make the slope floors and the event window scale-aware (#900)
+- *(projection)* Stop alternating projections on convergence; raise ProjectionError on failure (#901)
+
+### Documentation
+- *(experiments)* Sync make_figures.py with the paper's reproduction script (#899)
+- *(experiments)* Add validate-kkt, a KKT-residual certificate of every segment (#902)
+- *(experiments)* Add validate-scaling and validate-projection (#903)
+
+### Maintenance
+- Give ProjectionError and RCOND_FLOOR public homes (#905)
+
 ## [2.1.0] - 2026-10-01
 
 ### New Features
