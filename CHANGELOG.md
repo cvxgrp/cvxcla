@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.3.0] - 2026-10-02
+
+### Documentation
+- *(experiments)* Add validate-factor; pin cvxcla 2.2.0 (#912)
+- *(experiments)* Scaling also writes the timings for n <= 320 (scaling_small.pdf) (#913)
+- *(experiments)* Add validate-conditioning (conditioning study around the 1e-12 guard) (#914)
+
+### Other Changes
+- Docs/experiments sync paper script (#911)
+- Constraint conditioning, PSD factor covariance, and a formal backend contract (#915)
+
 ## [2.2.0] - 2026-10-02
 
 ### New Features
