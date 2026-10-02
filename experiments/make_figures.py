@@ -42,10 +42,11 @@ Targets (artefact in parentheses):
   * ``degeneracy``      -- Figure 5: the degeneracy boundary (degeneracy.pdf).
   * ``tie-degeneracy``  -- Section 10.6 tie-heavy stress envelope (no figure).
   * ``osqp``            -- S&P 500 trace vs a warm-started OSQP grid (no figure).
+  * ``validate-kkt``    -- Section 8.6 KKT residuals on every segment (no figure).
   * ``estimators``      -- Figure 8 + Section 11.1 estimator table (estimator_shrinkage.pdf).
   * ``michaud``         -- Figure 9 + Section 12 resampling table (michaud_frontier.pdf).
   * ``figures``         -- all seven figures.
-  * ``checks``          -- all four numerical checks.
+  * ``checks``          -- all five numerical checks.
   * ``all``             -- every figure and every check.
 
 Beyond ``cvxcla`` itself the steps need a few third-party packages: ``matplotlib`` (all
@@ -1636,6 +1637,289 @@ def check_osqp(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signa
 
 
 # ======================================================================================
+# Check: validate-kkt  (Section 8.6 KKT residuals)
+# ======================================================================================
+_KKT_SHORT_WINDOW = 600  # trading days: more than the 494 assets, but ill-conditioned
+_KKT_TOL = 1e-9  # a weight within this of a bound, or a row within it of h, is active
+_KKT_FRACTIONS = (0.25, 0.5, 0.75)  # interior points tested on every segment
+_KKT_ABOVE = (2.0, 4.0)  # multiples of the first finite lambda tested above it
+_KKT_PASS = 1e-8  # relative residual below which a condition counts as satisfied
+
+
+@dataclass
+class _KKTResiduals:
+    """The largest residual of each KKT condition over the points tested on one trace."""
+
+    points: int = 0
+    vertices: int = 0  # points whose free set does not determine the multipliers
+    primal: float = 0.0
+    stationarity: float = 0.0
+    dual: float = 0.0
+    complementarity: float = 0.0
+
+    def update(self, other: tuple[float, float, float, float, bool]) -> None:
+        """Fold in the four residuals of one test point (and whether it was a vertex)."""
+        self.points += 1
+        self.vertices += int(other[4])
+        self.primal = max(self.primal, other[0])
+        self.stationarity = max(self.stationarity, other[1])
+        self.dual = max(self.dual, other[2])
+        self.complementarity = max(self.complementarity, other[3])
+
+
+def _kkt_point(
+    w: np.ndarray,
+    lam: float,
+    mean: np.ndarray,
+    cov: np.ndarray,
+    lower: np.ndarray,
+    upper: np.ndarray,
+    a: np.ndarray,
+    b: np.ndarray,
+    g: np.ndarray,
+    h: np.ndarray,
+) -> tuple[float, float, float, float, bool]:
+    """KKT residuals of ``min 1/2 w'Sw - lam mu'w`` s.t. ``Aw = b, Gw <= h, l <= w <= u`` at w.
+
+    The certificate does not use the CLA's own multipliers or partition. The active
+    set is read off w (a weight within _KKT_TOL of a bound is blocked, a row within it
+    of h is active). When the free coordinates determine the equality and active-row
+    multipliers (their rows have full rank there), these solve stationarity on the
+    free coordinates by least squares and the bound multipliers are the remaining
+    gradient on the blocked ones, so dual feasibility is tested on its own. At a
+    vertex they are not unique (on the maximum-return vertex no weight is free), and
+    the test asks instead whether sign-feasible multipliers exist: a bounded least
+    squares fit of stationarity over all coordinates with eta, and the bound
+    multipliers, >= 0, whose residual is the distance to a KKT point.
+
+    Returns (primal infeasibility, stationarity, dual infeasibility, complementarity,
+    vertex); the middle three are relative to the scale max(1, |S w|, lam |mu|).
+    """
+    at_lower = np.abs(w - lower) <= _KKT_TOL
+    at_upper = (np.abs(w - upper) <= _KKT_TOL) & ~at_lower
+    free = ~(at_lower | at_upper)
+    slack = g @ w - h
+    active = np.abs(slack) <= _KKT_TOL
+
+    grad = cov @ w - lam * mean
+    scale = max(1.0, float(np.max(np.abs(cov @ w))), lam * float(np.max(np.abs(mean))))
+    rows = np.vstack([a, g[active]])
+    m = a.shape[0]
+    vertex = rows.shape[0] > 0 and np.linalg.matrix_rank(rows[:, free]) < rows.shape[0]
+    if not vertex:
+        mult = np.linalg.lstsq(rows[:, free].T, -grad[free], rcond=None)[0] if rows.shape[0] else np.zeros(0)
+        full = grad + rows.T @ mult  # gradient of the Lagrangian without the bound terms
+        nu_lower = full[at_lower]  # multiplier of l <= w: must be >= 0
+        nu_upper = -full[at_upper]  # multiplier of w <= u: must be >= 0
+        eta = mult[m:]  # multipliers of the active inequality rows: >= 0
+        stationarity = float(np.max(np.abs(full[free]), initial=0.0)) / scale
+    else:
+        from scipy.optimize import lsq_linear
+
+        eye = np.eye(len(w))
+        system = np.hstack([rows.T, -eye[:, at_lower], eye[:, at_upper]])
+        lower_b = np.concatenate([np.full(m, -np.inf), np.zeros(system.shape[1] - m)])
+        # BVLS is an exact active-set method; the default trust-region solver stops
+        # at its tolerance, ~1e-8 here, well above the residuals being measured.
+        fit = lsq_linear(system, -grad, bounds=(lower_b, np.full(system.shape[1], np.inf)), method="bvls", tol=1e-15)
+        eta = fit.x[m : rows.shape[0]]
+        nu_lower = fit.x[rows.shape[0] : rows.shape[0] + int(at_lower.sum())]
+        nu_upper = fit.x[rows.shape[0] + int(at_lower.sum()) :]
+        stationarity = float(np.max(np.abs(grad + system @ fit.x))) / scale
+
+    primal = max(
+        float(np.max(np.maximum(lower - w, 0.0), initial=0.0)),
+        float(np.max(np.maximum(w - upper, 0.0), initial=0.0)),
+        float(np.max(np.abs(a @ w - b), initial=0.0)),
+        float(np.max(np.maximum(slack, 0.0), initial=0.0)),
+    )
+    dual = (
+        max(
+            float(np.max(np.maximum(-nu_lower, 0.0), initial=0.0)),
+            float(np.max(np.maximum(-nu_upper, 0.0), initial=0.0)),
+            float(np.max(np.maximum(-eta, 0.0), initial=0.0)),
+        )
+        / scale
+    )
+    complementarity = (
+        max(
+            float(np.max(np.abs(nu_lower * (w - lower)[at_lower]), initial=0.0)),
+            float(np.max(np.abs(nu_upper * (upper - w)[at_upper]), initial=0.0)),
+            float(np.max(np.abs(eta * slack[active]), initial=0.0)),
+        )
+        / scale
+    )
+    return primal, stationarity, dual, complementarity, vertex
+
+
+def _kkt_trace_points(cla: CLA) -> list[tuple[float, np.ndarray]]:
+    """Return (lambda, w) at interior points of every segment of a trace.
+
+    Between consecutive turning points the weights are affine in lambda, so the
+    interior points are interpolations; above the first finite turning point the
+    portfolio is the constant maximum-return vertex.
+    """
+    points = []
+    tps = cla.turning_points
+    finite = [tp.lamb for tp in tps if np.isfinite(tp.lamb)]
+    for hi, lo in pairwise(tps):
+        if not np.isfinite(hi.lamb):
+            points += [(c * finite[0], hi.weights) for c in _KKT_ABOVE]
+            continue
+        if hi.lamb - lo.lamb <= 1e-12 * max(1.0, abs(hi.lamb)):
+            continue  # a zero-length step at a tie
+        for frac in _KKT_FRACTIONS:
+            points.append((lo.lamb + frac * (hi.lamb - lo.lamb), lo.weights + frac * (hi.weights - lo.weights)))
+    return points
+
+
+def _kkt_check(cla: CLA, mean: np.ndarray, cov: np.ndarray, kwargs: dict) -> _KKTResiduals:
+    """KKT residuals over a trace of the problem with box, equality and inequality rows."""
+    n = len(mean)
+    g = np.zeros((0, n)) if kwargs.get("g") is None else np.atleast_2d(kwargs["g"])
+    h = np.zeros(0) if kwargs.get("h") is None else np.asarray(kwargs["h"], dtype=float)
+    res = _KKTResiduals()
+    for lam, w in _kkt_trace_points(cla):
+        res.update(
+            _kkt_point(
+                w, lam, mean, cov, kwargs["lower_bounds"], kwargs["upper_bounds"], kwargs["a"], kwargs["b"], g, h
+            )
+        )
+    return res
+
+
+def _kkt_check_leverage(cla: CLA, mean: np.ndarray, cov: np.ndarray, kwargs: dict, cap: float) -> _KKTResiduals:
+    """KKT residuals of the lifted long/short program for a gross-exposure cap.
+
+    Every asset whose box straddles zero is split into legs x+ = max(w, 0) and
+    x- = max(-w, 0), so ``||w||_1 <= cap`` becomes the linear row ``1'x <= cap`` and
+    the residuals are those of the lifted problem, built here independently of the
+    CLA's own lift.
+    """
+    lower, upper = kwargs["lower_bounds"], kwargs["upper_bounds"]
+    n = len(mean)
+    legs = [(i, 1.0) for i in range(n) if upper[i] > 0] + [(i, -1.0) for i in range(n) if lower[i] < 0]
+    lift = np.zeros((n, len(legs)))
+    for j, (i, sign) in enumerate(legs):
+        lift[i, j] = sign
+    leg_upper = np.array([upper[i] if sign > 0 else -lower[i] for i, sign in legs])
+    a_l = kwargs["a"] @ lift
+    g_l = np.ones((1, len(legs)))
+    h_l = np.array([cap])
+    res = _KKTResiduals()
+    for lam, w in _kkt_trace_points(cla):
+        x = np.array([max(sign * w[i], 0.0) for i, sign in legs])
+        res.update(
+            _kkt_point(
+                x, lam, lift.T @ mean, lift.T @ cov @ lift, np.zeros(len(legs)), leg_upper, a_l, kwargs["b"], g_l, h_l
+            )
+        )
+    return res
+
+
+def check_validate_kkt(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
+    """Report the largest KKT residual of each condition over every segment of several traces."""
+    import pandas as pd
+
+    from cvxcla import IncrementalDenseCovariance
+
+    returns = pd.read_parquet(DATA)
+    cases = []
+
+    def long_only(n: int) -> dict:
+        return {"lower_bounds": np.zeros(n), "upper_bounds": np.ones(n), "a": np.ones((1, n)), "b": np.ones(1)}
+
+    sub = returns.iloc[:, :_VEXACT_N_ASSETS]
+    mean40, cov40 = sub.mean(axis=0).to_numpy(), np.cov(sub.to_numpy(), rowvar=False)
+    cases.append(("S&P 500, 40 assets", mean40, cov40, cov40, long_only(_VEXACT_N_ASSETS), None))
+
+    full_mean, full_cov = returns.mean(axis=0).to_numpy(), np.cov(returns.to_numpy(), rowvar=False)
+    n_full = len(full_mean)
+    cases.append(("S&P 500, 494 assets", full_mean, full_cov, full_cov, long_only(n_full), None))
+    cases.append(
+        (
+            "S&P 500, 494 assets, incremental backend",
+            full_mean,
+            full_cov,
+            IncrementalDenseCovariance(full_cov),
+            long_only(n_full),
+            None,
+        )
+    )
+    short = returns.iloc[-_KKT_SHORT_WINDOW:]
+    short_mean, short_cov = short.mean(axis=0).to_numpy(), np.cov(short.to_numpy(), rowvar=False)
+    cases.append(
+        (
+            f"S&P 500, 494 assets, last {_KKT_SHORT_WINDOW} days",
+            short_mean,
+            short_cov,
+            short_cov,
+            long_only(n_full),
+            None,
+        )
+    )
+
+    dense, factor, problem = _scale_make_problem(np.random.default_rng(_SCALE_SEED), 320, _SCALE_N_FACTORS)
+    factor_kwargs = {k: v for k, v in problem.items() if k != "mean"}
+    cases.append(("factor market, 320 assets, factor backend", problem["mean"], dense, factor, factor_kwargs, None))
+
+    rng = np.random.default_rng(_VCON_SEED)
+    cov30, mean30, sector = _vcon_make_market(rng)
+    ones = np.ones((1, _VCON_N_ASSETS))
+    char = rng.standard_normal(_VCON_N_ASSETS)
+    neutral = long_only(_VCON_N_ASSETS) | {"a": np.vstack([ones, char[None, :]]), "b": np.array([1.0, char.mean()])}
+    cases.append(("30 assets, budget + neutrality row", mean30, cov30, cov30, neutral, None))
+    caps = long_only(_VCON_N_ASSETS) | {
+        "g": np.array([(sector == s).astype(float) for s in range(_VCON_N_SECTORS)]),
+        "h": np.full(_VCON_N_SECTORS, _VCON_SECTOR_CAP),
+    }
+    cases.append(("30 assets, budget + sector caps", mean30, cov30, cov30, caps, None))
+    book = {
+        "lower_bounds": np.full(_VCON_N_ASSETS, -_VCON_SHORT),
+        "upper_bounds": np.ones(_VCON_N_ASSETS),
+        "a": ones,
+        "b": np.ones(1),
+    }
+    cases.append(("30 assets, 130/30 gross-exposure cap", mean30, cov30, cov30, book, _VCON_LEVERAGE))
+
+    print(
+        f"{'problem':<42}{'cond':>9}{'points':>8}{'vertex':>7}{'primal':>10}{'station.':>10}{'dual':>10}{'compl.':>10}"
+    )
+    worst = 0.0
+    for label, mean, cov, covariance, kwargs, cap in cases:
+        cla = CLA(mean=mean, covariance=covariance, leverage=cap, **kwargs)
+        res = _kkt_check(cla, mean, cov, kwargs) if cap is None else _kkt_check_leverage(cla, mean, cov, kwargs, cap)
+        worst = max(worst, res.primal, res.stationarity, res.dual, res.complementarity)
+        print(
+            f"{label:<42}{np.linalg.cond(cov):>9.1e}{res.points:>8d}{res.vertices:>7d}{res.primal:>10.1e}"
+            f"{res.stationarity:>10.1e}{res.dual:>10.1e}{res.complementarity:>10.1e}"
+        )
+    # The certificate must also detect errors: feed it wrong points from the first trace.
+    mean, cov, kwargs = cases[0][1], cases[0][2], cases[0][4]
+    points = _kkt_trace_points(CLA(mean=mean, covariance=cov, **kwargs))
+    lam, w = points[len(points) // 2]
+    no_rows = (np.zeros((0, len(w))), np.zeros(0))
+    bounds = (kwargs["lower_bounds"], kwargs["upper_bounds"], kwargs["a"], kwargs["b"], *no_rows)
+    inside = np.flatnonzero((w > 1e-6) & (w < 1.0 - 1e-6))
+    shift = np.zeros_like(w)
+    shift[inside[0]], shift[inside[1]] = 1e-3, -1e-3  # stays on the budget
+    wrong = {
+        "lambda of another segment": (points[len(points) // 4][0], w),
+        "weights shifted by 1e-3": (lam, w + shift),
+    }
+    print("\nsensitivity (largest relative residual of the four conditions):")
+    for name, (lam_x, w_x) in wrong.items():
+        print(f"  {name:<28}{max(_kkt_point(w_x, lam_x, mean, cov, *bounds)[:4]):.1e}")
+    print(
+        f"\nprimal: absolute; stationarity, dual and complementarity: relative to max(1, |Sw|, lam|mu|)."
+        f"\nvertex: points whose free set does not determine the multipliers; there stationarity is"
+        f"\nthe distance to a KKT point under sign-feasible multipliers, so dual feasibility holds by"
+        f"\nconstruction and a violation would show up as stationarity."
+        f"\nworst residual {worst:.1e}  ->  {'PASS' if worst < _KKT_PASS else 'FAIL'} (threshold {_KKT_PASS:.0e})"
+    )
+
+
+# ======================================================================================
 # Orchestration
 # ======================================================================================
 @dataclass
@@ -1660,6 +1944,7 @@ class Target(enum.StrEnum):
     degeneracy = "degeneracy"
     tie_degeneracy = "tie-degeneracy"
     osqp = "osqp"
+    validate_kkt = "validate-kkt"
     estimators = "estimators"
     michaud = "michaud"
     figures = "figures"
@@ -1678,6 +1963,7 @@ STEPS: list[Step] = [
     Step(Target.degeneracy, "Figure 5 (degeneracy.pdf)", figure_degeneracy, False),
     Step(Target.tie_degeneracy, "Section 10.6 tie-heavy stress envelope", check_tie_degeneracy, False),
     Step(Target.osqp, "Section 10.4 warm-started OSQP grid on the S&P 500", check_osqp, False),
+    Step(Target.validate_kkt, "Section 8.6 KKT residuals on every segment", check_validate_kkt, False),
     Step(Target.estimators, "Figure 8 (estimator_shrinkage.pdf) + estimator table", figure_estimators, False),
     Step(Target.michaud, "Figure 9 (michaud_frontier.pdf) + Section 12 resampling table", figure_michaud, False),
 ]
@@ -1699,6 +1985,7 @@ _CHECK_TARGETS = [
     Target.validate_constraints,
     Target.tie_degeneracy,
     Target.osqp,
+    Target.validate_kkt,
 ]
 
 
@@ -1758,7 +2045,7 @@ _DESCRIPTIONS: dict[Target, str] = {
     Target.estimators: "Fig 8: covariance-estimator shrinkage -> estimator_shrinkage.pdf",
     Target.michaud: "Fig 9: Michaud resampled frontier     -> michaud_frontier.pdf",
     Target.figures: "all seven figures",
-    Target.checks: "all four numerical checks",
+    Target.checks: "all five numerical checks",
     Target.all: "every figure and every check",
 }
 
