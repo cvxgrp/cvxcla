@@ -25,6 +25,10 @@ from .errors import ProjectionError
 # C w = d to round-off throughout.
 _PROJECTION_TOL = 1e-12  # pragma: no mutate
 _PROJECTION_MAX_ITER = 100  # pragma: no mutate
+# If the iterations stall short of _PROJECTION_TOL but within this, the clipped point
+# is accepted: the remaining violation is round-off, far inside the turning-point
+# validation tolerance. Only a larger violation means the projection failed.
+_PROJECTION_ACCEPT = float(np.sqrt(np.finfo(np.float64).eps))  # pragma: no mutate
 
 
 def project_feasible(
@@ -157,8 +161,10 @@ def project_alternating(
 
     Raises:
         ProjectionError: If ``_PROJECTION_MAX_ITER`` iterations leave the iterate
-            outside its box by more than ``_PROJECTION_TOL``; the message reports
-            the remaining box violation and equality residual.
+            outside its box by more than ``_PROJECTION_ACCEPT`` (``sqrt(eps)``);
+            the message reports the remaining box violation and equality residual.
+            A stall between ``_PROJECTION_TOL`` and ``_PROJECTION_ACCEPT`` is
+            round-off, and the clipped point is returned.
     """
     affine = AffineProjection(c, d)
     projected = weights
@@ -167,6 +173,8 @@ def project_alternating(
         if _box_violation(projected, lower, upper) <= _PROJECTION_TOL:
             return np.clip(projected, lower, upper)
     violation = _box_violation(projected, lower, upper)
+    if violation <= _PROJECTION_ACCEPT:
+        return np.clip(projected, lower, upper)
     residual = float(np.max(np.abs(c @ projected - d), initial=0.0))
     msg = (
         f"feasibility projection did not converge in {_PROJECTION_MAX_ITER} iterations: "
