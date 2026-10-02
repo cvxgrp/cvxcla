@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.3.2] - 2026-10-02
+
+### Bug Fixes
+- Copy array inputs into read-only arrays at construction (#924)
+
 ## [2.3.1] - 2026-10-02
 
 ### Bug Fixes
