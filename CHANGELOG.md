@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.3.4] - 2026-10-02
+
+### Bug Fixes
+- *(experiments)* Draw Figure 1 against variance with straight segments, as in the paper (#929)
+
 ## [2.3.3] - 2026-10-02
 
 ### Maintenance
