@@ -12,6 +12,7 @@ from numpy.typing import NDArray
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .errors import DegenerateProblemError, InfeasibleProblemError, NumericalError
+from .operators import orthonormal_rows
 from .types import TurningPoint
 
 
@@ -299,6 +300,40 @@ def _complete_free_set(
     return free
 
 
+# Equality rows whose row-normalised reciprocal condition number is below this are
+# nearly dependent enough that the linear program enforces the direction they carry
+# only loosely; they are restated in an orthonormal basis first. Above it the rows go
+# in as given: at a degenerate vertex the duals HiGHS reports, which resolve the
+# vertex (see classify_vertex), depend on how the rows are written.
+_LP_ROW_RCOND = 1e-6  # pragma: no mutate
+
+
+def _lp_equalities(a: NDArray[np.float64], b: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """The equality system handed to the linear program: ``(a, b)``, or orthonormal rows if nearly dependent.
+
+    Two nearly parallel rows (``1^T w = 1`` and ``(1 + eps v)^T w = 1``) carry the
+    constraint ``v^T w = 0`` only at scale ``eps``, and an absolute feasibility
+    tolerance enforces it to ``tol / eps``; from ``eps ~ 1e-7`` the vertex comes back
+    infeasible for the hidden row and is misread as degenerate. The orthonormal form
+    ``Q^T w = R^{-T} b`` (:func:`cvxcla.operators.orthonormal_rows`) has the same
+    feasible set with every direction at unit scale.
+
+    Args:
+        a: Equality-constraint matrix (``m x n``).
+        b: Equality-constraint right-hand side (length ``m``).
+
+    Returns:
+        The rows and right-hand side to pass to ``linprog``.
+    """
+    if a.shape[0] < 2:
+        return a, b
+    norms = np.linalg.norm(a, axis=1, keepdims=True)
+    sv = np.linalg.svd(a / np.where(norms > 0, norms, 1.0), compute_uv=False)
+    if sv[-1] >= _LP_ROW_RCOND * sv[0]:
+        return a, b
+    return orthonormal_rows(a, b)
+
+
 def _solve_max_return_lp(
     mean: NDArray[np.float64],
     lower_bounds: NDArray[np.float64],
@@ -333,10 +368,11 @@ def _solve_max_return_lp(
         NumericalError: If HiGHS stops for another reason.
     """
     has_ineq = g.shape[0] > 0
+    a_eq, b_eq = _lp_equalities(np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64))
     result = linprog(
         c=-np.asarray(mean, dtype=np.float64),
-        A_eq=np.asarray(a, dtype=np.float64),
-        b_eq=np.asarray(b, dtype=np.float64),
+        A_eq=a_eq,
+        b_eq=b_eq,
         A_ub=g if has_ineq else None,
         b_ub=h if has_ineq else None,
         bounds=list(zip(lower_bounds, upper_bounds, strict=True)),
