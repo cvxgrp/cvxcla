@@ -130,7 +130,9 @@ class InequalityConstrained:
         return self.dimension + int(self.g_matrix.shape[0])
 
 
-def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tuple[int, int, float] | None:
+def select_next_event(
+    l_mat: NDArray[np.float64], lam: float, tol: float, scale: float = 1.0
+) -> tuple[int, int, float] | None:
     """Pick the next breakpoint from the event matrix, or ``None`` to stop.
 
     The current segment is valid only for ``lambda`` at or below the current value
@@ -156,6 +158,9 @@ def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tup
         l_mat: The ``(n, k)`` matrix of candidate critical ``lambda`` values.
         lam: The current (upper) ``lambda`` bound on valid events.
         tol: Upper bound on the relative event-ordering tolerance.
+        scale: The natural scale of ``lambda``. Near ``lambda = 0`` the window is
+            taken relative to this scale rather than to ``|lambda|``, so it
+            does not shrink to nothing; ``1.0`` reproduces an absolute floor.
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
@@ -163,7 +168,7 @@ def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tup
     """
     l_mat = l_mat.copy()  # do not mutate the caller's matrix
     rate = min(tol, 1e-10)  # roundoff-scale relative window; tol is only an upper bound
-    l_mat[l_mat > lam + rate * max(1.0, abs(lam))] = -np.inf  # pragma: no mutate
+    l_mat[l_mat > lam + rate * max(scale, abs(lam))] = -np.inf  # pragma: no mutate
 
     lam_max = np.max(l_mat)
     # An event at lambda = 0 coincides with the endpoint ``finish`` records, so it
@@ -173,7 +178,7 @@ def select_next_event(l_mat: NDArray[np.float64], lam: float, tol: float) -> tup
     if lam_max <= 0:
         return None
 
-    tied = np.argwhere(l_mat >= lam_max - rate * max(1.0, abs(lam_max)))  # pragma: no mutate
+    tied = np.argwhere(l_mat >= lam_max - rate * max(scale, abs(lam_max)))  # pragma: no mutate
     sec, direction = tied[0]
     # lambda is non-increasing along the path: clamp away any roundoff overshoot.
     return int(sec), int(direction), float(min(lam, l_mat[sec, direction]))
@@ -204,6 +209,7 @@ def trace(problem: ParametricProblem) -> None:
     # that exposes only ``dimension`` (no inequality rows) falls back to n.
     path_coords = getattr(problem, "event_dimension", problem.dimension)  # pragma: no mutate
     max_iterations = 100 * (path_coords + 1)  # pragma: no mutate
+    scale = float(getattr(problem, "lambda_scale", 1.0))
     iterations = 0  # pragma: no mutate
 
     while True:  # pragma: no mutate
@@ -213,7 +219,7 @@ def trace(problem: ParametricProblem) -> None:
             raise RuntimeError(msg)  # pragma: no mutate
 
         segment = problem.segment(state)
-        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol)
+        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale)
         if event is None:
             problem.finish(state, segment)
             return

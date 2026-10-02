@@ -249,6 +249,34 @@ class CLA(InequalityConstrained):
             state,
         )
 
+    @cached_property
+    def _scales(self) -> tuple[float, float]:
+        """Return ``(lambda_scale, mu_scale)``, the natural units of the problem.
+
+        ``mu_scale`` is ``max |mu|`` and the covariance scale is ``max |Sigma 1| / n``,
+        one product with the equal-weight portfolio, so it is available for any
+        backend. Their ratio is the scale of ``lambda``, at which risk and return
+        balance. Both are positively homogeneous: rescaling ``mu`` by ``c`` and
+        ``Sigma`` by ``s`` rescales them by ``c`` and ``s / c``, which is what makes
+        the event tests invariant under a change of units. A zero scale (``mu = 0``
+        or ``Sigma = 0``) falls back to ``1``.
+        """
+        n = self.dimension
+        mu_scale = float(np.max(np.abs(self.mean))) if n else 0.0
+        cov_scale = float(np.max(np.abs(self.covariance_operator.matvec(np.ones(n))))) / n if n else 0.0
+        mu_scale = mu_scale if mu_scale > 0 else 1.0
+        cov_scale = cov_scale if cov_scale > 0 else 1.0
+        return cov_scale / mu_scale, mu_scale
+
+    @property
+    def lambda_scale(self) -> float:
+        """The natural scale of ``lambda`` (covariance scale over return scale).
+
+        The path tracer takes its event-ordering window relative to this scale near
+        ``lambda = 0`` (see :func:`cvxcla.pathtracer.select_next_event`).
+        """
+        return self._scales[0]
+
     def event_matrix(self, state: TurningPoint, segment: Segment) -> NDArray[np.float64]:  # noqa: ARG002
         """Return the ``(n + p, 4)`` event matrix for ``segment`` (see :func:`cvxcla._events.segment_events`).
 
@@ -257,7 +285,10 @@ class CLA(InequalityConstrained):
         event. ``state`` is part of the uniform ``ParametricProblem`` signature;
         the CLA does not need it because ``segment`` already bundles the masks.
         """
-        return segment_events(segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector)
+        lam_scale, mu_scale = self._scales
+        return segment_events(
+            segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector, lam_scale, mu_scale
+        )
 
     def step(self, state: TurningPoint, segment: Segment, sec: int, direction: int, lam: float) -> TurningPoint:
         """Emit the turning point at ``lam`` after flipping the activity at ``sec``.
