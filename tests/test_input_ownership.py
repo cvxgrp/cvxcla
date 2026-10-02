@@ -7,6 +7,7 @@ from cvxcla import CLA, FactorCovariance
 
 
 def _problem(n: int = 6, seed: int = 0) -> dict[str, np.ndarray]:
+    """Return the keyword arguments of a small long-only problem with two inequality rows."""
     rng = np.random.default_rng(seed)
     x = rng.standard_normal((3 * n, n))
     return {
