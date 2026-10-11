@@ -4,10 +4,11 @@ title: cvxcla
 abstract: >-
   A Python implementation of Markowitz's Critical Line Algorithm (CLA), which
   computes the entire efficient frontier of a portfolio-optimization problem
-  exactly, as a finite list of turning points, under arbitrary linear equality
-  constraints and bounds on the weights. Covariance is consumed through an
-  operator protocol, so dense, Gram and diagonal-plus-low-rank factor models
-  are all traced without ever forming an n-by-n matrix. The same parametric
+  exactly, as a finite list of turning points, under linear equality and
+  inequality constraints, bounds on the weights and an optional cap on gross
+  exposure. Covariance is consumed through an operator protocol, so dense,
+  Gram and diagonal-plus-low-rank factor models are all traced without ever
+  forming an n-by-n matrix. The same parametric
   active-set engine also traces the LASSO regularisation path, including
   general inequality constraints and the non-negative LASSO.
 type: software
@@ -16,14 +17,9 @@ authors:
     family-names: Schmelzer
     email: thomas.schmelzer@gmail.com
     affiliation: Jebel Quant Research
-  - given-names: Philipp
-    family-names: Schiele
-    email: pschiele@stanford.edu
 repository-code: "https://github.com/cvxgrp/cvxcla"
 url: "https://www.cvxgrp.org/cvxcla"
 license: MIT
-version: 2.0.0
-date-released: "2026-08-31"
 doi: 10.5281/zenodo.22209208
 identifiers:
   - type: doi
@@ -31,11 +27,6 @@ identifiers:
     description: >-
       Concept DOI, which always resolves to the most recent release. Cite this
       when referring to cvxcla in general.
-  - type: doi
-    value: 10.5281/zenodo.22209209
-    description: >-
-      Version DOI for release v2.0.0. Cite this when the exact release used
-      matters for reproducibility.
 keywords:
   - portfolio optimization
   - critical line algorithm
