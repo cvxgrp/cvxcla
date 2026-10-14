@@ -26,7 +26,7 @@ authors = [{name = "Thomas Schmelzer", email = "thomas.schmelzer@gmail.com"}]
 [project.optional-dependencies]
 plot = [
     "plotly>=6.0.1",
-    "kaleido==1.4.0",
+    "kaleido==1.5.0",
 ]
 
 [project.urls]
@@ -37,7 +37,7 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 [dependency-groups]
 dev = [
     "loguru==0.7.3",
-    "mosek==11.2.5",
+    "mosek==11.2.6",
     "marimo==0.25.1",
     "pandas==3.0.6",
     # Portfolio analytics for the notebooks/experiments: turns a frontier
