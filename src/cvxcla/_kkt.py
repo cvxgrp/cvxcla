@@ -85,6 +85,8 @@ def solve_kkt(
     NDArray[np.float64],
     NDArray[np.float64],
     NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
 ]:
     """Solve the reduced KKT system for the current critical-line segment.
 
@@ -110,12 +112,14 @@ def solve_kkt(
         active_ineq: Boolean mask (length ``p``) of the active inequality rows.
 
     Returns:
-        ``(r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta)``: the affine
-        segment ``w(lam) = r_alpha + lam * r_beta``, the box-multiplier
-        gradients ``gamma``/``delta`` that drive the leave-a-bound events, and
-        the affine inequality multipliers ``eta_alpha + lam * eta_beta``
-        (length ``p``, non-zero only on active rows) that drive the
-        release-a-row events.
+        ``(r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta)``:
+        the affine segment ``w(lam) = r_alpha + lam * r_beta``, the box-multiplier
+        gradients ``gamma``/``delta`` that drive the leave-a-bound events, the
+        affine inequality multipliers ``eta_alpha + lam * eta_beta`` (length ``p``,
+        non-zero only on active rows) that drive the release-a-row events, and the
+        affine equality multipliers ``nu_alpha + lam * nu_beta`` (length ``m``).
+        Together they satisfy ``Sigma w - lam mean + A^T nu + G^T eta = 0`` on the
+        free assets.
     """
     m = a.shape[0]
     ns = len(mean)
@@ -157,7 +161,7 @@ def solve_kkt(
     eta_beta = np.zeros(p)
     eta_alpha[active_ineq] = nu_alpha[m:]
     eta_beta[active_ineq] = nu_beta[m:]
-    return r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta
+    return r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha[:m], nu_beta[:m]
 
 
 class Segment(NamedTuple):
@@ -174,6 +178,8 @@ class Segment(NamedTuple):
     multiplier crosses zero) and the active-row mask ``active_ineq``. The slacks
     that drive an *inactive* row becoming active are recomputed from
     ``r_alpha``/``r_beta`` directly in :func:`cvxcla._events.ineq_event_ratios`.
+    The equality multipliers ``nu_alpha + lam * nu_beta`` are carried so the
+    turning points can record them.
     """
 
     r_alpha: NDArray[np.float64]
@@ -186,6 +192,8 @@ class Segment(NamedTuple):
     active_ineq: NDArray[np.bool_]
     eta_alpha: NDArray[np.float64]
     eta_beta: NDArray[np.float64]
+    nu_alpha: NDArray[np.float64]
+    nu_beta: NDArray[np.float64]
 
 
 def guard_active_rows(c: NDArray[np.float64], free_in: NDArray[np.bool_], lamb: float) -> None:
@@ -272,7 +280,20 @@ def critical_segment(
         state.free, state.weights, lower, upper, tol, allow_empty=rows.shape[0] == 0
     )
     guard_active_rows(rows, free_in, state.lamb)
-    r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+    r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta = solve_kkt(
         cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq
     )
-    return Segment(r_alpha, r_beta, gamma, delta, at_upper, at_lower, free_in, state.active_ineq, eta_alpha, eta_beta)
+    return Segment(
+        r_alpha,
+        r_beta,
+        gamma,
+        delta,
+        at_upper,
+        at_lower,
+        free_in,
+        state.active_ineq,
+        eta_alpha,
+        eta_beta,
+        nu_alpha,
+        nu_beta,
+    )

@@ -7,7 +7,7 @@ set of assets at their bounds changes.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import cached_property
 from typing import cast
 
@@ -370,8 +370,13 @@ class CLA(InequalityConstrained):
         return np.inf, first
 
     def segment(self, state: TurningPoint) -> Segment:
-        """Solve the reduced KKT system for the critical-line segment at ``state``."""
-        return critical_segment(
+        """Solve the reduced KKT system for the critical-line segment at ``state``.
+
+        The first segment also completes the first turning point, recorded before
+        any solve: at ``lambda = inf`` it gets the multiplier slopes ``nu_beta`` and
+        ``eta_beta`` (see :class:`cvxcla.types.TurningPoint`).
+        """
+        segment = critical_segment(
             self.covariance_operator,
             self.mean,
             self.a,
@@ -383,6 +388,9 @@ class CLA(InequalityConstrained):
             self.tol,
             state,
         )
+        if state.lamb == np.inf:
+            self.turning_points[0] = replace(state, nu=segment.nu_beta, eta=segment.eta_beta)
+        return segment
 
     @cached_property
     def _scales(self) -> tuple[float, float]:
@@ -452,13 +460,20 @@ class CLA(InequalityConstrained):
         else:
             active_ineq = active_ineq.copy()
             active_ineq[sec - n] = direction == 0
-        guard = not self.ends_trace(sec, direction)
-        self._emit(lam, segment.r_alpha + lam * segment.r_beta, free, active_ineq, guard=guard)
+        self._emit(
+            lam,
+            segment.r_alpha + lam * segment.r_beta,
+            free,
+            active_ineq,
+            segment.nu_alpha + lam * segment.nu_beta,
+            segment.eta_alpha + lam * segment.eta_beta,
+            guard=not self.ends_trace(sec, direction),
+        )
         return self.turning_points[-1]
 
     def finish(self, state: TurningPoint, segment: Segment) -> None:
         """Emit the minimum-variance endpoint at ``lambda = 0``."""
-        self._emit(0.0, segment.r_alpha, state.free, state.active_ineq)
+        self._emit(0.0, segment.r_alpha, state.free, state.active_ineq, segment.nu_alpha, segment.eta_alpha)
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
@@ -510,6 +525,8 @@ class CLA(InequalityConstrained):
         weights: NDArray[np.float64],
         free: NDArray[np.bool_],
         active_ineq: NDArray[np.bool_],
+        nu: NDArray[np.float64],
+        eta: NDArray[np.float64],
         guard: bool = True,
     ) -> None:
         """Build and store a turning point, projecting away sub-tolerance round-off.
@@ -542,7 +559,7 @@ class CLA(InequalityConstrained):
             self.h_vector,
             active_ineq,
         )
-        self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq))
+        self._append(TurningPoint(lamb=lamb, weights=weights, free=free, active_ineq=active_ineq, nu=nu, eta=eta))
 
     @property
     def frontier(self) -> Frontier:
