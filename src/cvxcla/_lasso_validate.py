@@ -101,8 +101,8 @@ def validate_constraints(
 
     Raises:
         ValueError: If only one of ``g``/``h`` is given, their shapes are
-            inconsistent with the problem dimension, or any ``h`` entry is not
-            strictly positive (which would make ``beta = 0`` infeasible).
+            inconsistent with the problem dimension, or an ``h`` entry is negative
+            (which would make ``beta = 0`` infeasible) or in ``(0, tol]``.
     """
     if g is None and h is None:
         return
@@ -128,13 +128,17 @@ def _validate_constraint_shapes(
 
     Raises:
         ValueError: If ``g``'s shape is inconsistent with ``h`` and the problem
-            dimension, or any ``h`` entry is not strictly positive.
+            dimension, any ``h`` entry is negative (``beta = 0`` would be infeasible), or
+            one lies in ``(0, tol]``, too close to zero to start from and not zero.
     """
     if g.shape != (h.shape[0], dimension):
         msg = f"g must have shape ({h.shape[0]}, {dimension}), got {g.shape}"
         raise ValueError(msg)
-    if np.any(h <= tol):
-        msg = "h must be strictly positive so beta = 0 is feasible (equality/zero-h needs a feasibility seed)"
+    if np.any(h < 0):
+        msg = "h must be nonnegative so beta = 0 is feasible"
+        raise ValueError(msg)
+    if np.any((h > 0) & (h <= tol)):
+        msg = f"h entries in (0, {tol:g}] are too close to zero to start from; pass 0 for a homogeneous row"
         raise ValueError(msg)
 
 

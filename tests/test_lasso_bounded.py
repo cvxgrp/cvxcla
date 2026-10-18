@@ -8,11 +8,15 @@ certificate of its optimality conditions at and between its breakpoints, and tha
 constraints it reproduces the homotopy's breakpoints.
 """
 
+import itertools
+
 import numpy as np
 import pytest
 from scipy.optimize import linprog
 
+import cvxcla._lasso_bounded as bounded
 from cvxcla import Lasso
+from cvxcla._lasso_bounded import kkt_violation
 from cvxcla.errors import DegenerateProblemError, InfeasibleProblemError
 
 N = 6
@@ -294,3 +298,115 @@ class TestBuilder:
         a = np.vstack([np.ones(N), np.arange(N, dtype=float) - 2.5])
         built = Lasso.problem(x, y).equality(a).bounds(SIGNS_LOWER, SIGNS_UPPER).trace()
         _assert_optimal(built, x, y, a, np.zeros(2), SIGNS_LOWER, SIGNS_UPPER)
+
+
+def _monotone(seed=7, n=100):
+    """A Gaussian design with an ordered truth, and the rows ``beta_j - beta_{j+1} <= 0``."""
+    rng = np.random.default_rng(seed)
+    truth = np.array([-2.0, -2.0, -1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.5, 3.0])
+    x = rng.standard_normal((n, len(truth)))
+    y = x @ truth + 0.5 * rng.standard_normal(n)
+    d = np.eye(len(truth) - 1, len(truth)) - np.eye(len(truth) - 1, len(truth), k=1)
+    return x, y - y.mean(), d
+
+
+def _certified(lasso, x, y, a, b, g, h, lower, upper):
+    """The largest optimality violation over the knots and the segment midpoints, by the LP certificate."""
+    gram, xty = x.T @ x, x.T @ y
+    lams = [bp.lam for bp in lasso.path]
+    points = [*lams, *(0.5 * (hi + lo) for hi, lo in itertools.pairwise(lams))]
+    return max(kkt_violation(gram, xty, lam, lasso.solution(lam), a, b, g, h, lower, upper) for lam in points)
+
+
+class TestCertificate:
+    """The LP certificate that guards the homogeneous route, checked on its own."""
+
+    def test_agrees_with_the_direct_check_where_both_apply(self):
+        """On a path with interior multipliers it certifies what the direct check certifies."""
+        x, y = _data(40, N, 0)
+        lower, upper = _box(x, y)
+        lasso = Lasso(x, y, lower=lower, upper=upper)
+        empty = np.zeros((0, N))
+        assert _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper) < 1e-12
+        _assert_optimal(lasso, x, y, empty, np.zeros(0), lower, upper)
+
+    def test_flags_a_point_off_the_path(self):
+        """A coefficient vector that is not optimal at its penalty is flagged."""
+        x, y = _data(40, N, 0)
+        lasso = Lasso(x, y)
+        lam = 0.5 * lasso.lam_max
+        beta = lasso.solution(lam) * 1.01
+        inf, empty = np.full(N, np.inf), np.zeros((0, N))
+        assert kkt_violation(x.T @ x, x.T @ y, lam, beta, empty, np.zeros(0), empty, np.zeros(0), -inf, inf) > 1e-4
+
+    def test_flags_an_infeasible_point(self):
+        """A point that breaks a row is flagged by the feasibility part alone."""
+        x, y = _data(40, N, 0)
+        g, h = np.eye(N)[:1], np.zeros(1)
+        beta = np.r_[1.0, np.zeros(N - 1)]
+        inf, empty = np.full(N, np.inf), np.zeros((0, N))
+        assert kkt_violation(x.T @ x, x.T @ y, 0.0, beta, empty, np.zeros(0), g, h, -inf, inf) > 1e-4
+
+
+class TestHomogeneousRows:
+    """Rows ``G beta <= 0``, resolved by two relaxed traces and an extrapolation (issue #965)."""
+
+    def test_monotone_fit(self):
+        """The monotone fit traces at ``h = 0``, ordered at every knot and certified."""
+        x, y, d = _monotone()
+        lasso = Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+        inf = np.full(x.shape[1], np.inf)
+        assert all(np.all(d @ bp.beta <= 1e-12) for bp in lasso.path)
+        assert (
+            _certified(lasso, x, y, np.zeros((0, x.shape[1])), np.zeros(0), d, np.zeros(d.shape[0]), -inf, inf) < 1e-12
+        )
+
+    def test_relaxed_paths_converge_to_it(self):
+        """Independently of the certificate: the path at ``h = eps`` lies about ``eps`` away."""
+        x, y, d = _monotone()
+        exact = Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+        for eps in (1e-3, 1e-5):
+            relaxed = Lasso(x, y, g=d, h=np.full(d.shape[0], eps))
+            lams = np.linspace(0.0, exact.lam_max, 23)[1:-1]
+            gap = max(np.abs(exact.solution(lam) - relaxed.solution(lam)).max() for lam in lams)
+            assert 0.1 * eps < gap < 10 * eps
+
+    def test_mixed_with_positive_rows_and_bounds(self):
+        """Homogeneous rows alongside a positive row, signs and caps, and a pinned fit."""
+        x, y, d = _monotone()
+        p = x.shape[1]
+        g = np.vstack([d, np.ones(p)])
+        h = np.r_[np.zeros(d.shape[0]), 2.0]
+        lower, upper = np.full(p, -2.5), np.r_[np.full(p - 1, 2.5), np.inf]
+        a, b = x[:1], y[:1]
+        lasso = Lasso(x, y, a=a, b=b, g=g, h=h, lower=lower, upper=upper)
+        assert _certified(lasso, x, y, a, b, g, h, lower, upper) < 1e-12
+
+    def test_builder(self):
+        """``.inequality(G, 0)`` reaches the same route."""
+        x, y, d = _monotone()
+        built = Lasso.problem(x, y).inequality(d, np.zeros(d.shape[0])).trace()
+        direct = Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+        assert np.array_equal(_knots(built)[1], _knots(direct)[1])
+
+    def test_declined_when_the_relaxations_disagree(self, monkeypatch):
+        """Two relaxed traces with different numbers of knots cannot be extrapolated."""
+        x, y, d = _monotone()
+        real = bounded._trace
+        calls = []
+
+        def trace(*args):
+            calls.append(1)
+            knots = real(*args)
+            return knots if len(calls) == 1 else knots[:-1]
+
+        monkeypatch.setattr(bounded, "_trace", trace)
+        with pytest.raises(DegenerateProblemError, match="sequence of active sets depends on the relaxation"):
+            Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+
+    def test_declined_when_the_certificate_fails(self, monkeypatch):
+        """An extrapolated path that does not certify is not returned."""
+        x, y, d = _monotone()
+        monkeypatch.setattr(bounded, "kkt_violation", lambda *args: 1.0)
+        with pytest.raises(DegenerateProblemError, match="violates the optimality conditions"):
+            Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
