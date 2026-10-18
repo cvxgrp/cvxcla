@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "casadi==3.8.1",
-#     "cvxcla==2.4.2",
+#     "cvxcla==2.5.0",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
