@@ -494,6 +494,28 @@ class TestDegenerateProblems:
         assert np.all(np.diff(lambdas) < 0)
         assert np.allclose(a @ cla.turning_points[-1].weights, 1.0)
 
+    def test_ill_conditioned_frontier_is_not_truncated(self):
+        """The roundoff floor of issue #940 must not swallow genuine small-lambda events.
+
+        With a diagonal covariance whose spectrum spans 1e12, the assets enter one by
+        one, the last ones at lambda ~1e-13 of the first event. A floor taken at ``tol``
+        scale (1e-10) ended this trace after 5 of its 59 turning points.
+        """
+        n = 60
+        rng = np.random.default_rng(6)
+        cla = CLA(
+            mean=rng.uniform(0.0, 1.0, n),
+            covariance=np.diag(np.geomspace(1.0, 1e-12, n)),
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert len(cla) >= n - 5
+        assert lambdas[-1] == 0.0
+        assert np.all(np.diff(lambdas) <= cla.tol)
+
     def _assert_valid_frontier(self, cla, upper_bound):
         """Check lambda monotonicity (within tol) and bounds on all turning points."""
         lambdas = np.array([tp.lamb for tp in cla.turning_points])
