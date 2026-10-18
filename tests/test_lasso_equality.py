@@ -172,11 +172,13 @@ class TestValidation:
         with pytest.raises(ValueError, match=r"a must have shape \(m, 5\)"):
             Lasso(x=x, y=y, a=np.ones((1, 4)))
 
-    def test_cannot_combine_with_inequalities(self):
-        """Equality and inequality rows together are refused."""
+    def test_combines_with_inequalities(self):
+        """Homogeneous equality rows and inequality rows go to the penalty form together (issue #969)."""
         x, y = _data(20, 5, 0)
-        with pytest.raises(ValueError, match="cannot be combined"):
-            Lasso(x=x, y=y, a=np.ones((1, 5)), g=np.eye(5)[:1], h=np.ones(1))
+        lasso = Lasso(x=x, y=y, a=np.ones((1, 5)), g=np.eye(5)[:1], h=np.ones(1))
+        assert lasso.path[-1].lam == 0.0
+        assert max(abs(bp.beta.sum()) for bp in lasso.path) < 1e-10
+        assert max(bp.beta[0] for bp in lasso.path) <= 1.0 + 1e-10
 
     def test_more_features_than_observations(self):
         """A singular Gram leaves the least-squares end non-unique, so it is refused."""

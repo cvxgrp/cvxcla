@@ -143,9 +143,10 @@ class Lasso(InequalityConstrained):
         quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
         linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
         a: Optional equality matrix ``(m, n)`` of ``A beta = b``. With ``b = 0`` it
-            needs a positive-definite Gram, so that the constrained least-squares end
-            of the path is unique, its bounds may only be signs (``0`` or infinite),
-            and it cannot be combined with ``g``/``h``.
+            and bounds that are only signs (``0`` or infinite) it is traced by the
+            leverage CLA and needs a positive-definite Gram, so that the constrained
+            least-squares end of the path is unique. With a finite bound or ``g``/``h``
+            it is relaxed and extrapolated (see :mod:`cvxcla._lasso_bounded`).
         b: Optional right-hand side ``(m,)`` of ``A beta = b``; ``None`` means
             ``b = 0``. A nonzero ``b`` needs a unique smallest-``l1`` point on
             ``A beta = b`` (true for generic ``A`` and ``b``) to start from.
@@ -177,8 +178,7 @@ class Lasso(InequalityConstrained):
             ValueError: If ``x`` is not 2d, ``y``'s length does not match ``x``, the
                 constraint shapes are inconsistent, any ``h`` entry is not strictly
                 positive (which would make ``beta = 0`` infeasible), a bound
-                excludes ``beta_j = 0``, ``A beta = 0`` comes with a finite bound
-                or with ``g``, or the CLA cannot trace the problem.
+                excludes ``beta_j = 0``, or the CLA cannot trace the problem.
         """
         if self.quad_form is not None or self.linear is not None:
             self.linear = validate_operator_inputs(self.quad_form, self.linear, self.x, self.y)
@@ -206,26 +206,15 @@ class Lasso(InequalityConstrained):
     def _cla_path(self) -> list[tuple[float, NDArray[np.float64], NDArray[np.bool_]]]:
         """Route a problem with equality rows or bounds to the CLA that takes it.
 
-        Homogeneous rows with signs only go to the leverage CLA, everything else
-        with a nondegenerate start, inequality rows ``G beta <= h`` included, to the
-        penalty form.
-
-        Raises:
-            ValueError: If ``A beta = 0`` comes with a finite bound or with inequality
-                rows: the leverage CLA cannot rescale either, and the penalty form
-                starts on a degenerate vertex there.
+        Homogeneous rows with signs only go to the leverage CLA, everything else,
+        inequality rows ``G beta <= h`` included, to the penalty form, which relaxes a
+        homogeneous ``A beta = 0`` there (the leverage CLA cannot rescale a finite
+        bound or a row).
         """
         lower, upper, b = validate_bounds(self.lower, self.upper, self.b, self.a, self.nonneg, self.dimension)
         a = np.zeros((0, self.dimension)) if self.a is None else self.a
         signs_only = bool(np.isin(lower, [0.0, -np.inf]).all() and np.isin(upper, [0.0, np.inf]).all())
-        if a.shape[0] and not b.any():
-            if not signs_only or self.g is not None:
-                msg = (
-                    "A beta = 0 takes signs (bounds of 0 or infinity) but cannot be combined with a "
-                    "finite bound or inequality rows g: the leverage CLA cannot rescale them, and "
-                    "the penalty form starts on a degenerate vertex"
-                )
-                raise ValueError(msg)
+        if a.shape[0] and not b.any() and signs_only and self.g is None:
             return equality_path(self.quad, self.xty, a, lower, upper, self.tol)
         return bounded_path(self.quad, self.xty, a, b, lower, upper, self.tol, self.g, self.h)
 

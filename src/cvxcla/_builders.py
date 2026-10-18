@@ -434,9 +434,9 @@ class LassoBuilder(Generic[SolverT]):
         """Add one or more equality rows ``A beta = b`` (repeated calls accumulate).
 
         A row of ones with ``b = 0`` is the sum-to-zero constraint. Homogeneous rows
-        are traced through the leverage CLA, rows with a nonzero ``b`` through the
-        penalty form, which also takes :meth:`inequality` rows; homogeneous rows
-        cannot be combined with them.
+        with sign bounds only are traced through the leverage CLA, everything else
+        through the penalty form, which also takes :meth:`inequality` rows and finite
+        bounds (relaxing homogeneous rows there).
 
         Args:
             a: A length-``n`` row vector or an ``(m, n)`` matrix.
