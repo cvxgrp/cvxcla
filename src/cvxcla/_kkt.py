@@ -27,6 +27,7 @@ def active_set(
     lower: NDArray[np.float64],
     upper: NDArray[np.float64],
     tol: float,
+    allow_empty: bool = False,
 ) -> tuple[NDArray[np.bool_], NDArray[np.bool_], NDArray[np.bool_], NDArray[np.float64]]:
     """Identify the active set at a turning point and the weights pinned to bounds.
 
@@ -41,16 +42,19 @@ def active_set(
         lower: Per-asset lower bounds.
         upper: Per-asset upper bounds.
         tol: Tolerance for classifying a weight as sitting on a bound.
+        allow_empty: Accept a turning point with every asset blocked. Only valid
+            when the reduced system has no constraint rows (no equality rows and
+            no active inequality rows): the segment is then the vertex itself.
 
     Returns:
         ``(at_upper, at_lower, free_in, fixed_weights)``.
 
     Raises:
-        NumericalError: If every asset is blocked, which makes the reduced system
-            singular.
+        NumericalError: If every asset is blocked and ``allow_empty`` is not set,
+            which makes the reduced system singular.
     """
     blocked = ~free
-    if np.all(blocked):
+    if np.all(blocked) and not allow_empty:
         msg = "All variables cannot be blocked"
         raise NumericalError(msg)
 
@@ -261,8 +265,13 @@ def critical_segment(
         DegenerateProblemError: If the active rows do not have full row rank on the
             free set (see :func:`guard_active_rows`).
     """
-    at_upper, at_lower, free_in, fixed_weights = active_set(state.free, state.weights, lower, upper, tol)
-    guard_active_rows(np.vstack([a, g[state.active_ineq]]), free_in, state.lamb)
+    rows = np.vstack([a, g[state.active_ineq]])
+    # With no constraint rows an all-blocked vertex is nondegenerate (free count ==
+    # row count == 0): the maximum-return vertex of a box-only problem is one.
+    at_upper, at_lower, free_in, fixed_weights = active_set(
+        state.free, state.weights, lower, upper, tol, allow_empty=rows.shape[0] == 0
+    )
+    guard_active_rows(rows, free_in, state.lamb)
     r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
         cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq
     )

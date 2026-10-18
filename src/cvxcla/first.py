@@ -271,7 +271,10 @@ def _spans(c: NDArray[np.float64], free: NDArray[np.bool_]) -> bool:
 
     ``rank(C[:, free]) <= min(rows, n_free)``, so fewer free assets than rows fails
     by itself. Testing this first also keeps ``matrix_rank`` off a zero-column
-    block, whose empty singular-value reduction raises on numpy 2.0.
+    block, whose empty singular-value reduction raises on numpy 2.0. No rows are
+    spanned by any free set, including the empty one of a box-only vertex, so that
+    case returns before ``matrix_rank`` sees a ``0 x 0`` block (which raises on
+    numpy < 2.5).
 
     Args:
         c: The active constraint rows (``[A ; G_active]``).
@@ -281,6 +284,8 @@ def _spans(c: NDArray[np.float64], free: NDArray[np.bool_]) -> bool:
         ``True`` when the free assets span the rows.
     """
     rows = c.shape[0]
+    if rows == 0:
+        return True
     return bool(int(np.count_nonzero(free)) >= rows and int(np.linalg.matrix_rank(c[:, free])) == rows)
 
 
@@ -593,10 +598,7 @@ def _reject_degenerate_vertex(
     c = np.vstack([a, g[active_ineq]])
     mc = c.shape[0]
     n_free = int(np.count_nonzero(free))
-    # rank(C[:, free]) <= min(mc, n_free), so fewer free assets than active rows
-    # is degenerate by itself. Testing this first also keeps matrix_rank off a
-    # zero-column block, whose empty singular-value reduction raises on numpy 2.0.
-    if n_free < mc or np.linalg.matrix_rank(c[:, free]) < mc:
+    if not _spans(c, free):
         msg = (
             f"The maximum-return vertex is degenerate (free-set size {n_free}, "
             f"active constraints {mc}): a basic asset sits exactly on a box bound, so the free set "
