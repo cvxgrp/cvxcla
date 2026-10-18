@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.4.2] - 2026-10-18
+
+### Bug Fixes
+- *(experiments)* Forward CLA._emit's new arguments in the recording wrappers (#956)
+- Decline a degenerate first vertex that would be traced off the frontier (#953) (#958)
+- An event whose intercept is round-off fires at lambda = 0 (#957) (#959)
+
 ## [2.4.1] - 2026-10-18
 
 ### Bug Fixes
