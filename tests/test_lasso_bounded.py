@@ -25,25 +25,31 @@ def _data(m, n, seed):
     return x, x @ rng.standard_normal(n) + 0.3 * rng.standard_normal(m)
 
 
-def _kkt_violation(x, y, lam, beta, a, b, lower, upper):
+def _kkt_violation(x, y, lam, beta, a, b, lower, upper, g=None, h=None):
     """Largest violation of the LASSO's optimality conditions, relative to ``||X^T y||_inf``.
 
     The problem is convex, so these conditions certify optimality on their own. With
-    ``r = X^T X beta - X^T y + A^T nu``, a nonzero coefficient strictly inside its
-    bounds needs ``r_j = -lam sign(beta_j)``, one at a cap ``u_j > 0`` needs
-    ``r_j <= -lam`` and one at a floor ``l_j < 0`` needs ``r_j >= lam``; a zero one
-    needs ``-lam <= r_j <= lam``, less the side a sign bound takes away. The
-    multipliers ``nu`` are solved for on the interior coefficients.
+    ``r = X^T X beta - X^T y + A^T nu + G_R^T eta`` over the active rows ``R`` of
+    ``G beta <= h``, a nonzero coefficient strictly inside its bounds needs
+    ``r_j = -lam sign(beta_j)``, one at a cap ``u_j > 0`` needs ``r_j <= -lam`` and one
+    at a floor ``l_j < 0`` needs ``r_j >= lam``; a zero one needs
+    ``-lam <= r_j <= lam``, less the side a sign bound takes away; and ``eta >= 0``.
+    The multipliers ``nu`` and ``eta`` are solved for on the interior coefficients.
     """
     gram, xty = x.T @ x, x.T @ y
+    g = np.zeros((0, x.shape[1])) if g is None else g
+    h = np.zeros(0) if h is None else h
     tol = 1e-9 * max(1.0, np.abs(beta).max())
     zero = np.abs(beta) <= tol
     at_up, at_lo = ~zero & (beta >= upper - tol), ~zero & (beta <= lower + tol)
     inner = ~zero & ~at_up & ~at_lo
+    rows = np.vstack([a, g[g @ beta >= h - tol * max(1.0, np.abs(h).max(initial=1.0))]])
     r = gram @ beta - xty
-    if a.shape[0] and inner.any():
-        nu = np.linalg.lstsq(a[:, inner].T, -lam * np.sign(beta[inner]) - r[inner], rcond=None)[0]
-        r = r + a.T @ nu
+    eta = np.zeros(0)
+    if rows.shape[0] and inner.any():
+        mult = np.linalg.lstsq(rows[:, inner].T, -lam * np.sign(beta[inner]) - r[inner], rcond=None)[0]
+        r = r + rows.T @ mult
+        eta = mult[a.shape[0] :]
     elif a.shape[0]:
         # At beta = 0 nothing pins nu down; take the one that violates the conditions least.
         m = a.shape[0]
@@ -67,16 +73,18 @@ def _kkt_violation(x, y, lam, beta, a, b, lower, upper):
             np.abs(a @ beta - b),
             np.maximum(beta - upper, 0),
             np.maximum(lower - beta, 0),
+            np.maximum(g @ beta - h, 0),
+            np.maximum(-eta, 0),
         ]
     )
     return float(viol.max(initial=0.0) / np.abs(xty).max())
 
 
-def _assert_optimal(lasso, x, y, a, b, lower, upper):
+def _assert_optimal(lasso, x, y, a, b, lower, upper, g=None, h=None):
     """The path is optimal at its breakpoints and at penalties strictly between them."""
     lams = [bp.lam for bp in lasso.path]
     for lam in [*lams, *np.linspace(0.0, lams[0], 9)[1:-1]]:
-        assert _kkt_violation(x, y, lam, lasso.solution(lam), a, b, lower, upper) < 1e-10, lam
+        assert _kkt_violation(x, y, lam, lasso.solution(lam), a, b, lower, upper, g, h) < 1e-10, lam
 
 
 def _knots(lasso):
@@ -163,6 +171,30 @@ class TestBoundedPaths:
         _assert_optimal(lasso, x, y, a, b, lower, upper)
 
     @pytest.mark.parametrize("seed", range(3))
+    def test_inequality_rows_with_signs_and_caps(self, seed):
+        """A cap on a group's net effect, ``|sum_{j<3} beta_j| <= h``, with signs and caps."""
+        x, y = _data(40, N, seed)
+        lower, upper = _box(x, y)
+        lower, upper = np.maximum(lower, SIGNS_LOWER), np.minimum(upper, SIGNS_UPPER)
+        g = np.vstack([np.r_[np.ones(3), np.zeros(N - 3)], -np.r_[np.ones(3), np.zeros(N - 3)]])
+        # Half the group's net effect at the end of the path without the row, so that it binds.
+        free_end = Lasso(x, y, lower=lower, upper=upper).path[-1].beta
+        h = np.full(2, 0.5 * abs(g[0] @ free_end) + 1e-3)
+        lasso = Lasso(x, y, g=g, h=h, lower=lower, upper=upper)
+        assert np.isclose(np.abs(g[0] @ lasso.path[-1].beta), h[0])  # the row binds
+        _assert_optimal(lasso, x, y, np.zeros((0, N)), np.zeros(0), lower, upper, g, h)
+
+    @pytest.mark.parametrize("seed", range(3))
+    def test_inequality_rows_with_a_nonzero_right_hand_side(self, seed):
+        """Rows ``G beta <= h`` together with a fit pinned at one observation."""
+        x, y = _data(40, N, seed)
+        a, b = x[:1], y[:1]
+        g, h = np.eye(N)[:2], np.full(2, 0.5)
+        inf = np.full(N, np.inf)
+        lasso = Lasso(x, y, a=a, b=b, g=g, h=h, lower=-inf)
+        _assert_optimal(lasso, x, y, a, b, -inf, inf, g, h)
+
+    @pytest.mark.parametrize("seed", range(3))
     def test_zero_sum_with_signs_on_some_coefficients(self, seed):
         """``A beta = 0`` with signs goes through the leverage CLA."""
         x, y = _data(40, N, seed)
@@ -210,7 +242,7 @@ class TestRejected:
             ({"upper": np.full(N, -0.1)}, "admit beta_j = 0"),
             ({"lower": np.zeros(N - 1)}, "must have shape"),
             ({"a": np.ones((1, N)), "b": np.ones(2)}, "b must have shape"),
-            ({"a": np.ones((1, N)), "upper": np.ones(N)}, "no finite bound"),
+            ({"a": np.ones((1, N)), "upper": np.ones(N)}, "cannot be combined with a finite bound"),
         ],
     )
     def test_invalid_bounds(self, kwargs, match):
@@ -225,11 +257,11 @@ class TestRejected:
         with pytest.raises(ValueError, match="needs equality rows"):
             Lasso(x, y, b=np.ones(1))
 
-    def test_bounds_with_inequality_rows(self):
-        """Bounds are not combined with ``G beta <= h``."""
+    def test_zero_sum_with_inequality_rows(self):
+        """``A beta = 0`` with rows ``G beta <= h`` has no nondegenerate encoding."""
         x, y = _data(30, N, 0)
-        with pytest.raises(ValueError, match="cannot be combined with inequality rows"):
-            Lasso(x, y, g=np.eye(N), h=np.ones(N), upper=np.ones(N))
+        with pytest.raises(ValueError, match="cannot be combined with a finite bound or inequality rows"):
+            Lasso(x, y, a=np.ones((1, N)), g=np.eye(N)[:1], h=np.ones(1))
 
     def test_fixed_coefficients_against_a_nonzero_right_hand_side(self):
         """``beta = 0`` cannot meet ``A beta = b`` with ``b != 0``."""
