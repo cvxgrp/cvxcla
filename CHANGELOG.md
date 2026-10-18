@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.5.0] - 2026-10-18
+
+### New Features
+- *(lasso)* Per-coefficient bounds and equality rows A beta = b (#962)
+- *(lasso)* Inequality rows G beta <= h together with bounds and A beta = b (#963)
+
 ## [2.4.2] - 2026-10-18
 
 ### Bug Fixes
