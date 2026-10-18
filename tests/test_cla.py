@@ -4,6 +4,7 @@ This module tests the main Critical Line Algorithm implementation,
 including initialization, turning point computation, and frontier generation.
 """
 
+import itertools
 from unittest.mock import patch
 
 import numpy as np
@@ -833,6 +834,18 @@ class TestCLAInternals:
         with pytest.raises(RuntimeError, match="All variables cannot be blocked"):
             active_set(np.zeros(n, dtype=bool), weights, cla.lower_bounds, cla.upper_bounds, cla.tol)
 
+    def test_active_set_all_blocked_allowed_without_rows(self, cla):
+        """With no constraint rows an all-blocked vertex is accepted and nothing is in the solve."""
+        n = cla.mean.size
+        weights = np.zeros(n)
+        weights[0] = 1.0
+        at_upper, at_lower, free_in, fixed = active_set(
+            np.zeros(n, dtype=bool), weights, cla.lower_bounds, cla.upper_bounds, cla.tol, allow_empty=True
+        )
+        assert not free_in.any()
+        assert np.all(at_upper | at_lower)
+        np.testing.assert_array_equal(fixed, weights)
+
     def test_solve_kkt_is_feasible_and_optimal_segment(self, cla):
         """The KKT solve returns an affine segment satisfying the equality constraints.
 
@@ -1354,3 +1367,53 @@ class TestInequalityConstraints:
         cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, g=g, h=h)
         self._assert_feasible_monotone(cla, a, b, g, h, lower, upper)
         self._assert_optimal(cla, mean, cov, a, b, g, h, lower, upper)
+
+
+class TestNoEqualityRows:
+    """Box-only problems, ``a`` with zero rows (https://github.com/cvxgrp/cvxcla/issues/936)."""
+
+    n = 4
+    mean = np.arange(1.0, n + 1)
+    covariance = np.eye(n) + 0.1
+
+    @pytest.fixture
+    def cla(self):
+        """The issue's repro: box bounds and no equality constraint."""
+        return CLA(
+            mean=self.mean,
+            covariance=self.covariance,
+            lower_bounds=np.zeros(self.n),
+            upper_bounds=np.ones(self.n),
+            a=np.zeros((0, self.n)),
+            b=np.zeros(0),
+        )
+
+    def test_traces_to_lambda_zero(self, cla):
+        """The maximum-return vertex has no free asset, and the trace still reaches lambda = 0."""
+        first, last = cla.turning_points[0], cla.turning_points[-1]
+        assert first.lamb == np.inf
+        assert not first.free.any()
+        np.testing.assert_array_equal(first.weights, np.ones(self.n))
+        assert last.lamb == 0.0
+        np.testing.assert_allclose(last.weights, 0.0, atol=1e-12)
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert np.all(np.diff(lambdas) < 0)
+
+    def test_matches_interior_point_at_segment_midpoints(self, cla):
+        """Interpolated turning points agree with an interior-point QP solve at each midpoint."""
+        from scipy.optimize import Bounds, minimize
+
+        tps = cla.turning_points[1:]  # the segment above the first event is unbounded in lambda
+        assert len(tps) >= 3
+        for t0, t1 in itertools.pairwise(tps):
+            lam, expected = (t0.lamb + t1.lamb) / 2, (t0.weights + t1.weights) / 2
+            result = minimize(
+                lambda w, lam=lam: 0.5 * w @ self.covariance @ w - lam * self.mean @ w,
+                np.full(self.n, 0.5),
+                jac=lambda w, lam=lam: self.covariance @ w - lam * self.mean,
+                hess=lambda w: self.covariance,
+                method="trust-constr",
+                bounds=Bounds(0.0, 1.0),
+                options={"gtol": 1e-12, "xtol": 1e-14},
+            )
+            np.testing.assert_allclose(result.x, expected, atol=1e-5)

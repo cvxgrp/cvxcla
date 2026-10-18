@@ -96,6 +96,10 @@ def bordered_solve(
     rhs = np.column_stack([rhs_const, rhs_slope])
     d = np.column_stack([d_const, d_slope])
     mc, n_free = c_free.shape
+    if n_free == 0:
+        # Nothing to solve: every coordinate is blocked. Reached only with no
+        # constraint rows, where the segment is the vertex itself.
+        return np.zeros(0), np.zeros(0), np.zeros(mc), np.zeros(mc)
     if mc <= 1 or mc > n_free:
         x, nu = _bordered_solve(quad, np.flatnonzero(free), c_free, rhs, d)
     else:
