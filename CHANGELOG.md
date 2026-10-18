@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.4.1] - 2026-10-18
+
+### Bug Fixes
+- Put the lambda = 0 floor at machine precision, not tol (#954)
+
 ## [2.4.0] - 2026-10-18
 
 ### New Features
