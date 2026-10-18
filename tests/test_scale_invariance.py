@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 
 from cvxcla import CLA
-from cvxcla._events import event_ratios, ineq_event_ratios
+from cvxcla._events import event_ratios, ineq_event_ratios, roundoff_events_at_zero
 from cvxcla.pathtracer import select_next_event
 
 SCALES = [1e-6, 1e-3, 1.0, 1e3, 1e6]
@@ -86,6 +86,30 @@ def test_event_ratios_honour_custom_floors():
     assert event_ratios(r_beta=np.zeros(1), delta=np.array([tiny]), **blocked)[0, 3] == -np.inf
     lowered = event_ratios(r_beta=np.zeros(1), delta=np.array([tiny]), delta_floor=1e-12, **blocked)
     assert np.isfinite(lowered[0, 3])
+
+
+def test_roundoff_intercept_puts_the_event_at_zero():
+    """A leave-a-bound event whose intercept is round-off fires at lambda = 0, not near it (issue #957)."""
+    blocked = {
+        "r_alpha": np.zeros(3),
+        "r_beta": np.zeros(3),
+        "delta": np.array([2.0, -2.0, 2.0]),
+        "free_in": np.zeros(3, dtype=bool),
+        "at_upper": np.array([False, True, False]),
+        "at_lower": np.array([True, False, True]),
+        "lower": np.zeros(3),
+        "upper": np.ones(3),
+    }
+    gamma = np.array([-1e-12, 1e-12, -1e-3])
+    exact = event_ratios(gamma=gamma, **blocked)
+    assert exact[0, 3] == pytest.approx(5e-13)
+    assert exact[1, 2] == pytest.approx(5e-13)
+    snapped = roundoff_events_at_zero(exact, gamma, np.full(3, 1e-11))
+    assert snapped[0, 3] == 0.0
+    assert snapped[1, 2] == 0.0
+    # a genuine intercept and the non-candidate entries are left alone
+    assert snapped[2, 3] == exact[2, 3]
+    assert snapped[0, 2] == -np.inf
 
 
 def test_ineq_event_ratios_honour_custom_floors():

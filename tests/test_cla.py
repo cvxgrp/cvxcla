@@ -565,6 +565,36 @@ class TestDegenerateProblems:
         assert lambdas[-1] == 0.0
         assert np.all(np.diff(lambdas) <= cla.tol)
 
+    def test_roundoff_events_at_zero_with_more_predictors_than_observations(self):
+        """A p > n LASSO traces to lambda = 0 (issue #957).
+
+        At lambda = 0 the fit interpolates y, so every gradient vanishes and every
+        blocked leg's event root rounds to either side of zero (here up to ~4e-14 of the
+        first event, above the lambda floor). One of them used to fire, growing the free
+        set past the rank of the covariance (40), and the trace raised.
+        """
+        rng = np.random.default_rng(7)
+        n, p = 40, 100
+        x = rng.standard_normal((n, p))
+        beta = np.zeros(p)
+        beta[:8] = rng.choice([-1, 1], 8) * rng.uniform(1, 3, 8)
+        y = x @ beta + 0.5 * rng.standard_normal(n)
+        s = np.hstack([np.eye(p), -np.eye(p)])
+        cla = CLA(
+            mean=-np.ones(2 * p),
+            covariance=s.T @ (x.T @ x) @ s,
+            lower_bounds=np.zeros(2 * p),
+            upper_bounds=np.full(2 * p, np.inf),
+            a=np.zeros((0, 2 * p)),
+            b=np.zeros(0),
+            q=s.T @ (x.T @ y),
+        )
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert len(cla) == 54
+        assert lambdas[-1] == 0.0
+        assert np.all(np.diff(lambdas) < 0)
+        assert int(np.count_nonzero(cla.turning_points[-1].free)) <= n
+
     def _assert_valid_frontier(self, cla, upper_bound):
         """Check lambda monotonicity (within tol) and bounds on all turning points."""
         lambdas = np.array([tp.lamb for tp in cla.turning_points])
