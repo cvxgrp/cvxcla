@@ -24,9 +24,23 @@ at tilt ``lam``, where ``u_bar`` stacks the bounds ``u_j`` and ``-l_j`` of the
 columns. The CLA's tilt *is* the penalty, so every turning point is a knot,
 ``beta = S z`` at ``lam``. At ``lam = inf`` the CLA starts from the vertex of
 smallest ``l1`` norm on the constraints, which is ``z = 0`` without equality rows
-(every row of ``G beta <= h`` is slack there, since ``h > 0``). A homogeneous
+(every row of ``G beta <= h`` with ``h > 0`` is slack there). A homogeneous
 equality row (``b = 0``) makes that vertex degenerate; such problems belong to the
 leverage route instead, and the CLA declines them here.
+
+**Homogeneous inequality rows** (``h_r = 0``, such as the ordering ``beta_j <=
+beta_{j+1}`` of a monotone fit) are all tight at ``z = 0``, so the start is degenerate
+too. They are resolved by relaxation and extrapolation. On a fixed sequence of active
+sets the solution on each segment is affine in ``h`` and its slope in ``lam`` does not
+depend on ``h``, so the parameter at which a coordinate reaches a bound, a knot, is
+affine in ``h`` as well. Tracing the rows at ``h_r = eps`` and ``h_r = 2 eps``, both
+nondegenerate, therefore gives the exact path at ``h_r = 0`` as
+``2 path(eps) - path(2 eps)``, provided both runs take the same sequence. Segments that
+shrink to a point at ``h_r = 0`` (rows the relaxed path met one by one, and the
+exact path meets together) are dropped. The result is then *certified*, not trusted: a
+linear program finds the multipliers that best satisfy the LASSO's optimality conditions
+at every knot and segment midpoint, and the extrapolated path is returned only if they
+hold to rounding. Otherwise the problem is declined.
 """
 
 from __future__ import annotations
@@ -35,10 +49,11 @@ import itertools
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from ._lasso_cla import BreakpointData
 from .cla import CLA
-from .errors import CLAError, InfeasibleProblemError
+from .errors import CLAError, DegenerateProblemError, InfeasibleProblemError
 from .operators import QuadraticForm
 
 
@@ -51,6 +66,181 @@ def _split(lower: NDArray[np.float64], upper: NDArray[np.float64]) -> tuple[NDAr
     keep = np.concatenate([upper > 0, lower < 0])
     legs = np.hstack([np.eye(n), -np.eye(n)])[:, keep]
     return legs, np.concatenate([upper, -lower])[keep]
+
+
+#: One knot of the path as ``(lam, beta)``.
+Knot = tuple[float, NDArray[np.float64]]
+
+#: The relaxation of a homogeneous row, relative to the scale ``||X^T y||_inf / max_j (X^T X)_jj``
+#: of a coefficient: large enough that the CLA starts cleanly, small enough that the relaxed
+#: path takes the exact path's sequence of active sets.
+RELAXATION = 1e-6
+
+#: The largest optimality violation, relative to ``||X^T y||_inf``, at which an
+#: extrapolated path is accepted.
+CERTIFIED = 1e-9
+
+
+def _trace(
+    sigma: NDArray[np.float64],
+    q: NDArray[np.float64],
+    legs: NDArray[np.float64],
+    cap: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64] | None,
+    h: NDArray[np.float64] | None,
+) -> list[Knot]:
+    """Run the penalty-form CLA and return its knots, from the first one down to ``lam = 0``."""
+    k = legs.shape[1]
+    try:
+        cla = CLA(
+            mean=-np.ones(k),
+            covariance=sigma,
+            lower_bounds=np.zeros(k),
+            upper_bounds=cap,
+            a=a @ legs,
+            b=b,
+            g=None if g is None else g @ legs,
+            h=h,
+            q=q,
+        )
+    except ValueError as err:
+        msg = f"the bounded LASSO could not be traced through the CLA: {err}"
+        # Keep the error's kind (infeasible, degenerate, ...) when the CLA classified it.
+        raise (type(err) if isinstance(err, CLAError) else ValueError)(msg) from err
+    # The lam = inf vertex is the first knot again, held still until a coefficient enters;
+    # the trace always ends with a finite one, the constrained least-squares fit at lam = 0.
+    return [(float(tp.lamb), legs @ tp.weights) for tp in cla.turning_points if np.isfinite(tp.lamb)]
+
+
+def kkt_violation(
+    gram: NDArray[np.float64],
+    xty: NDArray[np.float64],
+    lam: float,
+    beta: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+) -> float:
+    """Largest violation of the LASSO's optimality conditions at ``beta``, relative to ``||X^T y||_inf``.
+
+    With ``r = X^T X beta - X^T y + A^T nu + G_R^T eta`` over the rows ``R`` of
+    ``G beta <= h`` that are active, a nonzero coefficient strictly inside its bounds needs
+    ``r_j = -lam sign(beta_j)``, one at a cap ``u_j > 0`` needs ``r_j <= -lam``, one at a
+    floor ``l_j < 0`` needs ``r_j >= lam``, and a zero one needs ``-lam <= r_j <= lam``
+    less the side a sign bound takes away; ``eta >= 0``. A linear program picks ``nu`` and
+    ``eta`` to make the worst violation as small as it can, which is zero exactly at the
+    optimum, and the violation is then evaluated again exactly at the multipliers it found,
+    so the LP's own tolerance cannot hide one. Primal feasibility is included.
+
+    Args:
+        gram: ``X^T X`` as a dense ``(n, n)`` array.
+        xty: ``X^T y``.
+        lam: The penalty.
+        beta: The coefficients to certify.
+        a: Equality rows ``(m, n)``; ``m`` may be zero.
+        b: Their right-hand side.
+        g: Inequality rows ``(p, n)``; ``p`` may be zero.
+        h: Their right-hand side.
+        lower: Lower bounds.
+        upper: Upper bounds.
+
+    Returns:
+        The violation, relative to ``||X^T y||_inf``.
+    """
+    tol = 1e-9 * max(1.0, float(np.abs(beta).max()))
+    zero = np.abs(beta) <= tol
+    at_up, at_lo = ~zero & (beta >= upper - tol), ~zero & (beta <= lower + tol)
+    inner = ~zero & ~at_up & ~at_lo
+    rows = np.vstack([a, g[g @ beta >= h - tol * max(1.0, float(np.abs(h).max(initial=1.0)))]])
+    m, k = a.shape[0], rows.shape[0]
+    r0 = gram @ beta - xty
+    lam_sign = lam * np.sign(beta)
+    full = np.full_like(beta, lam)
+    # Each condition is  side * r_j + offset <= worst, over the coordinates in its mask.
+    parts = [
+        (inner, 1.0, lam_sign),
+        (inner, -1.0, -lam_sign),
+        (at_up, 1.0, full),
+        (at_lo, -1.0, full),
+        (zero & (lower < 0), 1.0, -full),
+        (zero & (upper > 0), -1.0, -full),
+    ]
+    coord = np.concatenate([np.flatnonzero(mask) for mask, _, _ in parts]).astype(int)
+    side = np.concatenate([np.full(int(mask.sum()), sgn) for mask, sgn, _ in parts])
+    offset = np.concatenate([off[mask] for mask, _, off in parts])
+    lp = linprog(
+        np.append(np.zeros(k), 1.0),
+        A_ub=np.hstack([side[:, None] * rows.T[coord], -np.ones((len(coord), 1))]),
+        b_ub=-(side * r0[coord] + offset),
+        bounds=[(None, None)] * m + [(0.0, None)] * (k - m + 1),
+        method="highs",
+    )
+    mult = np.concatenate([lp.x[:m], np.maximum(lp.x[m:k], 0.0)])
+    worst = float(np.max(side * (r0 + rows.T @ mult)[coord] + offset, initial=0.0))
+    feasibility = np.concatenate(
+        [
+            np.abs(a @ beta - b),
+            np.maximum(g @ beta - h, 0.0),
+            np.maximum(beta - upper, 0.0),
+            np.maximum(lower - beta, 0.0),
+        ]
+    )
+    return max(worst, float(feasibility.max(initial=0.0))) / float(np.abs(xty).max())
+
+
+def _resolve_homogeneous(
+    gram: NDArray[np.float64],
+    sigma: NDArray[np.float64],
+    xty: NDArray[np.float64],
+    legs: NDArray[np.float64],
+    cap: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+) -> list[Knot]:
+    """The exact knots with homogeneous rows ``h_r = 0``, from two relaxed traces (module docstring).
+
+    Raises:
+        DegenerateProblemError: If the two relaxed traces take different sequences, or the
+            extrapolated path fails its optimality certificate.
+    """
+    homogeneous = h == 0
+    eps = RELAXATION * float(np.abs(xty).max()) / max(float(np.diag(gram).max()), 1e-300)
+    q = legs.T @ xty
+    once = _trace(sigma, q, legs, cap, a, b, g, h + eps * homogeneous)
+    twice = _trace(sigma, q, legs, cap, a, b, g, h + 2 * eps * homogeneous)
+    if len(once) != len(twice):
+        msg = (
+            f"the homogeneous rows could not be resolved: relaxed by {eps:.1e} and {2 * eps:.1e} they "
+            f"trace {len(once)} and {len(twice)} knots, so the sequence of active sets depends on the relaxation"
+        )
+        raise DegenerateProblemError(msg)
+    knots: list[Knot] = [(max(2 * l1 - l2, 0.0), 2 * b1 - b2) for (l1, b1), (l2, b2) in zip(once, twice, strict=True)]
+    # A segment the relaxed path needed to meet the rows one by one has no length at h_r = 0.
+    floor = 1e-12 * knots[0][0]
+    kept = [knots[0]]
+    for lam, beta in knots[1:]:
+        if kept[-1][0] - lam > floor:
+            kept.append((lam, beta))
+    # The path ends at the least-squares fit, lam = 0, whichever of the coinciding knots was kept.
+    kept[-1] = knots[-1] if kept[-1][0] - knots[-1][0] <= floor else kept[-1]
+    points = kept + [(0.5 * (l1 + l2), 0.5 * (b1 + b2)) for (l1, b1), (l2, b2) in itertools.pairwise(kept)]
+    worst = max(kkt_violation(gram, xty, lam, beta, a, b, g, h, lower, upper) for lam, beta in points)
+    if worst > CERTIFIED:
+        msg = (
+            f"the homogeneous rows could not be resolved: the extrapolated path violates the "
+            f"optimality conditions by {worst:.1e} (relative), above {CERTIFIED:g}"
+        )
+        raise DegenerateProblemError(msg)
+    return kept
 
 
 def bounded_path(
@@ -76,7 +266,7 @@ def bounded_path(
         tol: Coefficients below ``tol`` times the path's scale count as zero in the
             ``active`` masks.
         g: Optional inequality rows ``(p, n)`` of ``G beta <= h``.
-        h: Their right-hand side ``(p,)``, strictly positive.
+        h: Their right-hand side ``(p,)``, nonnegative; a zero entry is a homogeneous row.
 
     Returns:
         The breakpoints ``(lam, beta, active)`` from the first knot down to the
@@ -85,6 +275,8 @@ def bounded_path(
     Raises:
         InfeasibleProblemError: If the bounds fix every coefficient at zero and
             ``b`` is nonzero.
+        DegenerateProblemError: If homogeneous rows cannot be resolved (see the module
+            docstring).
         ValueError: If the CLA cannot trace the problem, e.g. a degenerate or
             non-unique first vertex (see the module docstring).
     """
@@ -99,26 +291,11 @@ def bounded_path(
         return [(0.0, np.zeros(n), np.zeros(n, dtype=bool))]
     # S^T G S through the operator, one leg at a time; k <= 2 n, so this is O(n) matvecs.
     sigma = legs.T @ np.column_stack([quad.matvec(legs[:, i]) for i in range(k)])
-    try:
-        cla = CLA(
-            mean=-np.ones(k),
-            covariance=sigma,
-            lower_bounds=np.zeros(k),
-            upper_bounds=cap,
-            a=a @ legs,
-            b=b,
-            g=None if g is None else g @ legs,
-            h=h,
-            q=legs.T @ xty,
-        )
-    except ValueError as err:
-        msg = f"the bounded LASSO could not be traced through the CLA: {err}"
-        # Keep the error's kind (infeasible, degenerate, ...) when the CLA classified it.
-        raise (type(err) if isinstance(err, CLAError) else ValueError)(msg) from err
-
-    # The lam = inf vertex is the first knot again, held still until a coefficient enters;
-    # the trace always ends with a finite one, the constrained least-squares fit at lam = 0.
-    knots = [(float(tp.lamb), legs @ tp.weights) for tp in cla.turning_points if np.isfinite(tp.lamb)]
+    if g is not None and h is not None and np.any(h == 0):
+        gram = np.column_stack([quad.matvec(e) for e in np.eye(n)])
+        knots = _resolve_homogeneous(gram, sigma, xty, legs, cap, a, b, g, h, lower, upper)
+    else:
+        knots = _trace(sigma, legs.T @ xty, legs, cap, a, b, g, h)
     scale = max(float(np.abs(beta).max()) for _, beta in knots) or 1.0
 
     def support(beta: NDArray[np.float64]) -> NDArray[np.bool_]:

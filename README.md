@@ -386,7 +386,7 @@ through the CLA in the *penalty form*: each coefficient is split into a long and
 short leg, `β = Sz` with `z ≥ 0`, and the penalty `λ‖β‖₁` becomes a cost of `λ`
 per unit of gross position, so the CLA's tilt is `λ` itself (covariance `SᵀXᵀXS`,
 expected returns `−1`, benchmark `q = SᵀXᵀy`). Caps, signs, `Aβ = b` and inequality
-rows `Gβ ≤ h` (with `h > 0`) combine:
+rows `Gβ ≤ h` (with `h ≥ 0`) combine:
 
 ```python
 # beta_0..2 >= 0, and every |beta_j| <= 2
@@ -404,14 +404,26 @@ G = np.zeros((2, 12))
 G[0, :4], G[1, :4] = 1.0, -1.0
 lasso = Lasso.problem(X, y).equality(X[0], y[0]).inequality(G, np.ones(2)).bounds(lower, upper).trace()
 assert abs(G[0] @ lasso.path[-1].beta) <= 1.0 + 1e-9
+
+# a monotone fit, beta_0 <= beta_1 <= ... <= beta_11: homogeneous rows, h = 0
+D = np.eye(11, 12) - np.eye(11, 12, k=1)
+lasso = Lasso.problem(X, y).inequality(D, np.zeros(11)).trace()
+assert all((D @ bp.beta <= 1e-12).all() for bp in lasso.path)
 ```
+
+Homogeneous rows (`h = 0`) are all tight at `β = 0`, so they start on a degenerate
+vertex. They are traced twice, relaxed to `h = ε` and `h = 2ε`, and on a fixed
+sequence of active sets every knot is affine in `h`, so `2·path(ε) − path(2ε)` is the
+exact path at `h = 0`. The result is returned only after it passes an optimality
+certificate: a linear program finds the best multipliers at every knot and segment
+midpoint, and the conditions must hold to rounding.
 
 The two routes have these limits:
 - `Aβ = 0` takes signs (bounds of `0` or `±∞`) but neither a finite cap nor
   `inequality` rows: the rescaling cannot carry them, and the penalty form starts on
   a degenerate vertex
-- inequality rows need `h > 0`, so that `β = 0` starts with every row slack;
-  homogeneous rows such as the ordering of a monotone fit are refused
+- homogeneous inequality rows are declined if the two relaxed traces take different
+  sequences of active sets, or if the extrapolated path fails its certificate
 - `Aβ = b` with `b ≠ 0` needs a unique smallest-`ℓ₁` point on `Aβ = b` to start
   from; the fully invested `1ᵀβ = 1` has a whole face of them and is refused
 - under `Aβ = 0` the Gram `XᵀX` must be positive definite, so the constrained
