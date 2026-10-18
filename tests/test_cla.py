@@ -1603,3 +1603,46 @@ class TestMultipliers:
         tp = TurningPoint(weights=np.ones(2) / 2, free=np.ones(2, dtype=bool))
         assert tp.nu.shape == (0,)
         assert tp.eta.shape == (0,)
+
+
+class TestRankDeficientBudgetLasso:
+    """The LASSO budget form with p > n (https://github.com/cvxgrp/cvxcla/issues/941)."""
+
+    @staticmethod
+    def _problem():
+        """An 8 x 12 design: the split covariance has rank 8 and cancels along the ones vector."""
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((8, 12))
+        y = x[:, 0] - x[:, 1] + 0.1 * rng.standard_normal(8)
+        s = np.hstack([np.eye(12), -np.eye(12)])
+        k = 24
+        sigma = np.zeros((k + 1, k + 1))
+        sigma[:k, :k] = s.T @ (x.T @ x) @ s  # the last asset is cash
+        kwargs = {
+            "mean": np.append(s.T @ (x.T @ y), 0.0),
+            "covariance": sigma,
+            "lower_bounds": np.zeros(k + 1),
+            "upper_bounds": np.full(k + 1, np.inf),
+            "a": np.ones((1, k + 1)),
+            "b": np.ones(1),
+        }
+        return x, y, s, k, kwargs
+
+    def test_lambda_scale_is_not_roundoff(self):
+        """Sigma 1 = 0 here, so the scale must come from a probe that does not cancel."""
+        *_, kwargs = self._problem()
+        cla = CLA(**kwargs, stop=len(kwargs["mean"]) - 1)
+        assert np.max(np.abs(cla.covariance @ np.ones(len(cla.mean)))) < 1e-10
+        assert cla.lambda_scale > 1e-3
+
+    def test_traces_to_cash_and_matches_the_lasso_path(self):
+        """With stop=cash the trace runs to where cash enters and agrees with every LASSO knot."""
+        from cvxcla import Lasso
+
+        x, y, s, k, kwargs = self._problem()
+        cla = CLA(**kwargs, stop=k)
+        assert cla.turning_points[-1].free[k]
+        betas = [np.zeros(12)] + [s @ tp.weights[:k] / tp.lamb for tp in cla.turning_points[1:]]
+        knots = [bp.beta for bp in Lasso(x=x, y=y).path]
+        assert len(betas) == len(knots)
+        np.testing.assert_allclose(betas, knots, atol=1e-9)
