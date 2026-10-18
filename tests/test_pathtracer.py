@@ -71,6 +71,17 @@ class TestSelectNextEvent:
         # not tied: the preference does not override a larger ratio
         assert select_next_event(l_mat, lam=1.0, tol=1e-9, prefer=2) == (1, 0, 0.5)
 
+    def test_tie_never_picks_an_event_at_or_below_the_floor(self):
+        """The absolute tie window near zero must not fire an entry at lambda <= 0 (issue #957).
+
+        The best event sits just above the floor; a lower-index entry at -0 lies inside
+        the tie window, and the lowest-index rule used to fire it.
+        """
+        l_mat = np.full((3, 2), -np.inf)
+        l_mat[0, 0] = -0.0
+        l_mat[2, 1] = 5e-12
+        assert select_next_event(l_mat, lam=0.5, tol=1e-9, floor=1e-12) == (2, 1, 5e-12)
+
     def test_returns_none_when_all_neg_inf(self):
         """An all -inf matrix means no candidate events remain."""
         assert select_next_event(np.full((3, 2), -np.inf), lam=np.inf, tol=1e-9) is None

@@ -16,7 +16,7 @@ from numpy.typing import NDArray
 
 from ._builders import ProblemBuilder
 from ._checks import check_feasible, check_held_bounds, guard_degeneracy, well_conditioned
-from ._events import segment_events
+from ._events import roundoff_events_at_zero, segment_events
 from ._kkt import Segment, critical_segment
 from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
 from ._projection import project_feasible
@@ -25,6 +25,9 @@ from .first import classify_vertex, first_turning_point
 from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
+
+# Multiplier intercepts within this many ulps per dimension of the terms that form them are zero.
+_GAMMA_NOISE_ULPS = 100
 
 
 def _independent_equalities(
@@ -497,9 +500,29 @@ class CLA(InequalityConstrained):
         the CLA does not need it because ``segment`` already bundles the masks.
         """
         lam_scale, mu_scale = self._scales
-        return segment_events(
+        events = segment_events(
             segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector, lam_scale, mu_scale
         )
+        return roundoff_events_at_zero(events, segment.gamma, self._gamma_noise(segment))
+
+    def _gamma_noise(self, segment: Segment) -> NDArray[np.float64]:
+        """The round-off level of each multiplier intercept ``gamma``.
+
+        ``gamma = Sigma r_alpha + C^T nu_alpha - q`` is a sum of terms that can cancel:
+        when the fit at ``lambda = 0`` makes every gradient vanish (a LASSO with more
+        predictors than observations interpolates, issue #957) the intercepts are pure
+        round-off of terms of size ``|q|``, and their roots scatter around zero on
+        either side. Measured against those terms with the inner-product bound
+        ``n eps``, such an intercept is zero. A genuinely small one is not: an
+        ill-conditioned covariance has intercepts as small as its variances, but they
+        are not the residue of a cancellation (issue #954).
+        """
+        rows = np.vstack([self.a, self.g_matrix[segment.active_ineq]])
+        nu = np.concatenate([segment.nu_alpha, segment.eta_alpha[segment.active_ineq]])
+        sigma_w = np.asarray(self.covariance_operator.matvec(segment.r_alpha), dtype=np.float64)
+        terms = np.abs(sigma_w) + np.abs(rows.T @ nu) + np.abs(self.q_vector)
+        noise: NDArray[np.float64] = _GAMMA_NOISE_ULPS * self.dimension * float(np.finfo(np.float64).eps) * terms
+        return noise
 
     def ends_trace(self, sec: int, direction: int) -> bool:
         """Whether the event ``(sec, direction)`` ends the trace: asset ``stop`` leaving its bound."""
