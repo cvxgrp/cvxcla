@@ -54,6 +54,14 @@ class TestSelectNextEvent:
         l_mat[2, 1] = 0.0
         assert select_next_event(l_mat, lam=0.5, tol=1e-9) is None
 
+    def test_returns_none_when_best_event_is_roundoff_above_zero(self):
+        """A root that belongs at zero but rounds to a tiny positive value also ends the trace."""
+        l_mat = np.full((3, 2), -np.inf)
+        l_mat[1, 0] = 4.4e-16
+        assert select_next_event(l_mat, lam=0.5, tol=1e-9, floor=1e-10) is None
+        # without a floor the same event fires
+        assert select_next_event(l_mat, lam=0.5, tol=1e-9) == (1, 0, 4.4e-16)
+
     def test_returns_none_when_all_neg_inf(self):
         """An all -inf matrix means no candidate events remain."""
         assert select_next_event(np.full((3, 2), -np.inf), lam=np.inf, tol=1e-9) is None

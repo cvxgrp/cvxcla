@@ -467,6 +467,32 @@ class TestDegenerateProblems:
     (d) tolerate float error in the fully-invested check of init_algo.
     """
 
+    def test_roundoff_final_event_ends_the_trace(self):
+        """A last event at lambda ~ 1e-16 is lambda = 0, not a degeneracy (issue #940).
+
+        Splitting coefficients into long and short legs makes the covariance
+        singular, but a leg and its twin are never free together for lambda > 0;
+        their gradients vanish together only at lambda = 0, which rounding moves to
+        a tiny positive value.
+        """
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((60, 5))
+        s = np.hstack([np.eye(5), -np.eye(5)])
+        k = 10
+        a = rng.standard_normal((1, 5)) @ s
+        cla = CLA(
+            mean=-np.ones(k),
+            covariance=s.T @ (x.T @ x) @ s,
+            lower_bounds=np.zeros(k),
+            upper_bounds=np.full(k, np.inf),
+            a=a,
+            b=np.ones(1),
+        )
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert lambdas[-1] == 0.0
+        assert np.all(np.diff(lambdas) < 0)
+        assert np.allclose(a @ cla.turning_points[-1].weights, 1.0)
+
     def _assert_valid_frontier(self, cla, upper_bound):
         """Check lambda monotonicity (within tol) and bounds on all turning points."""
         lambdas = np.array([tp.lamb for tp in cla.turning_points])
