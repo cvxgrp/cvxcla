@@ -155,6 +155,34 @@ def ineq_event_ratios(
     return l_mat
 
 
+def roundoff_events_at_zero(
+    l_mat: NDArray[np.float64],
+    gamma: NDArray[np.float64],
+    gamma_noise: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """Put the leave-a-bound events whose intercept is round-off at ``lambda = 0``.
+
+    A leave-a-bound event fires at ``-gamma / delta``. When ``|gamma|`` is within its
+    round-off level the root belongs at zero and only rounds to either side of it, so
+    the event is moved to ``lambda = 0``, where the trace ends; elsewhere it stays.
+    Only candidate events (finite entries of columns 2 and 3) are moved.
+
+    Args:
+        l_mat: The event matrix whose first ``len(gamma)`` rows are the box events.
+        gamma: The multiplier intercepts of the box events.
+        gamma_noise: Per-asset round-off level of ``gamma``.
+
+    Returns:
+        The event matrix with those events at zero (a copy).
+    """
+    l_mat = l_mat.copy()
+    n = gamma.shape[0]
+    box = l_mat[:n, 2:]
+    at_zero = (np.abs(gamma) <= gamma_noise)[:, None] & np.isfinite(box)
+    box[at_zero] = 0.0
+    return l_mat
+
+
 def segment_events(
     segment: Segment,
     lower: NDArray[np.float64],

@@ -201,7 +201,9 @@ def select_next_event(
     if lam_max <= floor:
         return None
 
-    tied = np.argwhere(l_mat >= lam_max - rate * max(scale, abs(lam_max)))  # pragma: no mutate
+    # The tie window near zero is absolute, so it can reach entries at or below the floor;
+    # those are lambda = 0 (the endpoint), never the event to fire.
+    tied = np.argwhere((l_mat >= lam_max - rate * max(scale, abs(lam_max))) & (l_mat > floor))  # pragma: no mutate
     preferred = tied[tied[:, 0] == prefer]
     sec, direction = preferred[0] if len(preferred) else tied[0]
     # lambda is non-increasing along the path: clamp away any roundoff overshoot.
