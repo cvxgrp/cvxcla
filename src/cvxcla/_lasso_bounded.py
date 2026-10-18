@@ -1,9 +1,10 @@
-"""The LASSO under coefficient bounds and equality rows ``A beta = b``, as one CLA.
+"""The LASSO under coefficient bounds, equality rows ``A beta = b`` and rows ``G beta <= h``, as one CLA.
 
 The homotopy of :mod:`cvxcla.lasso` starts from ``beta = 0`` with every row slack,
 and the leverage route of :mod:`cvxcla._lasso_cla` needs every constraint
 homogeneous. Neither takes a sign on only some of the coefficients together with a
-cap, or an equality row with a nonzero right-hand side. This module traces those
+cap, an equality row with a nonzero right-hand side, or inequality rows together with
+either. This module traces those
 with the CLA directly, in the *penalty form* (Schmelzer, "The Constrained LASSO by
 the Critical Line Algorithm"): the penalty ``lam ||beta||_1`` is read as a cost of
 ``lam`` per unit of gross position.
@@ -12,18 +13,20 @@ Split ``beta = S z`` with ``z >= 0``, where ``S`` has a column ``e_j`` for every
 ``j`` with ``u_j > 0`` and a column ``-e_j`` for every ``j`` with ``l_j < 0``. With
 ``G = X^T X`` and ``c = X^T y`` the LASSO
 
-    min 1/2 ||y - X beta||^2 + lam ||beta||_1   s.t.  A beta = b,  l <= beta <= u
+    min 1/2 ||y - X beta||^2 + lam ||beta||_1   s.t.  A beta = b,  G beta <= h,  l <= beta <= u
 
 is, up to a constant, the CLA program
 
-    min 1/2 z^T (S^T G S) z - (S^T c + lam * (-1))^T z   s.t.  A S z = b,  0 <= z <= u_bar
+    min 1/2 z^T (S^T X^T X S) z - (S^T c + lam * (-1))^T z
+    s.t.  A S z = b,  G S z <= h,  0 <= z <= u_bar
 
 at tilt ``lam``, where ``u_bar`` stacks the bounds ``u_j`` and ``-l_j`` of the
 columns. The CLA's tilt *is* the penalty, so every turning point is a knot,
 ``beta = S z`` at ``lam``. At ``lam = inf`` the CLA starts from the vertex of
-smallest ``l1`` norm on ``A S z = b``, which is ``z = 0`` without rows. A
-homogeneous row (``b = 0``) makes that vertex degenerate; such problems belong to
-the leverage route instead, and the CLA declines them here.
+smallest ``l1`` norm on the constraints, which is ``z = 0`` without equality rows
+(every row of ``G beta <= h`` is slack there, since ``h > 0``). A homogeneous
+equality row (``b = 0``) makes that vertex degenerate; such problems belong to the
+leverage route instead, and the CLA declines them here.
 """
 
 from __future__ import annotations
@@ -58,8 +61,10 @@ def bounded_path(
     lower: NDArray[np.float64],
     upper: NDArray[np.float64],
     tol: float,
+    g: NDArray[np.float64] | None = None,
+    h: NDArray[np.float64] | None = None,
 ) -> list[BreakpointData]:
-    """Trace the LASSO path under ``A beta = b`` and ``lower <= beta <= upper``.
+    """Trace the LASSO path under ``A beta = b``, ``G beta <= h`` and ``lower <= beta <= upper``.
 
     Args:
         quad: The Gram form ``X^T X`` as a :class:`QuadraticForm`.
@@ -70,6 +75,8 @@ def bounded_path(
         upper: Upper bounds, each ``>= 0`` (``inf`` allowed).
         tol: Coefficients below ``tol`` times the path's scale count as zero in the
             ``active`` masks.
+        g: Optional inequality rows ``(p, n)`` of ``G beta <= h``.
+        h: Their right-hand side ``(p,)``, strictly positive.
 
     Returns:
         The breakpoints ``(lam, beta, active)`` from the first knot down to the
@@ -100,6 +107,8 @@ def bounded_path(
             upper_bounds=cap,
             a=a @ legs,
             b=b,
+            g=None if g is None else g @ legs,
+            h=h,
             q=legs.T @ xty,
         )
     except ValueError as err:

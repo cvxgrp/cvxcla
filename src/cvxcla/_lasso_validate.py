@@ -138,33 +138,22 @@ def _validate_constraint_shapes(
         raise ValueError(msg)
 
 
-def validate_equality(
-    a: NDArray[np.float64],
-    g: NDArray[np.float64] | None,
-    dimension: int,
-) -> NDArray[np.float64]:
-    """Validate the homogeneous equality constraints ``A beta = 0``.
+def validate_equality(a: NDArray[np.float64], dimension: int) -> NDArray[np.float64]:
+    """Validate the equality constraints ``A beta = b``.
 
     Args:
-        a: Equality matrix ``A`` of ``A beta = 0``.
-        g: The inequality matrix, which must be absent alongside ``a``.
+        a: Equality matrix ``A`` of ``A beta = b``.
         dimension: The problem dimension ``n`` (number of features).
 
     Returns:
         ``a`` as a 2d ``float64`` array.
 
     Raises:
-        ValueError: If ``a`` is not a 2d matrix with ``n`` columns, or ``g`` is
-            also given (the leverage-CLA route needs homogeneous rows, and
-            ``G beta <= 0`` rows are all tight at ``beta = 0``, which makes the
-            first vertex degenerate).
+        ValueError: If ``a`` is not a 2d matrix with ``n`` columns.
     """
     a = np.asarray(a, dtype=np.float64)
     if a.ndim != 2 or a.shape[1] != dimension:
         msg = f"a must have shape (m, {dimension}), got {a.shape}"
-        raise ValueError(msg)
-    if g is not None:
-        msg = "equality rows a cannot be combined with inequality rows g"
         raise ValueError(msg)
     return a
 
@@ -174,7 +163,6 @@ def validate_bounds(
     upper: NDArray[np.float64] | None,
     b: NDArray[np.float64] | None,
     a: NDArray[np.float64] | None,
-    g: NDArray[np.float64] | None,
     nonneg: bool,
     dimension: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
@@ -185,7 +173,6 @@ def validate_bounds(
         upper: Upper bounds, each ``>= 0`` (``inf`` allowed); ``None`` for none.
         b: Right-hand side of ``A beta = b``; ``None`` for ``b = 0``.
         a: The (validated) equality matrix, or ``None``.
-        g: The inequality matrix, which must be absent alongside bounds or ``b``.
         nonneg: Whether ``beta >= 0`` was requested, which tightens ``lower`` to ``0``.
         dimension: The problem dimension ``n`` (number of features).
 
@@ -194,12 +181,9 @@ def validate_bounds(
         an absent ``b`` zero.
 
     Raises:
-        ValueError: If a bound has the wrong shape or excludes ``beta_j = 0``, ``b``
-            is given without ``a`` or with the wrong length, or ``g`` is also given.
+        ValueError: If a bound has the wrong shape or excludes ``beta_j = 0``, or
+            ``b`` is given without ``a`` or with the wrong length.
     """
-    if g is not None and (lower is not None or upper is not None or b is not None):
-        msg = "bounds and a right-hand side b cannot be combined with inequality rows g"
-        raise ValueError(msg)
     lo = np.full(dimension, -np.inf) if lower is None else np.asarray(lower, dtype=np.float64)
     up = np.full(dimension, np.inf) if upper is None else np.asarray(upper, dtype=np.float64)
     if lo.shape != (dimension,) or up.shape != (dimension,):
