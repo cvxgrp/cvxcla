@@ -349,10 +349,11 @@ class LassoBuilder(Generic[SolverT]):
 
     The LASSO counterpart of :class:`ProblemBuilder`. Construct one via
     :meth:`cvxcla.lasso.Lasso.problem`, optionally add inequality constraints with
-    :meth:`inequality` or homogeneous equality constraints with :meth:`equality`,
-    and finish with :meth:`trace`, which builds the :class:`cvxcla.lasso.Lasso` and
-    traces the entire regularisation path. Like the CLA builder it adds no modelling
-    power: it accepts the same ``G beta <= h`` and ``A beta = 0`` rows the ``Lasso``
+    :meth:`inequality`, equality constraints with :meth:`equality` or
+    per-coefficient bounds with :meth:`bounds`, and finish with :meth:`trace`,
+    which builds the :class:`cvxcla.lasso.Lasso` and traces the entire
+    regularisation path. Like the CLA builder it adds no modelling power: it accepts
+    the same ``G beta <= h`` rows, ``A beta = b`` rows and bounds the ``Lasso``
     already supports and nothing else.
 
     Examples:
@@ -386,6 +387,9 @@ class LassoBuilder(Generic[SolverT]):
         self._g_blocks: list[NDArray[np.float64]] = []
         self._h_blocks: list[NDArray[np.float64]] = []
         self._a_blocks: list[NDArray[np.float64]] = []
+        self._b_blocks: list[NDArray[np.float64]] = []
+        self._lower: NDArray[np.float64] | None = None
+        self._upper: NDArray[np.float64] | None = None
         self._nonneg = False
 
     def non_negative(self) -> LassoBuilder[SolverT]:
@@ -426,27 +430,54 @@ class LassoBuilder(Generic[SolverT]):
         self._h_blocks.append(h_block)
         return self
 
-    def equality(self, a: NDArray[np.float64]) -> LassoBuilder[SolverT]:
-        """Add one or more homogeneous equality rows ``A beta = 0`` (calls accumulate).
+    def equality(self, a: NDArray[np.float64], b: float | NDArray[np.float64] = 0.0) -> LassoBuilder[SolverT]:
+        """Add one or more equality rows ``A beta = b`` (repeated calls accumulate).
 
-        A row of ones is the sum-to-zero constraint. Only a zero right-hand side is
-        supported: the path is traced through the leverage CLA, whose rescaling
-        needs homogeneous rows. Equality rows cannot be combined with
-        :meth:`inequality`.
+        A row of ones with ``b = 0`` is the sum-to-zero constraint. Homogeneous rows
+        are traced through the leverage CLA, rows with a nonzero ``b`` through the
+        penalty form. Equality rows cannot be combined with :meth:`inequality`.
 
         Args:
             a: A length-``n`` row vector or an ``(m, n)`` matrix.
+            b: The matching right-hand side: a scalar for a single row, or a
+                length-``m`` vector. Defaults to ``0``.
 
         Returns:
             ``self``, for chaining.
 
         Raises:
-            ValueError: If ``a``'s column count is not ``n``.
+            ValueError: If ``a``'s column count is not ``n`` or ``b``'s length does
+                not match the rows of ``a``.
         """
-        a_block, b_block = _as_block(a, np.zeros(np.atleast_2d(a).shape[0]))
+        rows = np.atleast_2d(a).shape[0]
+        a_block, b_block = _as_block(a, np.full(rows, b) if np.ndim(b) == 0 else b)
         n = int(self.x.shape[1]) if self.x.ndim == 2 else None
         _validate_block(a_block, b_block, n, "equality", "b")
         self._a_blocks.append(a_block)
+        self._b_blocks.append(b_block)
+        return self
+
+    def bounds(
+        self,
+        lower: NDArray[np.float64] | None = None,
+        upper: NDArray[np.float64] | None = None,
+    ) -> LassoBuilder[SolverT]:
+        """Set per-coefficient bounds ``lower <= beta <= upper`` (a later call replaces them).
+
+        A bound of ``0`` is a sign: ``lower_j = 0`` asks for ``beta_j >= 0`` and
+        ``upper_j = 0`` for ``beta_j <= 0``. A finite nonzero bound is a cap. Every
+        bound must admit ``beta_j = 0``, which the ``Lasso`` checks when the path is
+        traced.
+
+        Args:
+            lower: Length-``n`` lower bounds, each ``<= 0``; ``None`` for none.
+            upper: Length-``n`` upper bounds, each ``>= 0``; ``None`` for none.
+
+        Returns:
+            ``self``, for chaining.
+        """
+        self._lower = None if lower is None else np.asarray(lower, dtype=np.float64)
+        self._upper = None if upper is None else np.asarray(upper, dtype=np.float64)
         return self
 
     def trace(self) -> SolverT:
@@ -458,4 +489,7 @@ class LassoBuilder(Generic[SolverT]):
         """
         g, h = _stack(self._g_blocks, self._h_blocks)
         a = np.vstack(self._a_blocks) if self._a_blocks else None
-        return self._solver(x=self.x, y=self.y, g=g, h=h, a=a, nonneg=self._nonneg)
+        b = np.concatenate(self._b_blocks) if self._b_blocks else None
+        return self._solver(
+            x=self.x, y=self.y, g=g, h=h, a=a, b=b, lower=self._lower, upper=self._upper, nonneg=self._nonneg
+        )

@@ -121,8 +121,8 @@ fixed at zero, while for the ℓ₁ penalty it moves with λ.
 - Visualization of the efficient frontier using Plotly
 - Computation of the maximum Sharpe ratio portfolio
 - **LASSO regularisation path** through the same engine (`Lasso`), with the same
-  fluent builder, general inequality constraints `Gβ ≤ h`, and the non-negative
-  LASSO `β ≥ 0`
+  fluent builder, general inequality constraints `Gβ ≤ h`, per-coefficient bounds
+  (caps, and signs on any of the coefficients), and equality rows `Aβ = b`
 - Fully tested and documented codebase
 
 ## 🚀 Installation
@@ -378,14 +378,38 @@ assert abs(lasso.solution(0.5 * lasso.lam_max).sum()) < 1e-10
 The LASSO homotopy starts from `β = 0`, where an equality row is already active,
 so it cannot seed this path one coordinate at a time. The path is traced instead as
 one leverage-capped CLA on `Σ = XᵀX`, `μ = Xᵀy` and rescaled, `β = w / λ`, using
-the identity described next. This route has three limits:
-- the right-hand side must be zero
-- equality rows cannot be combined with `inequality` rows
-- the Gram `XᵀX` must be positive definite, so the constrained least-squares end
-  is unique
+the identity described next. Signs on any of the coefficients come along, since a
+bound of zero survives the rescaling.
 
-Block-structured rows, such as two groups that each sum to zero, make the
-first vertex degenerate and are refused.
+Per-coefficient **bounds** and equality rows with a **nonzero right-hand side** go
+through the CLA in the *penalty form*: each coefficient is split into a long and a
+short leg, `β = Sz` with `z ≥ 0`, and the penalty `λ‖β‖₁` becomes a cost of `λ`
+per unit of gross position, so the CLA's tilt is `λ` itself (covariance `SᵀXᵀXS`,
+expected returns `−1`, benchmark `q = SᵀXᵀy`). Caps, signs and `Aβ = b` combine:
+
+```python
+# beta_0..2 >= 0, and every |beta_j| <= 2
+lower = np.full(12, -2.0)
+lower[:3] = 0.0
+upper = np.full(12, 2.0)
+lasso = Lasso.problem(X, y).bounds(lower, upper).trace()
+
+# the same, with a fit that must pass through the first observation
+lasso = Lasso.problem(X, y).equality(X[0], y[0]).bounds(lower, upper).trace()
+assert abs(X[0] @ lasso.solution(0.5 * lasso.lam_max) - y[0]) < 1e-9
+```
+
+The two routes have these limits:
+- equality rows and bounds cannot be combined with `inequality` rows
+- `Aβ = 0` takes signs (bounds of `0` or `±∞`) but no finite cap: the rescaling
+  cannot carry a finite box, and the penalty form starts on a degenerate vertex
+- `Aβ = b` with `b ≠ 0` needs a unique smallest-`ℓ₁` point on `Aβ = b` to start
+  from; the fully invested `1ᵀβ = 1` has a whole face of them and is refused
+- under `Aβ = 0` the Gram `XᵀX` must be positive definite, so the constrained
+  least-squares end is unique
+
+Block-structured homogeneous rows, such as two groups that each sum to zero, make
+the first vertex degenerate and are refused.
 
 ### One curve, two literatures
 

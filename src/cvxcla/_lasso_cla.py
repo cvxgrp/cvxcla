@@ -19,7 +19,8 @@ constrained LASSO path. So one leverage-capped CLA trace with ``c = 1`` gives
 every LASSO breakpoint as ``beta = w / lam``, in order: ``lam = inf`` is
 ``beta = 0``, and the cap's release is the constrained least-squares fit. A box of
 ``+/- 2 c`` makes the CLA well posed and never binds, since ``|w_i| <= ||w||_1 <= c``.
-Under ``beta >= 0`` the lower bound is ``0``, which is homogeneous as well.
+A sign constraint ``beta_j >= 0`` or ``beta_j <= 0`` puts that coefficient's bound at
+``0``, which is homogeneous as well, so signs may be set on any of the coefficients.
 
 The CLA's tilt is not the LASSO penalty. The penalty at a breakpoint is read off
 the KKT conditions of the LASSO on the segment that leaves it:
@@ -44,13 +45,18 @@ from .operators import RCOND_FLOOR, QuadraticForm
 BreakpointData = tuple[float, NDArray[np.float64], NDArray[np.bool_]]
 
 
-def _max_correlation(xty: NDArray[np.float64], a: NDArray[np.float64], nonneg: bool) -> float:
-    """Return ``max xty^T beta`` over ``||beta||_1 <= 1``, ``A beta = 0`` (and ``beta >= 0``).
+def _max_correlation(
+    xty: NDArray[np.float64],
+    a: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+) -> float:
+    """Return ``max xty^T beta`` over ``||beta||_1 <= 1``, ``A beta = 0`` and the signs.
 
     Zero means ``beta = 0`` is optimal at every penalty, so the path is one point.
     """
     n = xty.shape[0]
-    legs = np.hstack([np.eye(n), -np.eye(n)])[:, : n if nonneg else 2 * n]
+    legs = np.hstack([np.eye(n), -np.eye(n)])[:, np.concatenate([upper > 0, lower < 0])]
     result = linprog(
         c=-(xty @ legs),
         A_ub=np.ones((1, legs.shape[1])),
@@ -94,16 +100,18 @@ def equality_path(
     quad: QuadraticForm,
     xty: NDArray[np.float64],
     a: NDArray[np.float64],
-    nonneg: bool,
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
     tol: float,
 ) -> list[BreakpointData]:
-    """Trace the LASSO path under ``A beta = 0`` via one leverage-capped CLA.
+    """Trace the LASSO path under ``A beta = 0`` and sign constraints via one leverage-capped CLA.
 
     Args:
         quad: The Gram form ``X^T X`` as a :class:`QuadraticForm`.
         xty: The linear term ``X^T y``.
         a: The equality rows ``(m, n)`` of ``A beta = 0``.
-        nonneg: Restrict to ``beta >= 0``.
+        lower: Per-coefficient lower bounds, each ``0`` (``beta_j >= 0``) or ``-inf``.
+        upper: Per-coefficient upper bounds, each ``0`` (``beta_j <= 0``) or ``inf``.
         tol: Below this, the largest feasible correlation counts as zero.
 
     Returns:
@@ -123,15 +131,15 @@ def equality_path(
             "constrained least-squares end of the path is unique"
         )
         raise ValueError(msg)
-    if _max_correlation(xty, a, nonneg) <= tol:
+    if _max_correlation(xty, a, lower, upper) <= tol:
         return [(0.0, np.zeros(n), np.zeros(n, dtype=bool))]
 
     try:
         cla = CLA(
             mean=xty,
             covariance=quad,
-            lower_bounds=np.zeros(n) if nonneg else np.full(n, -2.0),
-            upper_bounds=np.full(n, 2.0),
+            lower_bounds=np.where(lower < 0, -2.0, 0.0),
+            upper_bounds=np.where(upper > 0, 2.0, 0.0),
             a=a,
             b=np.zeros(a.shape[0]),
             leverage=1.0,

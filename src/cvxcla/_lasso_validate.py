@@ -167,3 +167,55 @@ def validate_equality(
         msg = "equality rows a cannot be combined with inequality rows g"
         raise ValueError(msg)
     return a
+
+
+def validate_bounds(
+    lower: NDArray[np.float64] | None,
+    upper: NDArray[np.float64] | None,
+    b: NDArray[np.float64] | None,
+    a: NDArray[np.float64] | None,
+    g: NDArray[np.float64] | None,
+    nonneg: bool,
+    dimension: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Validate per-coefficient bounds ``lower <= beta <= upper`` and the right-hand side ``b``.
+
+    Args:
+        lower: Lower bounds, each ``<= 0`` (``-inf`` allowed); ``None`` for none.
+        upper: Upper bounds, each ``>= 0`` (``inf`` allowed); ``None`` for none.
+        b: Right-hand side of ``A beta = b``; ``None`` for ``b = 0``.
+        a: The (validated) equality matrix, or ``None``.
+        g: The inequality matrix, which must be absent alongside bounds or ``b``.
+        nonneg: Whether ``beta >= 0`` was requested, which tightens ``lower`` to ``0``.
+        dimension: The problem dimension ``n`` (number of features).
+
+    Returns:
+        ``(lower, upper, b)`` as ``float64`` arrays, with absent bounds infinite and
+        an absent ``b`` zero.
+
+    Raises:
+        ValueError: If a bound has the wrong shape or excludes ``beta_j = 0``, ``b``
+            is given without ``a`` or with the wrong length, or ``g`` is also given.
+    """
+    if g is not None and (lower is not None or upper is not None or b is not None):
+        msg = "bounds and a right-hand side b cannot be combined with inequality rows g"
+        raise ValueError(msg)
+    lo = np.full(dimension, -np.inf) if lower is None else np.asarray(lower, dtype=np.float64)
+    up = np.full(dimension, np.inf) if upper is None else np.asarray(upper, dtype=np.float64)
+    if lo.shape != (dimension,) or up.shape != (dimension,):
+        msg = f"lower and upper must have shape ({dimension},), got {lo.shape} and {up.shape}"
+        raise ValueError(msg)
+    if np.any(lo > 0) or np.any(up < 0):
+        msg = "bounds must admit beta_j = 0: every lower bound <= 0 and every upper bound >= 0"
+        raise ValueError(msg)
+    if nonneg:
+        lo = np.maximum(lo, 0.0)
+    rows = 0 if a is None else a.shape[0]
+    if b is not None and a is None:
+        msg = "a right-hand side b needs equality rows a"
+        raise ValueError(msg)
+    rhs = np.zeros(rows) if b is None else np.asarray(b, dtype=np.float64).reshape(-1)
+    if rhs.shape != (rows,):
+        msg = f"b must have shape ({rows},), got {rhs.shape}"
+        raise ValueError(msg)
+    return lo, up, rhs
