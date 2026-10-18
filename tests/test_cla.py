@@ -491,6 +491,37 @@ class TestDegenerateProblems:
         assert np.all(np.diff(lambdas) < 0)
         assert np.allclose(a @ cla.turning_points[-1].weights, 1.0)
 
+    def test_roundoff_final_event_above_the_floor_ends_the_trace(self):
+        """A root at zero that rounding moves above the floor still ends the trace (issue #957).
+
+        A LASSO with more predictors than observations, in long and short legs: the
+        covariance is 200 x 200 of rank 40. Rounding puts its last event at ~4e-14 of
+        the first, above the machine-precision floor of issue #954, and the turning
+        point there would have a singular free block of 41 assets. It is the root at
+        lambda = 0, so the trace ends there with the 54 turning points of the path.
+        """
+        rng = np.random.default_rng(7)
+        n, p = 40, 100
+        x = rng.standard_normal((n, p))
+        beta = np.zeros(p)
+        beta[:8] = rng.choice([-1, 1], 8) * rng.uniform(1, 3, 8)
+        y = x @ beta + 0.5 * rng.standard_normal(n)
+        s = np.hstack([np.eye(p), -np.eye(p)])
+        gram, c = x.T @ x, x.T @ y
+        cla = CLA(
+            mean=-np.ones(2 * p),
+            covariance=s.T @ gram @ s,
+            lower_bounds=np.zeros(2 * p),
+            upper_bounds=np.full(2 * p, np.inf),
+            a=np.zeros((0, 2 * p)),
+            b=np.zeros(0),
+            q=s.T @ c,
+        )
+        lambdas = np.array([tp.lamb for tp in cla.turning_points])
+        assert len(cla) == 54
+        assert lambdas[-1] == 0.0
+        assert np.all(np.diff(lambdas[1:]) < 0)
+
     def test_degenerate_start_under_a_homogeneous_row_declines(self):
         """A LASSO in penalty form under sum(beta) = 0 declines instead of tracing wrong (issue #953).
 

@@ -29,10 +29,14 @@ from typing import Any, Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
-from .errors import NumericalError
+from .errors import DegenerateProblemError, NumericalError
 
 # An event parameter within this many ulps of zero, relative to the first event, is lambda = 0.
 _ROUNDOFF_FLOOR = 100 * float(np.finfo(np.float64).eps)
+
+# Below this, relative to the first event, an event whose turning point is declined as
+# degenerate is taken to be a root at lambda = 0 that rounding moved above the floor.
+_SUSPECT_FLOOR = 1e-10
 
 
 @runtime_checkable
@@ -237,7 +241,14 @@ def trace(problem: ParametricProblem) -> None:
     # The floor sits at machine precision, not at ``tol``: an ill-conditioned covariance
     # has genuine turning points many decades below the first event (~1e-13 of it for a
     # spectrum spanning 1e12), and a coarser floor truncates the frontier there.
+    # Rounding of a root at zero grows with the size and rank deficiency of the problem,
+    # though, and can land above that floor (~1e-14 of the first event for 200 assets of
+    # rank 40). Such a root is told apart by what follows it: its turning point has a
+    # singular free block, where a genuine small event's is well conditioned. So an event
+    # below ``_SUSPECT_FLOOR`` whose turning point is declined as degenerate ends the
+    # trace at lambda = 0, as it would have below the floor.
     floor = 0.0
+    suspect = 0.0
     prefer = getattr(problem, "stop", None)
     ends_trace = getattr(problem, "ends_trace", None)
     iterations = 0  # pragma: no mutate
@@ -257,6 +268,13 @@ def trace(problem: ParametricProblem) -> None:
         sec, direction, lam = event
         if floor == 0.0:  # pragma: no mutate
             floor = _ROUNDOFF_FLOOR * lam
-        state = problem.step(state, segment, sec, direction, lam)
+            suspect = _SUSPECT_FLOOR * lam
+        try:
+            state = problem.step(state, segment, sec, direction, lam)
+        except DegenerateProblemError:
+            if lam > suspect:
+                raise
+            problem.finish(state, segment)
+            return
         if ends_trace is not None and ends_trace(sec, direction):
             return
