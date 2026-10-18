@@ -30,6 +30,9 @@ _PROJECTION_MAX_ITER = 100  # pragma: no mutate
 # is accepted: the remaining violation is round-off, far inside the turning-point
 # validation tolerance. Only a larger violation means the projection failed.
 _PROJECTION_ACCEPT = float(np.sqrt(np.finfo(np.float64).eps))  # pragma: no mutate
+# The capped-simplex bracket doubles its half-width up to this; far beyond any weight
+# scale, it only bounds the loop for an infeasible budget.
+_BRACKET_MAX_STEP = 2.0**64  # pragma: no mutate
 
 
 def project_feasible(
@@ -119,11 +122,11 @@ def project_capped_simplex(
         The projected weight vector, on the budget and inside the box.
     """
     # sum(clip(w - theta, lower, upper)) is non-increasing in theta; bisect
-    # for the theta that hits the budget. The bracket clips to all-upper
-    # (sum at least the budget) at theta_lo and all-lower (at most the
-    # budget) at theta_hi, so a root is guaranteed for any feasible problem.
-    theta_lo = float((weights - upper).min()) - 1.0
-    theta_hi = float((weights - lower).max()) + 1.0
+    # for the theta that hits the budget. The bracket is taken around the
+    # unclipped shift and widened by doubling rather than read off the bounds,
+    # which may be infinite (an uncapped long-only problem would otherwise put
+    # theta_lo at -inf and return inf weights).
+    theta_lo, theta_hi = _bracket_shift(weights, lower, upper, budget)
     for _ in range(100):
         theta = 0.5 * (theta_lo + theta_hi)
         if float(np.clip(weights - theta, lower, upper).sum()) > budget:
@@ -131,6 +134,41 @@ def project_capped_simplex(
         else:
             theta_hi = theta
     return np.clip(weights - 0.5 * (theta_lo + theta_hi), lower, upper)
+
+
+def _bracket_shift(
+    weights: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+    budget: float,
+) -> tuple[float, float]:
+    """Return a finite ``(theta_lo, theta_hi)`` bracketing the capped-simplex shift.
+
+    Starts from the shift ``theta_0`` that meets the budget before clipping and
+    widens each side by doubling until ``sum(clip(w - theta_lo)) >= budget`` and
+    ``sum(clip(w - theta_hi)) <= budget``. Infinite bounds on either side are fine:
+    the clipped sum then grows without limit in that direction, so the doubling stops.
+    For a feasible problem (``sum(lower) <= budget <= sum(upper)``) a root lies in
+    the bracket; the doubling is capped so an infeasible one cannot loop forever.
+
+    Args:
+        weights: The candidate weight vector.
+        lower: Per-asset lower bounds.
+        upper: Per-asset upper bounds.
+        budget: The all-ones budget right-hand side ``sum(w)``.
+
+    Returns:
+        The finite bracket ``(theta_lo, theta_hi)``.
+    """
+    theta_0 = float((weights.sum() - budget) / weights.size)
+
+    def total(theta: float) -> float:
+        return float(np.clip(weights - theta, lower, upper).sum())
+
+    step = 1.0
+    while (total(theta_0 - step) < budget or total(theta_0 + step) > budget) and step < _BRACKET_MAX_STEP:
+        step *= 2.0
+    return theta_0 - step, theta_0 + step
 
 
 def project_alternating(
