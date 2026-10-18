@@ -63,8 +63,10 @@ from numpy.typing import NDArray
 
 from ._builders import LassoBuilder
 from ._lasso import LassoSegment, LassoState, scan_events, solve_segment
+from ._lasso_bounded import bounded_path
 from ._lasso_cla import equality_path
 from ._lasso_validate import (
+    validate_bounds,
     validate_constraints,
     validate_design_inputs,
     validate_equality,
@@ -102,10 +104,15 @@ class Lasso(InequalityConstrained):
 
     Optional linear inequality constraints ``G beta <= h`` (with ``h > 0``) are
     traced through the same bordered solve as the CLA's ``G w <= h`` rows.
-    Homogeneous equality constraints ``A beta = 0`` (sum-to-zero, contrasts) are
-    traced instead through one leverage-capped CLA under ``Sigma = X^T X`` and
-    ``mu = X^T y``, which traces the same curve (Schmelzer and Hastie,
-    arXiv:2609.25704, Theorem 1 and Corollary 2); see :mod:`cvxcla._lasso_cla`.
+    Homogeneous equality constraints ``A beta = 0`` (sum-to-zero, contrasts), with
+    or without signs on any of the coefficients, are traced instead through one
+    leverage-capped CLA under ``Sigma = X^T X`` and ``mu = X^T y``, which traces the
+    same curve (Schmelzer and Hastie, arXiv:2609.25704, Theorem 1 and Corollary 2);
+    see :mod:`cvxcla._lasso_cla`. Per-coefficient bounds ``lower <= beta <= upper``
+    (caps, and signs on some of the coefficients) and equality rows with a nonzero
+    right-hand side ``A beta = b`` are traced through the CLA in the penalty form,
+    whose tilt is the penalty itself; see :mod:`cvxcla._lasso_bounded`. Each route
+    takes combinations of its constraints.
 
     The quadratic form may be given either as a dense design ``(x, y)`` (the usual
     case, ``H = X^T X``) or, via :meth:`from_operator`, as a ``QuadraticForm``
@@ -130,9 +137,17 @@ class Lasso(InequalityConstrained):
         path: The discovered breakpoints, populated on construction.
         quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
         linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
-        a: Optional equality matrix ``(m, n)`` of ``A beta = 0``. It cannot be
-            combined with ``g``/``h``, and it needs a positive-definite Gram, so that
-            the constrained least-squares end of the path is unique.
+        a: Optional equality matrix ``(m, n)`` of ``A beta = b``. It cannot be
+            combined with ``g``/``h``. With ``b = 0`` it needs a positive-definite
+            Gram, so that the constrained least-squares end of the path is unique,
+            and its bounds may only be signs (``0`` or infinite).
+        b: Optional right-hand side ``(m,)`` of ``A beta = b``; ``None`` means
+            ``b = 0``. A nonzero ``b`` needs a unique smallest-``l1`` point on
+            ``A beta = b`` (true for generic ``A`` and ``b``) to start from.
+        lower: Optional per-coefficient lower bounds ``(n,)``, each ``<= 0``
+            (``-inf`` for none, ``0`` for ``beta_j >= 0``).
+        upper: Optional per-coefficient upper bounds ``(n,)``, each ``>= 0``
+            (``inf`` for none, ``0`` for ``beta_j <= 0``).
     """
 
     x: NDArray[np.float64] | None = None
@@ -146,6 +161,9 @@ class Lasso(InequalityConstrained):
     quad_form: QuadraticForm | None = None  # pragma: no mutate
     linear: NDArray[np.float64] | None = None  # pragma: no mutate
     a: NDArray[np.float64] | None = None  # pragma: no mutate
+    b: NDArray[np.float64] | None = None  # pragma: no mutate
+    lower: NDArray[np.float64] | None = None  # pragma: no mutate
+    upper: NDArray[np.float64] | None = None  # pragma: no mutate
 
     def __post_init__(self) -> None:
         """Validate shapes and trace the full LASSO path.
@@ -153,8 +171,10 @@ class Lasso(InequalityConstrained):
         Raises:
             ValueError: If ``x`` is not 2d, ``y``'s length does not match ``x``, the
                 constraint shapes are inconsistent, any ``h`` entry is not strictly
-                positive (which would make ``beta = 0`` infeasible), or equality
-                rows ``a`` are combined with ``g`` or cannot be traced.
+                positive (which would make ``beta = 0`` infeasible), equality
+                rows ``a``, bounds or ``b`` are combined with ``g``, a bound
+                excludes ``beta_j = 0``, ``A beta = 0`` comes with a finite bound,
+                or the CLA cannot trace the problem.
         """
         if self.quad_form is not None or self.linear is not None:
             self.linear = validate_operator_inputs(self.quad_form, self.linear, self.x, self.y)
@@ -163,10 +183,44 @@ class Lasso(InequalityConstrained):
         validate_constraints(self.g, self.h, self.dimension, self.tol)
         if self.a is not None:
             self.a = validate_equality(self.a, self.g, self.dimension)
-            path = equality_path(self.quad, self.xty, self.a, self.nonneg, self.tol)
-            self.path.extend(Breakpoint(lam, beta, active) for lam, beta, active in path)
+        if self.via_cla:
+            self.path.extend(Breakpoint(lam, beta, active) for lam, beta, active in self._cla_path())
             return
         trace(self)
+
+    @property
+    def via_cla(self) -> bool:
+        """Whether the path is traced by a CLA rather than the homotopy.
+
+        The homotopy starts from ``beta = 0`` with every constraint slack, so equality
+        rows, their right-hand side and per-coefficient bounds go through a CLA instead.
+        """
+        return any(v is not None for v in (self.a, self.b, self.lower, self.upper))
+
+    def _cla_path(self) -> list[tuple[float, NDArray[np.float64], NDArray[np.bool_]]]:
+        """Route a problem with equality rows or bounds to the CLA that takes it.
+
+        Homogeneous rows with signs only go to the leverage CLA, everything else
+        with a nondegenerate start to the penalty form.
+
+        Raises:
+            ValueError: If ``A beta = 0`` comes with a finite bound: the leverage CLA
+                cannot rescale a finite box, and the penalty form starts on a
+                degenerate vertex there.
+        """
+        lower, upper, b = validate_bounds(self.lower, self.upper, self.b, self.a, self.g, self.nonneg, self.dimension)
+        a = np.zeros((0, self.dimension)) if self.a is None else self.a
+        signs_only = bool(np.isin(lower, [0.0, -np.inf]).all() and np.isin(upper, [0.0, np.inf]).all())
+        if a.shape[0] and not b.any():
+            if not signs_only:
+                msg = (
+                    "A beta = 0 takes signs (bounds of 0 or infinity) but no finite bound: "
+                    "the leverage CLA cannot rescale a finite box, and the penalty form "
+                    "starts on a degenerate vertex"
+                )
+                raise ValueError(msg)
+            return equality_path(self.quad, self.xty, a, lower, upper, self.tol)
+        return bounded_path(self.quad, self.xty, a, b, lower, upper, self.tol)
 
     @classmethod
     def problem(cls, x: NDArray[np.float64], y: NDArray[np.float64]) -> LassoBuilder[Lasso]:
@@ -285,7 +339,7 @@ class Lasso(InequalityConstrained):
         ``X^T y`` outside the row space of ``A``, so the threshold is read off the
         traced path instead.
         """
-        if self.a is not None:
+        if self.via_cla:
             return self.path[0].lam
         return float(np.max(np.abs(self.xty)))
 
