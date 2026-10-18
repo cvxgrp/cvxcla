@@ -174,6 +174,14 @@ class CLA(InequalityConstrained):
             leg (see :mod:`cvxcla._leverage`); the turning points are reported in
             the original asset weights, and ``active_ineq`` covers the rows of
             ``g`` only.
+        stop: Optional asset index ``j``. The trace ends at the turning point where
+            asset ``j`` leaves its bound, which is recorded (and is the last one);
+            no ``lambda = 0`` endpoint follows. That event wins a tie with any other
+            event at the same ``lambda``. With a zero-variance, zero-return cash
+            asset in a fully invested problem, cash leaving zero is where the budget
+            goes slack, and the free block below it can be singular. ``None`` (the
+            default) traces to ``lambda = 0``. Not supported together with
+            ``leverage``.
 
     The array inputs (and a dense ``covariance``) are copied into read-only
     ``float64`` arrays when the object is built, so changing the caller's arrays
@@ -193,6 +201,7 @@ class CLA(InequalityConstrained):
     tol: float = 1e-5  # pragma: no mutate
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
     leverage: float | None = None
+    stop: int | None = None
 
     @classmethod
     def problem(
@@ -274,7 +283,8 @@ class CLA(InequalityConstrained):
         Raises:
             ValueError: If the inequality matrix ``g`` and vector ``h`` have
                 mismatched or wrong shapes, ``leverage`` is not a positive finite
-                number, or an input is not finite (see :func:`_check_finite_inputs`).
+                number, ``stop`` is not an asset index or is combined with
+                ``leverage``, or an input is not finite (see :func:`_check_finite_inputs`).
             InfeasibleProblemError: If the constraints admit no portfolio, including
                 an equality system whose dependent rows contradict the others.
             DegenerateProblemError: If the problem is feasible but outside the
@@ -295,11 +305,17 @@ class CLA(InequalityConstrained):
         b.setflags(write=False)
         object.__setattr__(self, "a", a)  # frozen dataclass: normalise once, before tracing
         object.__setattr__(self, "b", b)
+        if self.stop is not None and not 0 <= self.stop < self.dimension:
+            msg = f"stop must be an asset index in [0, {self.dimension}), got {self.stop}"
+            raise ValueError(msg)
         if self.leverage is None:
             trace(self)
             return
         if not (np.isfinite(self.leverage) and self.leverage > 0):
             msg = f"leverage must be a positive finite number, got {self.leverage}"
+            raise ValueError(msg)
+        if self.stop is not None:
+            msg = "stop is not supported together with leverage"
             raise ValueError(msg)
         self._trace_leveraged(self.leverage)
 
@@ -409,6 +425,10 @@ class CLA(InequalityConstrained):
             segment, self.lower_bounds, self.upper_bounds, self.g_matrix, self.h_vector, lam_scale, mu_scale
         )
 
+    def ends_trace(self, sec: int, direction: int) -> bool:
+        """Whether the event ``(sec, direction)`` ends the trace: asset ``stop`` leaving its bound."""
+        return sec == self.stop and direction >= 2
+
     def step(self, state: TurningPoint, segment: Segment, sec: int, direction: int, lam: float) -> TurningPoint:
         """Emit the turning point at ``lam`` after flipping the activity at ``sec``.
 
@@ -418,6 +438,10 @@ class CLA(InequalityConstrained):
         event on row ``sec - n``: ``direction == 0`` activates the row (its slack
         reached zero), ``direction == 1`` releases it (its multiplier reached
         zero). The weight vector is continuous across either event.
+
+        When the event ends the trace (see :meth:`ends_trace`), the turning point's
+        weights come from the segment above it and the free block below it is never
+        solved, so its degeneracy guard is skipped.
         """
         n = self.dimension
         free = state.free
@@ -428,7 +452,8 @@ class CLA(InequalityConstrained):
         else:
             active_ineq = active_ineq.copy()
             active_ineq[sec - n] = direction == 0
-        self._emit(lam, segment.r_alpha + lam * segment.r_beta, free, active_ineq)
+        guard = not self.ends_trace(sec, direction)
+        self._emit(lam, segment.r_alpha + lam * segment.r_beta, free, active_ineq, guard=guard)
         return self.turning_points[-1]
 
     def finish(self, state: TurningPoint, segment: Segment) -> None:
@@ -485,6 +510,7 @@ class CLA(InequalityConstrained):
         weights: NDArray[np.float64],
         free: NDArray[np.bool_],
         active_ineq: NDArray[np.bool_],
+        guard: bool = True,
     ) -> None:
         """Build and store a turning point, projecting away sub-tolerance round-off.
 
@@ -504,7 +530,7 @@ class CLA(InequalityConstrained):
         but not exactly feasible; the projection clears it and is a strict no-op for
         the well-posed turning points that are already feasible.
         """
-        if not self._free_blocks_well_conditioned:
+        if guard and not self._free_blocks_well_conditioned:
             guard_degeneracy(self.covariance_operator, lamb, free)
         weights = project_feasible(
             weights,
