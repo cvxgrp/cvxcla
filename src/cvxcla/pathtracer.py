@@ -31,6 +31,9 @@ from numpy.typing import NDArray
 
 from .errors import NumericalError
 
+# An event parameter within this many ulps of zero, relative to the first event, is lambda = 0.
+_ROUNDOFF_FLOOR = 100 * float(np.finfo(np.float64).eps)
+
 
 @runtime_checkable
 class ParametricProblem(Protocol):
@@ -231,6 +234,9 @@ def trace(problem: ParametricProblem) -> None:
     # can move a root at zero to ~1e-16, and firing it would emit a turning point whose
     # free block is singular. Taken from the path itself rather than ``scale``, which a
     # covariance that cancels along the equal-weight direction can drive to roundoff.
+    # The floor sits at machine precision, not at ``tol``: an ill-conditioned covariance
+    # has genuine turning points many decades below the first event (~1e-13 of it for a
+    # spectrum spanning 1e12), and a coarser floor truncates the frontier there.
     floor = 0.0
     prefer = getattr(problem, "stop", None)
     ends_trace = getattr(problem, "ends_trace", None)
@@ -250,7 +256,7 @@ def trace(problem: ParametricProblem) -> None:
 
         sec, direction, lam = event
         if floor == 0.0:  # pragma: no mutate
-            floor = min(problem.tol, 1e-10) * lam
+            floor = _ROUNDOFF_FLOOR * lam
         state = problem.step(state, segment, sec, direction, lam)
         if ends_trace is not None and ends_trace(sec, direction):
             return
