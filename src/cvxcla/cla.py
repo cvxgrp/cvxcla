@@ -373,6 +373,58 @@ class CLA(InequalityConstrained):
             trace(self)
         else:
             self._trace_leveraged(self.leverage)
+        self._restore_mean_units()
+
+    @cached_property
+    def _mean_shift(self) -> tuple[float, float, NDArray[np.float64]]:
+        """Return ``(c, d, r)``: the trace runs on ``(mean - c) / d`` (see :attr:`_traced_mean`).
+
+        When ``1`` lies in the row space of ``A`` (``A^T r = 1``, e.g. a budget row
+        ``1'w = b``), ``1'w`` is the same for every feasible portfolio, so subtracting
+        ``c`` from every return changes the objective by a constant only, and dividing
+        ``mean`` by ``d`` relabels ``lambda`` as ``lambda d``. Centring on the midpoint
+        of ``mean`` and scaling to unit half-range makes the event and held-bound
+        tolerances, which are absolute in ``mean``, see the spread of the returns rather
+        than their level: returns ``0.5 +- 1e-10`` trace like ``+-1`` (issue #967).
+        Without such a row, or with all returns equal, it is the identity ``(0, 1, 0)``.
+        """
+        identity = 0.0, 1.0, np.zeros(self.a.shape[0])
+        ones = np.ones(self.dimension)
+        r = np.asarray(np.linalg.lstsq(self.a.T, ones, rcond=None)[0], dtype=np.float64)
+        if not np.allclose(self.a.T @ r, ones, rtol=0.0, atol=1e-12):  # pragma: no mutate
+            return identity
+        hi, lo = float(np.max(self.mean)), float(np.min(self.mean))
+        if hi == lo:
+            return identity
+        return (hi + lo) / 2, (hi - lo) / 2, r
+
+    @cached_property
+    def _traced_mean(self) -> NDArray[np.float64]:
+        """The returns the trace runs on: ``(mean - c) / d`` (see :attr:`_mean_shift`)."""
+        c, d, _ = self._mean_shift
+        if c == 0.0 and d == 1.0:
+            return self.mean
+        return (self.mean - c) / d
+
+    def _restore_mean_units(self) -> None:
+        """Map the turning points traced on :attr:`_traced_mean` back to ``mean``.
+
+        With ``lambda' (mean - c) / d = lambda (mean - c 1)`` the original problem has
+        ``lambda = lambda' / d``, ``eta = eta'`` and ``nu = nu' + lambda c r``; at
+        ``lambda = inf`` the recorded slopes become ``d nu' + c r`` and ``d eta'``.
+        The weights are unchanged.
+        """
+        c, d, r = self._mean_shift
+        if c == 0.0 and d == 1.0:
+            return
+        restored = []
+        for tp in self.turning_points:
+            if tp.lamb == np.inf:
+                restored.append(replace(tp, nu=d * tp.nu + c * r, eta=d * tp.eta))
+            else:
+                lamb = tp.lamb / d
+                restored.append(replace(tp, lamb=lamb, nu=tp.nu + lamb * c * r))
+        self.turning_points[:] = restored
 
     def _trace_leveraged(self, leverage: float) -> None:
         """Trace the frontier under ``||w||_1 <= leverage`` via the signed lift.
@@ -397,7 +449,7 @@ class CLA(InequalityConstrained):
         lift = LeverageLift.from_bounds(lower, upper)
         g, h = lift.with_cap(self.g_matrix, self.h_vector, leverage if keep_cap else None)
         lifted = _LeveragedCLA(
-            mean=self.mean[lift.asset] * lift.sign,
+            mean=self._traced_mean[lift.asset] * lift.sign,
             q=self.q_vector[lift.asset] * lift.sign,
             covariance=SignedLift(self.covariance_operator, lift.asset, lift.sign),
             lower_bounds=lift.lower,
@@ -434,7 +486,7 @@ class CLA(InequalityConstrained):
         """
         segment = critical_segment(
             self.covariance_operator,
-            self.mean,
+            self._traced_mean,
             self.a,
             self.b,
             self.g_matrix,
@@ -475,7 +527,7 @@ class CLA(InequalityConstrained):
         or ``Sigma = 0``) falls back to ``1``.
         """
         n = self.dimension
-        mu_scale = float(np.max(np.abs(self.mean))) if n else 0.0
+        mu_scale = float(np.max(np.abs(self._traced_mean))) if n else 0.0
         probes = np.column_stack([np.ones(n), np.random.default_rng(0).choice([-1.0, 1.0], size=n)])
         cov_scale = float(np.max(np.abs(self.covariance_operator.matvec(probes)))) / n if n else 0.0
         mu_scale = mu_scale if mu_scale > 0 else 1.0
@@ -601,7 +653,14 @@ class CLA(InequalityConstrained):
     def _first_turning_point(self) -> TurningPoint:
         """Return the maximum-return vertex (see :func:`cvxcla.first.first_turning_point`)."""
         return first_turning_point(
-            self.mean, self.lower_bounds, self.upper_bounds, self.a, self.b, self.g_matrix, self.h_vector, self.tol
+            self._traced_mean,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.a,
+            self.b,
+            self.g_matrix,
+            self.h_vector,
+            self.tol,
         )
 
     def _append(self, tp: TurningPoint, tol: float | None = None) -> None:

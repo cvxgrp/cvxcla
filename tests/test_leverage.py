@@ -240,12 +240,14 @@ class TestFirstVertexNetting:
     """A max-return vertex with both legs of one asset positive is netted before tracing."""
 
     def test_overlapping_lp_vertex_is_netted(self):
-        """HiGHS returns asset 3 with both legs positive here; the trace still is optimal.
+        """HiGHS returns asset 2 with both legs positive here; the trace still is optimal.
 
         At this vertex the cap is tight but carries a zero multiplier (the box
         binds), so the LP optimum is not unique and HiGHS picks the overlapping one.
+        Which optimum it picks depends on the LP objective, i.e. on the centred
+        returns the budget lets the trace run on (issue #967).
         """
-        rng = np.random.default_rng(57)
+        rng = np.random.default_rng(30)
         n = int(rng.integers(4, 20))
         factors = rng.standard_normal((n, n))
         cov = factors @ factors.T / n + 0.05 * np.eye(n)

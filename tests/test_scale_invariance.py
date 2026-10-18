@@ -59,9 +59,18 @@ def test_turning_points_invariant_under_rescaling(reference, c, s):
 def test_lambda_scale_is_homogeneous(reference):
     """The lambda scale moves with s / c, which is what makes the tests unit-free."""
     mean, cov, bounds, _, _ = reference
-    base = CLA(mean=mean, covariance=cov, **bounds).lambda_scale
-    scaled = CLA(mean=1e3 * mean, covariance=1e-2 * cov, **bounds).lambda_scale
+    weighted = {**bounds, "a": np.linspace(1.0, 2.0, len(mean))[None, :]}  # no budget: mean is traced as given
+    base = CLA(mean=mean, covariance=cov, **weighted).lambda_scale
+    scaled = CLA(mean=1e3 * mean, covariance=1e-2 * cov, **weighted).lambda_scale
     assert scaled == pytest.approx(base * 1e-2 / 1e3)
+
+
+def test_lambda_scale_under_a_budget_ignores_the_returns(reference):
+    """With a budget row the trace runs on centred, unit-spread returns, so only s moves the scale."""
+    mean, cov, bounds, _, _ = reference
+    base = CLA(mean=mean, covariance=cov, **bounds).lambda_scale
+    scaled = CLA(mean=1e3 * mean + 7.0, covariance=1e-2 * cov, **bounds).lambda_scale
+    assert scaled == pytest.approx(base * 1e-2)
 
 
 def test_event_ratios_honour_custom_floors():
@@ -140,3 +149,58 @@ def test_select_next_event_window_follows_scale():
     l_mat[0, 0], l_mat[1, 0] = 1.0e-9 - 5e-11, 1.0e-9
     assert select_next_event(l_mat, lam=1.0, tol=1e-5)[0] == 0  # merged: lowest index
     assert select_next_event(l_mat, lam=1.0, tol=1e-5, scale=1e-8)[0] == 1  # resolved
+
+
+def _kkt_residual(cla: CLA, mean: np.ndarray, cov: np.ndarray) -> float:
+    """The largest stationarity residual over the free assets of every turning point."""
+    worst = 0.0
+    for tp in cla.turning_points:
+        grad = -mean + cla.a.T @ tp.nu if np.isinf(tp.lamb) else cov @ tp.weights - tp.lamb * mean + cla.a.T @ tp.nu
+        worst = max(worst, float(np.max(np.abs(grad[tp.free]), initial=0.0)))
+    return worst
+
+
+def test_nearly_tied_returns_trace_like_their_spread():
+    """Returns 0.5 +- 1e-10 under a budget trace like their spread scaled up (issue #967).
+
+    With ``1'w = 1`` a shift of every return is a constant and a scaling relabels
+    ``lambda``; the absolute event tolerances must not see the level ``0.5``.
+    """
+    rng = np.random.default_rng(42)
+    n, k = 20, 5
+    u = rng.standard_normal((n, k)) / np.sqrt(n)
+    cov = np.diag(rng.uniform(0.5, 2.0, n)) + (u * rng.uniform(0.5, 2.0, k) * n) @ u.T
+    mean = 0.5 + 1e-10 * rng.uniform(-1.0, 1.0, n)
+    bounds = {"lower_bounds": np.zeros(n), "upper_bounds": np.ones(n), "a": np.ones((1, n)), "b": np.ones(1)}
+
+    tied = CLA(mean=mean, covariance=cov, **bounds)
+    spread = CLA(mean=0.5 + (mean - 0.5) * 1e6, covariance=cov, **bounds)
+
+    assert len(tied) == len(spread) > 2
+    for x, y in zip(tied.turning_points, spread.turning_points, strict=True):
+        np.testing.assert_allclose(x.weights, y.weights, atol=1e-10)
+    lambdas = np.array([tp.lamb for tp in tied.turning_points[1:-1]])
+    np.testing.assert_allclose(lambdas * 1e-6, [tp.lamb for tp in spread.turning_points[1:-1]], rtol=1e-9)
+
+
+def test_shifted_returns_report_multipliers_of_the_original_problem(reference):
+    """The multipliers are mapped back from the centred trace, so the KKT identity holds in ``mean``."""
+    mean, cov, bounds, weights, _ = reference
+    cla = CLA(mean=mean + 0.1, covariance=cov, **bounds)
+
+    np.testing.assert_allclose([tp.weights for tp in cla.turning_points], weights, atol=1e-10)
+    assert _kkt_residual(cla, mean + 0.1, cov) < 1e-10
+
+
+def test_equal_returns_are_not_rescaled():
+    """All returns equal leave nothing to centre on: the trace runs on ``mean`` itself."""
+    cla = CLA(
+        mean=np.array([0.5]),
+        covariance=np.eye(1),
+        lower_bounds=np.zeros(1),
+        upper_bounds=np.ones(1),
+        a=np.ones((1, 1)),
+        b=np.ones(1),
+    )
+    assert cla._traced_mean is cla.mean
+    np.testing.assert_allclose(cla.turning_points[-1].weights, [1.0])
