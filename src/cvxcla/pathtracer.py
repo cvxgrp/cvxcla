@@ -74,7 +74,9 @@ class ParametricProblem(Protocol):
 
         ``direction`` is the winning event-matrix column; the implementation maps
         it to the new activity (and, where relevant, the sign) of ``sec``. Returns
-        the next ``State``.
+        the next ``State``. A problem may also define ``ends_trace(sec, direction)``;
+        when it returns ``True`` the trace ends at the vertex ``step`` just recorded
+        and no ``finish`` follows.
         """
         ...  # pragma: no cover
 
@@ -133,7 +135,12 @@ class InequalityConstrained:
 
 
 def select_next_event(
-    l_mat: NDArray[np.float64], lam: float, tol: float, scale: float = 1.0, floor: float = 0.0
+    l_mat: NDArray[np.float64],
+    lam: float,
+    tol: float,
+    scale: float = 1.0,
+    floor: float = 0.0,
+    prefer: int | None = None,
 ) -> tuple[int, int, float] | None:
     """Pick the next breakpoint from the event matrix, or ``None`` to stop.
 
@@ -167,6 +174,9 @@ def select_next_event(
             and end the trace. ``trace`` sets it relative to the first finite event,
             so a root that belongs at zero but rounds to a tiny positive value
             (e.g. ``1e-16``) does not fire.
+        prefer: Optional coordinate whose event wins a tie: if any of its events
+            is among those tied for the largest valid ratio, it is chosen over the
+            Bland lowest-index pick.
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
@@ -185,7 +195,8 @@ def select_next_event(
         return None
 
     tied = np.argwhere(l_mat >= lam_max - rate * max(scale, abs(lam_max)))  # pragma: no mutate
-    sec, direction = tied[0]
+    preferred = tied[tied[:, 0] == prefer]
+    sec, direction = preferred[0] if len(preferred) else tied[0]
     # lambda is non-increasing along the path: clamp away any roundoff overshoot.
     return int(sec), int(direction), float(min(lam, l_mat[sec, direction]))
 
@@ -221,6 +232,8 @@ def trace(problem: ParametricProblem) -> None:
     # free block is singular. Taken from the path itself rather than ``scale``, which a
     # covariance that cancels along the equal-weight direction can drive to roundoff.
     floor = 0.0
+    prefer = getattr(problem, "stop", None)
+    ends_trace = getattr(problem, "ends_trace", None)
     iterations = 0  # pragma: no mutate
 
     while True:  # pragma: no mutate
@@ -230,7 +243,7 @@ def trace(problem: ParametricProblem) -> None:
             raise NumericalError(msg)  # pragma: no mutate
 
         segment = problem.segment(state)
-        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale, floor)
+        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale, floor, prefer)
         if event is None:
             problem.finish(state, segment)
             return
@@ -239,3 +252,5 @@ def trace(problem: ParametricProblem) -> None:
         if floor == 0.0:  # pragma: no mutate
             floor = min(problem.tol, 1e-10) * lam
         state = problem.step(state, segment, sec, direction, lam)
+        if ends_trace is not None and ends_trace(sec, direction):
+            return

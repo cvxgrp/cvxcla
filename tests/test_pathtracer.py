@@ -62,6 +62,15 @@ class TestSelectNextEvent:
         # without a floor the same event fires
         assert select_next_event(l_mat, lam=0.5, tol=1e-9) == (1, 0, 4.4e-16)
 
+    def test_prefer_wins_a_tie(self):
+        """A preferred coordinate tied for the largest ratio beats the lowest-index pick."""
+        l_mat = np.full((4, 2), -np.inf)
+        l_mat[1, 0] = 0.5
+        l_mat[3, 1] = 0.5
+        assert select_next_event(l_mat, lam=1.0, tol=1e-9, prefer=3) == (3, 1, 0.5)
+        # not tied: the preference does not override a larger ratio
+        assert select_next_event(l_mat, lam=1.0, tol=1e-9, prefer=2) == (1, 0, 0.5)
+
     def test_returns_none_when_all_neg_inf(self):
         """An all -inf matrix means no candidate events remain."""
         assert select_next_event(np.full((3, 2), -np.inf), lam=np.inf, tol=1e-9) is None

@@ -1443,3 +1443,99 @@ class TestNoEqualityRows:
                 options={"gtol": 1e-12, "xtol": 1e-14},
             )
             np.testing.assert_allclose(result.x, expected, atol=1e-5)
+
+
+class TestStop:
+    """Early stop when a given asset leaves its bound (https://github.com/cvxgrp/cvxcla/issues/938)."""
+
+    @staticmethod
+    def _budget_lasso():
+        """The LASSO in budget form: split coefficients, long-only, fully invested, plus cash."""
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((60, 5))
+        y = x @ np.array([1.0, -1.0, 0.5, 0, 0]) + 0.1 * rng.standard_normal(60)
+        s = np.hstack([np.eye(5), -np.eye(5)])
+        k = 10
+        sigma = np.zeros((k + 1, k + 1))
+        sigma[:k, :k] = s.T @ (x.T @ x) @ s  # the last asset is cash
+        kwargs = {
+            "mean": np.append(s.T @ (x.T @ y), 0.0),
+            "covariance": sigma,
+            "lower_bounds": np.zeros(k + 1),
+            "upper_bounds": np.full(k + 1, np.inf),
+            "a": np.ones((1, k + 1)),
+            "b": np.ones(1),
+        }
+        return x, y, s, k, kwargs
+
+    def test_budget_lasso_stops_where_cash_leaves_zero(self):
+        """With stop=cash the trace ends where the budget goes slack and matches the LASSO path."""
+        from cvxcla import Lasso
+
+        x, y, s, k, kwargs = self._budget_lasso()
+        cla = CLA(**kwargs, stop=k)
+
+        last = cla.turning_points[-1]
+        assert last.free[k]
+        assert last.weights[k] == pytest.approx(0.0, abs=1e-12)
+        beta_ols = np.linalg.lstsq(x, y, rcond=None)[0]
+        assert last.lamb == pytest.approx(1.0 / np.abs(beta_ols).sum(), rel=1e-9)
+
+        betas = [np.zeros(5)] + [s @ tp.weights[:k] / tp.lamb for tp in cla.turning_points[1:]]
+        knots = [bp.beta for bp in Lasso(x=x, y=y).path]
+        assert len(betas) == len(knots)
+        np.testing.assert_allclose(betas, knots, atol=1e-9)
+
+    def test_without_stop_the_budget_lasso_is_degenerate(self):
+        """The same problem traced past the cash event hits the singular free block."""
+        from cvxcla.errors import DegenerateProblemError
+
+        *_, kwargs = self._budget_lasso()
+        with pytest.raises(DegenerateProblemError):
+            CLA(**kwargs)
+
+    def test_stop_that_never_fires_traces_to_lambda_zero(self):
+        """An asset that is free at the first vertex never leaves a bound, so the trace is unchanged."""
+        n = 3
+        kwargs = {
+            "mean": np.array([0.1, 0.15, 0.2]),
+            "covariance": np.eye(n) * 0.04,
+            "lower_bounds": np.zeros(n),
+            "upper_bounds": np.full(n, 0.6),
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+        plain = CLA(**kwargs)
+        stopped = CLA(**kwargs, stop=1)  # asset 1 is the free basic asset of the first vertex
+        assert plain.turning_points[0].free[1]
+        assert [tp.lamb for tp in stopped.turning_points] == [tp.lamb for tp in plain.turning_points]
+
+    @pytest.mark.parametrize("stop", [-1, 3])
+    def test_stop_out_of_range_raises(self, stop):
+        """``stop`` must name an asset."""
+        n = 3
+        with pytest.raises(ValueError, match=r"^stop must be an asset index in \[0, 3\)"):
+            CLA(
+                mean=np.array([0.1, 0.15, 0.2]),
+                covariance=np.eye(n) * 0.04,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                stop=stop,
+            )
+
+    def test_stop_with_leverage_raises(self):
+        """``stop`` is not supported on the leverage-capped (lifted) trace."""
+        n = 3
+        with pytest.raises(ValueError, match=r"^stop is not supported together with leverage$"):
+            CLA(
+                mean=np.array([0.1, 0.15, 0.2]),
+                covariance=np.eye(n) * 0.04,
+                lower_bounds=-np.ones(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                leverage=1.5,
+                stop=0,
+            )
