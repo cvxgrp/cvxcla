@@ -112,7 +112,9 @@ class TurningPoint(FrontierPoint):
     (one entry per equality row of ``CLA.a``) and ``eta`` (one entry per row of
     ``G``, zero on the inactive rows), so that on the free assets
 
-        ``Sigma w - lamb * mean + A^T nu + G^T eta = 0``.
+        ``Sigma w - q - lamb * mean + A^T nu + G^T eta = 0``,
+
+    where ``q`` is the linear term of ``CLA(q=...)`` (zero by default).
 
     At ``lamb = inf`` the multipliers grow with ``lamb``, so their slopes
     ``nu / lamb`` and ``eta / lamb`` are recorded instead, and the identity reads

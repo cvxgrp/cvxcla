@@ -78,6 +78,7 @@ def solve_kkt(
     free_in: NDArray[np.bool_],
     fixed_weights: NDArray[np.float64],
     active_ineq: NDArray[np.bool_],
+    linear: NDArray[np.float64] | None = None,
 ) -> tuple[
     NDArray[np.float64],
     NDArray[np.float64],
@@ -110,6 +111,10 @@ def solve_kkt(
         free_in: Boolean mask of the assets in the reduced solve.
         fixed_weights: Full-length weights of the assets held at their bounds.
         active_ineq: Boolean mask (length ``p``) of the active inequality rows.
+        linear: Optional constant linear term ``q`` of the objective
+            ``w^T Sigma w / 2 - (q + lam mean)^T w``. It enters only the constant
+            (``lambda``-free) system: one more term on its right-hand side and in
+            ``gamma``. ``None`` means ``q = 0``.
 
     Returns:
         ``(r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta)``:
@@ -118,8 +123,8 @@ def solve_kkt(
         affine inequality multipliers ``eta_alpha + lam * eta_beta`` (length ``p``,
         non-zero only on active rows) that drive the release-a-row events, and the
         affine equality multipliers ``nu_alpha + lam * nu_beta`` (length ``m``).
-        Together they satisfy ``Sigma w - lam mean + A^T nu + G^T eta = 0`` on the
-        free assets.
+        Together they satisfy ``Sigma w - q - lam mean + A^T nu + G^T eta = 0`` on
+        the free assets.
     """
     m = a.shape[0]
     ns = len(mean)
@@ -131,16 +136,18 @@ def solve_kkt(
     c = np.vstack([a, g[active_ineq]])
     d = np.concatenate([b, h[active_ineq]])
     c_free = c[:, free_in]
+    q = np.zeros(ns) if linear is None else linear
 
     # The reduced KKT system is the shared bordered solve: the constant system
     # carries the blocked-weight shift -Sigma_FB w_B and the reduced constraint
     # right-hand side d - C_B w_B; the slope system carries the mean with a zero
-    # constraint right-hand side (A r_beta = 0).
+    # constraint right-hand side (A r_beta = 0). A linear term q adds q_F to the
+    # constant system only.
     x_alpha, x_beta, nu_alpha, nu_beta = bordered_solve(
         cov,
         free_in,
         c_free,
-        -cross(cov, free_in, fixed_weights),
+        q[free_in] - cross(cov, free_in, fixed_weights),
         mean[free_in],
         d - c[:, out] @ fixed_weights[out],
         np.zeros(c.shape[0]),
@@ -151,7 +158,7 @@ def solve_kkt(
     r_beta = np.zeros(ns)
     r_beta[free_in] = x_beta
 
-    gamma = cov.matvec(r_alpha) + c.T @ nu_alpha
+    gamma = cov.matvec(r_alpha) + c.T @ nu_alpha - q
     delta = cov.matvec(r_beta) + c.T @ nu_beta - mean
 
     # The tail of the stacked multiplier is the inequality multiplier eta(lam)
@@ -247,6 +254,7 @@ def critical_segment(
     upper: NDArray[np.float64],
     tol: float,
     state: TurningPoint,
+    linear: NDArray[np.float64] | None = None,
 ) -> Segment:
     """Solve the reduced KKT system for the critical-line segment at ``state``.
 
@@ -265,6 +273,7 @@ def critical_segment(
         upper: Per-asset upper bounds.
         tol: Tolerance for classifying a weight as sitting on a bound.
         state: The turning point the segment starts from.
+        linear: Optional constant linear term ``q`` (see :func:`solve_kkt`).
 
     Returns:
         The :class:`Segment` valid below ``state``.
@@ -281,7 +290,7 @@ def critical_segment(
     )
     guard_active_rows(rows, free_in, state.lamb)
     r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta = solve_kkt(
-        cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq
+        cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq, linear
     )
     return Segment(
         r_alpha,
