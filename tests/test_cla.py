@@ -882,7 +882,7 @@ class TestCLAInternals:
         last = cla.turning_points[0]
         _, _, free_in, fixed = active_set(last.free, last.weights, cla.lower_bounds, cla.upper_bounds, cla.tol)
         _, _, active = _no_inequalities(cla.mean.size)
-        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta = solve_kkt(
+        r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, _, _ = solve_kkt(
             cla.covariance_operator, cla.mean, cla.a, cla.b, cla.g_matrix, cla.h_vector, free_in, fixed, active
         )
 
@@ -901,7 +901,7 @@ class TestCLAInternals:
             last.free, last.weights, cla.lower_bounds, cla.upper_bounds, cla.tol
         )
         _, _, active = _no_inequalities(cla.mean.size)
-        r_alpha, r_beta, gamma, delta, _, _ = solve_kkt(
+        r_alpha, r_beta, gamma, delta, _, _, _, _ = solve_kkt(
             cla.covariance_operator, cla.mean, cla.a, cla.b, cla.g_matrix, cla.h_vector, free_in, fixed, active
         )
         l_mat = event_ratios(
@@ -1539,3 +1539,67 @@ class TestStop:
                 leverage=1.5,
                 stop=0,
             )
+
+
+class TestMultipliers:
+    """KKT multipliers on every turning point (https://github.com/cvxgrp/cvxcla/issues/939)."""
+
+    n = 8
+
+    def _problem(self):
+        """Two equality rows, a group cap that binds near the top of the frontier, a box."""
+        rng = np.random.default_rng(1)
+        f = rng.standard_normal((self.n, 3))
+        cov = f @ f.T + np.diag(rng.uniform(0.5, 1.0, self.n)) * 0.1
+        mean = rng.uniform(0.01, 0.2, self.n)
+        g = np.zeros((1, self.n))
+        g[0, np.argsort(mean)[-3:]] = 1.0
+        return {
+            "mean": mean,
+            "covariance": cov,
+            "lower_bounds": np.zeros(self.n),
+            "upper_bounds": np.full(self.n, 0.5),
+            "a": np.vstack([np.ones(self.n), rng.standard_normal(self.n)]),
+            "b": np.array([1.0, 0.0]),
+            "g": g,
+            "h": np.array([0.4]),
+        }
+
+    @staticmethod
+    def _assert_stationary(cla):
+        """Sigma w - lam mean + A^T nu + G^T eta = 0 on the free assets (slopes at lam = inf)."""
+        for tp in cla.turning_points:
+            assert tp.nu.shape == (cla.a.shape[0],)
+            assert tp.eta.shape == (cla.g_matrix.shape[0],)
+            assert np.all(tp.eta[~tp.active_ineq] == 0.0)
+            gradient = -cla.mean if np.isinf(tp.lamb) else cla.covariance @ tp.weights - tp.lamb * cla.mean
+            residual = gradient + cla.a.T @ tp.nu + cla.g_matrix.T @ tp.eta
+            np.testing.assert_allclose(residual[tp.free], 0.0, atol=1e-10)
+
+    def test_stationarity_with_equalities_and_an_active_cap(self):
+        """The recorded multipliers certify every turning point, including the cap's."""
+        cla = CLA(**self._problem())
+        assert any(tp.active_ineq.any() and tp.eta.any() for tp in cla.turning_points)
+        self._assert_stationary(cla)
+
+    def test_stationarity_budget_only(self):
+        """A plain fully invested long-only problem: one multiplier, no inequality rows."""
+        kwargs = self._problem()
+        del kwargs["g"], kwargs["h"]
+        kwargs["a"], kwargs["b"] = np.ones((1, self.n)), np.ones(1)
+        self._assert_stationary(CLA(**kwargs))
+
+    def test_leveraged_trace_reports_the_rows_of_g(self):
+        """With a leverage cap, nu covers A and eta covers G only (the cap row is dropped)."""
+        kwargs = self._problem()
+        kwargs["lower_bounds"] = np.full(self.n, -0.5)
+        cla = CLA(**kwargs, leverage=1.5)
+        for tp in cla.turning_points:
+            assert tp.nu.shape == (2,)
+            assert tp.eta.shape == (1,)
+
+    def test_hand_built_turning_point_has_empty_multipliers(self):
+        """The fields default to empty arrays."""
+        tp = TurningPoint(weights=np.ones(2) / 2, free=np.ones(2, dtype=bool))
+        assert tp.nu.shape == (0,)
+        assert tp.eta.shape == (0,)

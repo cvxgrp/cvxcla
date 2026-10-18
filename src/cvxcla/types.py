@@ -108,6 +108,19 @@ class TurningPoint(FrontierPoint):
     active inequality row is a per-row one. The default is an empty mask, so
     box-and-equality problems (and the LASSO path) are unaffected.
 
+    A turning point traced by ``CLA`` also records the KKT multipliers: ``nu``
+    (one entry per equality row of ``CLA.a``) and ``eta`` (one entry per row of
+    ``G``, zero on the inactive rows), so that on the free assets
+
+        ``Sigma w - lamb * mean + A^T nu + G^T eta = 0``.
+
+    At ``lamb = inf`` the multipliers grow with ``lamb``, so their slopes
+    ``nu / lamb`` and ``eta / lamb`` are recorded instead, and the identity reads
+    ``-mean + A^T nu + G^T eta = 0`` on the free assets. Both default to empty
+    arrays for a turning point built by hand. On a ``CLA(leverage=...)`` trace
+    ``eta`` covers the rows of ``g`` only, so the gross-exposure cap's multiplier
+    is not included.
+
     Examples:
         >>> import numpy as np
         >>> tp = TurningPoint(
@@ -130,6 +143,8 @@ class TurningPoint(FrontierPoint):
     free: NDArray[np.bool_]
     lamb: float = np.inf
     active_ineq: NDArray[np.bool_] = field(default_factory=lambda: np.zeros(0, dtype=bool))
+    nu: NDArray[np.float64] = field(default_factory=lambda: np.zeros(0))
+    eta: NDArray[np.float64] = field(default_factory=lambda: np.zeros(0))
 
     @property
     def free_indices(self) -> np.ndarray:

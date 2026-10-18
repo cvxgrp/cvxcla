@@ -217,12 +217,18 @@ class LeverageLift:
         return np.vstack([lifted, np.ones((1, self.asset.shape[0]))]), np.append(h, cap)
 
     def to_turning_point(self, tp: TurningPoint, n: int, p: int) -> TurningPoint:
-        """Map a lifted turning point back to the ``n`` asset weights and the first ``p`` rows."""
+        """Map a lifted turning point back to the ``n`` asset weights and the first ``p`` rows.
+
+        The lifted equality rows are the original rows in leg columns, so ``nu`` is
+        unchanged; ``eta`` keeps the first ``p`` rows and drops the gross-exposure cap.
+        """
         return TurningPoint(
             lamb=tp.lamb,
             weights=self.to_assets(tp.weights, n),
             free=self.any_leg(tp.free, n),
             active_ineq=tp.active_ineq[:p],
+            nu=tp.nu,
+            eta=tp.eta[:p],
         )
 
     def net(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
