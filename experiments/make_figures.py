@@ -1170,10 +1170,12 @@ def _degen_trace(t_obs: int) -> _DegenSweepResult:
     worst = [0.0]
     original_emit = CLA._emit
 
-    def recording_emit(self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray, active_ineq: np.ndarray) -> None:
+    def recording_emit(
+        self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray, *args: object, **kw: object
+    ) -> None:
         if np.any(free):
             worst[0] = max(worst[0], float(np.linalg.cond(cov[np.ix_(free, free)])))
-        original_emit(self, lamb, weights, free, active_ineq)
+        original_emit(self, lamb, weights, free, *args, **kw)
 
     cla_module.CLA._emit = recording_emit
     try:
@@ -2084,9 +2086,9 @@ def _vproj_trace(mean: np.ndarray, cov: np.ndarray) -> tuple[str, list[tuple[flo
             records.append((float(np.max(np.abs(out - weights))), change, residual))
         return out
 
-    def recording_emit(self, lamb, weights, free, active_ineq):
+    def recording_emit(self, lamb, *args, **kw):
         current[0] = 0.0 if not np.isfinite(lamb) else float(lamb)
-        original_emit(self, lamb, weights, free, active_ineq)
+        original_emit(self, lamb, *args, **kw)
 
     cla_module.project_feasible, cla_module.CLA._emit = recording_project, recording_emit
     try:
