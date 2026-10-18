@@ -134,6 +134,52 @@ def _check_finite_inputs(cla: "CLA") -> None:
             raise ValueError(msg)
 
 
+def _check_shapes(cla: "CLA") -> None:
+    """Refuse mis-shaped inequality and benchmark data.
+
+    Args:
+        cla: The problem being constructed.
+
+    Raises:
+        ValueError: If ``g`` does not have ``n`` columns, ``h`` does not match the rows
+            of ``g``, or ``q`` does not have ``n`` entries.
+    """
+    n = cla.dimension
+    if cla.g_matrix.shape[1] != n:
+        msg = f"g must have {n} columns, got shape {cla.g_matrix.shape}"
+        raise ValueError(msg)
+    if cla.h_vector.shape[0] != cla.g_matrix.shape[0]:
+        msg = f"h must have {cla.g_matrix.shape[0]} entries, got {cla.h_vector.shape[0]}"
+        raise ValueError(msg)
+    if cla.q_vector.shape != (n,):
+        msg = f"q must have {n} entries, got shape {cla.q_vector.shape}"
+        raise ValueError(msg)
+
+
+def _check_options(cla: "CLA") -> None:
+    """Refuse an invalid ``stop`` or ``leverage``, or the two combined.
+
+    Args:
+        cla: The problem being constructed.
+
+    Raises:
+        ValueError: If ``stop`` is not an asset index, ``leverage`` is not a positive
+            finite number, or ``stop`` is combined with ``leverage``.
+    """
+    n = cla.dimension
+    if cla.stop is not None and not 0 <= cla.stop < n:
+        msg = f"stop must be an asset index in [0, {n}), got {cla.stop}"
+        raise ValueError(msg)
+    if cla.leverage is None:
+        return
+    if not (np.isfinite(cla.leverage) and cla.leverage > 0):
+        msg = f"leverage must be a positive finite number, got {cla.leverage}"
+        raise ValueError(msg)
+    if cla.stop is not None:
+        msg = "stop is not supported together with leverage"
+        raise ValueError(msg)
+
+
 @dataclass(frozen=True)
 class CLA(InequalityConstrained):
     """Critical Line Algorithm implementation based on Markowitz's approach.
@@ -313,33 +359,17 @@ class CLA(InequalityConstrained):
         """
         _own_inputs(self)
         _check_finite_inputs(self)
-        if self.g_matrix.shape[1] != self.dimension:
-            msg = f"g must have {self.dimension} columns, got shape {self.g_matrix.shape}"
-            raise ValueError(msg)
-        if self.h_vector.shape[0] != self.g_matrix.shape[0]:
-            msg = f"h must have {self.g_matrix.shape[0]} entries, got {self.h_vector.shape[0]}"
-            raise ValueError(msg)
-        if self.q_vector.shape != (self.dimension,):
-            msg = f"q must have {self.dimension} entries, got shape {self.q_vector.shape}"
-            raise ValueError(msg)
+        _check_shapes(self)
+        _check_options(self)
         a, b = _independent_equalities(np.atleast_2d(np.asarray(self.a, dtype=np.float64)), np.atleast_1d(self.b))
         a.setflags(write=False)
         b.setflags(write=False)
         object.__setattr__(self, "a", a)  # frozen dataclass: normalise once, before tracing
         object.__setattr__(self, "b", b)
-        if self.stop is not None and not 0 <= self.stop < self.dimension:
-            msg = f"stop must be an asset index in [0, {self.dimension}), got {self.stop}"
-            raise ValueError(msg)
         if self.leverage is None:
             trace(self)
-            return
-        if not (np.isfinite(self.leverage) and self.leverage > 0):
-            msg = f"leverage must be a positive finite number, got {self.leverage}"
-            raise ValueError(msg)
-        if self.stop is not None:
-            msg = "stop is not supported together with leverage"
-            raise ValueError(msg)
-        self._trace_leveraged(self.leverage)
+        else:
+            self._trace_leveraged(self.leverage)
 
     def _trace_leveraged(self, leverage: float) -> None:
         """Trace the frontier under ``||w||_1 <= leverage`` via the signed lift.
