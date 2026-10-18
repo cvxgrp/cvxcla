@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.4.0] - 2026-10-18
+
+### New Features
+- Optional early stop when a given asset leaves its bound (#938) (#944)
+- Record the equality and inequality multipliers on each turning point (#939) (#945)
+- Accept a linear benchmark term q (#937) (#947)
+
+### Bug Fixes
+- Treat a roundoff-sized final event as lambda = 0 (#940) (#942)
+- Trace box-only problems with no equality rows (#936) (#943)
+- A covariance scale that does not cancel along the ones vector (#941) (#946)
+- Bracket the capped-simplex projection finitely under infinite bounds (#949) (#951)
+
+### Documentation
+- Correct the CITATION.cff authors, abstract and release fields (#933)
+
+### Maintenance
+- Chore(deps)(deps): bump the python-dependencies group with 5 updates (#932)
+- Chore(deps)(deps): bump the python-dependencies group with 3 updates (#935)
+- Chore(deps)(deps): bump the github-actions group with 9 updates (#934)
+- Extract CLA input validation to bring __post_init__ to CC 2 (#948) (#950)
+
 ## [2.3.4] - 2026-10-02
 
 ### Bug Fixes
