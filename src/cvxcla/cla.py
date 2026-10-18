@@ -396,9 +396,15 @@ class CLA(InequalityConstrained):
     def _scales(self) -> tuple[float, float]:
         """Return ``(lambda_scale, mu_scale)``, the natural units of the problem.
 
-        ``mu_scale`` is ``max |mu|`` and the covariance scale is ``max |Sigma 1| / n``,
-        one product with the equal-weight portfolio, so it is available for any
-        backend. Their ratio is the scale of ``lambda``, at which risk and return
+        ``mu_scale`` is ``max |mu|`` and the covariance scale is ``max |Sigma v| / n``
+        over two probes ``v``: the equal-weight portfolio and a fixed pseudo-random
+        sign vector. Products are available for any backend. The second probe guards
+        against a covariance that cancels along ``1``: splitting coefficients into
+        long and short legs (``S^T G S`` with ``S = [I, -I]``) gives ``Sigma 1 = 0``
+        up to round-off, and a round-off scale would set every weight-slope floor
+        astronomically high and suppress the move-to-bound events. For a covariance
+        with mostly positive correlations ``|Sigma 1|`` dominates and the scale is
+        unchanged. Their ratio is the scale of ``lambda``, at which risk and return
         balance. Both are positively homogeneous: rescaling ``mu`` by ``c`` and
         ``Sigma`` by ``s`` rescales them by ``c`` and ``s / c``, which is what makes
         the event tests invariant under a change of units. A zero scale (``mu = 0``
@@ -406,7 +412,8 @@ class CLA(InequalityConstrained):
         """
         n = self.dimension
         mu_scale = float(np.max(np.abs(self.mean))) if n else 0.0
-        cov_scale = float(np.max(np.abs(self.covariance_operator.matvec(np.ones(n))))) / n if n else 0.0
+        probes = np.column_stack([np.ones(n), np.random.default_rng(0).choice([-1.0, 1.0], size=n)])
+        cov_scale = float(np.max(np.abs(self.covariance_operator.matvec(probes)))) / n if n else 0.0
         mu_scale = mu_scale if mu_scale > 0 else 1.0
         cov_scale = cov_scale if cov_scale > 0 else 1.0
         return cov_scale / mu_scale, mu_scale
