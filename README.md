@@ -385,7 +385,8 @@ Per-coefficient **bounds** and equality rows with a **nonzero right-hand side** 
 through the CLA in the *penalty form*: each coefficient is split into a long and a
 short leg, `β = Sz` with `z ≥ 0`, and the penalty `λ‖β‖₁` becomes a cost of `λ`
 per unit of gross position, so the CLA's tilt is `λ` itself (covariance `SᵀXᵀXS`,
-expected returns `−1`, benchmark `q = SᵀXᵀy`). Caps, signs and `Aβ = b` combine:
+expected returns `−1`, benchmark `q = SᵀXᵀy`). Caps, signs, `Aβ = b` and inequality
+rows `Gβ ≤ h` (with `h > 0`) combine:
 
 ```python
 # beta_0..2 >= 0, and every |beta_j| <= 2
@@ -397,12 +398,20 @@ lasso = Lasso.problem(X, y).bounds(lower, upper).trace()
 # the same, with a fit that must pass through the first observation
 lasso = Lasso.problem(X, y).equality(X[0], y[0]).bounds(lower, upper).trace()
 assert abs(X[0] @ lasso.solution(0.5 * lasso.lam_max) - y[0]) < 1e-9
+
+# and with the net effect of features 0-3 capped, |beta_0 + ... + beta_3| <= 1
+G = np.zeros((2, 12))
+G[0, :4], G[1, :4] = 1.0, -1.0
+lasso = Lasso.problem(X, y).equality(X[0], y[0]).inequality(G, np.ones(2)).bounds(lower, upper).trace()
+assert abs(G[0] @ lasso.path[-1].beta) <= 1.0 + 1e-9
 ```
 
 The two routes have these limits:
-- equality rows and bounds cannot be combined with `inequality` rows
-- `Aβ = 0` takes signs (bounds of `0` or `±∞`) but no finite cap: the rescaling
-  cannot carry a finite box, and the penalty form starts on a degenerate vertex
+- `Aβ = 0` takes signs (bounds of `0` or `±∞`) but neither a finite cap nor
+  `inequality` rows: the rescaling cannot carry them, and the penalty form starts on
+  a degenerate vertex
+- inequality rows need `h > 0`, so that `β = 0` starts with every row slack;
+  homogeneous rows such as the ordering of a monotone fit are refused
 - `Aβ = b` with `b ≠ 0` needs a unique smallest-`ℓ₁` point on `Aβ = b` to start
   from; the fully invested `1ᵀβ = 1` has a whole face of them and is refused
 - under `Aβ = 0` the Gram `XᵀX` must be positive definite, so the constrained
