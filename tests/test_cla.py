@@ -1647,6 +1647,38 @@ class TestRankDeficientBudgetLasso:
         assert len(betas) == len(knots)
         np.testing.assert_allclose(betas, knots, atol=1e-9)
 
+    def test_wide_design_traces_through_a_roundoff_projection(self):
+        """A 40 x 100 design (https://github.com/cvxgrp/cvxcla/issues/949).
+
+        A leg reaching zero lands a hair below it, so the turning point is projected
+        onto the capped simplex. With every upper bound infinite the projection's
+        bracket used to start at -inf and return infinite weights.
+        """
+        from cvxcla import Lasso
+
+        rng = np.random.default_rng(7)
+        x = rng.standard_normal((40, 100))
+        beta = np.zeros(100)
+        beta[:8] = rng.choice([-1, 1], 8) * rng.uniform(1, 3, 8)
+        y = x @ beta + 0.5 * rng.standard_normal(40)
+        s = np.hstack([np.eye(100), -np.eye(100)])
+        k = 200
+        sigma = np.zeros((k + 1, k + 1))
+        sigma[:k, :k] = s.T @ (x.T @ x) @ s
+        cla = CLA(
+            mean=np.append(s.T @ (x.T @ y), 0.0),
+            covariance=sigma,
+            lower_bounds=np.zeros(k + 1),
+            upper_bounds=np.full(k + 1, np.inf),
+            a=np.ones((1, k + 1)),
+            b=np.ones(1),
+            stop=k,
+        )
+        betas = [np.zeros(100)] + [s @ tp.weights[:k] / tp.lamb for tp in cla.turning_points[1:]]
+        knots = [bp.beta for bp in Lasso(x=x, y=y).path]
+        assert len(betas) == len(knots)
+        np.testing.assert_allclose(betas, knots, atol=1e-9)
+
 
 class TestLinearTerm:
     """A linear benchmark term q in w^T Sigma w / 2 - (q + lam mean)^T w (https://github.com/cvxgrp/cvxcla/issues/937)."""
