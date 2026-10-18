@@ -15,7 +15,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._builders import ProblemBuilder
-from ._checks import check_feasible, guard_degeneracy, well_conditioned
+from ._checks import check_feasible, check_held_bounds, guard_degeneracy, well_conditioned
 from ._events import segment_events
 from ._kkt import Segment, critical_segment
 from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
@@ -522,6 +522,7 @@ class CLA(InequalityConstrained):
         n = self.dimension
         free = state.free
         active_ineq = state.active_ineq
+        self._check_held_bounds(segment, lam, sec if sec < n else -1)
         if sec < n:
             free = free.copy()
             free[sec] = direction >= 2
@@ -541,7 +542,29 @@ class CLA(InequalityConstrained):
 
     def finish(self, state: TurningPoint, segment: Segment) -> None:
         """Emit the minimum-variance endpoint at ``lambda = 0``."""
+        self._check_held_bounds(segment, 0.0, -1)
         self._emit(0.0, segment.r_alpha, state.free, state.active_ineq, segment.nu_alpha, segment.eta_alpha)
+
+    def _check_held_bounds(self, segment: Segment, lam: float, event: int) -> None:
+        """Check the segment's held bounds where it ends (see :func:`cvxcla._checks.check_held_bounds`).
+
+        A segment that ends at ``lambda = inf`` (an event at the vertex itself) is
+        empty and holds nothing, so it is not checked.
+        """
+        if np.isfinite(lam):
+            lam_scale, mu_scale = self._scales
+            rows = np.vstack([self.a, self.g_matrix[segment.active_ineq]])
+            check_held_bounds(
+                segment,
+                lam,
+                event,
+                rows,
+                self.lower_bounds,
+                self.upper_bounds,
+                self.tol,
+                mu_scale,
+                lam_scale * mu_scale,
+            )
 
     def __len__(self) -> int:
         """Get the number of turning points in the efficient frontier.
