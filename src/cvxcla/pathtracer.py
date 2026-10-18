@@ -133,7 +133,7 @@ class InequalityConstrained:
 
 
 def select_next_event(
-    l_mat: NDArray[np.float64], lam: float, tol: float, scale: float = 1.0
+    l_mat: NDArray[np.float64], lam: float, tol: float, scale: float = 1.0, floor: float = 0.0
 ) -> tuple[int, int, float] | None:
     """Pick the next breakpoint from the event matrix, or ``None`` to stop.
 
@@ -163,6 +163,10 @@ def select_next_event(
         scale: The natural scale of ``lambda``. Near ``lambda = 0`` the window is
             taken relative to this scale rather than to ``|lambda|``, so it
             does not shrink to nothing; ``1.0`` reproduces an absolute floor.
+        floor: Events at or below this ``lambda`` are taken to be at ``lambda = 0``
+            and end the trace. ``trace`` sets it relative to the first finite event,
+            so a root that belongs at zero but rounds to a tiny positive value
+            (e.g. ``1e-16``) does not fire.
 
     Returns:
         ``(sec, direction, lam_next)`` for the chosen event, or ``None`` if no
@@ -177,7 +181,7 @@ def select_next_event(
     # ends the trace rather than firing: under homogeneous constraints the path runs
     # along a ray into the origin and every free coordinate reaches its bound there
     # at once, which would otherwise emit one copy of the endpoint per coordinate.
-    if lam_max <= 0:
+    if lam_max <= floor:
         return None
 
     tied = np.argwhere(l_mat >= lam_max - rate * max(scale, abs(lam_max)))  # pragma: no mutate
@@ -212,6 +216,11 @@ def trace(problem: ParametricProblem) -> None:
     path_coords = getattr(problem, "event_dimension", problem.dimension)  # pragma: no mutate
     max_iterations = 100 * (path_coords + 1)  # pragma: no mutate
     scale = float(getattr(problem, "lambda_scale", 1.0))
+    # Events below a floor relative to the first finite event are lambda = 0: roundoff
+    # can move a root at zero to ~1e-16, and firing it would emit a turning point whose
+    # free block is singular. Taken from the path itself rather than ``scale``, which a
+    # covariance that cancels along the equal-weight direction can drive to roundoff.
+    floor = 0.0
     iterations = 0  # pragma: no mutate
 
     while True:  # pragma: no mutate
@@ -221,10 +230,12 @@ def trace(problem: ParametricProblem) -> None:
             raise NumericalError(msg)  # pragma: no mutate
 
         segment = problem.segment(state)
-        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale)
+        event = select_next_event(problem.event_matrix(state, segment), lam, problem.tol, scale, floor)
         if event is None:
             problem.finish(state, segment)
             return
 
         sec, direction, lam = event
+        if floor == 0.0:  # pragma: no mutate
+            floor = min(problem.tol, 1e-10) * lam
         state = problem.step(state, segment, sec, direction, lam)
