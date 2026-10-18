@@ -14,6 +14,7 @@ from cvxcla import CLA, FactorCovariance
 from cvxcla._events import event_ratios
 from cvxcla._kkt import active_set, solve_kkt
 from cvxcla._projection import project_feasible
+from cvxcla.errors import DegenerateProblemError
 from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
 
@@ -331,25 +332,21 @@ class TestCLAEdgeCases:
         assert len(cla) >= 2
 
     def test_equal_returns(self):
-        """Test with assets having equal expected returns."""
-        mean = np.array([0.1, 0.1, 0.1])
-        covariance = np.eye(3) * 0.04
-        lower_bounds = np.zeros(3)
-        upper_bounds = np.ones(3)
-        a = np.ones((1, 3))
-        b = np.ones(1)
+        """Equal returns tie every bound at the maximum-return vertex, so the trace declines (issue #953).
 
-        cla = CLA(
-            mean=mean,
-            covariance=covariance,
-            lower_bounds=lower_bounds,
-            upper_bounds=upper_bounds,
-            a=a,
-            b=b,
-        )
-
-        # Should still produce a valid frontier
-        assert len(cla) > 0
+        Any vertex maximises the return; the true frontier is the minimum-variance
+        portfolio (1/3 each), which the vertex resolution cannot see. The trace used to
+        run on the LP's vertex and return (1, 0, 0) as the minimum-variance end.
+        """
+        with pytest.raises(DegenerateProblemError, match="should have left"):
+            CLA(
+                mean=np.array([0.1, 0.1, 0.1]),
+                covariance=np.eye(3) * 0.04,
+                lower_bounds=np.zeros(3),
+                upper_bounds=np.ones(3),
+                a=np.ones((1, 3)),
+                b=np.ones(1),
+            )
 
     def test_no_short_selling(self):
         """Test no short selling constraint (lower bounds = 0)."""
@@ -494,6 +491,58 @@ class TestDegenerateProblems:
         assert np.all(np.diff(lambdas) < 0)
         assert np.allclose(a @ cla.turning_points[-1].weights, 1.0)
 
+    def test_degenerate_start_under_a_homogeneous_row_declines(self):
+        """A LASSO in penalty form under sum(beta) = 0 declines instead of tracing wrong (issue #953).
+
+        The maximum-return vertex is w = 0 and every leg ties in the returns, so which
+        legs start the path depends on q alone. The resolution picked one from the
+        returns and traced a short path that is not the LASSO path, without error.
+        """
+        rng = np.random.default_rng(7)
+        n, p = 60, 5
+        raw = np.exp(rng.standard_normal((n, p)) + np.linspace(0, 2, p))
+        z = np.log(raw / raw.sum(axis=1, keepdims=True))
+        y = z @ np.array([1.2, 0.0, 0.0, -0.8, 0.0]) + 0.3 * rng.standard_normal(n)
+        z -= z.mean(axis=0)
+        y -= y.mean()
+        s = np.hstack([np.eye(p), -np.eye(p)])
+        with pytest.raises(DegenerateProblemError, match="should have left"):
+            CLA(
+                mean=-np.ones(2 * p),
+                covariance=s.T @ (z.T @ z) @ s,
+                q=s.T @ (z.T @ y),
+                lower_bounds=np.zeros(2 * p),
+                upper_bounds=np.full(2 * p, np.inf),
+                a=np.ones((1, p)) @ s,
+                b=np.zeros(1),
+            )
+
+    def test_held_bound_with_degenerate_multipliers_is_accepted(self):
+        """A wrongly signed multiplier is not a decline when other multipliers certify the point.
+
+        Tied returns at a capped vertex: the free asset sits on its cap, so the
+        multipliers the partition implies are not unique and one of them has the
+        wrong sign, yet the point is optimal (the asset cannot leave its bound without
+        pushing the free asset through its cap). The trace must go on, and it matches
+        the QP along the path.
+        """
+        rng = np.random.default_rng(305)
+        n = int(rng.integers(2, 26))
+        rng.integers(2)
+        mean = np.round(rng.standard_normal(n), 1)
+        l_matrix = rng.standard_normal((n, n))
+        covariance = l_matrix @ l_matrix.T + 0.1 * np.eye(n)
+        cla = CLA(
+            mean=mean,
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.full(n, 0.2),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        self._assert_valid_frontier(cla, 0.2)
+        assert cla.turning_points[-1].lamb == 0.0
+
     def test_ill_conditioned_frontier_is_not_truncated(self):
         """The roundoff floor of issue #940 must not swallow genuine small-lambda events.
 
@@ -529,7 +578,9 @@ class TestDegenerateProblems:
         """Blocks of identical means with capped upper bounds produce tied events.
 
         Spurious ratios above the current lambda used to win the argmax and
-        push weights far outside their bounds.
+        push weights far outside their bounds. The top block is untied: a tie there
+        makes the maximum-return vertex degenerate, which is declined (issue #953);
+        the lower blocks still tie along the path.
         """
         rng = np.random.default_rng(0)
         _ = rng.standard_normal((10, 10))  # keep historical draw order of the report
@@ -538,6 +589,8 @@ class TestDegenerateProblems:
         l_matrix = rng.standard_normal((n, n))
         covariance = l_matrix @ l_matrix.T + 0.1 * np.eye(n)
         mean = np.repeat(rng.standard_normal(n // 5), 5)
+        top = np.flatnonzero(mean == mean.max())
+        mean[top] += 1e-3 * np.arange(top.size)
 
         cla = CLA(
             mean=mean,

@@ -9,6 +9,10 @@ checks invariants that must hold on every efficient frontier
 - lambda is non-increasing along the frontier (within tol)
 - expected return is non-increasing along the turning points
 - the dense and FactorCovariance backends agree on the same problem
+
+A tie at the maximum-return vertex can leave its resolution off the frontier, and
+the trace then declines with ``DegenerateProblemError`` (issue #953); the invariants
+are checked on every frontier that is returned.
 """
 
 import numpy as np
@@ -17,6 +21,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from cvxcla import CLA, FactorCovariance
+from cvxcla.errors import DegenerateProblemError
 
 
 def _spd_matrix(rng: np.random.Generator, n: int) -> np.ndarray:
@@ -62,6 +67,14 @@ def problems(draw: st.DrawFn) -> dict:
     }
 
 
+def _trace(problem: dict) -> CLA | None:
+    """Trace ``problem``, or ``None`` when its degenerate maximum-return vertex is declined."""
+    try:
+        return CLA(**problem)
+    except DegenerateProblemError:
+        return None
+
+
 @pytest.mark.property
 class TestFrontierInvariants:
     """Invariants that every computed frontier must satisfy."""
@@ -70,7 +83,9 @@ class TestFrontierInvariants:
     @settings(max_examples=80, deadline=None)
     def test_turning_points_are_valid(self, problem):
         """Weights stay within bounds and sum to 1; lambda never increases beyond tol."""
-        cla = CLA(**problem)
+        cla = _trace(problem)
+        if cla is None:
+            return
         tol = cla.tol
 
         weights = np.array([tp.weights for tp in cla.turning_points])
@@ -85,7 +100,9 @@ class TestFrontierInvariants:
     @settings(max_examples=80, deadline=None)
     def test_expected_return_is_non_increasing(self, problem):
         """The frontier is traced from the max-return portfolio downwards."""
-        cla = CLA(**problem)
+        cla = _trace(problem)
+        if cla is None:
+            return
         returns = cla.frontier.returns
         assert np.all(np.diff(returns) <= 1e-6)
 
