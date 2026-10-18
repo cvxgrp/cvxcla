@@ -92,7 +92,7 @@ def _own_inputs(cla: "CLA") -> None:
     """
     for name in ("mean", "lower_bounds", "upper_bounds", "a", "b"):
         object.__setattr__(cla, name, _owned(getattr(cla, name)))  # frozen dataclass
-    for name in ("g", "h"):
+    for name in ("g", "h", "q"):
         if getattr(cla, name) is not None:
             object.__setattr__(cla, name, _owned(getattr(cla, name)))
     if not isinstance(cla.covariance, QuadraticForm):
@@ -102,7 +102,7 @@ def _own_inputs(cla: "CLA") -> None:
 def _check_finite_inputs(cla: "CLA") -> None:
     """Refuse non-finite data before anything is traced.
 
-    ``mean``, ``a``, ``b``, ``g`` and ``h`` must be finite, and the bounds must not be
+    ``mean``, ``a``, ``b``, ``g``, ``h`` and ``q`` must be finite, and the bounds must not be
     NaN; an infinite bound is allowed (an unbounded box, which the linear program of
     the first vertex handles). A dense covariance is checked when it is wrapped (see
     :func:`cvxcla.operators.dense_covariance`); a user-supplied backend is responsible
@@ -116,7 +116,15 @@ def _check_finite_inputs(cla: "CLA") -> None:
     Raises:
         ValueError: Naming the first offending input.
     """
-    for name, value in [("mean", cla.mean), ("a", cla.a), ("b", cla.b), ("g", cla.g_matrix), ("h", cla.h_vector)]:
+    inputs = [
+        ("mean", cla.mean),
+        ("a", cla.a),
+        ("b", cla.b),
+        ("g", cla.g_matrix),
+        ("h", cla.h_vector),
+        ("q", cla.q_vector),
+    ]
+    for name, value in inputs:
         if not np.all(np.isfinite(np.asarray(value, dtype=np.float64))):
             msg = f"{name} must be finite (no NaN or infinite entries)"
             raise ValueError(msg)
@@ -182,6 +190,15 @@ class CLA(InequalityConstrained):
             goes slack, and the free block below it can be singular. ``None`` (the
             default) traces to ``lambda = 0``. Not supported together with
             ``leverage``.
+        q: Optional linear benchmark term (length ``n``). The traced problem is
+            then ``min w^T Sigma w / 2 - (q + lam mean)^T w`` subject to the same
+            constraints, from ``lambda = inf`` to ``0``. With ``q = Sigma w_bar`` the
+            objective is, up to a constant, the tracking variance against a
+            benchmark portfolio ``w_bar`` less ``lam mean^T w`` (the active-risk
+            frontier); unlike a manual shift to ``w - w_bar`` it needs no solve with
+            ``Sigma`` and works when ``q`` is outside its range. The turning points
+            are reported in ``w``. ``q`` does not change the maximum-return vertex,
+            only the path below it. ``None`` (the default) means ``q = 0``.
 
     The array inputs (and a dense ``covariance``) are copied into read-only
     ``float64`` arrays when the object is built, so changing the caller's arrays
@@ -202,6 +219,7 @@ class CLA(InequalityConstrained):
     logger: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
     leverage: float | None = None
     stop: int | None = None
+    q: NDArray[np.float64] | None = None
 
     @classmethod
     def problem(
@@ -284,7 +302,8 @@ class CLA(InequalityConstrained):
             ValueError: If the inequality matrix ``g`` and vector ``h`` have
                 mismatched or wrong shapes, ``leverage`` is not a positive finite
                 number, ``stop`` is not an asset index or is combined with
-                ``leverage``, or an input is not finite (see :func:`_check_finite_inputs`).
+                ``leverage``, ``q`` does not have ``n`` entries, or an input is not
+                finite (see :func:`_check_finite_inputs`).
             InfeasibleProblemError: If the constraints admit no portfolio, including
                 an equality system whose dependent rows contradict the others.
             DegenerateProblemError: If the problem is feasible but outside the
@@ -299,6 +318,9 @@ class CLA(InequalityConstrained):
             raise ValueError(msg)
         if self.h_vector.shape[0] != self.g_matrix.shape[0]:
             msg = f"h must have {self.g_matrix.shape[0]} entries, got {self.h_vector.shape[0]}"
+            raise ValueError(msg)
+        if self.q_vector.shape != (self.dimension,):
+            msg = f"q must have {self.dimension} entries, got shape {self.q_vector.shape}"
             raise ValueError(msg)
         a, b = _independent_equalities(np.atleast_2d(np.asarray(self.a, dtype=np.float64)), np.atleast_1d(self.b))
         a.setflags(write=False)
@@ -343,6 +365,7 @@ class CLA(InequalityConstrained):
         g, h = lift.with_cap(self.g_matrix, self.h_vector, leverage if keep_cap else None)
         lifted = _LeveragedCLA(
             mean=self.mean[lift.asset] * lift.sign,
+            q=self.q_vector[lift.asset] * lift.sign,
             covariance=SignedLift(self.covariance_operator, lift.asset, lift.sign),
             lower_bounds=lift.lower,
             upper_bounds=lift.upper,
@@ -387,10 +410,18 @@ class CLA(InequalityConstrained):
             self.upper_bounds,
             self.tol,
             state,
+            self.q_vector,
         )
         if state.lamb == np.inf:
             self.turning_points[0] = replace(state, nu=segment.nu_beta, eta=segment.eta_beta)
         return segment
+
+    @cached_property
+    def q_vector(self) -> NDArray[np.float64]:
+        """The linear term ``q`` as a length-``n`` float array (zeros if ``q`` is ``None``)."""
+        if self.q is None:
+            return np.zeros(self.dimension)
+        return np.atleast_1d(np.asarray(self.q, dtype=np.float64))
 
     @cached_property
     def _scales(self) -> tuple[float, float]:

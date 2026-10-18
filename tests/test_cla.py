@@ -1646,3 +1646,111 @@ class TestRankDeficientBudgetLasso:
         knots = [bp.beta for bp in Lasso(x=x, y=y).path]
         assert len(betas) == len(knots)
         np.testing.assert_allclose(betas, knots, atol=1e-9)
+
+
+class TestLinearTerm:
+    """A linear benchmark term q in w^T Sigma w / 2 - (q + lam mean)^T w (https://github.com/cvxgrp/cvxcla/issues/937)."""
+
+    @staticmethod
+    def _penalty_form():
+        """The LASSO's penalty form: split coefficients, mean -1, q = S^T X^T y, no equality rows.
+
+        ``Sigma = S^T G S`` is singular (rank 5 of 10), and ``q = Sigma w_bar`` for the
+        split of the least-squares solution, so ``q`` lies in its range.
+        """
+        rng = np.random.default_rng(0)
+        x = rng.standard_normal((60, 5))
+        y = x @ np.array([1.0, -1.0, 0.5, 0, 0]) + 0.1 * rng.standard_normal(60)
+        gram, corr = x.T @ x, x.T @ y
+        s = np.hstack([np.eye(5), -np.eye(5)])
+        beta_ols = np.linalg.solve(gram, corr)
+        w_bar = np.concatenate([np.maximum(beta_ols, 0.0), np.maximum(-beta_ols, 0.0)])
+        common = {"mean": -np.ones(10), "covariance": s.T @ gram @ s, "a": np.zeros((0, 10)), "b": np.zeros(0)}
+        return x, y, s, s.T @ corr, w_bar, common
+
+    def test_agrees_with_the_shifted_problem(self):
+        """Native q traces the same path as the manual change of variables w - w_bar."""
+        *_, q, w_bar, common = self._penalty_form()
+        assert np.linalg.matrix_rank(common["covariance"]) == 5
+        np.testing.assert_allclose(common["covariance"] @ w_bar, q, atol=1e-10)
+
+        native = CLA(**common, lower_bounds=np.zeros(10), upper_bounds=np.full(10, np.inf), q=q)
+        shifted = CLA(**common, lower_bounds=-w_bar, upper_bounds=np.full(10, np.inf))
+
+        assert len(native.turning_points) == len(shifted.turning_points)
+        for tp, tp_shift in zip(native.turning_points, shifted.turning_points, strict=True):
+            assert tp.lamb == pytest.approx(tp_shift.lamb, rel=1e-12)
+            np.testing.assert_allclose(tp.weights, tp_shift.weights + w_bar, atol=1e-10)
+
+    def test_penalty_form_is_the_lasso_path(self):
+        """With q the penalty form's lambda is the LASSO penalty and S w its coefficients."""
+        from cvxcla import Lasso
+
+        x, y, s, q, _, common = self._penalty_form()
+        cla = CLA(**common, lower_bounds=np.zeros(10), upper_bounds=np.full(10, np.inf), q=q)
+        path = Lasso(x=x, y=y).path
+        assert len(cla.turning_points) == len(path) + 1  # plus the lambda = inf vertex
+        for tp, bp in zip(cla.turning_points[1:], path, strict=True):
+            assert tp.lamb == pytest.approx(bp.lam, rel=1e-9, abs=1e-12)
+            np.testing.assert_allclose(s @ tp.weights, bp.beta, atol=1e-9)
+
+    def test_multipliers_include_q(self):
+        """Stationarity with the linear term: Sigma w - q - lam mean + A^T nu = 0 on the free assets."""
+        *_, q, _, common = self._penalty_form()
+        cla = CLA(**common, lower_bounds=np.zeros(10), upper_bounds=np.full(10, np.inf), q=q)
+        for tp in cla.turning_points[1:]:
+            residual = cla.covariance @ tp.weights - q - tp.lamb * cla.mean + cla.a.T @ tp.nu
+            np.testing.assert_allclose(residual[tp.free], 0.0, atol=1e-9)
+
+    def test_zero_q_is_the_default(self):
+        """A zero q traces exactly the problem without q."""
+        n = 3
+        kwargs = {
+            "mean": np.array([0.1, 0.15, 0.2]),
+            "covariance": np.eye(n) * 0.04,
+            "lower_bounds": np.zeros(n),
+            "upper_bounds": np.ones(n),
+            "a": np.ones((1, n)),
+            "b": np.ones(1),
+        }
+        plain, zero = CLA(**kwargs), CLA(**kwargs, q=np.zeros(n))
+        assert [tp.lamb for tp in zero.turning_points] == [tp.lamb for tp in plain.turning_points]
+
+    def test_leveraged_trace_with_q(self):
+        """The linear term is lifted onto the legs like the mean: the endpoint minimises w^T Sigma w / 2 - q^T w."""
+        n = 3
+        cov = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.02], [0.0, 0.02, 0.16]])
+        q = cov @ np.array([0.6, 0.5, -0.1])
+        cla = CLA(
+            mean=np.array([0.1, 0.15, 0.2]),
+            covariance=cov,
+            lower_bounds=-np.ones(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+            leverage=1.5,
+            q=q,
+        )
+        # the unconstrained minimiser w_bar is feasible (sum 1, gross 1.2), so it is the lambda = 0 endpoint
+        np.testing.assert_allclose(cla.turning_points[-1].weights, [0.6, 0.5, -0.1], atol=1e-10)
+
+    @pytest.mark.parametrize(
+        ("q", "match"),
+        [
+            (np.zeros(2), r"^q must have 3 entries, got shape \(2,\)$"),
+            (np.array([0.0, np.nan, 0.0]), r"^q must be finite"),
+        ],
+    )
+    def test_invalid_q_raises(self, q, match):
+        """The linear term must be finite with one entry per asset."""
+        n = 3
+        with pytest.raises(ValueError, match=match):
+            CLA(
+                mean=np.array([0.1, 0.15, 0.2]),
+                covariance=np.eye(n) * 0.04,
+                lower_bounds=np.zeros(n),
+                upper_bounds=np.ones(n),
+                a=np.ones((1, n)),
+                b=np.ones(1),
+                q=q,
+            )
