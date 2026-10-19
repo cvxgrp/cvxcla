@@ -146,12 +146,16 @@ class TestRedundantRowsAreHarmless:
 class TestDegenerate:
     """Feasible problems outside the supported domain raise DegenerateProblemError."""
 
-    def test_singular_covariance(self, market):
-        """A rank-3 covariance makes a free block singular during the trace."""
+    def test_singular_covariance_held_by_the_budget(self, market):
+        """A rank-3 covariance is traced: the budget row holds the singular free blocks (issue #968).
+
+        The refusal for a free block that is singular on the rows' null space too is
+        tested directly in ``tests/test_degenerate_vertex.py``.
+        """
         rng = np.random.default_rng(0)
         u = rng.standard_normal((N, 3))
-        with pytest.raises(DegenerateProblemError, match="numerically singular"):
-            CLA(**market | {"covariance": u @ u.T})
+        cla = CLA(**market | {"covariance": u @ u.T})
+        assert cla.turning_points[-1].lamb == 0.0
 
     def test_unbounded_linear_program(self):
         """Without bounds the maximum-return linear program is unbounded."""

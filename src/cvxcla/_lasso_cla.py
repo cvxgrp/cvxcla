@@ -27,6 +27,14 @@ the KKT conditions of the LASSO on the segment that leaves it:
 ``(X^T y - X^T X beta)_F = lam_L s_F + A_F^T nu``, over the segment's free set
 ``F`` with signs ``s_F``. The matrix ``[s_F, A_F^T]`` has full column rank at
 every non-degenerate active set, so the least-squares solution is exact.
+
+With more features than observations the Gram is singular. The free set then
+outgrows its rank before the fit interpolates, and the CLA solves those segments
+through the whole bordered KKT system, which the active rows keep nonsingular (see
+:func:`cvxcla._checks.guard_degeneracy`). Once the fit interpolates the penalty is
+zero, and the least-squares fits are not unique: the CLA goes on through other
+interpolating fits of larger ``l1`` norm, which are not on the LASSO path, so the path
+ends at the first of them.
 """
 
 from __future__ import annotations
@@ -39,7 +47,10 @@ from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from .cla import CLA
 from .errors import CLAError
-from .operators import RCOND_FLOOR, QuadraticForm
+from .operators import QuadraticForm
+
+#: A penalty this far below the first one, relative, is zero: the fit interpolates.
+_INTERPOLATES = 1e-10  # pragma: no mutate
 
 #: One LASSO breakpoint as ``(lam, beta, active)``; :mod:`cvxcla.lasso` wraps it.
 BreakpointData = tuple[float, NDArray[np.float64], NDArray[np.bool_]]
@@ -116,21 +127,15 @@ def equality_path(
 
     Returns:
         The breakpoints ``(lam, beta, active)`` from ``lam_max`` down to the
-        constrained least-squares fit at ``lam = 0``.
+        constrained least-squares fit at ``lam = 0``. With a singular Gram (more
+        features than observations) that fit is not unique, and the path ends at the
+        limit ``lam -> 0+``, the first breakpoint at which the fit interpolates.
 
     Raises:
-        ValueError: If the Gram form is singular, so the constrained least-squares
-            fit is not unique (e.g. more features than observations), or if the CLA
-            cannot trace the problem (e.g. a degenerate first vertex).
+        ValueError: If the CLA cannot trace the problem (e.g. a degenerate first
+            vertex, or a free block that is singular on the constraints' null space).
     """
     n = xty.shape[0]
-    if quad.rcond_free(np.arange(n)) < RCOND_FLOOR:
-        msg = (
-            "the equality-constrained LASSO needs a positive-definite Gram X^T X "
-            "(more observations than features in general position), so that the "
-            "constrained least-squares end of the path is unique"
-        )
-        raise ValueError(msg)
     if _max_correlation(xty, a, lower, upper) <= tol:
         return [(0.0, np.zeros(n), np.zeros(n, dtype=bool))]
 
@@ -163,5 +168,12 @@ def equality_path(
             # where every free coordinate is strictly nonzero.
             beta = hi.weights / hi.lamb
             signs = np.sign((hi.weights + lo.weights) / (hi.lamb + lo.lamb))
-        path.append((_penalty(quad, xty, a, beta, hi.free, signs), beta, hi.free.copy()))
+        penalty = _penalty(quad, xty, a, beta, hi.free, signs)
+        if path and penalty <= _INTERPOLATES * path[0][0]:
+            # The fit interpolates: this is the end of the LASSO path. With more features
+            # than observations the least-squares fit is not unique, and the CLA goes on
+            # through other interpolating fits of larger l1 norm, which are not on it.
+            path.append((0.0, beta, hi.free.copy()))
+            break
+        path.append((penalty, beta, hi.free.copy()))
     return path

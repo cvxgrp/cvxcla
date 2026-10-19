@@ -219,21 +219,23 @@ class TestLeverageFrontier:
         assert frontier.weights.shape == (len(cla), n)
         assert np.allclose(frontier.variance, [w @ cov @ w for w in frontier.weights])
 
-    def test_rank_deficient_covariance_raises_degeneracy(self):
-        """The degeneracy guard still fires through the lift when the free set outgrows the rank."""
+    def test_rank_deficient_covariance_is_traced_through_the_lift(self):
+        """A free set past the covariance rank is traced through the lift while the rows hold it (issue #968)."""
         rng = np.random.default_rng(2)
         n = 20
         factors = rng.standard_normal((n, 8))
-        with pytest.raises(ValueError, match="numerically singular"):
-            CLA(
-                mean=rng.uniform(0.0, 1.0, n),
-                covariance=factors @ factors.T,
-                lower_bounds=np.full(n, -0.2),
-                upper_bounds=np.ones(n),
-                a=np.ones((1, n)),
-                b=np.ones(1),
-                leverage=1.5,
-            )
+        mean, cov = rng.uniform(0.0, 1.0, n), factors @ factors.T
+        lower, upper, a, b = np.full(n, -0.2), np.ones(n), np.ones((1, n)), np.ones(1)
+        cla = CLA(mean=mean, covariance=cov, lower_bounds=lower, upper_bounds=upper, a=a, b=b, leverage=1.5)
+        assert cla.turning_points[-1].lamb == 0.0
+        # At lambda ~ 300 the objective is ~ -300 and SLSQP's reference is only accurate to
+        # about 1e-8 relative there, so the comparison is relative rather than absolute.
+        for prev, tp in itertools.pairwise(cla.turning_points):
+            if np.isfinite(prev.lamb):
+                lam, w = 0.5 * (prev.lamb + tp.lamb), 0.5 * (prev.weights + tp.weights)
+                reference = _reference(mean, cov, lower, upper, a, b, 1.5, lam)
+                assert np.abs(w).sum() <= 1.5 + 1e-8
+                assert 0.5 * w @ cov @ w - lam * mean @ w <= reference + 1e-8 * max(1.0, abs(reference))
 
 
 class TestFirstVertexNetting:

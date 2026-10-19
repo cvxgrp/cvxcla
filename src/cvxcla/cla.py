@@ -555,6 +555,7 @@ class CLA(InequalityConstrained):
             self.tol,
             first,
             self.q_vector,
+            self._free_blocks_well_conditioned,
         )
         lam_scale, mu_scale = self._scales
         root = float(np.sqrt(np.finfo(np.float64).eps))
@@ -626,6 +627,7 @@ class CLA(InequalityConstrained):
             self.tol,
             state,
             self.q_vector,
+            self._free_blocks_well_conditioned,
         )
         if state.lamb == np.inf:
             self.turning_points[0] = replace(state, nu=segment.nu_beta, eta=segment.eta_beta)
@@ -851,7 +853,7 @@ class CLA(InequalityConstrained):
         the well-posed turning points that are already feasible.
         """
         if guard and not self._free_blocks_well_conditioned:
-            guard_degeneracy(self.covariance_operator, lamb, free)
+            guard_degeneracy(self.covariance_operator, lamb, free, np.vstack([self.a, self.g_matrix[active_ineq]]))
         weights = project_feasible(
             weights,
             self.lower_bounds,

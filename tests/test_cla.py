@@ -13,8 +13,8 @@ import pytest
 from cvxcla import CLA, FactorCovariance, Lasso
 from cvxcla._events import event_ratios
 from cvxcla._kkt import active_set, solve_kkt
+from cvxcla._lasso_bounded import kkt_violation
 from cvxcla._projection import project_feasible
-from cvxcla.errors import DegenerateProblemError
 from cvxcla.pathtracer import select_next_event
 from cvxcla.types import TurningPoint
 
@@ -27,6 +27,26 @@ def _no_inequalities(n):
     inequality rows.
     """
     return np.zeros((0, n)), np.zeros(0), np.zeros(0, dtype=bool)
+
+
+def _kkt_midpoints(cla, cov):
+    """The worst optimality violation over the segment midpoints, by the LP certificate.
+
+    :func:`cvxcla._lasso_bounded.kkt_violation` with ``gram = Sigma``, ``xty = lambda mean``
+    and no penalty checks the portfolio QP's conditions: a zero gradient on the interior
+    assets and the sign of each bound, with the best equality multipliers.
+    """
+    n = cla.dimension
+    worst = 0.0
+    for prev, tp in itertools.pairwise(cla.turning_points):
+        if np.isfinite(prev.lamb):
+            lam, w = 0.5 * (prev.lamb + tp.lamb), 0.5 * (prev.weights + tp.weights)
+            empty = (np.zeros((0, n)), np.zeros(0))
+            violation = kkt_violation(
+                cov, lam * cla.mean, 0.0, w, cla.a, cla.b, *empty, cla.lower_bounds, cla.upper_bounds
+            )
+            worst = max(worst, violation)
+    return worst
 
 
 class TestCLA:
@@ -240,32 +260,29 @@ class TestCLAEdgeCases:
             assert np.all(tp.weights >= -cla.tol)
             assert np.all(tp.weights <= 1.0 + cla.tol)
 
-    def test_rank_deficient_covariance_raises_degeneracy(self):
-        """A severely rank-deficient covariance yields a clear degeneracy diagnosis.
+    def test_rank_deficient_covariance_is_traced_on_the_constraints(self):
+        """A rank-deficient covariance is traced while the budget row holds its flat directions.
 
-        When the free set grows past the covariance rank the free-asset block is
-        numerically singular and its solve is unreliable. ``_emit`` detects this
-        from the block's reciprocal condition number (a deterministic, portable
-        signal, unlike the magnitude of the resulting box violation, which is the
-        residual of a singular solve and varies with the BLAS/LAPACK build), so it
-        raises an actionable degeneracy diagnosis (naming the remedy) rather than
-        silently returning a possibly-suboptimal frontier. Contrast
-        ``test_near_degenerate_trace_completes_via_projection``, where a merely
-        near-degenerate (full-rank) problem completes cleanly.
+        Once the free set grows past the covariance rank the free block is singular,
+        but the KKT system is not while the block is positive definite on the null
+        space of the active rows; such segments are solved through the whole bordered
+        system (issue #968). The trace used to be declined there. Every segment is
+        optimal by the KKT certificate.
         """
         rng = np.random.default_rng(2)
         factors = rng.standard_normal((20, 8))
         covariance = factors @ factors.T  # rank 8 < 20 assets
         n = 20
-        with pytest.raises(ValueError, match="numerically singular"):
-            CLA(
-                mean=rng.uniform(0.0, 1.0, n),
-                covariance=covariance,
-                lower_bounds=np.zeros(n),
-                upper_bounds=np.ones(n),
-                a=np.ones((1, n)),
-                b=np.ones(1),
-            )
+        cla = CLA(
+            mean=rng.uniform(0.0, 1.0, n),
+            covariance=covariance,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        assert cla.turning_points[-1].lamb == 0.0
+        assert _kkt_midpoints(cla, covariance) < 1e-9
 
     def test_near_degenerate_trace_completes_via_projection(self):
         """A near-degenerate but adequately-ranked trace completes cleanly (issue #686).
@@ -1624,11 +1641,16 @@ class TestStop:
         assert len(betas) == len(knots)
         np.testing.assert_allclose(betas, knots, atol=1e-9)
 
-    def test_without_stop_the_budget_lasso_is_degenerate(self):
-        """The same problem traced past the cash event hits the singular free block."""
+    def test_without_stop_the_budget_lasso_is_traced_past_cash(self):
+        """The same problem traced past the cash event is optimal there (issue #968).
+
+        Below the cash event the free block is singular (cash has no variance), but the
+        budget row holds it; the segments are solved through the whole bordered system.
+        """
         *_, kwargs = self._budget_lasso()
-        with pytest.raises(DegenerateProblemError):
-            CLA(**kwargs)
+        cla = CLA(**kwargs)
+        assert cla.turning_points[-1].lamb == 0.0
+        assert _kkt_midpoints(cla, kwargs["covariance"]) < 1e-9
 
     def test_stop_that_never_fires_traces_to_lambda_zero(self):
         """An asset that is free at the first vertex never leaves a bound, so the trace is unchanged."""

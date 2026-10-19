@@ -142,11 +142,11 @@ class Lasso(InequalityConstrained):
         path: The discovered breakpoints, populated on construction.
         quad_form: Optional ``QuadraticForm`` operator ``H`` (operator mode).
         linear: Optional linear term ``X^T y`` of shape ``(n,)`` (operator mode).
-        a: Optional equality matrix ``(m, n)`` of ``A beta = b``. With ``b = 0`` it
-            and bounds that are only signs (``0`` or infinite) it is traced by the
-            leverage CLA and needs a positive-definite Gram, so that the constrained
-            least-squares end of the path is unique. With a finite bound or ``g``/``h``
-            it is relaxed and extrapolated (see :mod:`cvxcla._lasso_bounded`).
+        a: Optional equality matrix ``(m, n)`` of ``A beta = b``. With ``b = 0`` and
+            bounds that are only signs (``0`` or infinite) it is traced by the leverage
+            CLA; with more features than observations that path ends where the fit first
+            interpolates. With a finite bound or ``g``/``h`` it is relaxed and
+            extrapolated (see :mod:`cvxcla._lasso_bounded`).
         b: Optional right-hand side ``(m,)`` of ``A beta = b``; ``None`` means
             ``b = 0``. A nonzero ``b`` needs a unique smallest-``l1`` point on
             ``A beta = b`` (true for generic ``A`` and ``b``) to start from.
