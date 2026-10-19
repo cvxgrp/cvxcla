@@ -65,6 +65,7 @@ def bordered_solve(
     rhs_slope: NDArray[np.float64],
     d_const: NDArray[np.float64],
     d_slope: NDArray[np.float64],
+    dense: bool = False,
 ) -> tuple[
     NDArray[np.float64],
     NDArray[np.float64],
@@ -92,6 +93,12 @@ def bordered_solve(
     active-row guards bound. With more rows than free coordinates the rows cannot
     be independent; the plain solve is used and reports the singular system. A
     single row is its own orthogonal basis, so it too takes the plain solve.
+
+    With ``dense`` the bordered matrix is formed from the free block and solved as a
+    whole. That is the route when ``H_FF`` is singular but the system is not: ``H_FF``
+    then only needs to be positive definite on the null space of ``C``, which the
+    elimination through ``H_FF^{-1}`` cannot use (more free coordinates than the rank of
+    a Gram matrix, held by constraint rows).
     """
     rhs = np.column_stack([rhs_const, rhs_slope])
     d = np.column_stack([d_const, d_slope])
@@ -100,7 +107,13 @@ def bordered_solve(
         # Nothing to solve: every coordinate is blocked. Reached only with no
         # constraint rows, where the segment is the vertex itself.
         return np.zeros(0), np.zeros(0), np.zeros(mc), np.zeros(mc)
-    if mc <= 1 or mc > n_free:
+    if dense:
+        index = np.flatnonzero(free)
+        block = np.asarray(quad.block_matvec(index, index, np.eye(n_free)), dtype=np.float64)
+        kkt = np.block([[block, c_free.T], [c_free, np.zeros((mc, mc))]])
+        solution = np.linalg.solve(kkt, np.vstack([rhs, d]))
+        x, nu = solution[:n_free], solution[n_free:]
+    elif mc <= 1 or mc > n_free:
         x, nu = _bordered_solve(quad, np.flatnonzero(free), c_free, rhs, d)
     else:
         q, r = np.linalg.qr(c_free.T)

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.linalg import null_space  # type: ignore[import-untyped]
 from scipy.optimize import linprog  # type: ignore[import-untyped]
 
 from ._kkt import Segment
@@ -97,8 +98,24 @@ def well_conditioned(cov: QuadraticForm) -> bool:
     return float(cov.rcond_free(np.arange(cov.n))) >= RCOND_FLOOR
 
 
-def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -> None:
-    """Refuse the turning point when the free-asset block is numerically singular.
+def _reduced_rcond(cov: QuadraticForm, index: NDArray[np.intp], c_free: NDArray[np.float64]) -> float:
+    """Reciprocal condition number of the free block on the null space of ``c_free``.
+
+    A null space of dimension zero (as many independent rows as free assets) fixes the
+    free weights by the rows alone, so the block plays no part and the result is ``1``.
+    """
+    basis = null_space(c_free)
+    if basis.shape[1] == 0:
+        return 1.0
+    block = np.asarray(cov.block_matvec(index, index, basis), dtype=np.float64)
+    eigenvalues = np.abs(np.linalg.eigvalsh(basis.T @ block))
+    return float(eigenvalues.min() / max(float(eigenvalues.max()), 1e-300))
+
+
+def guard_degeneracy(
+    cov: QuadraticForm, lamb: float, free: NDArray[np.bool_], rows: NDArray[np.float64] | None = None
+) -> None:
+    """Refuse the turning point when its reduced KKT system is numerically singular.
 
     We distinguish two regimes by the conditioning of the free-asset block.
     While that block stays numerically full rank its solve is reliable and any
@@ -114,6 +131,16 @@ def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -
     BLAS/LAPACK build, the conditioning is deterministic and portable, so the
     completed-vs-declined boundary is the same on every platform.
 
+    A singular free block does not by itself make the turning point singular: the
+    active constraint rows ``C`` hold the free assets on their null space, and the
+    KKT system is uniquely solvable when the free block is positive definite there.
+    So a free block below the floor is tested again on that null space, ``Z^T
+    Sigma_FF Z`` with ``C_F Z = 0``, and the point is refused only when that is
+    singular too (see :func:`cvxcla.operators.bordered_solve`, whose ``dense`` route
+    solves such a segment). A LASSO with more predictors than observations reaches
+    this: its free set outgrows the rank of the Gram matrix before the fit
+    interpolates, and the constraint rows hold it.
+
     The caller skips this check entirely when the full covariance is well
     conditioned: by interlacing no free block can then be singular, so the check
     is provably redundant (see :func:`well_conditioned`).
@@ -122,13 +149,18 @@ def guard_degeneracy(cov: QuadraticForm, lamb: float, free: NDArray[np.bool_]) -
         cov: The covariance as a ``QuadraticForm`` backend.
         lamb: Lambda value of the candidate turning point, used in the message.
         free: Boolean mask of the free assets at the candidate.
+        rows: The active constraint rows ``[A ; G_active]`` (``(k, n)``), or ``None``
+            to test the free block alone.
 
     Raises:
         DegenerateProblemError: With a degeneracy-specific message when the
-            free-asset block is numerically singular (an unreliable solve);
+            reduced system is numerically singular (an unreliable solve);
             otherwise returns without effect.
     """
-    rcond = cov.rcond_free(np.flatnonzero(free))
+    index = np.flatnonzero(free)
+    rcond = float(cov.rcond_free(index))
+    if rcond < RCOND_FLOOR and rows is not None and rows.shape[0]:
+        rcond = _reduced_rcond(cov, index, rows[:, index])
     if rcond < RCOND_FLOOR:
         n_free = int(np.count_nonzero(free))
         msg = (

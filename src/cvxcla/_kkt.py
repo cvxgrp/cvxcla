@@ -79,6 +79,7 @@ def solve_kkt(
     fixed_weights: NDArray[np.float64],
     active_ineq: NDArray[np.bool_],
     linear: NDArray[np.float64] | None = None,
+    dense: bool = False,
 ) -> tuple[
     NDArray[np.float64],
     NDArray[np.float64],
@@ -115,6 +116,8 @@ def solve_kkt(
             ``w^T Sigma w / 2 - (q + lam mean)^T w``. It enters only the constant
             (``lambda``-free) system: one more term on its right-hand side and in
             ``gamma``. ``None`` means ``q = 0``.
+        dense: Solve the bordered system as a whole (see
+            :func:`cvxcla.operators.bordered_solve`), for a singular ``Sigma_FF``.
 
     Returns:
         ``(r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta)``:
@@ -151,6 +154,7 @@ def solve_kkt(
         mean[free_in],
         d - c[:, out] @ fixed_weights[out],
         np.zeros(c.shape[0]),
+        dense=dense,
     )
 
     r_alpha = fixed_weights.copy()
@@ -255,6 +259,7 @@ def critical_segment(
     tol: float,
     state: TurningPoint,
     linear: NDArray[np.float64] | None = None,
+    well_conditioned: bool = True,
 ) -> Segment:
     """Solve the reduced KKT system for the critical-line segment at ``state``.
 
@@ -274,6 +279,10 @@ def critical_segment(
         tol: Tolerance for classifying a weight as sitting on a bound.
         state: The turning point the segment starts from.
         linear: Optional constant linear term ``q`` (see :func:`solve_kkt`).
+        well_conditioned: Whether every free block of ``cov`` is known to be
+            nonsingular (see :func:`cvxcla._checks.well_conditioned`). When it is not,
+            a free block below the singularity floor is solved through the whole
+            bordered system.
 
     Returns:
         The :class:`Segment` valid below ``state``.
@@ -289,8 +298,9 @@ def critical_segment(
         state.free, state.weights, lower, upper, tol, allow_empty=rows.shape[0] == 0
     )
     guard_active_rows(rows, free_in, state.lamb)
+    dense = not well_conditioned and float(cov.rcond_free(np.flatnonzero(free_in))) < RCOND_FLOOR
     r_alpha, r_beta, gamma, delta, eta_alpha, eta_beta, nu_alpha, nu_beta = solve_kkt(
-        cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq, linear
+        cov, mean, a, b, g, h, free_in, fixed_weights, state.active_ineq, linear, dense
     )
     return Segment(
         r_alpha,

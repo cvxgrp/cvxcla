@@ -12,9 +12,10 @@ import itertools
 
 import numpy as np
 import pytest
-from scipy.optimize import minimize
+from scipy.optimize import linprog, minimize
 
 from cvxcla import CLA, DenseCovariance, Lasso
+from cvxcla._lasso_bounded import kkt_violation
 from cvxcla.errors import DegenerateProblemError
 
 
@@ -180,11 +181,48 @@ class TestValidation:
         assert max(abs(bp.beta.sum()) for bp in lasso.path) < 1e-10
         assert max(bp.beta[0] for bp in lasso.path) <= 1.0 + 1e-10
 
-    def test_more_features_than_observations(self):
-        """A singular Gram leaves the least-squares end non-unique, so it is refused."""
-        x, y = _data(10, 20, 0)
-        with pytest.raises(ValueError, match="positive-definite Gram"):
-            Lasso(x=x, y=y, a=np.ones((1, 20)))
+    @pytest.mark.parametrize("signed", [False, True])
+    def test_more_features_than_observations(self, signed):
+        """A singular Gram is traced to the minimum-l1 interpolating fit (issue #968).
+
+        The reproduction of the issue: 100 features, 40 observations, a zero sum, and
+        optionally ``beta_j >= 0`` on the first 30. The free set outgrows the rank of the
+        Gram before the fit interpolates. The fits that interpolate under the constraints
+        form a whole face; the path ends at its limit ``lam -> 0+``, the one of smallest
+        ``l1`` norm, which a linear program finds independently. Every breakpoint and
+        segment midpoint with ``lam > 0`` is optimal by the LP certificate.
+        """
+        rng = np.random.default_rng(7)
+        m, n = 40, 100
+        x = rng.standard_normal((m, n))
+        x -= x.mean(0)
+        beta = np.zeros(n)
+        beta[:4] = [1.0, -1.0, 2.0, -2.0]
+        y = x @ beta + 0.5 * rng.standard_normal(m)
+        y -= y.mean()
+        a, b = np.ones((1, n)), np.zeros(1)
+        lower = np.where(signed & (np.arange(n) < 30), 0.0, -np.inf)
+        upper = np.full(n, np.inf)
+        lasso = Lasso(x=x, y=y, a=a, lower=lower, upper=upper)
+
+        end = lasso.path[-1]
+        assert end.lam == 0.0
+        assert np.linalg.norm(y - x @ end.beta) < 1e-8
+        assert abs(end.beta.sum()) < 1e-8
+        lams = np.array([bp.lam for bp in lasso.path])
+        assert np.all(np.diff(lams) < 0)
+
+        empty = (np.zeros((0, n)), np.zeros(0))
+        midpoints = [0.5 * (hi + lo) for hi, lo in itertools.pairwise(lams)]
+        for lam in [*lams[lams > 0], *midpoints]:
+            violation = kkt_violation(x.T @ x, x.T @ y, lam, lasso.solution(lam), a, b, *empty, lower, upper)
+            assert violation < 1e-10
+
+        # beta = u - v with u, v >= 0: the smallest l1 norm on X beta = y, A beta = 0 and the signs.
+        stacked = np.vstack([x, a])
+        legs = [(0.0, None)] * n + [(0.0, 0.0 if lo == 0 else None) for lo in lower]
+        lp = linprog(np.ones(2 * n), A_eq=np.hstack([stacked, -stacked]), b_eq=np.r_[y, b], bounds=legs, method="highs")
+        np.testing.assert_allclose(end.beta, lp.x[:n] - lp.x[n:], atol=1e-9)
 
     def test_block_rows_trace_and_are_optimal(self):
         """Block-structured rows (two groups, each summing to zero) are traced.

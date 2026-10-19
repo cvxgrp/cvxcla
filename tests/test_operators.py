@@ -303,3 +303,30 @@ class TestCLAWithOperator:
         backend = dense_covariance(problem["covariance"])
         cla_op = CLA(**{**problem, "covariance": backend})
         assert cla_op.covariance_operator is backend
+
+
+def test_dense_bordered_solve_matches_elimination() -> None:
+    """The dense route solves the same system as the elimination on a nonsingular block."""
+    rng = np.random.default_rng(8)
+    b = rng.standard_normal((6, 6))
+    op = DenseOperator(b @ b.T + 6 * np.eye(6))
+    free = np.array([True, True, False, True, True, True])
+    nf = int(free.sum())
+    c_free = rng.standard_normal((2, nf))
+    args = (rng.standard_normal(nf), rng.standard_normal(nf), rng.standard_normal(2), rng.standard_normal(2))
+    plain = bordered_solve(op, free, c_free, *args)
+    dense = bordered_solve(op, free, c_free, *args, dense=True)
+    for got, want in zip(dense, plain, strict=True):
+        np.testing.assert_allclose(got, want)
+
+
+def test_dense_bordered_solve_on_a_singular_block() -> None:
+    """A block singular only along a direction the row fixes is solved through the whole system."""
+    op = DenseOperator(np.array([[1.0, 1.0], [1.0, 1.0]]))
+    free = np.array([True, True])
+    c_free = np.array([[1.0, -1.0]])
+    x, _, nu, _ = bordered_solve(
+        op, free, c_free, np.array([2.0, 2.0]), np.zeros(2), np.zeros(1), np.zeros(1), dense=True
+    )
+    np.testing.assert_allclose(x, [1.0, 1.0])
+    np.testing.assert_allclose(nu, [0.0], atol=1e-12)

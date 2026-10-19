@@ -12,9 +12,10 @@ import itertools
 
 import numpy as np
 import pytest
+from cvx.linalg import DenseOperator
 
 from cvxcla import CLA
-from cvxcla._checks import check_held_bounds
+from cvxcla._checks import check_held_bounds, guard_degeneracy
 from cvxcla._kkt import Segment
 from cvxcla.errors import DegenerateProblemError
 from cvxcla.first import _dual_step, _dual_vertex, classify_vertex, vertex_partition
@@ -242,3 +243,24 @@ class TestHeldBoundCertificate:
         )
         with pytest.raises(DegenerateProblemError, match="should have left"):
             check_held_bounds(segment, 1.0, -1, np.ones((1, 2)), np.zeros(2), np.full(2, 2.0), 1e-9, 1.0, 1.0)
+
+
+class TestReducedGuard:
+    """A singular free block is refused only when it is singular on the rows' null space."""
+
+    COV = DenseOperator(np.diag([1.0, 0.0]))
+    FREE = np.array([True, True])
+
+    def test_rows_that_fix_the_flat_direction_pass(self):
+        """``w_1`` is flat in the covariance but held by a row on it."""
+        guard_degeneracy(self.COV, 1.0, self.FREE, np.array([[0.0, 1.0]]))
+
+    def test_rows_as_many_as_free_assets_pass(self):
+        """Two independent rows fix both weights; the block plays no part."""
+        guard_degeneracy(self.COV, 1.0, self.FREE, np.eye(2))
+
+    @pytest.mark.parametrize("rows", [None, np.zeros((0, 2)), np.array([[1.0, 0.0]])])
+    def test_a_flat_direction_left_free_is_refused(self, rows):
+        """Without rows, or with a row that leaves ``w_1`` free, the point is refused."""
+        with pytest.raises(DegenerateProblemError, match="numerically singular"):
+            guard_degeneracy(self.COV, 1.0, self.FREE, rows)
