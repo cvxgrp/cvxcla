@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.6.0] - 2026-10-19
+
+### New Features
+- *(lasso)* Trace homogeneous inequality rows (h = 0), e.g. a monotone fit (#966)
+- *(lasso)* Trace A beta = 0 with finite bounds or inequality rows (#969) (#973)
+
+### Bug Fixes
+- *(cla)* Trace budget problems on centred, unit-spread returns (#967) (#970)
+- *(checks)* Certify held bounds against the active inequality multipliers only (#971)
+- *(cla)* Start a tied maximum return at the minimiser of the quadratic term on its face (#972)
+- *(cla)* Solve and guard singular free blocks on the constraints' null space (#968) (#974)
+
 ## [2.5.0] - 2026-10-18
 
 ### New Features
