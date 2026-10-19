@@ -174,3 +174,8 @@ tag = false
 filename = "experiments/make_figures.py"
 search = '"cvxcla=={current_version}",'
 replace = '"cvxcla=={new_version}",'
+
+[[tool.bumpversion.files]]
+filename = "experiments/bldp_gap.py"
+search = '"cvxcla=={current_version}",'
+replace = '"cvxcla=={new_version}",'
