@@ -24,9 +24,8 @@ at tilt ``lam``, where ``u_bar`` stacks the bounds ``u_j`` and ``-l_j`` of the
 columns. The CLA's tilt *is* the penalty, so every turning point is a knot,
 ``beta = S z`` at ``lam``. At ``lam = inf`` the CLA starts from the vertex of
 smallest ``l1`` norm on the constraints, which is ``z = 0`` without equality rows
-(every row of ``G beta <= h`` with ``h > 0`` is slack there). A homogeneous
-equality row (``b = 0``) makes that vertex degenerate; such problems belong to the
-leverage route instead, and the CLA declines them here.
+(every row of ``G beta <= h`` with ``h > 0`` is slack there). Homogeneous rows with
+signs only go to the leverage route; the cases below are traced here.
 
 **Homogeneous inequality rows** (``h_r = 0``, such as the ordering ``beta_j <=
 beta_{j+1}`` of a monotone fit) are all tight at ``z = 0``, so the start is degenerate
@@ -41,6 +40,13 @@ exact path meets together) are dropped. The result is then *certified*, not trus
 linear program finds the multipliers that best satisfy the LASSO's optimality conditions
 at every knot and segment midpoint, and the extrapolated path is returned only if they
 hold to rounding. Otherwise the problem is declined.
+
+**Homogeneous equality rows** (``A beta = 0``, such as a zero sum) together with a finite
+bound or inequality rows are resolved the same way, relaxing ``b`` to ``eps A d`` for a
+generic point ``d`` the bounds and the homogeneous rows admit, alongside any ``h_r = 0``.
+At ``b = 0`` the start ``z = 0`` is degenerate; relaxed it is a whole face of
+smallest-``l1`` points (every same-signed leg of a ones row ties), and the CLA starts on
+that face where its quadratic term is smallest.
 """
 
 from __future__ import annotations
@@ -193,6 +199,29 @@ def kkt_violation(
     return max(worst, float(feasibility.max(initial=0.0))) / float(np.abs(xty).max())
 
 
+def _relaxation_direction(
+    a: NDArray[np.float64],
+    g: NDArray[np.float64],
+    h: NDArray[np.float64],
+    lower: NDArray[np.float64],
+    upper: NDArray[np.float64],
+) -> NDArray[np.float64]:
+    """A generic point ``d`` whose image ``A d`` relaxes ``A beta = 0`` (module docstring).
+
+    Each coefficient gets a pseudo-random magnitude in ``[0.5, 1.5]`` and a sign its bounds
+    allow, so ``A d`` is generic and the relaxed start a unique vertex. ``d`` is then scaled
+    so that ``G_r d <= 1/2`` on the homogeneous rows, which keeps ``eps d`` strictly inside
+    their relaxation ``g_r beta <= eps``; every other constraint has room of order one.
+    """
+    rng = np.random.default_rng(0)
+    n = a.shape[1]
+    sign = np.where(rng.random(n) < 0.5, -1.0, 1.0)
+    sign = np.where(upper > 0, np.where(lower < 0, sign, 1.0), np.where(lower < 0, -1.0, 0.0))
+    d: NDArray[np.float64] = sign * rng.uniform(0.5, 1.5, n)
+    reach = float(np.max(g[h == 0] @ d, initial=0.0))
+    return d * min(1.0, 0.5 / reach) if reach > 0 else d
+
+
 def _resolve_homogeneous(
     gram: NDArray[np.float64],
     sigma: NDArray[np.float64],
@@ -206,17 +235,22 @@ def _resolve_homogeneous(
     lower: NDArray[np.float64],
     upper: NDArray[np.float64],
 ) -> list[Knot]:
-    """The exact knots with homogeneous rows ``h_r = 0``, from two relaxed traces (module docstring).
+    """The exact knots with homogeneous rows ``h_r = 0`` or ``A beta = 0``, from two relaxed traces.
 
     Raises:
         DegenerateProblemError: If the two relaxed traces take different sequences, or the
             extrapolated path fails its optimality certificate.
     """
-    homogeneous = h == 0
+    h_dir = (h == 0).astype(np.float64)
+    b_dir = a @ _relaxation_direction(a, g, h, lower, upper) if a.shape[0] and not b.any() else np.zeros_like(b)
     eps = RELAXATION * float(np.abs(xty).max()) / max(float(np.diag(gram).max()), 1e-300)
     q = legs.T @ xty
-    once = _trace(sigma, q, legs, cap, a, b, g, h + eps * homogeneous)
-    twice = _trace(sigma, q, legs, cap, a, b, g, h + 2 * eps * homogeneous)
+    rows = (g, h) if g.shape[0] else (None, None)
+
+    def relaxed(t: float) -> list[Knot]:
+        return _trace(sigma, q, legs, cap, a, b + t * b_dir, rows[0], None if rows[1] is None else h + t * h_dir)
+
+    once, twice = relaxed(eps), relaxed(2 * eps)
     if len(once) != len(twice):
         msg = (
             f"the homogeneous rows could not be resolved: relaxed by {eps:.1e} and {2 * eps:.1e} they "
@@ -291,9 +325,12 @@ def bounded_path(
         return [(0.0, np.zeros(n), np.zeros(n, dtype=bool))]
     # S^T G S through the operator, one leg at a time; k <= 2 n, so this is O(n) matvecs.
     sigma = legs.T @ np.column_stack([quad.matvec(legs[:, i]) for i in range(k)])
-    if g is not None and h is not None and np.any(h == 0):
+    homogeneous_rows = g is not None and h is not None and bool(np.any(h == 0))
+    if homogeneous_rows or (a.shape[0] and not b.any()):
         gram = np.column_stack([quad.matvec(e) for e in np.eye(n)])
-        knots = _resolve_homogeneous(gram, sigma, xty, legs, cap, a, b, g, h, lower, upper)
+        g_all = np.zeros((0, n)) if g is None else g
+        h_all = np.zeros(0) if h is None else h
+        knots = _resolve_homogeneous(gram, sigma, xty, legs, cap, a, b, g_all, h_all, lower, upper)
     else:
         knots = _trace(sigma, legs.T @ xty, legs, cap, a, b, g, h)
     scale = max(float(np.abs(beta).max()) for _, beta in knots) or 1.0

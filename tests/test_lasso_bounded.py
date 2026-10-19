@@ -246,11 +246,10 @@ class TestRejected:
             ({"upper": np.full(N, -0.1)}, "admit beta_j = 0"),
             ({"lower": np.zeros(N - 1)}, "must have shape"),
             ({"a": np.ones((1, N)), "b": np.ones(2)}, "b must have shape"),
-            ({"a": np.ones((1, N)), "upper": np.ones(N)}, "cannot be combined with a finite bound"),
         ],
     )
     def test_invalid_bounds(self, kwargs, match):
-        """Bounds that exclude zero or have the wrong shape, and A beta = 0 with a cap."""
+        """Bounds that exclude zero or have the wrong shape."""
         x, y = _data(30, N, 0)
         with pytest.raises(ValueError, match=match):
             Lasso(x, y, **kwargs)
@@ -260,12 +259,6 @@ class TestRejected:
         x, y = _data(30, N, 0)
         with pytest.raises(ValueError, match="needs equality rows"):
             Lasso(x, y, b=np.ones(1))
-
-    def test_zero_sum_with_inequality_rows(self):
-        """``A beta = 0`` with rows ``G beta <= h`` has no nondegenerate encoding."""
-        x, y = _data(30, N, 0)
-        with pytest.raises(ValueError, match="cannot be combined with a finite bound or inequality rows"):
-            Lasso(x, y, a=np.ones((1, N)), g=np.eye(N)[:1], h=np.ones(1))
 
     def test_contradictory_rows_are_infeasible(self):
         """``beta_0 = 1`` against ``beta_0 <= 0.5``: the CLA's classification comes through."""
@@ -423,3 +416,56 @@ class TestFlatStart:
         lasso = Lasso(x, y, a=a, b=b)
         free = np.full(N, np.inf)
         assert _certified(lasso, x, y, a, b, np.zeros((0, N)), np.zeros(0), -free, free) < 1e-12
+
+
+class TestZeroSum:
+    """``A beta = 0`` with finite bounds or inequality rows, relaxed and extrapolated (issue #969)."""
+
+    @staticmethod
+    def _compositional():
+        """The reproduction of issue #969: centred data and a sparse zero-sum truth."""
+        rng = np.random.default_rng(7)
+        x = rng.standard_normal((60, 10))
+        x -= x.mean(0)
+        y = x @ np.r_[1.0, -1.0, np.zeros(8)] + 0.3 * rng.standard_normal(60)
+        return x, y - y.mean()
+
+    def test_capped_group(self):
+        """The issue's example: a zero sum with ``beta_0 <= 0.5`` is traced and certified."""
+        x, y = self._compositional()
+        a, b = np.ones((1, 10)), np.zeros(1)
+        g, h = np.eye(10)[:1], np.array([0.5])
+        lasso = Lasso(x, y, a=a, b=b, g=g, h=h)
+        free = np.full(10, np.inf)
+        assert _certified(lasso, x, y, a, b, g, h, -free, free) < 1e-12
+        assert max(abs(bp.beta.sum()) for bp in lasso.path) < 1e-12
+        assert max(bp.beta[0] for bp in lasso.path) == pytest.approx(0.5)
+
+    def test_finite_bounds(self):
+        """A zero sum inside a box ``|beta_j| <= 0.6`` is certified."""
+        x, y = self._compositional()
+        a, b = np.ones((1, 10)), np.zeros(1)
+        lower, upper = np.full(10, -0.6), np.full(10, 0.6)
+        lasso = Lasso(x, y, a=a, b=b, lower=lower, upper=upper)
+        assert _certified(lasso, x, y, a, b, np.zeros((0, 10)), np.zeros(0), lower, upper) < 1e-12
+
+    def test_slack_bounds_agree_with_the_leverage_route(self):
+        """Bounds that never bind go through the relaxation and give the signs-only path."""
+        x, y = self._compositional()
+        a = np.ones((1, 10))
+        relaxed = Lasso(x, y, a=a, b=np.zeros(1), lower=np.full(10, -100.0), upper=np.full(10, 100.0)).path
+        leverage = Lasso(x, y, a=a, b=np.zeros(1)).path
+        assert len(relaxed) == len(leverage)
+        for got, want in zip(relaxed, leverage, strict=True):
+            assert got.lam == pytest.approx(want.lam, rel=1e-9, abs=1e-12)
+            np.testing.assert_allclose(got.beta, want.beta, atol=1e-10)
+
+    def test_with_homogeneous_rows(self):
+        """A zero sum, a sign and the ordering ``beta_0 <= beta_1``: both kinds relaxed together."""
+        x, y = _data(40, N, 3)
+        a, b = np.ones((1, N)), np.zeros(1)
+        g, h = np.diff(np.eye(N), axis=0)[:2], np.array([0.0, 0.3])
+        lower, upper = np.full(N, -np.inf), np.full(N, np.inf)
+        lower[0] = 0.0
+        lasso = Lasso(x, y, a=a, b=b, g=g, h=h, lower=lower, upper=upper)
+        assert _certified(lasso, x, y, a, b, g, h, lower, upper) < 1e-12
