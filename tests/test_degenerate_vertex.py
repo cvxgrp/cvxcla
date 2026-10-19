@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 from cvxcla import CLA
+from cvxcla._checks import check_held_bounds
+from cvxcla._kkt import Segment
 from cvxcla.errors import DegenerateProblemError
 from cvxcla.first import _dual_step, _dual_vertex, _vertex_partition, classify_vertex
 
@@ -192,3 +194,32 @@ class TestDualVertexHelpers:
         )
         np.testing.assert_array_equal(released, [False, True])
         np.testing.assert_array_equal(freed, [False, False, False])
+
+
+class TestHeldBoundCertificate:
+    """The certificate of a held bound sees only the active inequality rows."""
+
+    def test_inactive_rows_are_left_out(self):
+        """An asset held on a bound with the wrong multiplier is certified past inactive rows.
+
+        Asset 1 sits on its floor with multiplier ``-0.5``, which a shift of the budget
+        multiplier repairs (asset 0 is on its floor too, so the shift is free). The two
+        inequality rows are inactive: their multipliers must not enter the certificate,
+        which used to stack all of them against the active rows only and fail on the shapes.
+        """
+        segment = Segment(
+            r_alpha=np.array([1.0, 0.0]),
+            r_beta=np.zeros(2),
+            gamma=np.array([0.0, -0.5]),
+            delta=np.zeros(2),
+            at_upper=np.array([False, False]),
+            at_lower=np.array([False, True]),
+            free_in=np.array([True, False]),
+            active_ineq=np.array([False, False]),
+            eta_alpha=np.zeros(2),
+            eta_beta=np.zeros(2),
+            nu_alpha=np.zeros(1),
+            nu_beta=np.zeros(1),
+        )
+        rows = np.ones((1, 2))  # the budget; no inequality row is active
+        check_held_bounds(segment, 1.0, -1, rows, np.array([1.0, 0.0]), np.array([2.0, 1.0]), 1e-9, 1.0, 1.0)
