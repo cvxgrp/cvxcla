@@ -10,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from cvxcla import CLA, FactorCovariance
+from cvxcla import CLA, FactorCovariance, Lasso
 from cvxcla._events import event_ratios
 from cvxcla._kkt import active_set, solve_kkt
 from cvxcla._projection import project_feasible
@@ -332,21 +332,48 @@ class TestCLAEdgeCases:
         assert len(cla) >= 2
 
     def test_equal_returns(self):
-        """Equal returns tie every bound at the maximum-return vertex, so the trace declines (issue #953).
+        """Equal returns tie on the whole feasible set, so the path starts at its minimum variance.
 
-        Any vertex maximises the return; the true frontier is the minimum-variance
-        portfolio (1/3 each), which the vertex resolution cannot see. The trace used to
-        run on the LP's vertex and return (1, 0, 0) as the minimum-variance end.
+        Any vertex maximises the return; the limit of the path at ``lambda = inf`` is the
+        point of that face the covariance picks, the minimum-variance portfolio (1/3
+        each), and the trace stays there. It used to run on the LP's vertex and return
+        (1, 0, 0) as the minimum-variance end (issue #953), and then to decline.
         """
-        with pytest.raises(DegenerateProblemError, match="should have left"):
-            CLA(
-                mean=np.array([0.1, 0.1, 0.1]),
-                covariance=np.eye(3) * 0.04,
-                lower_bounds=np.zeros(3),
-                upper_bounds=np.ones(3),
-                a=np.ones((1, 3)),
-                b=np.ones(1),
-            )
+        cla = CLA(
+            mean=np.array([0.1, 0.1, 0.1]),
+            covariance=np.eye(3) * 0.04,
+            lower_bounds=np.zeros(3),
+            upper_bounds=np.ones(3),
+            a=np.ones((1, 3)),
+            b=np.ones(1),
+        )
+        for tp in cla.turning_points:
+            np.testing.assert_allclose(tp.weights, np.full(3, 1 / 3))
+        assert cla.turning_points[-1].lamb == 0.0
+
+    def test_tied_top_starts_at_the_face_minimiser(self):
+        """Two assets tie at the top: the path starts at their minimum-variance split.
+
+        On the face ``w_0 + w_1 = 1`` the variance is smallest at ``w_0 = 8/11``. Asset 2 is
+        pinned at zero there by the tied return alone, not by a constraint, so it starts
+        blocked and leaves its bound at a finite lambda; until then the point is held still.
+        """
+        cov = np.array([[0.04, 0.01, 0.0], [0.01, 0.09, 0.0], [0.0, 0.0, 0.01]])
+        cla = CLA(
+            mean=np.array([0.2, 0.2, 0.1]),
+            covariance=cov,
+            lower_bounds=np.zeros(3),
+            upper_bounds=np.ones(3),
+            a=np.ones((1, 3)),
+            b=np.ones(1),
+            g=np.array([[0.0, 0.0, 1.0]]),
+            h=np.array([0.9]),
+        )
+        first, second = cla.turning_points[:2]
+        np.testing.assert_allclose(first.weights, [8 / 11, 3 / 11, 0.0], atol=1e-12)
+        np.testing.assert_array_equal(first.free, [True, True, False])
+        np.testing.assert_allclose(second.weights, first.weights, atol=1e-12)
+        assert 0 < second.lamb < np.inf
 
     def test_no_short_selling(self):
         """Test no short selling constraint (lower bounds = 0)."""
@@ -491,12 +518,13 @@ class TestDegenerateProblems:
         assert np.all(np.diff(lambdas) < 0)
         assert np.allclose(a @ cla.turning_points[-1].weights, 1.0)
 
-    def test_degenerate_start_under_a_homogeneous_row_declines(self):
-        """A LASSO in penalty form under sum(beta) = 0 declines instead of tracing wrong (issue #953).
+    def test_degenerate_start_under_a_homogeneous_row(self):
+        """A LASSO in penalty form under sum(beta) = 0 traces the LASSO path (issue #953).
 
         The maximum-return vertex is w = 0 and every leg ties in the returns, so which
-        legs start the path depends on q alone. The resolution picked one from the
-        returns and traced a short path that is not the LASSO path, without error.
+        legs start the path depends on q alone. The resolution used to pick one from the
+        returns and trace a short path that is not the LASSO path, and then to decline;
+        the start on the face of tied legs gives the path of the leverage route.
         """
         rng = np.random.default_rng(7)
         n, p = 60, 5
@@ -506,16 +534,21 @@ class TestDegenerateProblems:
         z -= z.mean(axis=0)
         y -= y.mean()
         s = np.hstack([np.eye(p), -np.eye(p)])
-        with pytest.raises(DegenerateProblemError, match="should have left"):
-            CLA(
-                mean=-np.ones(2 * p),
-                covariance=s.T @ (z.T @ z) @ s,
-                q=s.T @ (z.T @ y),
-                lower_bounds=np.zeros(2 * p),
-                upper_bounds=np.full(2 * p, np.inf),
-                a=np.ones((1, p)) @ s,
-                b=np.zeros(1),
-            )
+        cla = CLA(
+            mean=-np.ones(2 * p),
+            covariance=s.T @ (z.T @ z) @ s,
+            q=s.T @ (z.T @ y),
+            lower_bounds=np.zeros(2 * p),
+            upper_bounds=np.full(2 * p, np.inf),
+            a=np.ones((1, p)) @ s,
+            b=np.zeros(1),
+        )
+        knots = [(tp.lamb, s @ tp.weights) for tp in cla.turning_points if np.isfinite(tp.lamb)]
+        reference = Lasso(z, y, a=np.ones((1, p))).path
+        assert len(knots) == len(reference)
+        for (lam, beta), bp in zip(knots, reference, strict=True):
+            assert lam == pytest.approx(bp.lam, rel=1e-9, abs=1e-12)
+            np.testing.assert_allclose(beta, bp.beta, atol=1e-10)
 
     def test_held_bound_with_degenerate_multipliers_is_accepted(self):
         """A wrongly signed multiplier is not a decline when other multipliers certify the point.
@@ -1593,8 +1626,6 @@ class TestStop:
 
     def test_without_stop_the_budget_lasso_is_degenerate(self):
         """The same problem traced past the cash event hits the singular free block."""
-        from cvxcla.errors import DegenerateProblemError
-
         *_, kwargs = self._budget_lasso()
         with pytest.raises(DegenerateProblemError):
             CLA(**kwargs)

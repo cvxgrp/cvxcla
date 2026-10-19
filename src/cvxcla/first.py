@@ -224,14 +224,14 @@ def classify_vertex(
 
     An asset is free when it sits strictly inside its box (by more than ``tol``)
     and an inequality row is active when it is tight to ``tol``. The vertex is
-    then checked for degeneracy (see :func:`_reject_degenerate_vertex`).
+    then checked for degeneracy (see :func:`reject_degenerate_vertex`).
 
     With the linear program's ``duals`` a degenerate vertex -- one whose interior
     assets do not span the tight rows -- is resolved first. Its optimal duals are
     not unique, and the one the solver happens to report need not show which
     partition works, so the partition is chosen from the whole optimal dual set:
     :func:`_dual_vertex` moves the reported duals to a vertex of that set, and
-    :func:`_vertex_partition` reads a partition off it -- the tight rows with a
+    :func:`vertex_partition` reads a partition off it -- the tight rows with a
     zero multiplier stay inactive, and assets on a bound with a zero reduced cost
     are freed, in order of decreasing return, until the free block of the active
     rows is square and nonsingular. The segment then reproduces the vertex, and the
@@ -262,7 +262,7 @@ def classify_vertex(
     if duals is not None and not _spans(np.vstack([a, g[active_ineq]]), free):
         free, active_ineq = _resolve_vertex(weights, lower_bounds, upper_bounds, a, g, tol, free, active_ineq, duals)
 
-    _reject_degenerate_vertex(a, g, free, active_ineq)
+    reject_degenerate_vertex(a, g, free, active_ineq)
     return TurningPoint(free=free, weights=weights, active_ineq=active_ineq)
 
 
@@ -328,7 +328,7 @@ def _resolve_vertex(
     nu = np.linalg.lstsq(a.T, duals.mean - duals.gap - g[tight].T @ eta, rcond=None)[0]
     y = _dual_vertex(rows, duals.mean, free, sign, m, np.r_[nu, eta], duals.tol)
     gap = duals.mean - rows.T @ y
-    freed, released = _vertex_partition(
+    freed, released = vertex_partition(
         rows,
         free,
         (sign != 0) & (sign * gap <= duals.tol),
@@ -438,7 +438,7 @@ def _dual_step(
     return None
 
 
-def _vertex_partition(
+def vertex_partition(
     rows: NDArray[np.float64],
     free: NDArray[np.bool_],
     candidates: NDArray[np.bool_],
@@ -570,7 +570,7 @@ def _solve_max_return_lp(
     return np.asarray(result.x, dtype=np.float64), gap, eta
 
 
-def _reject_degenerate_vertex(
+def reject_degenerate_vertex(
     a: NDArray[np.float64],
     g: NDArray[np.float64],
     free: NDArray[np.bool_],
