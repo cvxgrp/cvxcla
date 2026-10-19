@@ -199,7 +199,7 @@ def check_held_bounds(
     if not np.any(wrong):
         return
     weights = segment.r_alpha + lamb * segment.r_beta
-    eta = segment.eta_alpha + lamb * segment.eta_beta
+    eta = (segment.eta_alpha + lamb * segment.eta_beta)[segment.active_ineq]
     if _certified(multiplier, eta, weights, segment.free_in, rows, lower, upper, tol, floor):
         return
     msg = (
