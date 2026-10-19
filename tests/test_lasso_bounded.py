@@ -267,17 +267,18 @@ class TestRejected:
         with pytest.raises(ValueError, match="cannot be combined with a finite bound or inequality rows"):
             Lasso(x, y, a=np.ones((1, N)), g=np.eye(N)[:1], h=np.ones(1))
 
+    def test_contradictory_rows_are_infeasible(self):
+        """``beta_0 = 1`` against ``beta_0 <= 0.5``: the CLA's classification comes through."""
+        x, y = _data(30, N, 0)
+        e = np.eye(N)[:1]
+        with pytest.raises(InfeasibleProblemError, match="could not be traced"):
+            Lasso(x, y, a=e, b=np.ones(1), g=e, h=np.array([0.5]))
+
     def test_fixed_coefficients_against_a_nonzero_right_hand_side(self):
         """``beta = 0`` cannot meet ``A beta = b`` with ``b != 0``."""
         x, y = _data(30, N, 0)
         with pytest.raises(InfeasibleProblemError):
             Lasso(x, y, a=np.ones((1, N)), b=np.ones(1), lower=np.zeros(N), upper=np.zeros(N))
-
-    def test_a_flat_start_is_declined(self):
-        """Sum-to-one has a whole face of smallest-l1 points to start from, not one vertex."""
-        x, y = _data(30, N, 0)
-        with pytest.raises(DegenerateProblemError, match="could not be traced"):
-            Lasso(x, y, a=np.ones((1, N)), b=np.ones(1))
 
 
 class TestBuilder:
@@ -410,3 +411,15 @@ class TestHomogeneousRows:
         monkeypatch.setattr(bounded, "kkt_violation", lambda *args: 1.0)
         with pytest.raises(DegenerateProblemError, match="violates the optimality conditions"):
             Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+
+
+class TestFlatStart:
+    """A whole face of smallest-l1 starting points is resolved by the quadratic term."""
+
+    def test_sum_to_one(self):
+        """Sum-to-one ties every positive leg at the start; the traced path is certified."""
+        x, y = _data(30, N, 0)
+        a, b = np.ones((1, N)), np.ones(1)
+        lasso = Lasso(x, y, a=a, b=b)
+        free = np.full(N, np.inf)
+        assert _certified(lasso, x, y, a, b, np.zeros((0, N)), np.zeros(0), -free, free) < 1e-12

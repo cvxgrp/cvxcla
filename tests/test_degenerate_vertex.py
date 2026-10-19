@@ -17,7 +17,7 @@ from cvxcla import CLA
 from cvxcla._checks import check_held_bounds
 from cvxcla._kkt import Segment
 from cvxcla.errors import DegenerateProblemError
-from cvxcla.first import _dual_step, _dual_vertex, _vertex_partition, classify_vertex
+from cvxcla.first import _dual_step, _dual_vertex, classify_vertex, vertex_partition
 
 MU = np.array([3.0, 2.0, 1.0])
 SIGMA = np.array([[1.0, 0.2, 0.1], [0.2, 0.8, 0.1], [0.1, 0.1, 0.5]])
@@ -185,7 +185,7 @@ class TestDualVertexHelpers:
     def test_partition_prefers_releasing_rows(self):
         """A zero-multiplier row is released before a zero-reduced-cost asset is freed."""
         rows = np.array([[1.0, 1, 1], [1.0, 1, 0]])
-        freed, released = _vertex_partition(
+        freed, released = vertex_partition(
             rows,
             np.array([True, False, False]),
             np.array([False, True, True]),
@@ -223,3 +223,22 @@ class TestHeldBoundCertificate:
         )
         rows = np.ones((1, 2))  # the budget; no inequality row is active
         check_held_bounds(segment, 1.0, -1, rows, np.array([1.0, 0.0]), np.array([2.0, 1.0]), 1e-9, 1.0, 1.0)
+
+    def test_an_uncertifiable_point_is_declined(self):
+        """With the free asset strictly inside its box no shift repairs the wrong multiplier."""
+        segment = Segment(
+            r_alpha=np.array([1.0, 0.0]),
+            r_beta=np.zeros(2),
+            gamma=np.array([0.0, -0.5]),
+            delta=np.zeros(2),
+            at_upper=np.array([False, False]),
+            at_lower=np.array([False, True]),
+            free_in=np.array([True, False]),
+            active_ineq=np.zeros(0, dtype=bool),
+            eta_alpha=np.zeros(0),
+            eta_beta=np.zeros(0),
+            nu_alpha=np.zeros(1),
+            nu_beta=np.zeros(1),
+        )
+        with pytest.raises(DegenerateProblemError, match="should have left"):
+            check_held_bounds(segment, 1.0, -1, np.ones((1, 2)), np.zeros(2), np.full(2, 2.0), 1e-9, 1.0, 1.0)

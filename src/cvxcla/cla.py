@@ -12,6 +12,7 @@ from functools import cached_property
 from typing import cast
 
 import numpy as np
+from cvx.linalg import DenseOperator
 from numpy.typing import NDArray
 
 from ._builders import ProblemBuilder
@@ -21,7 +22,7 @@ from ._kkt import Segment, critical_segment
 from ._leverage import LeverageLift, SignedLift, mask_leg_events, tighten_at_minimum_gross
 from ._projection import project_feasible
 from .errors import InfeasibleProblemError
-from .first import classify_vertex, first_turning_point
+from .first import classify_vertex, first_turning_point, reject_degenerate_vertex, vertex_partition
 from .operators import DenseCovariance, QuadraticForm
 from .pathtracer import InequalityConstrained, trace
 from .types import Frontier, FrontierPoint, TurningPoint
@@ -181,6 +182,59 @@ def _check_options(cla: "CLA") -> None:
     if cla.stop is not None:
         msg = "stop is not supported together with leverage"
         raise ValueError(msg)
+
+
+class _FaceShift(QuadraticForm):
+    """The form ``base + c u u^T``, which agrees with ``base`` on ``u^T w = const`` up to a constant.
+
+    On a face of constant return the shift adds curvature along every direction that changes
+    the return, so a free block that is singular only along such a direction (both legs of a
+    split coefficient, ``e_j+ + e_j-``, under a constant ``-1`` return) is not singular here.
+    Products go through ``base``; a free-block solve forms the free block, which is small.
+
+    Attributes:
+        base: The unshifted form.
+        u: The direction of the shift (the returns).
+        c: Its weight.
+    """
+
+    def __init__(self, base: QuadraticForm, u: NDArray[np.float64], c: float) -> None:
+        """Wrap ``base`` with the shift ``c u u^T``."""
+        self.base = base
+        self.u = u
+        self.c = c
+
+    @property
+    def n(self) -> int:
+        """Dimension of the form."""
+        return int(self.base.n)
+
+    def matvec(self, x: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return ``(base + c u u^T) x``."""
+        return self.block_matvec(np.arange(self.n), np.arange(self.n), x)
+
+    def block_matvec(self, rows: object, cols: object, v: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return the ``(rows, cols)`` block of the shifted form applied to ``v``."""
+        rows = np.asarray(rows, dtype=np.intp)
+        cols = np.asarray(cols, dtype=np.intp)
+        v = np.asarray(v, dtype=np.float64)
+        shift = np.multiply.outer(self.c * self.u[rows], self.u[cols] @ v)
+        return np.asarray(self.base.block_matvec(rows, cols, v), dtype=np.float64) + shift
+
+    def _block(self, free: object) -> DenseOperator:
+        """The free block as a dense form."""
+        index = np.asarray(free, dtype=np.intp)
+        return DenseOperator(self.block_matvec(index, index, np.eye(index.size)))
+
+    def solve_free(self, free: object, rhs: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Solve on the free block."""
+        index = np.asarray(free, dtype=np.intp)
+        return np.asarray(self._block(index).solve_free(np.arange(index.size), rhs), dtype=np.float64)
+
+    def rcond_free(self, free: object) -> float:
+        """Reciprocal condition number of the free block."""
+        index = np.asarray(free, dtype=np.intp)
+        return float(self._block(index).rcond_free(np.arange(index.size)))
 
 
 @dataclass(frozen=True)
@@ -474,8 +528,84 @@ class CLA(InequalityConstrained):
             initial state for the path tracer.
         """
         first = self._first_turning_point()
+        if self._tied_start(first):
+            first = self._face_minimiser(first)
         self._append(first)
         return np.inf, first
+
+    def _tied_start(self, first: TurningPoint) -> bool:
+        """Whether ``first`` holds a tied asset on a bound it should leave at ``lambda = inf``.
+
+        An asset whose multiplier has no slope in ``lambda`` (``delta = 0``: its return ties
+        with the free assets') and the wrong sign in its intercept ``gamma`` should have left
+        its bound before the trace starts. The maximum-return vertex is then not the limit of
+        the path at ``lambda = inf``: returns tie on a whole face of the linear program, and
+        the limit is the point of that face the quadratic term picks (see
+        :meth:`_face_minimiser`).
+        """
+        segment = critical_segment(
+            self.covariance_operator,
+            self._traced_mean,
+            self.a,
+            self.b,
+            self.g_matrix,
+            self.h_vector,
+            self.lower_bounds,
+            self.upper_bounds,
+            self.tol,
+            first,
+            self.q_vector,
+        )
+        lam_scale, mu_scale = self._scales
+        root = float(np.sqrt(np.finfo(np.float64).eps))
+        floor = root * max(lam_scale * mu_scale, float(np.max(np.abs(segment.gamma), initial=0.0)))
+        tied = np.abs(segment.delta) <= root * mu_scale
+        wrong = (segment.at_lower & (segment.gamma < -floor)) | (segment.at_upper & (segment.gamma > floor))
+        return bool(np.any(tied & wrong))
+
+    def _face_minimiser(self, first: TurningPoint) -> TurningPoint:
+        """The limit of the path at ``lambda = inf`` when the maximum return is attained on a face.
+
+        For large ``lambda`` the program ``min w^T Sigma w / 2 - (q + lambda mean)^T w`` is
+        solved, to leading order, by any maximum-return point, and to the next order by the one
+        that minimises ``w^T Sigma w / 2 - q^T w`` over the face ``mean^T w = mean^T first``. That
+        point is the ``lambda = 0`` end of a CLA on the face, traced under a generic tilt so its
+        own start is a unique vertex. On the face ``mean^T w`` is constant, so a covariance
+        that is singular there is first shifted by ``c mean mean^T`` (see :class:`_FaceShift`),
+        which changes the face's objective by a constant only. The free set here is the assets strictly inside their
+        box at that point, not the face trace's own free set: there the row ``mean^T w`` can
+        pin an asset that sits on a bound, which nothing pins here. On the interior assets the
+        returns are a combination of the active rows (moving them along the face keeps the
+        maximum), so the first segment holds the point still until an asset with a nonzero
+        slope leaves its bound. The active rows are the face trace's.
+        """
+        mean = self._traced_mean
+        tilt = np.random.default_rng(0).standard_normal(self.dimension) * self._scales[1]
+        covariance = self.covariance_operator
+        if not self._free_blocks_well_conditioned:
+            lam_scale, mu_scale = self._scales
+            covariance = _FaceShift(covariance, mean, lam_scale / mu_scale)
+        face = CLA(
+            mean=tilt,
+            covariance=covariance,
+            lower_bounds=self.lower_bounds,
+            upper_bounds=self.upper_bounds,
+            a=np.vstack([self.a, mean]),
+            b=np.append(self.b, float(mean @ first.weights)),
+            g=self.g,
+            h=self.h,
+            q=self.q_vector,
+            tol=self.tol,
+            logger=self.logger,
+        )
+        end = face.turning_points[-1]
+        free = (end.weights > self.lower_bounds + self.tol) & (end.weights < self.upper_bounds - self.tol)
+        # Where the point sits on a vertex, complete the basis from the face trace's free set.
+        rows = np.vstack([self.a, self.g_matrix[end.active_ineq]])
+        freed, _ = vertex_partition(rows, free, end.free & ~free, np.zeros(rows.shape[0], dtype=bool), -mean)
+        free = free | freed
+        reject_degenerate_vertex(self.a, self.g_matrix, free, end.active_ineq)
+        return TurningPoint(free=free, weights=end.weights, active_ineq=end.active_ineq)
 
     def segment(self, state: TurningPoint) -> Segment:
         """Solve the reduced KKT system for the critical-line segment at ``state``.

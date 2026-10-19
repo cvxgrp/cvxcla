@@ -204,12 +204,10 @@ def check_held_bounds(
         return
     msg = (
         f"The segment ending at lambda={lamb:.4g} held {int(np.count_nonzero(wrong))} asset(s) on a "
-        "bound it should have left, so it is not on the efficient frontier. This comes from a "
-        "degenerate maximum-return vertex whose bounds tie in the returns alone (tied returns at "
-        "the top of the frontier, or a homogeneous equality row b = 0 whose maximum-return vertex "
-        "is w = 0): which of them start the path depends on q - Sigma w, which the vertex "
-        "resolution does not see. Perturb the returns or the constraints so the maximum-return "
-        "vertex is non-degenerate."
+        "bound it should have left, so it is not on the efficient frontier, and no choice of the "
+        "active rows' multipliers certifies the point. This comes from a degenerate turning point "
+        "whose bounds tie, where the segment's multipliers are not unique. Perturb the returns or "
+        "the constraints so the turning point is non-degenerate."
     )
     raise DegenerateProblemError(msg)
 
