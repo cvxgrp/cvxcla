@@ -89,9 +89,16 @@ over seeds is within ±10%.
   slicing takes 27–40%, and the λ formula plus the removal branch most of the
   rest. The last factor is cvxcla's own cost relative to a ~100-line vectorised
   CLA: cvxcla is 3× *slower* at n = 20 (validation and guards), and 1.9× faster at
-  n = 640 (a block-eliminated solve instead of an explicit inverse). A vectorised
-  CLA with an incrementally updated inverse is a further 3.9× faster than the
-  fresh-inverse one, and about 2× faster than cvxcla's dense backend at n = 640.
+  n = 640 (a block-eliminated solve instead of an explicit inverse).
+- **Maintaining the inverse pays off at scale, in both codes.** Updating the
+  free-block inverse by rank-one steps instead of rebuilding it makes the
+  minimal CLA 3.9× faster at n = 640, and makes cvxcla 2.5× faster with
+  `IncrementalDenseCovariance` instead of the default dense backend (no gain
+  below n = 80). With matching linear algebra, cvxcla's incremental backend is
+  3× slower than the minimal CLA at n = 20 but 1.25× *faster* at n = 640
+  (204 ms against 247 ms), and it scales better (n^1.7 against n^2.3 over the
+  last doubling). These numbers come from a separate run of the four fast
+  variants; the BLdP columns above were not re-timed with it.
 - **BLdP can cycle.** Its re-entry test `lam < self.ls[-1]` has no tolerance and
   its loop has no iteration cap. With bordered updates, which change λ by about
   1e-15, an asset alternately leaves and re-enters at the same λ forever: 5 of

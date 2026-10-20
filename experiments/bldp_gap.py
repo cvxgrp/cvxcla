@@ -42,12 +42,17 @@ actually explains. It has three parts.
    ``cvxcla``       ``cvxcla.CLA`` with the dense backend (a fresh block-eliminated
                     KKT solve per turning point, plus its feasibility and
                     degeneracy guards).
+   ``cvxcla-incr``  ``cvxcla.CLA`` with ``IncrementalDenseCovariance``: the same
+                    loop and guards, with the free-block inverse maintained by
+                    rank-one updates (the library's counterpart of ``vec-incr``).
 
    The consecutive ratios telescope: bldp/cvxcla = (bldp/bordered) x
    (bordered/vec-fresh) x (vec-fresh/cvxcla). The first factor is the
    inverse-in-the-loop, the second the Python-loop event search (with its
    per-candidate slicing), the third whatever remains between a minimal
-   vectorised CLA and cvxcla.
+   vectorised CLA and cvxcla. ``cvxcla-incr`` sits outside the chain: it compares
+   the two linear-algebra strategies inside the library (cvxcla/cvxcla-incr) and
+   the library's incremental backend against the minimal one (cvxcla-incr/vec-incr).
 
 3. **Phase profile.** One instrumented copy of the shipped ``_solve`` (same
    operations, wrapped in timers) splits the BLdP trace time into the addition
@@ -105,7 +110,7 @@ from pathlib import Path
 
 import numpy as np
 
-VARIANTS = ["bldp", "bordered", "vec-fresh", "vec-incr", "cvxcla"]
+VARIANTS = ["bldp", "bordered", "vec-fresh", "vec-incr", "cvxcla", "cvxcla-incr"]
 
 
 class CycleError(RuntimeError):
@@ -332,12 +337,13 @@ def run_variant(variant: str, dense: np.ndarray, mean: np.ndarray) -> np.ndarray
             fresh=variant == "vec-fresh",
         )
         return np.array(inv.weights)
-    if variant == "cvxcla":
-        from cvxcla import CLA
+    if variant in {"cvxcla", "cvxcla-incr"}:
+        from cvxcla import CLA, IncrementalDenseCovariance
 
+        # A new operator per trace, so every trace starts with no cached inverse.
         cla = CLA(
             mean=mean,
-            covariance=dense,
+            covariance=dense if variant == "cvxcla" else IncrementalDenseCovariance(dense),
             lower_bounds=np.zeros(n),
             upper_bounds=np.ones(n),
             a=np.ones((1, n)),
@@ -532,9 +538,11 @@ def report(
     print("The first three columns multiply to the fourth.\n")
     print(
         "| n | inverse-in-loop (bldp/bordered) | Python loop (bordered/vec-fresh) | rest (vec-fresh/cvxcla) "
-        "| total (bldp/cvxcla) | aside: fresh vs incremental (vec-fresh/vec-incr) |"
+        "| total (bldp/cvxcla) | aside: fresh vs incremental (vec-fresh/vec-incr) "
+        "| aside: cvxcla dense vs incremental (cvxcla/cvxcla-incr) "
+        "| aside: library vs minimal incremental (cvxcla-incr/vec-incr) |"
     )
-    print("|---:|---:|---:|---:|---:|---:|")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
     for n in sizes:
         cols = [
             seed_ratios(results, "bldp", "bordered", n),
@@ -542,6 +550,8 @@ def report(
             seed_ratios(results, "vec-fresh", "cvxcla", n),
             seed_ratios(results, "bldp", "cvxcla", n),
             seed_ratios(results, "vec-fresh", "vec-incr", n),
+            seed_ratios(results, "cvxcla", "cvxcla-incr", n),
+            seed_ratios(results, "cvxcla-incr", "vec-incr", n),
         ]
         print(f"| {n} | " + " | ".join(_fmt_ratio(c) for c in cols) + " |")
 
@@ -552,7 +562,7 @@ def report(
             x, y = np.log([p[0] for p in pairs]), np.log([p[1] for p in pairs])
             p_all = float(np.polyfit(x, y, 1)[0])
             p_last = float((y[-1] - y[-2]) / (x[-1] - x[-2]))
-            print(f"- {v:9s} p = {p_all:.2f} overall, {p_last:.2f} over the last doubling")
+            print(f"- {v:11s} p = {p_all:.2f} overall, {p_last:.2f} over the last doubling")
 
     if profiles:
         print("\n## 6. Where the shipped BLdP trace spends its time (first terminating seed, % of trace)\n")
@@ -585,6 +595,7 @@ def plot(results: list[dict[str, object]], sizes: list[int], path: Path) -> None
         "vec-fresh": ("-D", "#9467bd", "vectorised, fresh inverse"),
         "vec-incr": ("-s", "#2ca02c", "vectorised, incremental inverse"),
         "cvxcla": ("-o", "#c00000", "cvxcla, dense"),
+        "cvxcla-incr": ("--o", "#1f4e79", "cvxcla, IncrementalDenseCovariance"),
     }
     for v, (marker, colour, label) in styles.items():
         ns = [n for n in sizes if (v, n) in summary]
