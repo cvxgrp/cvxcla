@@ -22,7 +22,7 @@ once for *every* candidate blocked asset (a Python loop) --- O(n) dense inverses
 per turning point. That structure, not a lack of numpy, is why it scales steeply.
 
 Usage:
-    uv run python experiments/inverse_cla.py        # verify vs cvxcla
+    uv run python experiments/inverse_cla.py        # verify both modes vs cvxcla
 """
 
 from __future__ import annotations
@@ -50,14 +50,27 @@ class InverseCLA:
         covariance: NDArray[np.float64],
         lower_bounds: NDArray[np.float64],
         upper_bounds: NDArray[np.float64],
-        tol: float = 1e-5,
+        tol: float = 1e-9,
+        fresh: bool = False,
     ) -> None:
-        """Trace the frontier on construction (mirrors ``cvxcla.CLA``)."""
+        """Trace the frontier on construction (mirrors ``cvxcla.CLA``).
+
+        ``tol`` is an absolute tie window on lambda. It was 1e-5, which from n = 160
+        on merged genuinely distinct events: the lowest-index event inside the window
+        was taken ahead of the true next one, so the trace stepped past a turning
+        point and returned weights up to 5e-6 below a zero lower bound (#869).
+
+        With ``fresh=True`` the free-block inverse is recomputed from scratch by
+        ``np.linalg.inv`` at every turning point instead of being updated, so the
+        class then differs from PyPortfolioOpt only in its vectorised event search
+        (used by ``bldp_gap.py`` to attribute the runtime gap).
+        """
         self.mean = mean
         self.cov = covariance
         self.lower_bounds = lower_bounds
         self.upper_bounds = upper_bounds
         self.tol = tol
+        self.fresh = fresh
         self.weights: list[NDArray[np.float64]] = []
         self._solve()
 
@@ -147,7 +160,13 @@ class InverseCLA:
             self.weights.append(r_alpha + lam * r_beta)
 
             # --- Incremental update of Sigma_FF^{-1} for the one-asset flip ---
-            if enters:
+            if self.fresh:
+                if enters:
+                    order.append(int(secchg))
+                else:
+                    order.remove(int(secchg))
+                sinv = np.linalg.inv(cov[np.ix_(order, order)])
+            elif enters:
                 # Bordered inverse: append asset ``secchg`` at the end.
                 c = cov[idx, secchg]
                 s = cov[secchg, secchg]
@@ -195,18 +214,24 @@ def main() -> None:
         rng = np.random.default_rng(7)
         dense, problem = _make_problem(rng, n, 10)
         ref = CLA(covariance=dense, **problem)
-        inv = InverseCLA(
-            mean=problem["mean"],
-            covariance=dense,
-            lower_bounds=problem["lower_bounds"],
-            upper_bounds=problem["upper_bounds"],
-        )
         ref_w = np.array([tp.weights for tp in ref.turning_points])
-        inv_w = np.array(inv.weights)
-        same_count = len(ref) == len(inv)
-        max_diff = float(np.max(np.abs(ref_w - inv_w))) if same_count else float("nan")
-        status = "OK" if same_count and max_diff < 1e-8 else "MISMATCH"
-        print(f"n={n:4d}  cvxcla pts={len(ref):4d}  inverse pts={len(inv):4d}  max|dw|={max_diff:.2e}  [{status}]")
+        for fresh in (False, True):
+            inv = InverseCLA(
+                mean=problem["mean"],
+                covariance=dense,
+                lower_bounds=problem["lower_bounds"],
+                upper_bounds=problem["upper_bounds"],
+                fresh=fresh,
+            )
+            inv_w = np.array(inv.weights)
+            same_count = len(ref) == len(inv)
+            max_diff = float(np.max(np.abs(ref_w - inv_w))) if same_count else float("nan")
+            status = "OK" if same_count and max_diff < 1e-8 else "MISMATCH"
+            label = "fresh" if fresh else "incremental"
+            print(
+                f"n={n:4d}  {label:11s}  cvxcla pts={len(ref):4d}  inverse pts={len(inv):4d}  "
+                f"max|dw|={max_diff:.2e}  [{status}]"
+            )
 
 
 if __name__ == "__main__":
