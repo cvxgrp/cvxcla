@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.6.1] - 2026-10-19
+
+### Maintenance
+- *(experiments)* The CLA paper's script, revised for 2.6.0 (#976)
+
 ## [2.6.0] - 2026-10-19
 
 ### New Features

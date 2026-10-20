@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "casadi==3.8.1",
-#     "cvxcla==2.6.0",
+#     "cvxcla==2.6.1",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "osqp==1.1.3",
@@ -218,6 +218,10 @@ def _osqp_warm_grid(mean: np.ndarray, sigma: np.ndarray, lams: np.ndarray, eps: 
         eps_rel=eps,
         polishing=True,
         warm_starting=True,
+        # OSQP's default of 4000 iterations sits on a knife-edge at n = 640: a 1e-13
+        # change in the grid's top lambda tips one warm-started solve over it. A run
+        # that converges within 4000 is unaffected; a solve that still fails raises.
+        max_iter=40_000,
         verbose=False,
     )
     weights = []
@@ -327,35 +331,43 @@ def figure_frontier(out_dir: Path) -> None:
     frontier = cla.frontier
     returns_f = frontier.returns
     vol_f = frontier.volatility
-    var_f = frontier.variance
     max_sharpe, _ = frontier.max_sharpe
     cond = float(np.linalg.cond(dense_cov))
 
     print(f"problem                 : {_FR20_N_ASSETS} assets x {_FR20_N_DAYS} days, {_FR20_N_FACTORS}-factor model")
     print(f"covariance condition no.: {cond:,.1f}")
-    print(f"turning points          : {len(cla)}  (dense and factor agree)")
+    distinct = len({tuple(np.round(tp.weights, 12)) for tp in cla.turning_points})
+    print(f"turning points          : {len(cla)}, {distinct} distinct  (dense and factor agree)")
     print(f"dense trace  (median)   : {dense_time * 1e3:.1f} ms  ({dense_time / len(cla) * 1e3:.2f} ms/point)")
     print(f"factor trace (median)   : {factor_time * 1e3:.1f} ms  ({factor_time / len(cla) * 1e3:.2f} ms/point)")
     print(f"factor speedup          : {dense_time / factor_time:.2f}x")
     print(f"expected-return range   : [{returns_f.min():.4f}, {returns_f.max():.4f}]")
     print(f"volatility range        : [{vol_f.min():.4f}, {vol_f.max():.4f}]")
-    print(f"variance range          : [{var_f.min():.4f}, {var_f.max():.4f}]")
     print(f"max Sharpe (model units): {max_sharpe:.4f}")
 
-    # Figure 1 as printed in the paper: variance on the x-axis, straight lines through
-    # the turning points. (The exact segment curve is drawn in Figures 4 and 9.)
-    fig, ax = plt.subplots(figsize=(5.0, 3.4))
-    ax.plot(var_f, returns_f, "-o", ms=2.5, lw=1.0, color="#1f4e79", label="Efficient frontier")
+    var_f = frontier.variance
+
+    # Draw the exact curve between turning points and mark only the turning points: the
+    # variance is quadratic along each segment, so each piece is a parabolic arc.
+    curve_w = _along_segments(frontier.weights)
+    curve_var = np.einsum("ij,jk,ik->i", curve_w, dense_cov, curve_w)
+    curve_ret = curve_w @ mean
+    fig, ax = plt.subplots(figsize=(5.0, 2.9))
+    ax.plot(curve_var, curve_ret, "-", lw=1.0, color="#1f4e79", label="Efficient frontier")
+    ax.plot(var_f, returns_f, "o", ms=2.5, color="#1f4e79", label="Turning points")
     ax.scatter(var_f[[0, -1]], returns_f[[0, -1]], color="#c00000", zorder=5, s=18)
     ax.annotate(
-        "max return", (var_f[0], returns_f[0]), textcoords="offset points", xytext=(-6, 4), ha="right", fontsize=8
+        "max return",
+        (var_f[0], returns_f[0]),
+        textcoords="offset points",
+        xytext=(0, -7),
+        ha="center",
+        va="top",
+        fontsize=8,
     )
     ax.annotate("min variance", (var_f[-1], returns_f[-1]), textcoords="offset points", xytext=(8, -2), fontsize=8)
-    ax.set_xlabel("Variance (model units)")
+    ax.set_xlabel(r"Variance $w^\top \Sigma w$ (model units)")
     ax.set_ylabel("Expected return (model units)")
-    ax.set_title(
-        f"Efficient frontier: {_FR20_N_ASSETS} assets, {_FR20_N_DAYS} days ({len(cla)} turning points)", fontsize=9
-    )
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     out = out_dir / "frontier.pdf"
@@ -905,15 +917,19 @@ def figure_real_frontier(out_dir: Path) -> None:
     print(f"annualised vol range    : [{vol.min():.3f}, {vol.max():.3f}]")
     print(f"max Sharpe (annualised) : {sharpe * np.sqrt(ann):.3f}")
 
-    # 2. Degeneracy demonstration on a short (rank-deficient) estimation window.
+    # 2. A short (rank-deficient) estimation window. Since cvxcla 2.6.0 its frontier is
+    # traced: the budget row holds the free assets on its null space, where the singular
+    # free block is still positive definite. Earlier releases declined it.
     short = r[-_REAL_SHORT_WINDOW:]
     short_cov = np.cov(short, rowvar=False)
     rank = int(np.linalg.matrix_rank(short_cov))
     try:
-        CLA(mean=short.mean(axis=0), covariance=short_cov, **_real_problem(n))
-        print(f"short window W={_REAL_SHORT_WINDOW}     : traced (unexpected)")
-    except Exception as exc:  # noqa: BLE001 - we are demonstrating the failure
-        print(f"short window W={_REAL_SHORT_WINDOW}     : rank(S)={rank} < N={n} -> {type(exc).__name__}: {exc}")
+        short_cla = CLA(mean=short.mean(axis=0), covariance=short_cov, **_real_problem(n))
+        print(
+            f"short window W={_REAL_SHORT_WINDOW}     : rank(S)={rank} < N={n}, traced: {len(short_cla)} turning points"
+        )
+    except Exception as exc:  # noqa: BLE001 - a release before 2.6.0 declines it
+        print(f"short window W={_REAL_SHORT_WINDOW}     : rank(S)={rank} < N={n}, declined: {type(exc).__name__}")
 
     # Draw the exact curve between turning points and mark only the turning points.
     curve_w = _along_segments(frontier.weights)
@@ -1123,7 +1139,7 @@ def figure_michaud(out_dir: Path) -> None:
 _DEGEN_N_ASSETS = 120
 _DEGEN_WINDOWS = [240, 180, 150, 130, 120, 100, 90, 75, 60, 45, 30, 20, 15]
 _DEGEN_SEED = 0
-_DEGEN_GUARD = 1e12  # the singularity guard in CLA._emit: free-block cond above this is declined
+_DEGEN_GUARD = 1e12  # the singularity guard: a reduced free block with cond above this is declined
 
 
 @dataclass
@@ -1134,8 +1150,9 @@ class _DegenSweepResult:
     rank: int
     completed: bool
     n_points: int
-    worst_cond: float  # worst candidate free-block condition number
+    worst_cond: float  # worst candidate free-block condition number, Sigma_FF
     obj_gap: float  # worst objective gap of a completed turning point vs QP
+    reduced_cond: float = 0.0  # the same, on the budget's null space, Z^T Sigma_FF Z: what the guard reads
 
 
 def _degen_max_objective_gap(cla: CLA, mean: np.ndarray, cov: np.ndarray) -> float:
@@ -1167,15 +1184,23 @@ def _degen_trace(t_obs: int) -> _DegenSweepResult:
         "b": np.ones(1),
     }
 
-    worst = [0.0]
+    from scipy.linalg import null_space
+
+    worst, reduced = [0.0], [0.0]
     original_emit = CLA._emit
 
     def recording_emit(
-        self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray, *args: object, **kw: object
+        self: CLA, lamb: float, weights: np.ndarray, free: np.ndarray, *args: object, **kwargs: object
     ) -> None:
+        # _emit's trailing arguments vary across releases (2.4.0 added the multipliers,
+        # 2.6.0 the guard flag); pass them through untouched.
         if np.any(free):
-            worst[0] = max(worst[0], float(np.linalg.cond(cov[np.ix_(free, free)])))
-        original_emit(self, lamb, weights, free, *args, **kw)
+            block = cov[np.ix_(free, free)]
+            worst[0] = max(worst[0], float(np.linalg.cond(block)))
+            if block.shape[0] > 1:  # the budget row holds the free assets on its null space
+                z = null_space(np.ones((1, block.shape[0])))
+                reduced[0] = max(reduced[0], float(np.linalg.cond(z.T @ block @ z)))
+        original_emit(self, lamb, weights, free, *args, **kwargs)
 
     cla_module.CLA._emit = recording_emit
     try:
@@ -1194,6 +1219,7 @@ def _degen_trace(t_obs: int) -> _DegenSweepResult:
         n_points=n_points,
         worst_cond=worst[0],
         obj_gap=obj_gap,
+        reduced_cond=reduced[0],
     )
 
 
@@ -1202,19 +1228,24 @@ def figure_degeneracy(out_dir: Path) -> None:
     results = [_degen_trace(t) for t in _DEGEN_WINDOWS]
 
     print(f"universe n = {_DEGEN_N_ASSETS}; singularity guard (cond) = {_DEGEN_GUARD:g}\n")
-    print(f"{'T':>5} {'rank':>5} {'status':>9} {'pts':>5} {'worst cond':>11} {'obj gap':>11}")
+    print(f"{'T':>5} {'rank':>5} {'status':>9} {'pts':>5} {'worst cond':>11} {'reduced':>11} {'obj gap':>11}")
     for r in results:
         status = "completed" if r.completed else "declined"
-        print(f"{r.t_obs:>5} {r.rank:>5} {status:>9} {r.n_points:>5} {r.worst_cond:>11.2e} {r.obj_gap:>11.2e}")
+        print(
+            f"{r.t_obs:>5} {r.rank:>5} {status:>9} {r.n_points:>5} {r.worst_cond:>11.2e} "
+            f"{r.reduced_cond:>11.2e} {r.obj_gap:>11.2e}"
+        )
 
     from matplotlib.lines import Line2D
 
     ts = [r.t_obs for r in results]
     cond = [max(r.worst_cond, 1.0) for r in results]
+    red = [max(r.reduced_cond, 1.0) for r in results]
     done = [r.completed for r in results]
 
     fig, ax = plt.subplots(figsize=(5.4, 3.4))
-    for t, c, ok in zip(ts, cond, done, strict=True):
+    ax.scatter(ts, cond, s=30, zorder=2, facecolors="none", edgecolors="#999999", marker="o")
+    for t, c, ok in zip(ts, red, done, strict=True):
         ax.scatter(t, c, s=36, zorder=3, color="#1f4e79" if ok else "#c00000", marker="o" if ok else "X")
     ax.axhline(_DEGEN_GUARD, ls="--", lw=1.0, color="#555555")
     ax.text(ts[0], _DEGEN_GUARD * 1.6, "singularity guard", ha="right", va="bottom", fontsize=7.5, color="#555555")
@@ -1231,16 +1262,35 @@ def figure_degeneracy(out_dir: Path) -> None:
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("Observations $T$ (sample covariance rank $\\approx \\min(T-1, n)$)")
-    ax.set_ylabel("Worst candidate free-block cond. number")
-    ax.set_title(
-        f"Full rank completes (optimal); a singular free block is declined ($n={_DEGEN_N_ASSETS}$)", fontsize=8.5
-    )
+    ax.set_ylabel("Worst free-block cond. number")
+    ax.set_title(f"The guard reads the free block on the budget's null space ($n={_DEGEN_N_ASSETS}$)", fontsize=8.5)
 
     legend = [
-        Line2D([0], [0], marker="o", color="w", markerfacecolor="#1f4e79", ms=7, label="completed (optimal)"),
-        Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="declined (guard)"),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor="#1f4e79",
+            ms=7,
+            label="on the null space: completed (optimal)",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor="none",
+            markeredgecolor="#999999",
+            ms=7,
+            label="raw free block $\\Sigma_{FF}$",
+        ),
     ]
-    ax.legend(handles=legend, fontsize=7.5, loc="upper right")
+    if not all(done):  # a declined marker only when some trace is declined
+        legend.insert(
+            1, Line2D([0], [0], marker="X", color="w", markerfacecolor="#c00000", ms=7, label="declined (guard)")
+        )
+    ax.legend(handles=legend, fontsize=7.5, loc="center left")
     fig.tight_layout()
     out = out_dir / "degeneracy.pdf"
     fig.savefig(out)
@@ -1562,11 +1612,20 @@ def _tie_points(cla: CLA, kwargs: dict) -> tuple[int, int]:
     return ties, dependent
 
 
+# A completed trace counts only if it is optimal: its worst KKT residual, the certificate
+# of Table 4, must not exceed the threshold that check uses. Counting completions alone
+# once reported traces that ended but left the efficient frontier (cvxcla 2.3.3, tied
+# maximum returns).
+_TIE_CERTIFIED = 1e-8
+
+
 def _tie_outcome(kwargs: dict) -> tuple[str, int, int, int, int, int]:
     """Trace one instance; return (status, turning_points, cap, max_active_rows, ties, dependent ties).
 
-    status in {completed, declined, cap_hit}. The CLA traces in its constructor, so
-    a decline (ValueError) or a cap hit (RuntimeError) surfaces here.
+    status in {certified, off, declined, cap_hit}: a completed trace is certified when every
+    turning point passes the KKT certificate, and off the frontier otherwise. The CLA
+    traces in its constructor, so a decline (ValueError) or a cap hit (RuntimeError)
+    surfaces here.
     """
     n = len(kwargs["mean"])
     g = kwargs.get("g")
@@ -1582,7 +1641,10 @@ def _tie_outcome(kwargs: dict) -> tuple[str, int, int, int, int, int]:
     if g is not None:
         h = kwargs["h"]
         active = max(int(np.sum(np.abs(g @ tp.weights - h) <= 1e-7)) for tp in cla.turning_points)
-    return "completed", len(cla.turning_points), cap, active, *_tie_points(cla, kwargs)
+    res = _kkt_check(cla, np.asarray(kwargs["mean"]), np.asarray(kwargs["covariance"]), kwargs)
+    worst = max(res.primal, res.stationarity, res.dual, res.complementarity)
+    status = "certified" if worst <= _TIE_CERTIFIED else "off"
+    return status, len(cla.turning_points), cap, active, *_tie_points(cla, kwargs)
 
 
 def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared runner signature
@@ -1596,20 +1658,21 @@ def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared ru
     grid = [(n, s) for n in _TIE_SIZES for s in _TIE_SEEDS]
     print(f"{len(grid)} instances per family; sizes {_TIE_SIZES}, seeds {_TIE_SEEDS.start}..{_TIE_SEEDS.stop - 1}\n")
     head = (
-        f"{'family':<24}{'completed':>10}{'declined':>9}{'cap hits':>9}{'max tps':>8}{'tps/cap':>9}{'max active':>11}"
-        f"{'ties':>7}{'ties dep.':>10}"
+        f"{'family':<24}{'certified':>10}{'off':>5}{'declined':>9}{'cap hits':>9}{'max tps':>8}{'tps/cap':>9}"
+        f"{'max active':>11}{'ties':>7}{'ties dep.':>10}"
     )
     print(head)
     for name, build in families.items():
-        completed = declined = cap_hit = 0
+        completed = off = declined = cap_hit = 0
         max_tps = max_active = ties = dependent = 0
         worst_ratio = 0.0
         for n, seed in grid:
             status, tps, cap, active, n_ties, n_dep = _tie_outcome(build(np.random.default_rng(seed), n))
             ties += n_ties
             dependent += n_dep
-            if status == "completed":
-                completed += 1
+            if status in ("certified", "off"):
+                completed += status == "certified"
+                off += status == "off"
                 max_tps = max(max_tps, tps)
                 max_active = max(max_active, active)
                 worst_ratio = max(worst_ratio, tps / cap)
@@ -1618,13 +1681,13 @@ def check_tie_degeneracy(out_dir: Path) -> None:  # noqa: ARG001 - the shared ru
             else:
                 cap_hit += 1
         print(
-            f"{name:<24}{completed:>10}{declined:>9}{cap_hit:>9}{max_tps:>8}{worst_ratio:>8.1%}{max_active:>11}"
-            f"{ties:>7}{dependent:>10}"
+            f"{name:<24}{completed:>10}{off:>5}{declined:>9}{cap_hit:>9}{max_tps:>8}{worst_ratio:>8.1%}"
+            f"{max_active:>11}{ties:>7}{dependent:>10}"
         )
 
-    print("\nNo cap hits: every completing trace stays far below 100(n+p+1), and the")
-    print("over-constrained family is declined at the first vertex with a diagnosis,")
-    print("not run into the cap. Declines are the two documented boundaries.")
+    print(f"\n'certified': completed, with every turning point passing the KKT certificate to {_TIE_CERTIFIED:g};")
+    print("'off': completed but failing it, a frontier that ends but is wrong. Every completing")
+    print("trace stays far below the iteration cap 100(n+p+1).")
     print("'ties' counts turning points at the lambda of the one before (a tie); 'ties dep.'")
     print("those where the active constraint gradients are dependent, outside Proposition 1.")
 
@@ -1697,6 +1760,21 @@ class _KKTResiduals:
         self.complementarity = max(self.complementarity, other[3])
 
 
+def _lstsq(matrix: np.ndarray, rhs: np.ndarray) -> np.ndarray:
+    """Least squares by NumPy's SVD driver, or by SciPy's QR driver if that SVD does not converge.
+
+    LAPACK's divide-and-conquer SVD occasionally fails on a nearly rank-deficient matrix,
+    such as hundreds of active rows over few free weights; the QR route solves the same
+    problem without an SVD.
+    """
+    try:
+        return np.linalg.lstsq(matrix, rhs, rcond=None)[0]
+    except np.linalg.LinAlgError:
+        import scipy.linalg
+
+        return scipy.linalg.lstsq(matrix, rhs, lapack_driver="gelsy")[0]
+
+
 def _kkt_point(
     w: np.ndarray,
     lam: float,
@@ -1737,7 +1815,7 @@ def _kkt_point(
     m = a.shape[0]
     vertex = rows.shape[0] > 0 and np.linalg.matrix_rank(rows[:, free]) < rows.shape[0]
     if not vertex:
-        mult = np.linalg.lstsq(rows[:, free].T, -grad[free], rcond=None)[0] if rows.shape[0] else np.zeros(0)
+        mult = _lstsq(rows[:, free].T, -grad[free]) if rows.shape[0] else np.zeros(0)
         full = grad + rows.T @ mult  # gradient of the Lagrangian without the bound terms
         nu_lower = full[at_lower]  # multiplier of l <= w: must be >= 0
         nu_upper = -full[at_upper]  # multiplier of w <= u: must be >= 0
@@ -1751,11 +1829,23 @@ def _kkt_point(
         lower_b = np.concatenate([np.full(m, -np.inf), np.zeros(system.shape[1] - m)])
         # BVLS is an exact active-set method; the default trust-region solver stops
         # at its tolerance, ~1e-8 here, well above the residuals being measured.
-        fit = lsq_linear(system, -grad, bounds=(lower_b, np.full(system.shape[1], np.inf)), method="bvls", tol=1e-15)
-        eta = fit.x[m : rows.shape[0]]
-        nu_lower = fit.x[rows.shape[0] : rows.shape[0] + int(at_lower.sum())]
-        nu_upper = fit.x[rows.shape[0] + int(at_lower.sum()) :]
-        stationarity = float(np.max(np.abs(grad + system @ fit.x))) / scale
+        try:
+            x = lsq_linear(
+                system, -grad, bounds=(lower_b, np.full(system.shape[1], np.inf)), method="bvls", tol=1e-15
+            ).x
+        except np.linalg.LinAlgError:
+            # BVLS solves its subproblems with NumPy's SVD, which occasionally fails to
+            # converge on hundreds of nearly dependent active rows. Lawson--Hanson NNLS
+            # solves the same fit with the m free multipliers split into two signs.
+            from scipy.optimize import nnls
+
+            split = np.hstack([system[:, :m], -system[:, :m], system[:, m:]])
+            y = nnls(split, -grad, maxiter=50 * split.shape[1])[0]
+            x = np.concatenate([y[:m] - y[m : 2 * m], y[2 * m :]])
+        eta = x[m : rows.shape[0]]
+        nu_lower = x[rows.shape[0] : rows.shape[0] + int(at_lower.sum())]
+        nu_upper = x[rows.shape[0] + int(at_lower.sum()) :]
+        stationarity = float(np.max(np.abs(grad + system @ x))) / scale
 
     primal = max(
         float(np.max(np.maximum(lower - w, 0.0), initial=0.0)),
@@ -2086,9 +2176,9 @@ def _vproj_trace(mean: np.ndarray, cov: np.ndarray) -> tuple[str, list[tuple[flo
             records.append((float(np.max(np.abs(out - weights))), change, residual))
         return out
 
-    def recording_emit(self, lamb, *args, **kw):
+    def recording_emit(self, lamb, weights, free, *args, **kwargs):
         current[0] = 0.0 if not np.isfinite(lamb) else float(lamb)
-        original_emit(self, lamb, *args, **kw)
+        original_emit(self, lamb, weights, free, *args, **kwargs)
 
     cla_module.project_feasible, cla_module.CLA._emit = recording_project, recording_emit
     try:
