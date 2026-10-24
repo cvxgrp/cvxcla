@@ -112,6 +112,80 @@ over seeds is within ±10%.
   not swept), n > 640, other problem families, memory, or the original BLdP
   code as published rather than PyPortfolioOpt's descendant of it.
 
+### Measured: do they compute the same frontier? (#869, track 2)
+
+[`experiments/bldp_agree.py`](experiments/bldp_agree.py) feeds the same `mean`,
+`covariance`, `lB` and `uB` to PyPortfolioOpt 1.6.0's `CLA` and to cvxcla 2.7.0. It
+checks each trace on its own against CVXPY 1.9.3 / Clarabel 0.11.1 at tolerance
+1e-12, at every turning point and every segment midpoint, and compares the two
+paths `w(λ)` exactly. Both use the same λ convention. There are 90 problems in
+eight families over 3 seeds: generic, shorting, all-equal means, tied means,
+duplicated assets, rank-deficient sample covariances, a conditioning sweep from
+1e2 to 1e16, and bounds that bind exactly. "Exact" means feasible to 1e-9, λ
+running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
+
+- **On generic problems the shipped code is often wrong.** cvxcla is exact on all
+  57 feasible non-degenerate problems except two at κ ≥ 1e14 (below). The shipped
+  BLdP code is exact on only 21 of them. The rest lose real turning points, with
+  objective gaps up to 3e-4 and paths up to 0.35 apart in max-norm, and no error
+  is raised. Even plain long-only problems fail on 4 of 12 (n = 10 to 100). Two bugs explain all
+  of it:
+  1. **Stale blocked weights.** When a free asset hits a bound, `_solve` sets the
+     working vector `w[i] = bound`. `_get_matrices` then reads the blocked weights
+     from `self.w[-1]`, the *previous* turning point. The new point is solved with
+     asset `i` at its old free value, so its budget is off by exactly
+     `bound − w_prev[i]` (e.g. −4.1e-2). `_purge_num_err` deletes it as infeasible,
+     and a true vertex goes with it. Sometimes the trace recovers instead by
+     removing, re-adding and removing the asset at the same λ. That leaves three
+     copies of one point, the same leave-and-re-enter pattern that track 1 saw
+     cycle forever under bordered updates. Whether these stale weights cause that
+     cycle was not checked. Reading the
+     blocked weights from the working vector (`bldp-fix-w`, a two-method subclass)
+     makes 52 of the 57 exact.
+  2. **A zero-tolerance purge.** `_purge_excess` deletes a turning point whenever a
+     later one has a strictly higher `μ'w`. Where `μ'w` is flat, rounding makes it
+     rise by about 1e-14, and a true vertex is deleted. With a 1e-12 relative
+     tolerance as well (`bldp-fix-wp`), 56 of 57 are exact with gaps ≤ 7e-13. The
+     remaining case cycles at κ = 1e16.
+
+  With both fixes, BLdP and cvxcla trace the same path to 1e-8 on every one of
+  these problems except the two below. The defects are in the implementation,
+  not in the algorithm.
+- **Degenerate inputs break BLdP; cvxcla handles every one.** cvxcla is exact on all 30
+  problems in the all-equal, tied, duplicated and rank-deficient families. BLdP,
+  with or without the two fixes:
+  - *All-equal means:* raises `TypeError` on all 6. PyPortfolioOpt ships the
+    paper's `mean[-1] += 1e-5` hack commented out. With it switched back on, BLdP
+    still raises for n = 20, and for n = 5 traces the frontier of a perturbed
+    problem whose λ is scaled by 1/1e-5 (gap ≈ 4e-5). The true frontier is the
+    single minimum-variance point.
+  - *Ties in expected returns:* raises `TypeError` on 7 of 9. When the
+    event-search denominator `c` is exactly 0, `_compute_lambda` returns `None`,
+    and the comparison `lam < self.ls[-1]` fails on it. Once, rounding kept `c`
+    off zero and the trace ran silently down the wrong path: `_init_algo` starts at
+    one vertex of the tied face and never frees the other tied assets, giving a
+    gap of 0.25. cvxcla starts at the face minimiser.
+  - *Duplicated assets / rank-deficient Σ:* `LinAlgError` on 8 of 9 duplicated
+    problems and `TypeError` on the 3 problems with T < n/2. Worse, when an exact
+    duplicate of the top asset enters later, `np.linalg.inv` of the singular free
+    block (cond 1.5e16) does not raise. Every later point violates the budget,
+    `_purge_num_err` deletes them all, and the frontier silently stops at
+    λ = 11.4 instead of 0. With T = 30 < n = 40 the fixed code is exact on 2 of
+    3 problems and goes wrong near λ = 0 on the third (gap 2e-6).
+  - *Infeasible bounds* (`sum(uB) < 1`): `IndexError` from `_init_algo` walking
+    off the asset list. cvxcla raises `InfeasibleProblemError`.
+- **Which degrades first with conditioning?** With both bugs fixed, BLdP's
+  explicit inverse holds up surprisingly well: gaps ≤ 4e-13 up to κ = 1e14, and
+  one cycle at 1e16. cvxcla stays exact up to 1e12. At κ = 1e14 and 1e16 it has
+  one problem each with a gap of 5e-8 and 8e-8. That is on a segment at
+  λ ≈ 1e-10, where its weights are 2e-3 off the QP's along a near-null direction
+  of Σ, while BLdP-fixed and the QP agree to 1e-14. As shipped, BLdP is wrong
+  from κ = 1e2 because of the two bugs.
+- **Not measured:** the 2013 paper's own code as published rather than
+  PyPortfolioOpt's descendant (whether bugs 1 and 2 are in the original is not
+  checked here), the Markowitz–Todd 10-asset example, n > 100, and constraint
+  classes beyond a budget and box bounds (BLdP supports nothing else).
+
 ## Where each paper is stronger
 
 ### Bailey–López de Prado, on its own terms
