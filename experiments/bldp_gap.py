@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "cvxcla==2.6.2",
+#     "cvxcla==2.7.0",
 #     "matplotlib==3.11.0",
 #     "numpy==2.4.6",
 #     "pyportfolioopt==1.6.0",
