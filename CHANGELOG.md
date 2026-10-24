@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.6.2] - 2026-10-24
+
+### New Features
+- *(experiments)* Reproduce and attribute the BLdP runtime gap (#869, track 1) (#979)
+
+### Bug Fixes
+- Guard the KKT certificate's normaliser when X'y = 0 (#982) (#983)
+
+### Maintenance
+- Chore(deps)(deps): bump the github-actions group with 7 updates (#980)
+- Chore(deps-dev)(deps-dev): bump the python-dependencies group with 2 updates (#981)
+
 ## [2.6.1] - 2026-10-19
 
 ### Maintenance
