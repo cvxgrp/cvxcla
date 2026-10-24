@@ -384,7 +384,7 @@ class TestHomogeneousRows:
         assert np.array_equal(_knots(built)[1], _knots(direct)[1])
 
     def test_declined_when_the_relaxations_disagree(self, monkeypatch):
-        """Two relaxed traces with different numbers of knots cannot be extrapolated."""
+        """Relaxed traces with different numbers of knots, at every relaxation, cannot be extrapolated."""
         x, y, d = _monotone()
         real = bounded._trace
         calls = []
@@ -392,7 +392,7 @@ class TestHomogeneousRows:
         def trace(*args):
             calls.append(1)
             knots = real(*args)
-            return knots if len(calls) == 1 else knots[:-1]
+            return knots[:-1] if len(calls) % 2 == 0 else knots  # the run relaxed by 2 eps loses a knot
 
         monkeypatch.setattr(bounded, "_trace", trace)
         with pytest.raises(DegenerateProblemError, match="sequence of active sets depends on the relaxation"):
@@ -475,3 +475,120 @@ class TestZeroSum:
         lower[0] = 0.0
         lasso = Lasso(x, y, a=a, b=b, g=g, h=h, lower=lower, upper=upper)
         assert _certified(lasso, x, y, a, b, g, h, lower, upper) < 1e-12
+
+
+class TestRowsExcludingZero:
+    """Rows ``G beta <= h`` with ``h_r < 0``: the penalty form starts from the smallest-l1 point they allow."""
+
+    def _floor(self):
+        """A floor above the least-squares value of the largest coefficient, so that it binds."""
+        x, y = _data(30, N, 0)
+        ols = np.linalg.lstsq(x, y, rcond=None)[0]
+        j = int(np.argmax(ols))
+        return x, y, j, ols[j] + 0.5
+
+    def test_floor_on_one_coefficient(self):
+        """``beta_j >= l > 0`` as the row ``-beta_j <= -l``: optimal throughout, starting at ``l e_j``."""
+        x, y, j, floor = self._floor()
+        g, h = -np.eye(N)[j : j + 1], np.array([-floor])
+        lasso = Lasso(x, y, g=g, h=h)
+        inf, empty = np.full(N, np.inf), np.zeros((0, N))
+        _assert_optimal(lasso, x, y, empty, np.zeros(0), -inf, inf, g, h)
+        assert min(bp.beta[j] for bp in lasso.path) >= floor - 1e-12
+        np.testing.assert_allclose(lasso.path[0].beta, floor * np.eye(N)[j], atol=1e-12)
+
+    def test_tied_start(self):
+        """``beta_0 + beta_1 + beta_2 >= 2`` ties a whole face of smallest-l1 starts; the path is optimal."""
+        x, y = _data(30, N, 1)
+        g, h = -np.r_[np.ones(3), np.zeros(N - 3)][None, :], np.array([-2.0])
+        lasso = Lasso(x, y, g=g, h=h)
+        inf, empty = np.full(N, np.inf), np.zeros((0, N))
+        _assert_optimal(lasso, x, y, empty, np.zeros(0), -inf, inf, g, h)
+        assert min(bp.beta[:3].sum() for bp in lasso.path) >= 2.0 - 1e-12
+
+    def test_with_bounds_and_positive_rows(self):
+        """A floor together with caps and a slack-at-zero row ``beta_0 + beta_1 <= 1``."""
+        x, y, j, floor = self._floor()
+        lower, upper = np.full(N, -2.0 * floor), np.full(N, 2.0 * floor)
+        g = np.vstack([-np.eye(N)[j], np.r_[1.0, 1.0, np.zeros(N - 2)]])
+        h = np.array([-floor, 1.0])
+        lasso = Lasso(x, y, g=g, h=h, lower=lower, upper=upper)
+        _assert_optimal(lasso, x, y, np.zeros((0, N)), np.zeros(0), lower, upper, g, h)
+
+    def test_with_a_zero_sum(self):
+        """A floor under a zero sum, which is relaxed: the floor row is left as it is."""
+        x, y = _data(40, N, 3)
+        a, b = np.ones((1, N)), np.zeros(1)
+        g, h = -np.eye(N)[:1], np.array([-0.3])
+        inf = np.full(N, np.inf)
+        lasso = Lasso(x, y, a=a, b=b, g=g, h=h)
+        assert _certified(lasso, x, y, a, b, g, h, -inf, inf) < 1e-12
+        assert min(bp.beta[0] for bp in lasso.path) >= 0.3 - 1e-12
+
+    def test_builder(self):
+        """``.inequality(-e_j, -l)`` reaches the same route."""
+        x, y, j, floor = self._floor()
+        built = Lasso.problem(x, y).inequality(-np.eye(N)[j], -floor).trace()
+        direct = Lasso(x, y, g=-np.eye(N)[j : j + 1], h=np.array([-floor]))
+        assert np.array_equal(_knots(built)[1], _knots(direct)[1])
+
+    def test_contradictory_floor_and_cap_are_infeasible(self):
+        """``beta_0 >= 1`` against ``beta_0 <= 0.5``: the CLA's classification comes through."""
+        x, y = _data(30, N, 0)
+        g, h = np.vstack([-np.eye(N)[0], np.eye(N)[0]]), np.array([-1.0, 0.5])
+        with pytest.raises(InfeasibleProblemError, match="could not be traced"):
+            Lasso(x, y, g=g, h=h)
+
+
+class TestRelaxationLadder:
+    """A path declined at one relaxation is traced again at the next, smaller one."""
+
+    def test_a_smaller_relaxation_resolves_a_swap(self, monkeypatch):
+        """Relaxed traces that part at the first relaxation are retried; the path is the same."""
+        x, y, d = _monotone()
+        want = Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+        real = bounded._trace
+        calls = []
+
+        def trace(*args):
+            calls.append(1)
+            knots = real(*args)
+            return knots[:-1] if len(calls) == 2 else knots
+
+        monkeypatch.setattr(bounded, "_trace", trace)
+        got = Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+        assert len(calls) == 4
+        lam_want, beta_want = _knots(want)
+        lam_got, beta_got = _knots(got)
+        np.testing.assert_allclose(lam_got, lam_want, rtol=1e-9)
+        np.testing.assert_allclose(beta_got, beta_want, atol=1e-9 * np.abs(beta_want).max())
+
+    def test_declined_when_a_smaller_relaxation_cannot_start(self, monkeypatch):
+        """An error of the CLA after the first relaxation ends the ladder and declines the problem."""
+        x, y, d = _monotone()
+        real = bounded._trace
+        calls = []
+
+        def trace(*args):
+            calls.append(1)
+            if len(calls) == 3:
+                msg = "no start at this resolution"
+                raise InfeasibleProblemError(msg)
+            knots = real(*args)
+            return knots[:-1] if len(calls) == 2 else knots
+
+        monkeypatch.setattr(bounded, "_trace", trace)
+        with pytest.raises(DegenerateProblemError, match=r"depends on the relaxation.*cannot start"):
+            Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
+
+    def test_an_error_at_the_first_relaxation_is_the_problems_own(self, monkeypatch):
+        """At the first relaxation the CLA's error is raised as it is, not as a decline."""
+        x, y, d = _monotone()
+
+        def trace(*args):
+            msg = "the rows are infeasible"
+            raise InfeasibleProblemError(msg)
+
+        monkeypatch.setattr(bounded, "_trace", trace)
+        with pytest.raises(InfeasibleProblemError, match="the rows are infeasible"):
+            Lasso(x, y, g=d, h=np.zeros(d.shape[0]))

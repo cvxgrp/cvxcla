@@ -99,10 +99,14 @@ def validate_constraints(
         dimension: The problem dimension ``n`` (number of features).
         tol: Tolerance below which an ``h`` entry counts as non-positive.
 
+    A negative ``h`` entry, a row that excludes ``beta = 0``, is allowed: the penalty
+    form starts such a path from the smallest-``l1`` point on the constraints rather than
+    from ``beta = 0`` (see :mod:`cvxcla._lasso_bounded`).
+
     Raises:
         ValueError: If only one of ``g``/``h`` is given, their shapes are
-            inconsistent with the problem dimension, or an ``h`` entry is negative
-            (which would make ``beta = 0`` infeasible) or in ``(0, tol]``.
+            inconsistent with the problem dimension, or an ``h`` entry is in
+            ``(0, tol]``.
     """
     if g is None and h is None:
         return
@@ -118,7 +122,7 @@ def _validate_constraint_shapes(
     dimension: int,
     tol: float,
 ) -> None:
-    """Validate the shapes and positivity of a fully-provided ``G beta <= h``.
+    """Validate the shapes of a fully-provided ``G beta <= h``, and that no ``h`` entry is nearly zero.
 
     Args:
         g: Inequality matrix ``G`` (both ``g`` and ``h`` known to be present).
@@ -128,14 +132,11 @@ def _validate_constraint_shapes(
 
     Raises:
         ValueError: If ``g``'s shape is inconsistent with ``h`` and the problem
-            dimension, any ``h`` entry is negative (``beta = 0`` would be infeasible), or
-            one lies in ``(0, tol]``, too close to zero to start from and not zero.
+            dimension, or an ``h`` entry lies in ``(0, tol]``, too close to zero to
+            start from and not zero.
     """
     if g.shape != (h.shape[0], dimension):
         msg = f"g must have shape ({h.shape[0]}, {dimension}), got {g.shape}"
-        raise ValueError(msg)
-    if np.any(h < 0):
-        msg = "h must be nonnegative so beta = 0 is feasible"
         raise ValueError(msg)
     if np.any((h > 0) & (h <= tol)):
         msg = f"h entries in (0, {tol:g}] are too close to zero to start from; pass 0 for a homogeneous row"
@@ -194,7 +195,10 @@ def validate_bounds(
         msg = f"lower and upper must have shape ({dimension},), got {lo.shape} and {up.shape}"
         raise ValueError(msg)
     if np.any(lo > 0) or np.any(up < 0):
-        msg = "bounds must admit beta_j = 0: every lower bound <= 0 and every upper bound >= 0"
+        msg = (
+            "bounds must admit beta_j = 0: every lower bound <= 0 and every upper bound >= 0; "
+            "pass a bound that excludes zero as a row of g beta <= h, e.g. -beta_j <= -l_j"
+        )
         raise ValueError(msg)
     if nonneg:
         lo = np.maximum(lo, 0.0)

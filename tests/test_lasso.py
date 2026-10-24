@@ -183,12 +183,15 @@ class TestConstrainedLasso:
             lam = frac * plain.lam_max
             np.testing.assert_allclose(constrained.solution(lam), plain.solution(lam), atol=1e-7)
 
-    def test_rejects_negative_h(self):
-        """A negative ``h`` entry (``beta = 0`` infeasible) is rejected."""
+    def test_negative_h_goes_through_the_penalty_form(self):
+        """A negative ``h`` entry excludes ``beta = 0``: the path starts away from it and stays feasible."""
         x, y, g, h = self._problem_with_caps()
         h[0] = -1.0
-        with pytest.raises(ValueError, match="nonnegative"):
-            Lasso(x=x, y=y, g=g, h=h)
+        lasso = Lasso(x=x, y=y, g=g, h=h)
+        assert lasso.via_cla
+        assert lasso.path[0].beta.any()
+        assert lasso.lam_max == lasso.path[0].lam
+        assert max(float((g @ bp.beta - h).max()) for bp in lasso.path) < 1e-10
 
     def test_rejects_h_too_close_to_zero(self):
         """An ``h`` entry in ``(0, tol]`` is neither a start nor a homogeneous row."""
