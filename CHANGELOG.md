@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.7.0] - 2026-10-24
+
+### New Features
+- *(lasso)* Rows that exclude beta = 0, and a smaller relaxation when one fails (#985)
+
 ## [2.6.2] - 2026-10-24
 
 ### New Features
