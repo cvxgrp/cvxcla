@@ -156,7 +156,7 @@ def kkt_violation(
         upper: Upper bounds.
 
     Returns:
-        The violation, relative to ``||X^T y||_inf``.
+        The violation, relative to ``||X^T y||_inf`` (absolute when ``X^T y = 0``).
     """
     tol = 1e-9 * max(1.0, float(np.abs(beta).max()))
     zero = np.abs(beta) <= tol
@@ -196,7 +196,8 @@ def kkt_violation(
             np.maximum(lower - beta, 0.0),
         ]
     )
-    return max(worst, float(feasibility.max(initial=0.0))) / float(np.abs(xty).max())
+    # With X^T y = 0 there is no scale to be relative to; the violation is then absolute.
+    return max(worst, float(feasibility.max(initial=0.0))) / (float(np.abs(xty).max()) or 1.0)
 
 
 def _relaxation_direction(

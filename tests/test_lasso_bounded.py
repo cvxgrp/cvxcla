@@ -405,6 +405,12 @@ class TestHomogeneousRows:
         with pytest.raises(DegenerateProblemError, match="violates the optimality conditions"):
             Lasso(x, y, g=d, h=np.zeros(d.shape[0]))
 
+    def test_zero_correlation(self):
+        """With ``X^T y = 0`` the rows ``beta <= 0, -beta <= 0`` give the knot ``(0, 0)`` (issue #982)."""
+        inf = np.full(1, np.inf)
+        lasso = Lasso(np.eye(1), np.zeros(1), lower=-inf, upper=inf, g=np.array([[1.0], [-1.0]]), h=np.zeros(2))
+        assert [(bp.lam, *bp.beta) for bp in lasso.path] == [(0.0, 0.0)]
+
 
 class TestFlatStart:
     """A whole face of smallest-l1 starting points is resolved by the quadratic term."""
