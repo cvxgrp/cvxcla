@@ -411,8 +411,8 @@ class LassoBuilder(Generic[SolverT]):
         Args:
             g: A length-``n`` row vector or a ``(p, n)`` matrix.
             h: The matching right-hand side: a scalar for a single row, or a
-                length-``p`` vector. Each entry must be nonnegative (so
-                ``beta = 0`` stays feasible), checked when the path is traced.
+                length-``p`` vector. A zero entry is a homogeneous row and a negative
+                one excludes ``beta = 0``; both are traced through the penalty form.
 
         Returns:
             ``self``, for chaining.

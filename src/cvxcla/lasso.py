@@ -40,8 +40,9 @@ correlation that drives the enter/leave events carries the active-row multiplier
 still piecewise linear (a quadratic loss under a polyhedral penalty *and* polyhedral
 constraints; cf. Rosset and Zhu). The homotopy needs ``h > 0`` so the path can start
 from ``beta = 0`` with every row slack -- the same first vertex as the unconstrained
-LASSO; a row with ``h = 0``, such as the ordering of a monotone fit, goes through the
-penalty form instead (see :mod:`cvxcla._lasso_bounded`). Homogeneous equality
+LASSO; a row with ``h = 0``, such as the ordering of a monotone fit, or with ``h < 0``,
+which excludes ``beta = 0``, goes through the penalty form instead (see
+:mod:`cvxcla._lasso_bounded`). Homogeneous equality
 constraints ``A beta = 0`` are traced by a different route: one leverage-capped CLA,
 rescaled (see :mod:`cvxcla._lasso_cla`).
 
@@ -106,7 +107,8 @@ class Lasso(InequalityConstrained):
 
     Optional linear inequality constraints ``G beta <= h`` (with ``h > 0``) are
     traced through the same bordered solve as the CLA's ``G w <= h`` rows; rows with
-    ``h = 0`` (homogeneous, e.g. a monotone fit) through the penalty form.
+    ``h = 0`` (homogeneous, e.g. a monotone fit) or ``h < 0`` (excluding ``beta = 0``)
+    through the penalty form.
     Homogeneous equality constraints ``A beta = 0`` (sum-to-zero, contrasts), with
     or without signs on any of the coefficients, are traced instead through one
     leverage-capped CLA under ``Sigma = X^T X`` and ``mu = X^T y``, which traces the
@@ -129,9 +131,10 @@ class Lasso(InequalityConstrained):
         y: Response vector of shape ``(m,)`` (``None`` in operator mode).
         g: Optional inequality matrix ``(p, n)`` of ``G beta <= h``; ``None`` means
             the plain LASSO.
-        h: Optional inequality right-hand side ``(p,)``; nonnegative. A zero entry is a
-            homogeneous row, such as the ordering of a monotone fit, traced through the
-            penalty form (see :mod:`cvxcla._lasso_bounded`).
+        h: Optional inequality right-hand side ``(p,)``. A zero entry is a homogeneous
+            row, such as the ordering of a monotone fit, and a negative one a row that
+            excludes ``beta = 0``, such as a floor ``-beta_j <= -l_j``; both are traced
+            through the penalty form (see :mod:`cvxcla._lasso_bounded`).
         nonneg: When ``True``, restrict to the non-negative LASSO ``beta >= 0``;
             the default ``False`` traces the ordinary signed path.
         gram: When ``True``, drive the path with the ``GramCovariance`` data-matrix
@@ -176,9 +179,9 @@ class Lasso(InequalityConstrained):
 
         Raises:
             ValueError: If ``x`` is not 2d, ``y``'s length does not match ``x``, the
-                constraint shapes are inconsistent, any ``h`` entry is not strictly
-                positive (which would make ``beta = 0`` infeasible), a bound
-                excludes ``beta_j = 0``, or the CLA cannot trace the problem.
+                constraint shapes are inconsistent, an ``h`` entry is in ``(0, tol]``,
+                a bound excludes ``beta_j = 0`` (pass it as a row of ``G beta <= h``
+                instead), or the CLA cannot trace the problem.
         """
         if self.quad_form is not None or self.linear is not None:
             self.linear = validate_operator_inputs(self.quad_form, self.linear, self.x, self.y)
@@ -197,11 +200,12 @@ class Lasso(InequalityConstrained):
         """Whether the path is traced by a CLA rather than the homotopy.
 
         The homotopy starts from ``beta = 0`` with every constraint slack, so equality
-        rows, their right-hand side, per-coefficient bounds and homogeneous rows
-        ``g_r beta <= 0`` go through a CLA instead.
+        rows, their right-hand side, per-coefficient bounds, homogeneous rows
+        ``g_r beta <= 0`` and rows that exclude ``beta = 0`` (``h_r < 0``) go through a
+        CLA instead.
         """
-        homogeneous_rows = self.h is not None and bool(np.any(np.asarray(self.h) == 0))
-        return homogeneous_rows or any(v is not None for v in (self.a, self.b, self.lower, self.upper))
+        rows_not_slack = self.h is not None and bool(np.any(np.asarray(self.h) <= 0))
+        return rows_not_slack or any(v is not None for v in (self.a, self.b, self.lower, self.upper))
 
     def _cla_path(self) -> list[tuple[float, NDArray[np.float64], NDArray[np.bool_]]]:
         """Route a problem with equality rows or bounds to the CLA that takes it.
@@ -269,7 +273,8 @@ class Lasso(InequalityConstrained):
             quad: The quadratic form ``H`` as a :class:`QuadraticForm` operator.
             xty: The linear term ``X^T y`` of shape ``(n,)``.
             g: Optional inequality matrix of ``G beta <= h``.
-            h: Optional inequality right-hand side; entries must be nonnegative.
+            h: Optional inequality right-hand side; a zero entry is a homogeneous row,
+                a negative one excludes ``beta = 0``.
             a: Optional equality matrix of ``A beta = 0`` (not combined with ``g``).
             nonneg: Restrict the path to ``beta >= 0``.
             tol: Tolerance for event selection and the validity window.

@@ -24,8 +24,11 @@ at tilt ``lam``, where ``u_bar`` stacks the bounds ``u_j`` and ``-l_j`` of the
 columns. The CLA's tilt *is* the penalty, so every turning point is a knot,
 ``beta = S z`` at ``lam``. At ``lam = inf`` the CLA starts from the vertex of
 smallest ``l1`` norm on the constraints, which is ``z = 0`` without equality rows
-(every row of ``G beta <= h`` with ``h > 0`` is slack there). Homogeneous rows with
-signs only go to the leverage route; the cases below are traced here.
+(every row of ``G beta <= h`` with ``h > 0`` is slack there). A row with ``h_r < 0``
+excludes ``beta = 0`` and moves the start to the smallest-``l1`` point it allows, as a
+nonzero ``b`` does; where that point is a whole face the CLA starts on it where its
+quadratic term is smallest. Homogeneous rows with signs only go to the leverage route;
+the cases below are traced here.
 
 **Homogeneous inequality rows** (``h_r = 0``, such as the ordering ``beta_j <=
 beta_{j+1}`` of a monotone fit) are all tight at ``z = 0``, so the start is degenerate
@@ -39,7 +42,15 @@ shrink to a point at ``h_r = 0`` (rows the relaxed path met one by one, and the
 exact path meets together) are dropped. The result is then *certified*, not trusted: a
 linear program finds the multipliers that best satisfy the LASSO's optimality conditions
 at every knot and segment midpoint, and the extrapolated path is returned only if they
-hold to rounding. Otherwise the problem is declined.
+hold to rounding.
+
+The relaxation moves every knot, by an amount proportional to it. Where two knots of
+the exact path lie closer together than that, the two relaxed runs can meet their
+events in different orders, and the extrapolation then pairs knots of different events.
+A long path is the usual case: a zero-sum LASSO with 500 parts has knots less than ``1e-6 lam_max``
+apart, and relaxed by the first of :data:`RELAXATIONS` two of them swap. So a path that
+fails either check is traced again with the next, smaller relaxation, and the problem is
+declined only when every relaxation fails, or the CLA cannot start at one.
 
 **Homogeneous equality rows** (``A beta = 0``, such as a zero sum) together with a finite
 bound or inequality rows are resolved the same way, relaxing ``b`` to ``eps A d`` for a
@@ -77,10 +88,12 @@ def _split(lower: NDArray[np.float64], upper: NDArray[np.float64]) -> tuple[NDAr
 #: One knot of the path as ``(lam, beta)``.
 Knot = tuple[float, NDArray[np.float64]]
 
-#: The relaxation of a homogeneous row, relative to the scale ``||X^T y||_inf / max_j (X^T X)_jj``
-#: of a coefficient: large enough that the CLA starts cleanly, small enough that the relaxed
-#: path takes the exact path's sequence of active sets.
-RELAXATION = 1e-6
+#: The relaxations of a homogeneous row tried in turn, relative to the scale
+#: ``||X^T y||_inf / max_j (X^T X)_jj`` of a coefficient. The first is large enough that the
+#: CLA starts cleanly; the smaller ones are tried only when it fails, for paths whose
+#: knots lie closer together than the first moves them (module docstring). Below about
+#: ``1e-9`` the relaxed start is lost in rounding.
+RELAXATIONS = (1e-6, 1e-7, 1e-8)
 
 #: The largest optimality violation, relative to ``||X^T y||_inf``, at which an
 #: extrapolated path is accepted.
@@ -238,44 +251,64 @@ def _resolve_homogeneous(
 ) -> list[Knot]:
     """The exact knots with homogeneous rows ``h_r = 0`` or ``A beta = 0``, from two relaxed traces.
 
+    Each relaxation of :data:`RELAXATIONS` is tried in turn until one gives a path that
+    passes both checks. An error of the CLA at the first relaxation is the problem's own
+    (infeasible rows, say) and is raised as it is; at a later one it means the relaxation
+    is too small to start from, and the problem is declined.
+
     Raises:
-        DegenerateProblemError: If the two relaxed traces take different sequences, or the
-            extrapolated path fails its optimality certificate.
+        DegenerateProblemError: If at every relaxation the two relaxed traces take
+            different sequences or the extrapolated path fails its optimality certificate.
     """
     h_dir = (h == 0).astype(np.float64)
     b_dir = a @ _relaxation_direction(a, g, h, lower, upper) if a.shape[0] and not b.any() else np.zeros_like(b)
-    eps = RELAXATION * float(np.abs(xty).max()) / max(float(np.diag(gram).max()), 1e-300)
+    scale = float(np.abs(xty).max()) / max(float(np.diag(gram).max()), 1e-300)
     q = legs.T @ xty
     rows = (g, h) if g.shape[0] else (None, None)
 
     def relaxed(t: float) -> list[Knot]:
         return _trace(sigma, q, legs, cap, a, b + t * b_dir, rows[0], None if rows[1] is None else h + t * h_dir)
 
-    once, twice = relaxed(eps), relaxed(2 * eps)
-    if len(once) != len(twice):
-        msg = (
-            f"the homogeneous rows could not be resolved: relaxed by {eps:.1e} and {2 * eps:.1e} they "
-            f"trace {len(once)} and {len(twice)} knots, so the sequence of active sets depends on the relaxation"
-        )
-        raise DegenerateProblemError(msg)
-    knots: list[Knot] = [(max(2 * l1 - l2, 0.0), 2 * b1 - b2) for (l1, b1), (l2, b2) in zip(once, twice, strict=True)]
-    # A segment the relaxed path needed to meet the rows one by one has no length at h_r = 0.
-    floor = 1e-12 * knots[0][0]
-    kept = [knots[0]]
-    for lam, beta in knots[1:]:
-        if kept[-1][0] - lam > floor:
-            kept.append((lam, beta))
-    # The path ends at the least-squares fit, lam = 0, whichever of the coinciding knots was kept.
-    kept[-1] = knots[-1] if kept[-1][0] - knots[-1][0] <= floor else kept[-1]
-    points = kept + [(0.5 * (l1 + l2), 0.5 * (b1 + b2)) for (l1, b1), (l2, b2) in itertools.pairwise(kept)]
-    worst = max(kkt_violation(gram, xty, lam, beta, a, b, g, h, lower, upper) for lam, beta in points)
-    if worst > CERTIFIED:
-        msg = (
-            f"the homogeneous rows could not be resolved: the extrapolated path violates the "
-            f"optimality conditions by {worst:.1e} (relative), above {CERTIFIED:g}"
-        )
-        raise DegenerateProblemError(msg)
-    return kept
+    def extrapolated(eps: float) -> list[Knot] | str:
+        """The certified exact knots from the relaxations ``eps`` and ``2 eps``, or why there are none."""
+        once, twice = relaxed(eps), relaxed(2 * eps)
+        if len(once) != len(twice):
+            return (
+                f"relaxed by {eps:.1e} and {2 * eps:.1e} they trace {len(once)} and {len(twice)} knots, "
+                f"so the sequence of active sets depends on the relaxation"
+            )
+        knots = [(max(2 * l1 - l2, 0.0), 2 * b1 - b2) for (l1, b1), (l2, b2) in zip(once, twice, strict=True)]
+        # A segment the relaxed path needed to meet the rows one by one has no length at h_r = 0.
+        floor = 1e-12 * knots[0][0]
+        kept = [knots[0]]
+        for lam, beta in knots[1:]:
+            if kept[-1][0] - lam > floor:
+                kept.append((lam, beta))
+        # The path ends at the least-squares fit, lam = 0, whichever of the coinciding knots was kept.
+        kept[-1] = knots[-1] if kept[-1][0] - knots[-1][0] <= floor else kept[-1]
+        points = kept + [(0.5 * (l1 + l2), 0.5 * (b1 + b2)) for (l1, b1), (l2, b2) in itertools.pairwise(kept)]
+        worst = max(kkt_violation(gram, xty, lam, beta, a, b, g, h, lower, upper) for lam, beta in points)
+        if worst > CERTIFIED:
+            return (
+                f"relaxed by {eps:.1e} the extrapolated path violates the optimality conditions by "
+                f"{worst:.1e} (relative), above {CERTIFIED:g}"
+            )
+        return kept
+
+    reasons: list[str] = []
+    for relaxation in RELAXATIONS:
+        try:
+            result = extrapolated(relaxation * scale)
+        except ValueError as err:
+            if not reasons:
+                raise
+            reasons.append(f"relaxed by {relaxation * scale:.1e} the CLA cannot start ({err})")
+            break
+        if not isinstance(result, str):
+            return result
+        reasons.append(result)
+    msg = "the homogeneous rows could not be resolved: " + "; ".join(reasons)
+    raise DegenerateProblemError(msg)
 
 
 def bounded_path(
@@ -301,7 +334,8 @@ def bounded_path(
         tol: Coefficients below ``tol`` times the path's scale count as zero in the
             ``active`` masks.
         g: Optional inequality rows ``(p, n)`` of ``G beta <= h``.
-        h: Their right-hand side ``(p,)``, nonnegative; a zero entry is a homogeneous row.
+        h: Their right-hand side ``(p,)``; a zero entry is a homogeneous row, a negative
+            one excludes ``beta = 0``.
 
     Returns:
         The breakpoints ``(lam, beta, active)`` from the first knot down to the
