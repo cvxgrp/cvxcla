@@ -82,7 +82,9 @@ over seeds is within ±10%.
 
   Replacing each candidate's fresh O(n_F³) inverse with an O(n_F²) bordered
   update, while keeping the loop, buys at most 1.6×. Most of the gap comes from
-  evaluating O(n) candidates one at a time in Python. Each evaluation re-slices
+  evaluating O(n) candidates one at a time. (Track 3 below shows that this cost is
+  the per-candidate *formula*, not the Python loop: the loop itself costs
+  1.2–1.5×.) Each evaluation re-slices
   `covarF`/`covarFB` and re-runs the λ formula, so it costs O(n·n_F) with or
   without an inverse. A phase profile of the shipped code agrees: the
   addition-branch inverses take 8% of the trace at n = 20 and 41% at n = 640. The
@@ -138,8 +140,9 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
      and a true vertex goes with it. Sometimes the trace recovers instead by
      removing, re-adding and removing the asset at the same λ. That leaves three
      copies of one point, the same leave-and-re-enter pattern that track 1 saw
-     cycle forever under bordered updates. Whether these stale weights cause that
-     cycle was not checked. Reading the
+     cycle forever under bordered updates. They do not cause that cycle: track 3
+     found the bordered variant cycling on the same 9 of 30 problems with or
+     without both fixes. Reading the
      blocked weights from the working vector (`bldp-fix-w`, a two-method subclass)
      makes 52 of the 57 exact.
   2. **A zero-tolerance purge.** `_purge_excess` deletes a turning point whenever a
@@ -185,6 +188,80 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
   PyPortfolioOpt's descendant (whether bugs 1 and 2 are in the original is not
   checked here), the Markowitz–Todd 10-asset example, n > 100, and constraint
   classes beyond a budget and box bounds (BLdP supports nothing else).
+
+### Measured: is the comparison apples to apples? (#869, track 3)
+
+[`experiments/bldp_fair.py`](experiments/bldp_fair.py) re-times the gap with every
+rung restricted to BLdP's own problem class: dense Σ, box bounds and one budget
+row. It uses the K = 10 factor problems of track 1, n = 20 to 320, 3 seeds × 3
+repeats, each in a fresh process, on the same M4 Pro, Python 3.12 and numpy 2.4.6
+stack. It asks which parts of the gap are cvxcla's to claim.
+
+- **Correcting BLdP does not shrink the gap.** With both track-2 bugs fixed, BLdP
+  is 4–9% *slower* than as shipped, because it keeps the turning points the purge
+  used to delete. The gap against a correct BLdP is 3.5× at n = 20 and 150× at
+  n = 320, against 3.1× and 144× for the shipped code. Track 1's ratios therefore
+  stand, but they were measured against code that returns a wrong frontier on many
+  of these problems (exact distance to cvxcla's path up to 1e-2).
+- **The gap is algorithmic, not Python.** Track 1's 12–141× "vectorised event
+  search" rung changed two things at once. A new rung, `loop` (an option of
+  `InverseCLA`), keeps the reduced-cost formula of the vectorised code but visits
+  the assets one at a time in a Python loop. That splits the rung in two:
+
+  | n | bug fixes | formula | interpreter | cvxcla vs minimal | total |
+  |---:|---:|---:|---:|---:|---:|
+  | 20 | 0.91× | 11× | 1.22× | 0.23× | 3.1× |
+  | 80 | 0.92× | 27× | 1.50× | 0.44× | 16× |
+  | 320 | 0.96× | 83× | 1.45× | 1.24× | 144× |
+
+  The *formula* factor grows like n^0.96. BLdP re-derives each candidate's λ from
+  its own bordered system, re-slicing Σ and recomputing the shared products each
+  time: O(n) candidates × O(n_F³ + n·n_F) work per turning point. Reading every
+  candidate's λ off one solve of the current segment (`-γ_i/δ_i`) costs O(n)
+  per candidate. That is a change in complexity, and it accounts for almost all of
+  the gap. It includes the per-candidate inverse, which track 1 put at ≤ 1.6×.
+  The *interpreter* factor, the same flops dispatched once per asset instead of
+  once per step, is flat at 1.2–1.5× (n^−0.1). A Python loop is not what makes
+  BLdP slow.
+- **What cvxcla's architecture is entitled to claim.** None of the formula factor
+  is specific to cvxcla: a ~100-line vectorised CLA (`vec-fresh`) has it too.
+  cvxcla's own contribution is the last column. It is 4.3× *slower* than the
+  minimal code at n = 20 and 1.24× faster at n = 320, crossing over near n = 250.
+  A cProfile of cvxcla shows where its extra time goes:
+  - *Guards* take 48% of its trace at n = 20 (1.3 ms) and 25% at n = 320 (26 ms).
+    These are the feasibility checks and projection, held-bound checks, active-row
+    guards, the multipliers' round-off level, the mean shift and tied-start
+    handling.
+  - *Generality* (the inequality-row event search, idle here) takes ≤ 1%.
+  - The *core* (75% at n = 320, 79 ms) is faster than the minimal code's whole
+    trace (131 ms): a block-eliminated Cholesky solve rather than an explicit
+    inverse.
+
+  So on BLdP's problem class, supporting arbitrary `A w = b` and `G w ≤ h` costs
+  cvxcla almost nothing. Its robustness costs a constant share, and its linear
+  algebra wins at scale.
+- **The environment does not explain the gap.** Both codes ran on the same
+  machine and stack, so hardware cancels in every ratio. Single-threaded BLAS
+  changes no timing by more than 7%, presumably because the blocks are too small
+  for threads to help. The shipped BLdP code at n = 160 takes about 1.43 s on
+  Python 3.12, 3.13 and 3.14 alike (numpy 2.4.6). It takes **3.83 s** under numpy
+  1.26.4, 2.6× slower. A newer numpy *narrows* the gap, so the ratios above are,
+  if anything, kind to BLdP compared with the stack it was written for.
+- **What a scaling comparison may conclude.** BLdP set out to make the CLA
+  available and verifiably correct at n = 10. It never claimed speed, and at
+  n = 20, the smallest size timed here, the gap is about 3×. The measured gap supports a narrow statement: *the
+  reference implementation, as shipped and widely used, has a per-step complexity
+  a factor of about n above what the algorithm needs.* That is a property of the
+  code's formulation, not of the CLA, not of Python, and mostly not of cvxcla's
+  architecture: the formula factor (11–83×) belongs to any vectorised CLA. cvxcla
+  can claim the last column, robustness at a constant cost, and the features
+  outside BLdP's class (general constraints, factor backends). It cannot claim
+  the 100× headline over BLdP.
+- **Not measured:** stacks older than numpy 1.26 or Python 3.12 (PyPortfolioOpt
+  1.6.0 and cvxcla do not install there, so the 2013 environment is out of reach),
+  other CPUs or BLAS builds, n > 320 for this split, and memory. The profile
+  fractions are taken under cProfile, which inflates Python-call-heavy code, so
+  the guards' share is an upper estimate.
 
 ## Where each paper is stronger
 

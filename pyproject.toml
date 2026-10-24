@@ -184,3 +184,8 @@ replace = '"cvxcla=={new_version}",'
 filename = "experiments/bldp_agree.py"
 search = '"cvxcla=={current_version}",'
 replace = '"cvxcla=={new_version}",'
+
+[[tool.bumpversion.files]]
+filename = "experiments/bldp_fair.py"
+search = '"cvxcla=={current_version}",'
+replace = '"cvxcla=={new_version}",'

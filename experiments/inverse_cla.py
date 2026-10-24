@@ -52,6 +52,7 @@ class InverseCLA:
         upper_bounds: NDArray[np.float64],
         tol: float = 1e-9,
         fresh: bool = False,
+        loop: bool = False,
     ) -> None:
         """Trace the frontier on construction (mirrors ``cvxcla.CLA``).
 
@@ -64,6 +65,12 @@ class InverseCLA:
         ``np.linalg.inv`` at every turning point instead of being updated, so the
         class then differs from PyPortfolioOpt only in its vectorised event search
         (used by ``bldp_gap.py`` to attribute the runtime gap).
+
+        With ``loop=True`` the event search visits the assets one at a time in a
+        Python loop (each blocked asset's reduced cost is its own dot product with
+        a row of Sigma) instead of as whole-vector numpy expressions. The arithmetic
+        and the event chosen are the same; only the interpreter overhead differs
+        (used by ``bldp_fair.py`` to separate it from the change of formula).
         """
         self.mean = mean
         self.cov = covariance
@@ -71,6 +78,7 @@ class InverseCLA:
         self.upper_bounds = upper_bounds
         self.tol = tol
         self.fresh = fresh
+        self.loop = loop
         self.weights: list[NDArray[np.float64]] = []
         self._solve()
 
@@ -133,19 +141,34 @@ class InverseCLA:
             r_beta = np.zeros(ns)
             r_beta[idx] = z_beta - y * nu_beta
 
-            gamma = cov @ r_alpha + nu_alpha
-            delta = cov @ r_beta + nu_beta - mean
-
-            free_in = free
             l_mat = np.full((ns, 4), -np.inf)
-            beta_down = free_in & (r_beta < -eps)
-            beta_up = free_in & (r_beta > +eps)
-            delta_down = at_upper & (delta < -eps)
-            delta_up = at_lower & (delta > +eps)
-            l_mat[beta_down, 0] = (ub[beta_down] - r_alpha[beta_down]) / r_beta[beta_down]
-            l_mat[beta_up, 1] = (lb[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
-            l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]
-            l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
+            if self.loop:
+                for i in range(ns):
+                    if free[i]:
+                        if r_beta[i] < -eps:
+                            l_mat[i, 0] = (ub[i] - r_alpha[i]) / r_beta[i]
+                        elif r_beta[i] > eps:
+                            l_mat[i, 1] = (lb[i] - r_alpha[i]) / r_beta[i]
+                    elif at_upper[i] or at_lower[i]:
+                        gamma_i = cov[i] @ r_alpha + nu_alpha
+                        delta_i = cov[i] @ r_beta + nu_beta - mean[i]
+                        if at_upper[i] and delta_i < -eps:
+                            l_mat[i, 2] = -gamma_i / delta_i
+                        if at_lower[i] and delta_i > eps:
+                            l_mat[i, 3] = -gamma_i / delta_i
+            else:
+                gamma = cov @ r_alpha + nu_alpha
+                delta = cov @ r_beta + nu_beta - mean
+
+                free_in = free
+                beta_down = free_in & (r_beta < -eps)
+                beta_up = free_in & (r_beta > +eps)
+                delta_down = at_upper & (delta < -eps)
+                delta_up = at_lower & (delta > +eps)
+                l_mat[beta_down, 0] = (ub[beta_down] - r_alpha[beta_down]) / r_beta[beta_down]
+                l_mat[beta_up, 1] = (lb[beta_up] - r_alpha[beta_up]) / r_beta[beta_up]
+                l_mat[delta_down, 2] = -gamma[delta_down] / delta[delta_down]
+                l_mat[delta_up, 3] = -gamma[delta_up] / delta[delta_up]
             l_mat[l_mat > lam + tol] = -np.inf
 
             lam_max = np.max(l_mat)
@@ -215,21 +238,22 @@ def main() -> None:
         dense, problem = _make_problem(rng, n, 10)
         ref = CLA(covariance=dense, **problem)
         ref_w = np.array([tp.weights for tp in ref.turning_points])
-        for fresh in (False, True):
+        for fresh, loop in ((False, False), (True, False), (True, True)):
             inv = InverseCLA(
                 mean=problem["mean"],
                 covariance=dense,
                 lower_bounds=problem["lower_bounds"],
                 upper_bounds=problem["upper_bounds"],
                 fresh=fresh,
+                loop=loop,
             )
             inv_w = np.array(inv.weights)
             same_count = len(ref) == len(inv)
             max_diff = float(np.max(np.abs(ref_w - inv_w))) if same_count else float("nan")
             status = "OK" if same_count and max_diff < 1e-8 else "MISMATCH"
-            label = "fresh" if fresh else "incremental"
+            label = ("fresh" if fresh else "incremental") + (" loop" if loop else "")
             print(
-                f"n={n:4d}  {label:11s}  cvxcla pts={len(ref):4d}  inverse pts={len(inv):4d}  "
+                f"n={n:4d}  {label:16s}  cvxcla pts={len(ref):4d}  inverse pts={len(inv):4d}  "
                 f"max|dw|={max_diff:.2e}  [{status}]"
             )
 
