@@ -267,18 +267,34 @@ stack. It asks which parts of the gap are cvxcla's to claim.
 
 ### Bailey–López de Prado, on its own terms
 
-- **Pedagogy.** It is a tutorial: 17 complete code snippets, step by step. It
-  established *the* open-source CLA reference (it became PyPortfolioOpt and is
-  widely cited).
-- **Novelty-at-the-time.** In 2013 it filled a genuine gap — the first
+- **Availability.** In 2013 it filled a genuine gap: it was the first
   documented open-source CLA in a scientific language (prior art was the
-  Markowitz–Todd VBA-Excel implementation). That is higher-impact novelty than
-  an interface refinement.
-- **Ground-truth validation.** It reproduces the canonical Markowitz–Todd
-  10-asset example to 15 significant figures.
+  Markowitz–Todd VBA-Excel implementation). Its code became PyPortfolioOpt's
+  `CLA` and is widely cited and used. That impact is real, whatever the code's
+  quality.
+- **A reference answer.** It reproduces the canonical Markowitz–Todd 10-asset
+  example to 15 significant figures. One example is a narrow check, though:
+  track 2 found the code wrong on 4 of 12 ordinary long-only problems from
+  n = 10 up.
+
+It has no pedagogical edge. As code to learn from, it shows how a parametric QP
+should *not* be solved:
+- It re-derives every candidate event from its own bordered system, about n
+  times the work per turning point that the algorithm needs (track 3).
+- It compares λ values with no tolerance, so it can cycle (track 1).
+- It hides infeasible turning points by deleting them, which turns two bugs into
+  a silently wrong frontier (track 2).
 
 ### `cvxcla`
 
+- **A better entry into the field.** `cvxcla` states each segment as the KKT
+  system of the parametric QP: the optimality conditions on the free set,
+  multipliers for the active constraints, and events where a weight hits a bound
+  or a multiplier changes sign. That is the language of the parametric-QP and
+  homotopy literature. The payoff is transferable understanding. The same
+  `ParametricProblem` / `trace` engine runs the LARS/LASSO homotopy, with the
+  same four events under different names (README). BLdP's bespoke λ formulas,
+  re-derived per candidate, teach none of that structure.
 - **Scale demonstrated.** BLdP only ever runs its n = 10 toy example. `cvxcla`
   shows n = 640 benchmarks, an n = 20,000 factor stress test, and a real
   n = 494 S&P 500 frontier.
@@ -294,10 +310,24 @@ stack. It asks which parts of the gap are cvxcla's to claim.
 
 ## Verdict
 
-BLdP is a **pedagogical reference implementation** that established the
-open-source baseline; `cvxcla` is an **engineering / performance paper** that
-re-architects that baseline — operator abstraction, block elimination,
-structured backends, hardened degeneracy handling — and quantifies the payoff.
-`cvxcla`'s characterization of BLdP is accurate and fair; if anything it
-*under-credits* BLdP's pedagogical completeness, which a single sentence in §8
-could acknowledge.
+BLdP's lasting contribution is **availability**. It established the open-source
+baseline, and its code is in wide use through PyPortfolioOpt. It is not a model
+implementation:
+- its event search does about n times the necessary work per step;
+- it has no tolerances;
+- it repairs infeasible points by deleting them.
+
+The good practice is the reverse: write down the KKT system of the parametric
+QP, solve the current segment once and read every event off it, compare with
+tolerances, and validate against an independent solver. That is also the more
+helpful entry into the field, because it is how the parametric-QP and homotopy
+literature, LARS/LASSO included, presents path following. `cvxcla` is an
+**engineering / performance paper** that rebuilds the method on those principles
+and quantifies the payoff: operator abstraction, block elimination, structured
+backends and hardened degeneracy handling.
+
+`cvxcla`'s characterization of BLdP is accurate. If anything, it is too narrow
+about the cause of the gap. It blames the inverse inside the candidate loop,
+which accounts for at most 1.6×, where tracks 1 and 3 locate the gap in the
+per-candidate formulation as a whole. §8 could now also note that the reference
+code returns wrong frontiers on ordinary problems (track 2).
