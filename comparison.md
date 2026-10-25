@@ -287,6 +287,14 @@ should *not* be solved:
 
 ### `cvxcla`
 
+- **A better entry into the field.** `cvxcla` states each segment as the KKT
+  system of the parametric QP: the optimality conditions on the free set,
+  multipliers for the active constraints, and events where a weight hits a bound
+  or a multiplier changes sign. That is the language of the parametric-QP and
+  homotopy literature. The payoff is transferable understanding. The same
+  `ParametricProblem` / `trace` engine runs the LARS/LASSO homotopy, with the
+  same four events under different names (README). BLdP's bespoke λ formulas,
+  re-derived per candidate, teach none of that structure.
 - **Scale demonstrated.** BLdP only ever runs its n = 10 toy example. `cvxcla`
   shows n = 640 benchmarks, an n = 20,000 factor stress test, and a real
   n = 494 S&P 500 frontier.
@@ -309,11 +317,14 @@ implementation:
 - it has no tolerances;
 - it repairs infeasible points by deleting them.
 
-The good practice is the reverse: solve the current segment once and read every
-event off it, compare with tolerances, and validate against an independent
-solver. `cvxcla` is an **engineering / performance paper** that rebuilds the
-method on those principles and quantifies the payoff: operator abstraction,
-block elimination, structured backends and hardened degeneracy handling.
+The good practice is the reverse: write down the KKT system of the parametric
+QP, solve the current segment once and read every event off it, compare with
+tolerances, and validate against an independent solver. That is also the more
+helpful entry into the field, because it is how the parametric-QP and homotopy
+literature, LARS/LASSO included, presents path following. `cvxcla` is an
+**engineering / performance paper** that rebuilds the method on those principles
+and quantifies the payoff: operator abstraction, block elimination, structured
+backends and hardened degeneracy handling.
 
 `cvxcla`'s characterization of BLdP is accurate. If anything, it is too narrow
 about the cause of the gap. It blames the inverse inside the candidate loop,
