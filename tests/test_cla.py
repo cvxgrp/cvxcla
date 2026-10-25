@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from scipy.optimize import minimize
 
 from cvxcla import CLA, FactorCovariance, Lasso
 from cvxcla._events import event_ratios
@@ -1944,3 +1945,69 @@ class TestLinearTerm:
                 b=np.ones(1),
                 q=q,
             )
+
+
+def _portfolio_problems():
+    """Two long-only, fully invested problems the CLA of cvxcla 2.5.0 refused, as (mean, covariance).
+
+    Moved from the constrained-LASSO note (Jebel-Quant/lasso, ``preprints/constrained_lasso``),
+    whose checks exposed both defects; the seed and the order of the draws are the note's.
+    """
+    rng = np.random.default_rng(7)
+    tied = np.array([0.05, 0.08, 0.08, 0.03, 0.06, 0.02, 0.07, 0.04])  # two assets share the top forecast
+    loadings = rng.standard_normal((12, 3))
+    return {
+        "tied maximum return": (tied, np.cov(rng.standard_normal((200, len(tied))), rowvar=False)),
+        "factor model, no specific risk": (0.05 * rng.standard_normal(12), 1e-3 * loadings @ loadings.T),
+    }
+
+
+class TestPortfoliosRefusedBefore260:
+    """A tied top forecast and a low-rank covariance, each checked against an independent solver.
+
+    2.5.0 refused both: the tie makes the starting vertex non-unique, and the factor model
+    without specific risk makes the free block singular. Since 2.6.0 the first starts on the
+    tied face where the quadratic term is smallest and the second is solved on the null space
+    of the active constraints. Every turning point is compared with SLSQP on the same
+    Markowitz problem, and every segment passes the KKT certificate.
+    """
+
+    @pytest.mark.parametrize("name", list(_portfolio_problems()))
+    def test_traced_and_optimal(self, name):
+        """Neither problem is refused, and no turning point is beaten by SLSQP beyond its tolerance."""
+        mean, cov = _portfolio_problems()[name]
+        n = len(mean)
+        cla = CLA(
+            mean=mean,
+            covariance=cov,
+            lower_bounds=np.zeros(n),
+            upper_bounds=np.ones(n),
+            a=np.ones((1, n)),
+            b=np.ones(1),
+        )
+        assert np.linalg.matrix_rank(cov) == {"tied maximum return": 8, "factor model, no specific risk": 3}[name]
+        assert len(cla) > 2
+        assert _kkt_midpoints(cla, cov) < 1e-9
+
+        finite = [tp for tp in cla.turning_points if np.isfinite(tp.lamb)]
+        scale = max(tp.lamb for tp in finite) * float(np.abs(mean).max())  # the objective's size at the start
+        for tp in finite:
+
+            def objective(w, lam=tp.lamb):
+                return 0.5 * w @ cov @ w - lam * mean @ w
+
+            def gradient(w, lam=tp.lamb):
+                return cov @ w - lam * mean
+
+            reference = minimize(
+                objective,
+                np.full(n, 1.0 / n),
+                jac=gradient,
+                method="SLSQP",
+                bounds=[(0.0, 1.0)] * n,
+                constraints=[{"type": "eq", "fun": lambda w: w.sum() - 1.0, "jac": lambda w: np.ones(n)}],
+                options={"ftol": 1e-14, "maxiter": 1000},
+            )
+            assert reference.success, reference.message
+            # The CLA's turning point is optimal, so the solver can match it but not beat it.
+            assert (objective(tp.weights) - reference.fun) / scale < 1e-7, (tp.lamb, reference.fun)
