@@ -156,8 +156,23 @@ class TestAgainstTheHomotopy:
         lams = sorted({bp.lam for bp in (*lasso.path, *ref.path)})
         scale = max(np.abs(ref.solution(lam)).max() for lam in lams)
         gap = max(np.abs(lasso.solution(lam) - ref.solution(lam)).max() for lam in lams)
-        assert gap < 1e-6 * scale
         empty = np.zeros((0, p))
+        # DIAGNOSTIC (temporary): which route is off the path on macOS CI?
+        cla_cert = _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper)
+        ref_cert = _certified(ref, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper)
+        worst = max(lams, key=lambda lam: np.abs(lasso.solution(lam) - ref.solution(lam)).max())
+        print(
+            f"DIAG knots cla={len(lasso.path)} homotopy={len(ref.path)} gap={gap:.3e} scale={scale:.3e} "
+            f"cert cla={cla_cert:.3e} homotopy={ref_cert:.3e} worst_lam/lam0={worst / ref.path[0].lam:.3e}"
+        )
+        print(
+            "DIAG cla lams/lam0",
+            np.array2string(np.array([bp.lam for bp in lasso.path]) / ref.path[0].lam, precision=6),
+        )
+        print(
+            "DIAG hom lams/lam0", np.array2string(np.array([bp.lam for bp in ref.path]) / ref.path[0].lam, precision=6)
+        )
+        assert gap < 1e-6 * scale
         assert _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper) < 1e-9
 
     def test_lam_max_is_the_first_breakpoint(self):
