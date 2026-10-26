@@ -128,6 +128,28 @@ class TestAgainstTheHomotopy:
             assert np.allclose(lam, ref_lam, atol=1e-9)
             assert np.allclose(beta, ref_beta, atol=1e-9)
 
+    def test_equicorrelated_design(self):
+        """Columns with pairwise correlation 0.99999: the end of the path is round-off, not a wrong bound.
+
+        At ``lambda = 0`` the multipliers of the unused legs are ``Sigma w - q``, two terms
+        of the size of ``X^T y`` that cancel to round-off. The held-bound check used to
+        measure that round-off against the probe scale of ``Sigma`` alone, which on this
+        nearly rank-one Gram split into legs is ``1e-4``, and declined the path.
+        """
+        rng = np.random.default_rng(14)
+        n, p, rho = 100, 40, 0.99999
+        x = np.sqrt(rho) * rng.standard_normal((n, 1)) + np.sqrt(1 - rho) * rng.standard_normal((n, p))
+        x -= x.mean(axis=0)
+        truth = np.zeros(p)
+        truth[:6] = rng.choice([-1, 1], 6) * rng.uniform(1, 3, 6)
+        y = x @ truth + 0.5 * rng.standard_normal(n)
+        y -= y.mean()
+        lam, beta = _knots(Lasso(x, y, lower=np.full(p, -np.inf), upper=np.full(p, np.inf)))
+        ref_lam, ref_beta = _knots(Lasso(x, y))
+        assert len(lam) == len(ref_lam)
+        assert np.allclose(lam, ref_lam, rtol=1e-6, atol=1e-9 * ref_lam[0])
+        assert np.allclose(beta, ref_beta, atol=1e-6 * np.abs(ref_beta).max())
+
     def test_lam_max_is_the_first_breakpoint(self):
         """On the CLA route the threshold is read off the traced path."""
         x, y = _data(40, N, 0)

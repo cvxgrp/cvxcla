@@ -756,7 +756,10 @@ class CLA(InequalityConstrained):
         """Check the segment's held bounds where it ends (see :func:`cvxcla._checks.check_held_bounds`).
 
         A segment that ends at ``lambda = inf`` (an event at the vertex itself) is
-        empty and holds nothing, so it is not checked.
+        empty and holds nothing, so it is not checked. The multipliers are
+        ``Sigma w - q - lambda mu``, so their round-off scales with ``q`` as well as with
+        ``Sigma w``: near ``lambda = 0`` the first two nearly cancel, and the probe
+        estimate of ``Sigma``'s scale alone can be far smaller than either of them.
         """
         if np.isfinite(lam):
             lam_scale, mu_scale = self._scales
@@ -770,7 +773,7 @@ class CLA(InequalityConstrained):
                 self.upper_bounds,
                 self.tol,
                 mu_scale,
-                lam_scale * mu_scale,
+                max(lam_scale * mu_scale, float(np.max(np.abs(self.q_vector), initial=0.0))),
             )
 
     def __len__(self) -> int:

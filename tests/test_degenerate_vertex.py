@@ -244,6 +244,29 @@ class TestHeldBoundCertificate:
         with pytest.raises(DegenerateProblemError, match="should have left"):
             check_held_bounds(segment, 1.0, -1, np.ones((1, 2)), np.zeros(2), np.full(2, 2.0), 1e-9, 1.0, 1.0)
 
+    def test_no_active_rows(self):
+        """With no rows there are no multipliers to shift, and a wrong sign is declined.
+
+        The certificate used to hand linprog a problem without variables, which it
+        refuses with a ValueError instead of an answer.
+        """
+        segment = Segment(
+            r_alpha=np.array([1.0, 0.0]),
+            r_beta=np.zeros(2),
+            gamma=np.array([0.0, -0.5]),
+            delta=np.zeros(2),
+            at_upper=np.array([False, False]),
+            at_lower=np.array([False, True]),
+            free_in=np.array([True, False]),
+            active_ineq=np.zeros(0, dtype=bool),
+            eta_alpha=np.zeros(0),
+            eta_beta=np.zeros(0),
+            nu_alpha=np.zeros(0),
+            nu_beta=np.zeros(0),
+        )
+        with pytest.raises(DegenerateProblemError, match="should have left"):
+            check_held_bounds(segment, 1.0, -1, np.zeros((0, 2)), np.zeros(2), np.full(2, 2.0), 1e-9, 1.0, 1.0)
+
 
 class TestReducedGuard:
     """A singular free block is refused only when it is singular on the rows' null space."""
