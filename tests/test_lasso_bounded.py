@@ -138,7 +138,7 @@ class TestAgainstTheHomotopy:
 
         The knots are not compared one by one: on a design this ill-conditioned, events
         that nearly coincide split or merge with the last bits of the BLAS, so the two
-        routes can count different knots (47 and 45 on macOS CI) along the same curve.
+        routes can count different knots along the same curve.
         The paths are compared as curves instead, at every knot of either, and the CLA
         route is certified optimal at its knots and midpoints.
         """
@@ -156,23 +156,8 @@ class TestAgainstTheHomotopy:
         lams = sorted({bp.lam for bp in (*lasso.path, *ref.path)})
         scale = max(np.abs(ref.solution(lam)).max() for lam in lams)
         gap = max(np.abs(lasso.solution(lam) - ref.solution(lam)).max() for lam in lams)
-        empty = np.zeros((0, p))
-        # DIAGNOSTIC (temporary): which route is off the path on macOS CI?
-        cla_cert = _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper)
-        ref_cert = _certified(ref, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper)
-        worst = max(lams, key=lambda lam: np.abs(lasso.solution(lam) - ref.solution(lam)).max())
-        print(
-            f"DIAG knots cla={len(lasso.path)} homotopy={len(ref.path)} gap={gap:.3e} scale={scale:.3e} "
-            f"cert cla={cla_cert:.3e} homotopy={ref_cert:.3e} worst_lam/lam0={worst / ref.path[0].lam:.3e}"
-        )
-        print(
-            "DIAG cla lams/lam0",
-            np.array2string(np.array([bp.lam for bp in lasso.path]) / ref.path[0].lam, precision=6),
-        )
-        print(
-            "DIAG hom lams/lam0", np.array2string(np.array([bp.lam for bp in ref.path]) / ref.path[0].lam, precision=6)
-        )
         assert gap < 1e-6 * scale
+        empty = np.zeros((0, p))
         assert _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper) < 1e-9
 
     def test_lam_max_is_the_first_breakpoint(self):
