@@ -217,7 +217,7 @@ def check_held_bounds(
         upper: Per-asset upper bounds.
         tol: Tolerance for classifying a weight as sitting on a bound.
         mu_scale: The scale of the returns, which sets the scale of ``delta``.
-        cov_scale: The scale of ``Sigma w``, which sets the scale of ``gamma``.
+        cov_scale: The scale of ``Sigma w`` and ``q``, which sets the scale of ``gamma``.
 
     Raises:
         DegenerateProblemError: If the point at ``lamb`` is not optimal.
@@ -291,5 +291,9 @@ def _certified(
     p = eta.shape[0]
     a_ub = np.vstack([-rows.T[up], rows.T[down], -np.eye(k)[k - p :]])
     b_ub = np.concatenate([m[up] + floor, floor - m[down], eta + floor])
+    if k == 0:
+        # No active rows, so no multipliers to shift: the point is optimal as it stands
+        # or not at all. linprog refuses a problem without variables.
+        return bool(np.all(b_ub >= 0))
     result = linprog(np.zeros(k), A_ub=a_ub, b_ub=b_ub, bounds=[(None, None)] * k, method="highs")
     return bool(result.status == 0)

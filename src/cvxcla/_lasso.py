@@ -28,11 +28,11 @@ from .operators import QuadraticForm, bordered_solve
 class LassoState(NamedTuple):
     """The support, sign pattern, active inequality rows, and current penalty.
 
-    ``lam`` is the penalty at the segment's upper end. The event scan uses it to
-    require *strict* progress to a smaller penalty: right after a coefficient
-    enters it sits at zero, so its leave event lies at the current ``lam``; without
-    the strict window the shared selector would re-fire it and the walk would cycle
-    between entering and leaving the same coordinate.
+    ``lam`` is the penalty at the segment's upper end. Right after a coefficient
+    enters it sits at zero, so its leave event lies at the current ``lam``; the
+    event scan must not re-fire it, or the walk would cycle between entering and
+    leaving the same coordinate. It tells that echo from a second event due at the
+    same ``lam`` by direction (see :func:`scan_events`).
     """
 
     active: NDArray[np.bool_]
@@ -130,8 +130,16 @@ def scan_events(
 
     Rows ``0..n-1`` are coordinate events (col 0 leave, col 1 enter ``+``, col 2
     enter ``-``); rows ``n..n+p-1`` are inequality-row events (col 0 activate, col
-    1 release). Entries are ``-inf`` where the event cannot occur, and only
-    events strictly inside ``(tol, lam - tol)`` are kept.
+    1 release). Entries are ``-inf`` where the event cannot occur.
+
+    Every event is kept only in the direction in which it can happen: a coefficient
+    leaves while shrinking through zero against its sign, and a coordinate enters
+    while its correlation crosses ``+/- lam`` outwards. An event that does not move
+    that way is the echo of the one just taken (a coefficient that has just entered
+    sits at zero but grows), and is dropped. Events within ``tol`` of the current
+    ``lam`` that do move that way are due now and are kept at ``lam``: two events
+    can coincide, as when nearly collinear columns swap, and the one taken second
+    would otherwise be lost and the path continue with a wrong sign.
 
     Args:
         n: The problem dimension (number of features).
@@ -153,20 +161,23 @@ def scan_events(
 
     l_mat = np.full((n + rows, 4), -np.inf)
 
-    # leave: alpha_j - lam beta_slope_j = 0
-    leaves = active & (np.abs(beta_slope) > tol)  # pragma: no mutate
+    # leave: alpha_j - lam beta_slope_j = 0. As lam decreases beta_j moves by
+    # beta_slope_j, so it shrinks through zero only when that is against its sign.
+    leaves = active & (np.abs(beta_slope) > tol) & (state.signs * beta_slope < 0)  # pragma: no mutate
     l_mat[:n][leaves, 0] = alpha[leaves] / beta_slope[leaves]
 
-    # enter (+): p_j + lam q_j = +lam -> lam = p_j / (1 - q_j)
+    # enter (+): p_j + lam q_j = +lam -> lam = p_j / (1 - q_j). Below it the
+    # correlation exceeds +lam only when 1 - q_j > 0.
     denom_pos = 1.0 - q
-    enters_pos = inactive & (np.abs(denom_pos) > tol)  # pragma: no mutate
+    enters_pos = inactive & (denom_pos > tol)  # pragma: no mutate
     l_mat[:n][enters_pos, 1] = p[enters_pos] / denom_pos[enters_pos]
 
-    # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j). Disabled under the
-    # non-negative restriction beta >= 0, where only positive entries are allowed.
+    # enter (-): p_j + lam q_j = -lam -> lam = -p_j / (1 + q_j), crossed outwards
+    # only when 1 + q_j > 0. Disabled under the non-negative restriction beta >= 0,
+    # where only positive entries are allowed.
     if not nonneg:
         denom_neg = 1.0 + q
-        enters_neg = inactive & (np.abs(denom_neg) > tol)  # pragma: no mutate
+        enters_neg = inactive & (denom_neg > tol)  # pragma: no mutate
         l_mat[:n][enters_neg, 2] = -p[enters_neg] / denom_neg[enters_neg]
 
     if rows:
@@ -181,6 +192,8 @@ def scan_events(
         releasing = rows_active & (eta_slope > tol)  # pragma: no mutate
         l_mat[n:][releasing, 1] = -eta_alpha[releasing] / eta_slope[releasing]
 
-    # Keep only events that make strict progress to a smaller, positive penalty.
-    l_mat[(l_mat <= tol) | (l_mat >= state.lam - tol)] = -np.inf
+    # Keep events at a positive penalty no larger than the current one; those that
+    # round to just above it are due now.
+    l_mat[(l_mat <= tol) | (l_mat > state.lam + tol)] = -np.inf
+    np.minimum(l_mat, state.lam, out=l_mat)
     return l_mat

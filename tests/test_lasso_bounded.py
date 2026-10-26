@@ -128,6 +128,38 @@ class TestAgainstTheHomotopy:
             assert np.allclose(lam, ref_lam, atol=1e-9)
             assert np.allclose(beta, ref_beta, atol=1e-9)
 
+    def test_equicorrelated_design(self):
+        """Columns with pairwise correlation 0.99999: the end of the path is round-off, not a wrong bound.
+
+        At ``lambda = 0`` the multipliers of the unused legs are ``Sigma w - q``, two terms
+        of the size of ``X^T y`` that cancel to round-off. The held-bound check used to
+        measure that round-off against the probe scale of ``Sigma`` alone, which on this
+        nearly rank-one Gram split into legs is ``1e-4``, and declined the path.
+
+        The knots are not compared one by one: on a design this ill-conditioned, events
+        that nearly coincide split or merge with the last bits of the BLAS, so the two
+        routes can count different knots along the same curve.
+        The paths are compared as curves instead, at every knot of either, and the CLA
+        route is certified optimal at its knots and midpoints.
+        """
+        rng = np.random.default_rng(14)
+        n, p, rho = 100, 40, 0.99999
+        x = np.sqrt(rho) * rng.standard_normal((n, 1)) + np.sqrt(1 - rho) * rng.standard_normal((n, p))
+        x -= x.mean(axis=0)
+        truth = np.zeros(p)
+        truth[:6] = rng.choice([-1, 1], 6) * rng.uniform(1, 3, 6)
+        y = x @ truth + 0.5 * rng.standard_normal(n)
+        y -= y.mean()
+        lower, upper = np.full(p, -np.inf), np.full(p, np.inf)
+        lasso, ref = Lasso(x, y, lower=lower, upper=upper), Lasso(x, y)
+        assert lasso.path[0].lam == pytest.approx(ref.path[0].lam)
+        lams = sorted({bp.lam for bp in (*lasso.path, *ref.path)})
+        scale = max(np.abs(ref.solution(lam)).max() for lam in lams)
+        gap = max(np.abs(lasso.solution(lam) - ref.solution(lam)).max() for lam in lams)
+        assert gap < 1e-6 * scale
+        empty = np.zeros((0, p))
+        assert _certified(lasso, x, y, empty, np.zeros(0), empty, np.zeros(0), lower, upper) < 1e-9
+
     def test_lam_max_is_the_first_breakpoint(self):
         """On the CLA route the threshold is read off the traced path."""
         x, y = _data(40, N, 0)

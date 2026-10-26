@@ -107,6 +107,33 @@ class TestLassoPath:
             assert _kkt_violation(x, y, beta, lam) < 1e-7
             np.testing.assert_allclose(beta, _coordinate_descent(x, y, lam), atol=1e-5)
 
+    @pytest.mark.parametrize("draw", range(20))
+    def test_coinciding_events_are_both_taken(self, draw):
+        """Columns with pairwise correlation 0.99999: a swap of two coefficients at one lambda.
+
+        Nearly collinear columns trade places, one leaving as the other enters at the
+        same lambda. The walk takes one event per step, and used to drop every event
+        within ``tol`` of the current lambda after it, so the second was lost and the
+        path went on with a coefficient of the wrong sign. Which event comes first
+        depends on the last bits of the arithmetic, so the design is drawn with
+        round-off perturbations of ``x``; before the fix eight of these twenty failed on
+        an M4 Mac, and which ones depends on the BLAS.
+        """
+        rng = np.random.default_rng(14)
+        m, n, rho = 100, 40, 0.99999
+        x = np.sqrt(rho) * rng.standard_normal((m, 1)) + np.sqrt(1 - rho) * rng.standard_normal((m, n))
+        x -= x.mean(axis=0)
+        truth = np.zeros(n)
+        truth[:6] = rng.choice([-1, 1], 6) * rng.uniform(1, 3, 6)
+        y = x @ truth + 0.5 * rng.standard_normal(m)
+        y -= y.mean()
+        x = x * (1 + 1e-15 * np.random.default_rng(1000 + draw).standard_normal(x.shape))
+        lasso = Lasso(x, y)
+        lams = [bp.lam for bp in lasso.path]
+        scale = np.abs(x.T @ y).max()
+        for lam in [*lams, *(0.5 * (hi + lo) for hi, lo in pairwise(lams))]:
+            assert _kkt_violation(x, y, lasso.solution(lam), lam) < 1e-9 * scale, lam
+
     def test_solution_clamps_outside_range(self):
         """Querying beyond lam_max returns 0; at or below 0 returns the final fit."""
         x, y = _uncorrelated_problem()
