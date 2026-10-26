@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com),
 and entries are generated from [Conventional Commits](https://www.conventionalcommits.org).
 
+## [2.7.1] - 2026-10-26
+
+### New Features
+- *(experiments)* Check that BLdP and cvxcla agree, and find where they don't (#869, track 2) (#987)
+- *(experiments)* Is the BLdP comparison apples to apples? (#869, track 3) (#989)
+
+### Bug Fixes
+- Held-bound check without rows or against q, and coinciding homotopy events (#991)
+
+### Documentation
+- *(comparison)* BLdP has no pedagogical edge; the KKT formulation is the better entry (#869) (#990)
+
+### Maintenance
+- Two portfolios 2.5.0 refused, checked against an independent solver (#988)
+
 ## [2.7.0] - 2026-10-24
 
 ### New Features

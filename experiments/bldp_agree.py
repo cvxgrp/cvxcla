@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "clarabel==0.11.1",
-#     "cvxcla==2.7.0",
+#     "cvxcla==2.7.1",
 #     "cvxpy==1.9.3",
 #     "numpy==2.4.6",
 #     # scikit-base (a PyPortfolioOpt dependency) imports packaging without declaring it.
