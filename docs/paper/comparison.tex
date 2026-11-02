@@ -11,6 +11,24 @@
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries,
+  commentstyle=\color{black!55},
+  stringstyle=\color{black!75},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  frame=lines,
+  framesep=4pt,
+  xleftmargin=6pt,
+  xrightmargin=6pt,
+  literate={'}{\textquotesingle}1,
+}
 
 \setlist{itemsep=2pt,topsep=4pt}
 \newcommand{\code}[1]{\texttt{#1}}
@@ -52,6 +70,13 @@
   Both defects can be fixed with small changes, and we give them.
 \end{abstract}
 
+\begin{flushleft}
+  \textbf{Keywords:} critical line algorithm, efficient frontier, portfolio
+  optimization, parametric quadratic programming, reproducibility, open-source
+  software.\\
+  \textbf{JEL classification:} C61, C63, G11.
+\end{flushleft}
+
 \section{Introduction}
 
 The Critical Line Algorithm~\cite{markowitz1956} computes the entire
@@ -66,14 +91,24 @@ PyPortfolioOpt~\cite{pypfopt}, through which most practitioners use it today.
 \cvxcla{}~\cite{cvxcla,cvxclasoftware} is a later implementation of the same algorithm. It
 states each segment of the frontier as the KKT system of a parametric quadratic
 program and adds structured covariance backends and handling of degenerate
-cases. Comparisons between the two have so far been made by reading papers and
-source code; this note measures them.
+cases. Its software paper~\cite[Appendix~C]{cvxcla} already relates the two:
+it notes the per-candidate inverse, reports that PyPortfolioOpt misses some
+turning points, and gives a 39-line CLA written with the KKT conditions. This
+note measures what that appendix states. It is new in four respects: it
+decomposes the runtime gap factor by factor, separating the explicit inverse,
+the event formula and the Python interpreter; it checks both implementations
+against an independent solver on 90 problems, including degenerate and
+ill-conditioned ones; it attributes each wrong frontier to a defect; and it
+corrects the appendix on one point, since the second defect deletes only copies
+of turning points that are kept (Section~\ref{sec:correctness}).
 
-\paragraph{What is tested.} We test PyPortfolioOpt~1.6.0's \code{CLA}, the
-version of the BLdP code that users install, and write \emph{BLdP} for it
-throughout. We have not run the code as printed in the 2013 paper, and we do
-not claim that its findings carry over to that code
-(Section~\ref{sec:limitations}).
+\paragraph{What is tested.} We run PyPortfolioOpt~1.6.0's \code{CLA}, the
+version of the BLdP code that users install. It is the 2013 code ported from
+Python~2 to Python~3, with minor corrections; we write \emph{BLdP} for both.
+The two defects of Section~\ref{sec:correctness} appear verbatim in the 2013
+listing: \code{getMatrices} reads the blocked weights from \code{self.w[-1]}
+after \code{solve} has set \code{w[i\_in]=bi\_in}, and \code{purgeExcess}
+compares with \code{mu<mu\_}~\cite[Snippets~5 and~8, Appendix~A.1]{bailey2013}.
 
 \paragraph{Contributions.}
 \begin{itemize}
@@ -96,7 +131,41 @@ Both implementations trace the solutions $w(\lambda)$ of
   \quad\text{subject to}\quad \mathbf{1}^\top w = 1,\;\; \ell \le w \le u,
 \end{equation}
 for $\lambda$ from $\infty$ down to 0, and use the same convention for
-$\lambda$. They also share several design choices. Both start from the same
+$\lambda$. In \cvxcla{} the problem is stated by its data, term by term
+(Listing~\ref{lst:cvxcla}). The same constructor takes general equality rows
+$Aw = b$, inequality rows $Gw \le h$ (arguments \code{g} and \code{h}) and a
+covariance operator in place of the matrix $\Sigma$; BLdP's problem class is
+the special case of one budget row and box bounds.
+
+\begin{figure}[ht]
+\begin{lstlisting}[style=py]
+import numpy as np
+from cvxcla import CLA
+
+rng = np.random.default_rng(0)
+n = 10
+mu = rng.uniform(0.0, 1.0, n)              # expected returns
+X = rng.standard_normal((2 * n, n))
+Sigma = X.T @ X / (2 * n)                  # covariance
+
+cla = CLA(
+    mean=mu, covariance=Sigma,             # objective of (1)
+    lower_bounds=np.zeros(n),              # l <= w
+    upper_bounds=np.ones(n),               #      w <= u
+    a=np.ones((1, n)), b=np.ones(1),       # budget 1'w = 1
+)
+
+for tp in cla.turning_points:              # lambda from inf down to 0
+    print(f"{tp.lamb:10.4g}", np.round(tp.weights, 3))
+
+sharpe, w = cla.frontier.max_sharpe        # maximum-Sharpe portfolio
+\end{lstlisting}
+\caption{Problem~\eqref{eq:qp} in \cvxcla{}~2.7.1. The trace stores one
+  turning point per change of the free set; on this instance there are ten,
+  from $\lambda = \infty$ to $\lambda = 0$.}\label{lst:cvxcla}
+\end{figure}
+
+The two implementations also share several design choices. Both start from the same
 greedy first turning point: every weight at its lower bound, then assets filled
 in descending order of expected return until the budget binds. Both end with an
 explicit turning point at $\lambda = 0$, departing from Niedermayer and
@@ -395,7 +464,7 @@ changes, behaves as follows.
   \item \emph{Tied means.} It raises \code{TypeError} on 7 of 9. When the
     denominator $c$ of the event formula is exactly zero,
     \code{\_compute\_lambda} returns \code{None}, and the comparison with the
-    previous $\lambda$ fails (PyPortfolioOpt issue \#738). In one case $c$ was
+    previous $\lambda$ fails under Python~3 (PyPortfolioOpt issue \#738). In one case $c$ was
     only close to zero and the trace continued along a wrong path: it starts
     at one vertex of the tied face and never frees the other tied assets
     (gap $0.25$). \cvxcla{} starts at the minimiser on that face.
@@ -505,9 +574,11 @@ its per-step complexity and its behaviour on degenerate inputs are unchanged.
 
 \section{Limitations}\label{sec:limitations}
 
-The code tested is PyPortfolioOpt~1.6.0's descendant of BLdP, not the code
-printed in the 2013 paper; whether the two defects are present in the original
-is not checked. The Markowitz--Todd 10-asset example is not reproduced. All
+The code run is the Python~3 port in PyPortfolioOpt~1.6.0. The two defects
+are in the 2013 listing verbatim, but some failures on degenerate inputs are
+specific to Python~3: there, comparing \code{None} with a number raises
+\code{TypeError}, while under Python~2, where \code{None} compares below every
+number, the 2013 code proceeds; what it then returns was not tested. The Markowitz--Todd 10-asset example is not reproduced. All
 timings come from one machine and one problem family; other CPUs and BLAS
 builds, $n > 640$ (and $n > 320$ for Table~\ref{tab:fair}) and memory use were
 not measured. Software older than numpy~1.26 and Python~3.12 could not be

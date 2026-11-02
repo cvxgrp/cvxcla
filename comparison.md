@@ -216,9 +216,13 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
   λ ≈ 1e-10, where its weights are 2e-3 off the QP's along a near-null direction
   of Σ, while BLdP-fixed and the QP agree to 1e-14. As shipped, BLdP is wrong
   from κ = 1e2 because of the two defects.
-- **Not measured:** the 2013 paper's own code as published rather than
-  PyPortfolioOpt's descendant (whether defects 1 and 2 are in the original is not
-  checked here), the Markowitz–Todd 10-asset example, n > 100, and constraint
+- **The 2013 code.** PyPortfolioOpt's `CLA` is the 2013 code ported from
+  Python 2 to Python 3, with minor corrections. Both defects are in the 2013
+  listing verbatim: `getMatrices` reads `wB` from `self.w[-1]` after `solve` has
+  set `w[i_in]=bi_in`, and `purgeExcess` compares with `mu<mu_`. The `TypeError`
+  failures on tied means are Python 3's: Python 2 lets `None` compare below
+  every number, so the 2013 code proceeds there; what it returns was not tested.
+- **Not measured:** the Markowitz–Todd 10-asset example, n > 100, and constraint
   classes beyond a budget and box bounds (BLdP supports nothing else).
 
 ### Measured: is the comparison apples to apples? (#869, track 3)
