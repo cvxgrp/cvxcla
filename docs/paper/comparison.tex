@@ -1,0 +1,668 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\cvxcla}{\code{cvxcla}}
+\newcommand{\repo}{https://github.com/cvxgrp/cvxcla/blob/main}
+\newcommand{\repofile}[1]{\href{\repo/#1}{\code{\detokenize{#1}}}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\title{\cvxcla{} vs.\ Bailey--López de Prado (2013):\\
+  a measured comparison of two Critical Line Algorithm implementations}
+\author{Thomas Schmelzer}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  We compare the \cvxcla{} implementation of Markowitz's Critical Line
+  Algorithm with the reference open-source implementation of Bailey and
+  López de Prado (BLdP)~\cite{bailey2013}, as shipped in PyPortfolioOpt.
+  Beyond a source-level comparison, we report three experiments. First, the
+  runtime gap grows with problem size without a plateau, reaching $418\times$
+  at $n = 640$; at most $1.6\times$ of it is due to the dense inverse inside
+  the candidate loop. Second, the shipped BLdP code fails an exact path check on
+  36 of 57 generic problems; one bug (stale blocked weights) loses real
+  portfolios, while a second defect only drops $\lambda$ labels. It also fails
+  on degenerate inputs that \cvxcla{} handles. Third, restricted to
+  BLdP's own problem class, the gap is algorithmic: BLdP's per-step complexity
+  is a factor of about $n$ above what the algorithm needs, a factor that any
+  vectorised CLA recovers. \cvxcla{} can claim robustness at a constant cost,
+  faster linear algebra at scale, and features outside BLdP's class, but not
+  the $100\times$ headline.
+\end{abstract}
+
+\section{Introduction}
+
+This note compares the \cvxcla{} paper (Schmelzer, \emph{The Critical Line
+Algorithm as implemented in cvxcla}~\cite{cvxcla}) with Bailey and López de
+Prado, ``An Open-Source Implementation of the Critical-Line Algorithm for
+Portfolio Optimization''~\cite{bailey2013}.
+
+This is not an arbitrary comparison: Bailey--López de Prado (BLdP) is the
+reference that \cvxcla{} benchmarks against, and the PyPortfolioOpt~\cite{pypfopt}
+\code{CLA} used in the experiments is an implementation of it. The comparison
+therefore doubles as a fact-check of \cvxcla{}'s \S8 (``Relation to the
+Bailey--López de Prado algorithm'').
+
+Sections~\ref{sec:lineage} and~\ref{sec:differences} compare the two
+implementations from their papers and source. Sections~\ref{sec:gap}--\ref{sec:fair}
+report the three experiments of issue
+\href{https://github.com/cvxgrp/cvxcla/issues/869}{\#869}, each reproducible
+with a script under \code{experiments/}. Section~\ref{sec:strengths} weighs
+the two papers, and Section~\ref{sec:verdict} concludes.
+
+\section{Shared lineage}\label{sec:lineage}
+
+Both papers compute the \emph{entire} efficient frontier exactly as a finite
+list of Markowitz turning points~\cite{markowitz1956}, in Python. They share
+several concrete design choices:
+
+\begin{itemize}
+  \item \textbf{First turning point.} The same greedy construction: start
+    every weight at its lower bound, fill assets in descending
+    expected-return order until the budget binds; the last (partially filled)
+    asset is the sole free asset (BLdP \code{initAlgo}, Snippet~2;
+    \cvxcla{} \code{init\_algo}, \S3).
+  \item \textbf{Minimum-variance endpoint.} Both append an explicit turning
+    point at $\lambda = 0$, and both explicitly note this \emph{departs from
+    Niedermayer et al.}~\cite{niedermayer2010}, who keep searching for turning
+    points at negative $\lambda$.
+  \item \textbf{Maximum-Sharpe portfolio.} Both locate it by a
+    one-dimensional search over the convex combination of the two turning
+    points that bracket the discrete Sharpe maximum (BLdP: golden-section
+    search, Snippets~13--14; \cvxcla{}: one-dimensional search, \S6).
+  \item \textbf{Frontier interpolation.} Both reconstruct intermediate
+    frontier portfolios as convex combinations of adjacent turning points.
+\end{itemize}
+
+\section{Head-to-head differences}\label{sec:differences}
+
+Table~\ref{tab:differences} summarises the differences, verified against the
+BLdP source.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Differences between the two implementations.}\label{tab:differences}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.8cm}LL}
+    \toprule
+    Axis & Bailey--López de Prado (2013) & \cvxcla{} \\
+    \midrule
+    Covariance representation
+      & Explicit dense matrix, sliced via \code{getMatrices} /
+        \code{reduceMatrix} (Snippet~5)
+      & Operator protocol (\code{matvec}, \code{solve\_free}, \code{cross})
+        plus structured backends \\
+    Free-block linear algebra
+      & Explicit \code{np.linalg.inv(covarF)} at each step (Snippets~3, 7--9)
+      & Single block-eliminated KKT solve via an $m \times m$ Schur
+        complement; no explicit inverse \\
+    Asset-entry search
+      & Full inverse recomputed \emph{inside} the candidate loop
+        \code{for i in b} (Snippet~3), hence $O(n)$ inverses per turning point
+      & Vectorised event search; one solve per step \\
+    Structured risk models
+      & Not supported
+      & Diagonal-plus-low-rank factor backend via the Woodbury identity (no
+        $n \times n$ matrix ever formed) \\
+    Constraints
+      & Box bounds and a single (budget) equality only (inputs: \code{mean},
+        \code{covar}, \code{lB}, \code{uB})
+      & Arbitrary $m$ linear equality constraints $Aw = b$ \\
+    Degeneracy handling
+      & No general anti-cycling rule; a single hack (\code{mean[-1]+=1e-5})
+        for all-equal means
+      & Bland-style lowest-index tie-break and $\sqrt{\varepsilon}$ slope
+        floor (\S4.3--4.4) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{The central claim checks out}
+
+\cvxcla{}'s most load-bearing \S8/\S9.3 claim, that PyPortfolioOpt
+``recomputes that full inverse once for every candidate'' in the asset-entry
+search, is literally BLdP Snippet~3: \code{covarF\_inv = np.linalg.inv(covarF)}
+sits \emph{inside} the \code{for i in b} candidate loop. The per-candidate loop
+is what drives the runtime gap, but the measurements below show that the dense
+\emph{inverse} inside it accounts for only a small part of that gap.
+
+One nuance is worth noting: BLdP's \emph{removal} branch (Snippet~7) computes
+the inverse once \emph{outside} its loop, so the per-candidate rebuild is
+specific to the \emph{addition} branch, which is exactly how \cvxcla{} phrases
+it.
+
+\section{Where the gap comes from}\label{sec:gap}
+
+The script \repofile{experiments/bldp_gap.py} re-measures the gap and breaks it
+down. It uses PyPortfolioOpt~1.6.0, numpy~2.4.6 (Accelerate) and \cvxcla{}~2.6.0
+on an Apple M4 Pro, with the factor-model problems of the paper's scaling
+figure ($K = 10$, long-only, budget), 3 seeds $\times$ 3 repeats per size, and
+each measurement in a fresh process. Ratios are medians over seeds; the spread
+over seeds is within $\pm 10\%$.
+
+\begin{itemize}
+  \item \textbf{Code reading confirmed.} In PyPortfolioOpt's \code{\_solve}
+    (verified by parsing the shipped source, not the paper's snippet
+    numbering), the only \code{np.linalg.inv} inside a loop is the addition
+    branch's \code{for i in b}. At $n = 640$ a trace performs 321 inverses per
+    turning point, about $n/2$.
+  \item \textbf{The gap grows with $n$, with no plateau.} BLdP/\cvxcla{} is
+    $2.8\times$ at $n = 20$, $16\times$ at 80, $146\times$ at 320 and
+    $\mathbf{418\times}$ at 640, against the $\approx 340\times$ reported. Over
+    the last doubling, BLdP scales like $n^{3.7}$ and \cvxcla{} like $n^{2.1}$.
+  \item \textbf{The gap breaks into three factors}, each from changing one
+    thing at a time (Table~\ref{tab:gap}).
+\end{itemize}
+
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Factors of the runtime gap (track~1). Each column changes one thing
+    at a time; their product is the total.}\label{tab:gap}
+  \begin{tabular}{rrrrr}
+    \toprule
+    $n$ & \shortstack[r]{inverse $\to$ bordered\\update, loop kept}
+        & \shortstack[r]{Python loop $\to$\\vectorised search}
+        & \shortstack[r]{minimal vectorised\\CLA $\to$ \cvxcla{}}
+        & total \\
+    \midrule
+    20  & $0.9\times$ & $12\times$  & $0.3\times$ & $2.8\times$ \\
+    80  & $1.0\times$ & $37\times$  & $0.4\times$ & $16\times$  \\
+    320 & $1.3\times$ & $86\times$  & $1.3\times$ & $146\times$ \\
+    640 & $1.6\times$ & $141\times$ & $1.9\times$ & $418\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Replacing each candidate's fresh $O(n_F^3)$ inverse with an $O(n_F^2)$
+bordered update, while keeping the loop, buys at most $1.6\times$. Most of the
+gap comes from evaluating $O(n)$ candidates one at a time. (Section~\ref{sec:fair}
+shows that this cost is the per-candidate \emph{formula}, not the Python loop:
+the loop itself costs $1.2$--$1.5\times$.) Each evaluation re-slices
+\code{covarF}/\code{covarFB} and re-runs the $\lambda$ formula, so it costs
+$O(n \cdot n_F)$ with or without an inverse. A phase profile of the shipped
+code agrees: the addition-branch inverses take 8\% of the trace at $n = 20$
+and 41\% at $n = 640$. The slicing takes 27--40\%, and the $\lambda$ formula
+plus the removal branch most of the rest. The last factor is \cvxcla{}'s own
+cost relative to a $\sim$100-line vectorised CLA: \cvxcla{} is $3\times$
+\emph{slower} at $n = 20$ (validation and guards), and $1.9\times$ faster at
+$n = 640$ (a block-eliminated solve instead of an explicit inverse).
+
+\begin{itemize}
+  \item \textbf{Maintaining the inverse pays off at scale, in both codes.}
+    Updating the free-block inverse by rank-one steps instead of rebuilding it
+    makes the minimal CLA $3.9\times$ faster at $n = 640$, and makes \cvxcla{}
+    $2.5\times$ faster with \code{IncrementalDenseCovariance} instead of the
+    default dense backend (no gain below $n = 80$). With matching linear
+    algebra, \cvxcla{}'s incremental backend is $3\times$ slower than the
+    minimal CLA at $n = 20$ but $1.25\times$ \emph{faster} at $n = 640$
+    (204\,ms against 247\,ms), and it scales better ($n^{1.7}$ against
+    $n^{2.3}$ over the last doubling). These numbers come from a separate run of
+    the four fast variants; the BLdP columns of Table~\ref{tab:gap} were not
+    re-timed with it.
+  \item \textbf{BLdP can cycle.} Its re-entry test \code{lam < self.ls[-1]}
+    has no tolerance and its loop has no iteration cap. With bordered updates,
+    which change $\lambda$ by about $10^{-15}$, an asset alternately leaves and
+    re-enters at the same $\lambda$ forever: 5 of the 18 runs of that variant
+    never terminate. The shipped code finished on all 18 problems, but only by
+    the luck of its rounding. (While checking the vectorised variants against
+    \cvxcla{}, the experiment also found that \code{experiments/inverse\_cla.py}
+    used an absolute $10^{-5}$ tie window on $\lambda$ that stepped past
+    turning points from $n = 160$ on, with weights down to $-5 \times 10^{-6}$
+    under a zero bound. It now uses $10^{-9}$.)
+  \item \textbf{Not measured:} other CPUs or BLAS builds (\code{--threads} is
+    available but was not swept), $n > 640$, other problem families, memory,
+    or the original BLdP code as published rather than PyPortfolioOpt's
+    descendant of it.
+\end{itemize}
+
+\section{Do they compute the same frontier?}\label{sec:agree}
+
+The script \repofile{experiments/bldp_agree.py} feeds the same \code{mean},
+\code{covariance}, \code{lB} and \code{uB} to PyPortfolioOpt~1.6.0's \code{CLA}
+and to \cvxcla{}~2.7.0. It checks each trace on its own against
+CVXPY~1.9.3~\cite{cvxpy} / Clarabel~0.11.1~\cite{clarabel} at tolerance
+$10^{-12}$, at every turning point and every segment midpoint, and compares the
+two paths $w(\lambda)$ exactly. Both use the same $\lambda$ convention. There
+are 90 problems in eight families over 3 seeds: generic, shorting, all-equal
+means, tied means, duplicated assets, rank-deficient sample covariances, a
+conditioning sweep from $10^{2}$ to $10^{16}$, and bounds that bind exactly.
+``Exact'' means feasible to $10^{-9}$, $\lambda$ running from $\infty$ to 0,
+and a relative objective gap below $10^{-8}$ everywhere.
+
+\subsection{On generic problems the shipped code is often wrong}
+
+\cvxcla{} is exact on all 57 feasible non-degenerate problems except two at
+$\kappa \ge 10^{14}$ (Section~\ref{sec:conditioning}). The shipped BLdP code is
+exact on only 21 of them. The rest fail the check, with objective gaps up to
+$3 \times 10^{-4}$ and paths up to $0.35$ apart in max-norm, and no error is
+raised. Even plain long-only problems fail on 4 of 12 ($n = 10$ to 100), all
+from the first defect below. The check compares the two paths as functions of
+$\lambda$, so it counts two different defects, and only the first one loses
+portfolios:
+
+\begin{enumerate}
+  \item \textbf{Stale blocked weights.} When a free asset hits a bound,
+    \code{\_solve} sets the working vector \code{w[i] = bound}.
+    \code{\_get\_matrices} then reads the blocked weights from
+    \code{self.w[-1]}, the \emph{previous} turning point. The new point is
+    solved with asset $i$ at its old free value, so its budget is off by
+    exactly $\text{bound} - w_{\text{prev},i}$ (e.g.\ $-4.1 \times 10^{-2}$).
+    \code{\_purge\_num\_err} deletes it as infeasible, and a true vertex goes
+    with it. Sometimes the trace recovers instead by removing, re-adding and
+    removing the asset at the same $\lambda$. That leaves three copies of one
+    point, the same leave-and-re-enter pattern that Section~\ref{sec:gap} saw
+    cycle forever under bordered updates. They do not cause that cycle:
+    Section~\ref{sec:fair} found the bordered variant cycling on the same 9 of
+    30 problems with or without both fixes. Reading the blocked weights from
+    the working vector (\code{bldp-fix-w}, a two-method subclass) makes 52 of
+    the 57 exact. This bug is user-visible: PyPortfolioOpt issue
+    \href{https://github.com/PyPortfolio/PyPortfolioOpt/issues/750}{\#750}
+    reports it independently, with \code{max\_sharpe} silently suboptimal in
+    22 of 300 random problems.
+  \item \textbf{A zero-tolerance purge, which loses only $\lambda$ labels.}
+    \code{\_purge\_excess} deletes a turning point whenever a later one has a
+    strictly higher $\mu^\top w$. Where $\mu^\top w$ is flat, rounding makes
+    it rise by about $10^{-14}$. Along an exact trace, though, $\mu^\top w$ is
+    flat only where the weights are constant, since
+    $\mathrm{d}(\mu^\top w)/\mathrm{d}\lambda = \mu^\top (\mathrm{d}w/\mathrm{d}\lambda)$
+    vanishes only when $\mathrm{d}w/\mathrm{d}\lambda = 0$. So every point the
+    purge deletes is a copy of a kept turning point. With the first bug fixed,
+    it deletes 34 points in 17 of the 57 problems, and every one matches a kept
+    point to within $1.1 \times 10^{-11}$. No portfolio is lost, and
+    \code{max\_sharpe}, which interpolates by weight and never reads
+    $\lambda$, is unchanged. What is lost is the $\lambda$ at which the
+    weights stop being constant; the check here reads the path in $\lambda$,
+    so it scores this as an error. This defect was first reported as deleting
+    true vertices; the reporter of \#750 showed otherwise, and the correction
+    is posted there. With a $10^{-12}$ relative tolerance as well
+    (\code{bldp-fix-wp}), 56 of 57 are exact as $\lambda$-paths with gaps
+    $\le 7 \times 10^{-13}$. The remaining case cycles at
+    $\kappa = 10^{16}$.
+\end{enumerate}
+
+With both fixes, BLdP and \cvxcla{} trace the same path to $10^{-8}$ on every
+one of these problems except the two below. Only the first fix is needed for
+the same set of portfolios. The defects are in the implementation, not in the
+algorithm.
+
+\subsection{Degenerate inputs break BLdP; \cvxcla{} handles every one}
+
+\cvxcla{} is exact on all 30 problems in the all-equal, tied, duplicated and
+rank-deficient families. BLdP, with or without the two fixes:
+
+\begin{itemize}
+  \item \emph{All-equal means:} raises \code{TypeError} on all 6.
+    PyPortfolioOpt ships the paper's \code{mean[-1] += 1e-5} hack commented
+    out. With it switched back on, BLdP still raises for $n = 20$, and for
+    $n = 5$ traces the frontier of a perturbed problem whose $\lambda$ is
+    scaled by $1/10^{-5}$ (gap $\approx 4 \times 10^{-5}$). The true frontier
+    is the single minimum-variance point.
+  \item \emph{Ties in expected returns:} raises \code{TypeError} on 7 of 9.
+    When the event-search denominator $c$ is exactly 0,
+    \code{\_compute\_lambda} returns \code{None}, and the comparison
+    \code{lam < self.ls[-1]} fails on it. Once, rounding kept $c$ off zero and
+    the trace ran silently down the wrong path: \code{\_init\_algo} starts at
+    one vertex of the tied face and never frees the other tied assets, giving a
+    gap of $0.25$. \cvxcla{} starts at the face minimiser.
+  \item \emph{Duplicated assets / rank-deficient $\Sigma$:} \code{LinAlgError}
+    on 8 of 9 duplicated problems and \code{TypeError} on the 3 problems with
+    $T < n/2$. Worse, when an exact duplicate of the top asset enters later,
+    \code{np.linalg.inv} of the singular free block (condition number
+    $1.5 \times 10^{16}$) does not raise. Every later point violates the
+    budget, \code{\_purge\_num\_err} deletes them all, and the frontier
+    silently stops at $\lambda = 11.4$ instead of 0. With $T = 30 < n = 40$ the
+    fixed code is exact on 2 of 3 problems and goes wrong near $\lambda = 0$ on
+    the third (gap $2 \times 10^{-6}$).
+  \item \emph{Infeasible bounds} ($\sum_i u_i < 1$): \code{IndexError} from
+    \code{\_init\_algo} walking off the asset list. \cvxcla{} raises
+    \code{InfeasibleProblemError}.
+\end{itemize}
+
+\subsection{Which degrades first with conditioning?}\label{sec:conditioning}
+
+With both fixes, BLdP's explicit inverse holds up surprisingly well: gaps
+$\le 4 \times 10^{-13}$ up to $\kappa = 10^{14}$, and one cycle at
+$10^{16}$. \cvxcla{} stays exact up to $10^{12}$. At $\kappa = 10^{14}$ and
+$10^{16}$ it has one problem each with a gap of $5 \times 10^{-8}$ and
+$8 \times 10^{-8}$. That is on a segment at $\lambda \approx 10^{-10}$, where
+its weights are $2 \times 10^{-3}$ off the QP's along a near-null direction of
+$\Sigma$, while BLdP-fixed and the QP agree to $10^{-14}$. As shipped, BLdP is
+wrong from $\kappa = 10^{2}$ because of the two defects.
+
+\paragraph{Not measured.} The 2013 paper's own code as published rather than
+PyPortfolioOpt's descendant (whether defects 1 and 2 are in the original is not
+checked here), the Markowitz--Todd 10-asset example~\cite{markowitz2000},
+$n > 100$, and constraint classes beyond a budget and box bounds (BLdP
+supports nothing else).
+
+\section{Is the comparison apples to apples?}\label{sec:fair}
+
+The script \repofile{experiments/bldp_fair.py} re-times the gap with every rung
+restricted to BLdP's own problem class: dense $\Sigma$, box bounds and one
+budget row. It uses the $K = 10$ factor problems of Section~\ref{sec:gap},
+$n = 20$ to 320, 3 seeds $\times$ 3 repeats, each in a fresh process, on the
+same M4 Pro, Python~3.12 and numpy~2.4.6 stack. It asks which parts of the gap
+are \cvxcla{}'s to claim.
+
+\subsection{Correcting BLdP does not shrink the gap}
+
+With both fixes of Section~\ref{sec:agree}, BLdP is 4--9\% \emph{slower}
+than as shipped, because it keeps the turning points the purges used to delete.
+The gap against a correct BLdP is $3.5\times$ at $n = 20$ and $150\times$ at
+$n = 320$, against $3.1\times$ and $144\times$ for the shipped code. The ratios
+of Section~\ref{sec:gap} therefore stand, but they were measured against code
+that returns a wrong frontier on many of these problems (exact distance to
+\cvxcla{}'s path up to $10^{-2}$).
+
+\subsection{The gap is algorithmic, not Python}
+
+The $12$--$141\times$ ``vectorised event search'' rung of Table~\ref{tab:gap}
+changed two things at once. A new rung, \code{loop} (an option of
+\code{InverseCLA}), keeps the reduced-cost formula of the vectorised code but
+visits the assets one at a time in a Python loop. That splits the rung in two
+(Table~\ref{tab:fair}).
+
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Factors of the gap on BLdP's own problem class (track~3).}\label{tab:fair}
+  \begin{tabular}{rrrrrr}
+    \toprule
+    $n$ & bug fixes & formula & interpreter & \cvxcla{} vs minimal & total \\
+    \midrule
+    20  & $0.91\times$ & $11\times$ & $1.22\times$ & $0.23\times$ & $3.1\times$ \\
+    80  & $0.92\times$ & $27\times$ & $1.50\times$ & $0.44\times$ & $16\times$  \\
+    320 & $0.96\times$ & $83\times$ & $1.45\times$ & $1.24\times$ & $144\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The \emph{formula} factor grows like $n^{0.96}$. BLdP re-derives each
+candidate's $\lambda$ from its own bordered system, re-slicing $\Sigma$ and
+recomputing the shared products each time: $O(n)$ candidates $\times$
+$O(n_F^3 + n \cdot n_F)$ work per turning point. Reading every candidate's
+$\lambda$ off one solve of the current segment ($-\gamma_i/\delta_i$) costs
+$O(n)$ per candidate. That is a change in complexity, and it accounts for
+almost all of the gap. It includes the per-candidate inverse, which
+Section~\ref{sec:gap} put at $\le 1.6\times$. The \emph{interpreter} factor,
+the same flops dispatched once per asset instead of once per step, is flat at
+$1.2$--$1.5\times$ ($n^{-0.1}$). A Python loop is not what makes BLdP slow.
+
+\subsection{What \cvxcla{}'s architecture is entitled to claim}
+
+None of the formula factor is specific to \cvxcla{}: a $\sim$100-line
+vectorised CLA (\code{vec-fresh}) has it too. \cvxcla{}'s own contribution is
+the last column of Table~\ref{tab:fair}. It is $4.3\times$ \emph{slower} than
+the minimal code at $n = 20$ and $1.24\times$ faster at $n = 320$, crossing
+over near $n = 250$. A cProfile of \cvxcla{} shows where its extra time goes:
+
+\begin{itemize}
+  \item \emph{Guards} take 48\% of its trace at $n = 20$ (1.3\,ms) and 25\% at
+    $n = 320$ (26\,ms). These are the feasibility checks and projection,
+    held-bound checks, active-row guards, the multipliers' round-off level,
+    the mean shift and tied-start handling.
+  \item \emph{Generality} (the inequality-row event search, idle here) takes
+    $\le 1\%$.
+  \item The \emph{core} (75\% at $n = 320$, 79\,ms) is faster than the minimal
+    code's whole trace (131\,ms): a block-eliminated Cholesky solve rather
+    than an explicit inverse.
+\end{itemize}
+
+So on BLdP's problem class, supporting arbitrary $Aw = b$ and $Gw \le h$ costs
+\cvxcla{} almost nothing. Its robustness costs a constant share, and its linear
+algebra wins at scale.
+
+\subsection{The environment does not explain the gap}
+
+Both codes ran on the same machine and stack, so hardware cancels in every
+ratio. Single-threaded BLAS changes no timing by more than 7\%, presumably
+because the blocks are too small for threads to help. The shipped BLdP code at
+$n = 160$ takes about 1.43\,s on Python 3.12, 3.13 and 3.14 alike
+(numpy~2.4.6). It takes \textbf{3.83\,s} under numpy~1.26.4, $2.6\times$
+slower. A newer numpy \emph{narrows} the gap, so the ratios above are, if
+anything, kind to BLdP compared with the stack it was written for.
+
+\subsection{What a scaling comparison may conclude}
+
+BLdP set out to make the CLA available and verifiably correct at $n = 10$. It
+never claimed speed, and at $n = 20$, the smallest size timed here, the gap is
+about $3\times$. The measured gap supports a narrow statement: \emph{the
+reference implementation, as shipped and widely used, has a per-step
+complexity a factor of about $n$ above what the algorithm needs.} That is a
+property of the code's formulation, not of the CLA, not of Python, and mostly
+not of \cvxcla{}'s architecture: the formula factor ($11$--$83\times$) belongs
+to any vectorised CLA. \cvxcla{} can claim the last column, robustness at a
+constant cost, and the features outside BLdP's class (general constraints,
+factor backends). It cannot claim the $100\times$ headline over BLdP.
+
+\paragraph{Not measured.} Stacks older than numpy~1.26 or Python~3.12
+(PyPortfolioOpt~1.6.0 and \cvxcla{} do not install there, so the 2013
+environment is out of reach), other CPUs or BLAS builds, $n > 320$ for this
+split, and memory. The profile fractions are taken under cProfile, which
+inflates Python-call-heavy code, so the guards' share is an upper estimate.
+
+\section{Where each paper is stronger}\label{sec:strengths}
+
+\subsection{Bailey--López de Prado, on its own terms}
+
+\begin{itemize}
+  \item \textbf{Availability.} In 2013 it filled a genuine gap: it was the
+    first documented open-source CLA in a scientific language (prior art was
+    the Markowitz--Todd VBA-Excel implementation~\cite{markowitz2000}). Its
+    code became PyPortfolioOpt's \code{CLA} and is widely cited and used. That
+    impact is real, whatever the code's quality.
+  \item \textbf{A reference answer.} It reproduces the canonical
+    Markowitz--Todd 10-asset example to 15 significant figures. One example is
+    a narrow check, though: Section~\ref{sec:agree} found the code wrong on 4
+    of 12 ordinary long-only problems from $n = 10$ up.
+\end{itemize}
+
+It has no pedagogical edge. As code to learn from, it shows how a parametric
+QP should \emph{not} be solved:
+
+\begin{itemize}
+  \item It re-derives every candidate event from its own bordered system,
+    about $n$ times the work per turning point that the algorithm needs
+    (Section~\ref{sec:fair}).
+  \item It compares $\lambda$ values with no tolerance, so it can cycle
+    (Section~\ref{sec:gap}).
+  \item It hides infeasible turning points by deleting them, which turns the
+    stale-weight bug into a silently wrong frontier (Section~\ref{sec:agree}).
+\end{itemize}
+
+\subsection{\cvxcla{}}
+
+\begin{itemize}
+  \item \textbf{A better entry into the field.} \cvxcla{} states each segment
+    as the KKT system of the parametric QP: the optimality conditions on the
+    free set, multipliers for the active constraints, and events where a
+    weight hits a bound or a multiplier changes sign. That is the language of
+    the parametric-QP and homotopy literature. The payoff is transferable
+    understanding. The same \code{ParametricProblem} / \code{trace} engine runs
+    the LARS/LASSO homotopy, with the same four events under different
+    names~\cite{schmelzer2026}. BLdP's bespoke $\lambda$ formulas, re-derived
+    per candidate, teach none of that structure.
+  \item \textbf{Scale demonstrated.} BLdP only ever runs its $n = 10$ toy
+    example. \cvxcla{} shows $n = 640$ benchmarks, an $n = 20{,}000$ factor
+    stress test, and a real $n = 494$ S\&P~500 frontier.
+  \item \textbf{Robustness.} BLdP never discusses conditioning, cycling, or
+    tolerances and has no general anti-cycling rule. \cvxcla{} hardens the
+    event logic \emph{and} honestly documents where it still fails (\S9.6).
+  \item \textbf{Representation-agnosticism.} The covariance-operator
+    abstraction (and the resulting sub-quadratic factor backend) is the one
+    element not present in BLdP, or, per \cvxcla{}, in any standard CLA
+    implementation.
+  \item \textbf{Independent exactness check.} \cvxcla{} validates against a
+    general convex QP solver (CVXPY/Clarabel) at solver precision, rather than
+    against a single known reference answer.
+\end{itemize}
+
+\section{Ranking}\label{sec:ranking}
+
+\cvxcla{} ranks clearly ahead, and the deciding axis is correctness, not
+speed. All evidence comes from this repository's own experiments, written by
+\cvxcla{}'s author, and none of it has been reproduced independently.
+
+\subsection{Axis by axis}
+
+\begin{table}[ht]
+  \centering
+  \small
+  \caption{Ranking by axis.}\label{tab:ranking}
+  \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.6cm}
+      >{\raggedright\arraybackslash}p{1.9cm}L}
+    \toprule
+    Axis & Ahead & Evidence \\
+    \midrule
+    Correctness & \cvxcla{}
+      & Shipped BLdP loses real turning points through stale blocked weights
+        (silently suboptimal \code{max\_sharpe} in \#750) and fails on tied,
+        duplicated and rank-deficient inputs; \cvxcla{} is exact on all
+        but two problems at $\kappa \ge 10^{14}$ (Section~\ref{sec:agree}). \\
+    Robustness & \cvxcla{}
+      & BLdP has no tolerances, can cycle, and deletes infeasible points;
+        \cvxcla{} uses tie-breaks, tolerances and raises on infeasibility. \\
+    Scope & \cvxcla{}
+      & BLdP: box bounds and a budget only. \cvxcla{}: general $Aw = b$,
+        $Gw \le h$, leverage caps, factor backends, the LASSO path. \\
+    Speed at scale & \cvxcla{}
+      & $3\times$ at $n = 20$ to $418\times$ at $n = 640$, mostly a factor of
+        about $n$ that any vectorised CLA recovers; \cvxcla{}'s own share is
+        $1.2$--$1.9\times$ (Sections~\ref{sec:gap},~\ref{sec:fair}). \\
+    Small-$n$ overhead & neither
+      & \cvxcla{} is $4\times$ slower than a minimal vectorised CLA at
+        $n = 20$ because of its guards, but still faster than BLdP. \\
+    Extreme conditioning & BLdP (fixed)
+      & With both fixes, BLdP's explicit inverse matches the QP slightly
+        better at $\kappa \ge 10^{14}$ (Section~\ref{sec:conditioning}). \\
+    History and reach & BLdP
+      & First open-source CLA in Python; widely used through PyPortfolioOpt. \\
+    Simplicity & BLdP
+      & Shorter, numpy only; but a poor model to learn from, since its
+        per-candidate formulas hide the KKT structure. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Overall}
+
+\begin{enumerate}
+  \item \textbf{\cvxcla{}}, for any real use.
+  \item \textbf{BLdP with the stale-weight fix}: correct on generic problems, but
+    still about $n$ times too slow and fragile on degenerate inputs.
+  \item \textbf{BLdP as shipped}: not recommended; its results are wrong too
+    often, with no error raised.
+\end{enumerate}
+
+The ranking does not credit \cvxcla{}'s architecture with the $100\times$-plus
+speed headline. Most of that comes from writing the CLA properly, not from
+\cvxcla{} specifically: a minimal correct vectorised CLA would also beat BLdP
+by a wide margin. \cvxcla{} adds robustness, scope and somewhat faster linear
+algebra on top of that.
+
+Two checks would make the ranking more convincing: running the original 2013
+code rather than PyPortfolioOpt's descendant of it, and having someone outside
+the project repeat the experiments, as issue
+\href{https://github.com/cvxgrp/cvxcla/issues/869}{\#869} invites.
+
+\section{Verdict}\label{sec:verdict}
+
+BLdP's lasting contribution is \textbf{availability}. It established the
+open-source baseline, and its code is in wide use through PyPortfolioOpt. It
+is not a model implementation:
+
+\begin{itemize}
+  \item its event search does about $n$ times the necessary work per step;
+  \item it has no tolerances;
+  \item it repairs infeasible points by deleting them.
+\end{itemize}
+
+The good practice is the reverse: write down the KKT system of the parametric
+QP, solve the current segment once and read every event off it, compare with
+tolerances, and validate against an independent solver. That is also the more
+helpful entry into the field, because it is how the parametric-QP and homotopy
+literature, LARS/LASSO included, presents path following. \cvxcla{} is an
+\textbf{engineering / performance paper} that rebuilds the method on those
+principles and quantifies the payoff: operator abstraction, block elimination,
+structured backends and hardened degeneracy handling.
+
+\cvxcla{}'s characterisation of BLdP is accurate. If anything, it is too narrow
+about the cause of the gap. It blames the inverse inside the candidate loop,
+which accounts for at most $1.6\times$, where Sections~\ref{sec:gap}
+and~\ref{sec:fair} locate the gap in the per-candidate formulation as a whole.
+\S8 could now also note that the reference code returns wrong frontiers on
+ordinary problems (Section~\ref{sec:agree}).
+
+\begin{thebibliography}{9}
+
+\bibitem{bailey2013}
+D.~H. Bailey and M.~López de Prado.
+\newblock An open-source implementation of the critical-line algorithm for
+  portfolio optimization.
+\newblock \emph{Algorithms}, 6(1):169--196, 2013.
+\newblock SSRN abstract 2197616.
+
+\bibitem{cvxcla}
+T.~Schmelzer.
+\newblock The Critical Line Algorithm as implemented in cvxcla.
+\newblock Software and manuscript, \url{https://github.com/cvxgrp/cvxcla}.
+
+\bibitem{schmelzer2026}
+T.~Schmelzer and T.~Hastie.
+\newblock The Critical Line Algorithm and the constrained LASSO: one curve,
+  two literatures.
+\newblock arXiv:2609.25704 [stat.ME], 2026.
+
+\bibitem{markowitz1956}
+H.~Markowitz.
+\newblock The optimization of a quadratic function subject to linear
+  constraints.
+\newblock \emph{Naval Research Logistics Quarterly}, 3(1--2):111--133, 1956.
+
+\bibitem{markowitz2000}
+H.~M. Markowitz and G.~P. Todd.
+\newblock \emph{Mean-Variance Analysis in Portfolio Choice and Capital
+  Markets}.
+\newblock Wiley, 2000.
+
+\bibitem{niedermayer2010}
+A.~Niedermayer and D.~Niedermayer.
+\newblock Applying Markowitz's critical line algorithm.
+\newblock In J.~B. Guerard, editor, \emph{Handbook of Portfolio Construction},
+  pages 383--400. Springer, 2010.
+
+\bibitem{pypfopt}
+R.~A. Martin.
+\newblock PyPortfolioOpt: portfolio optimization in Python.
+\newblock \emph{Journal of Open Source Software}, 6(61):3066, 2021.
+
+\bibitem{cvxpy}
+S.~Diamond and S.~Boyd.
+\newblock CVXPY: A Python-embedded modeling language for convex optimization.
+\newblock \emph{Journal of Machine Learning Research}, 17(83):1--5, 2016.
+
+\bibitem{clarabel}
+P.~J. Goulart and Y.~Chen.
+\newblock Clarabel: An interior-point solver for conic programs with
+  quadratic objectives.
+\newblock arXiv:2405.12762, 2024.
+
+\end{thebibliography}
+
+\end{document}

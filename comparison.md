@@ -128,10 +128,11 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
 
 - **On generic problems the shipped code is often wrong.** cvxcla is exact on all
   57 feasible non-degenerate problems except two at κ ≥ 1e14 (below). The shipped
-  BLdP code is exact on only 21 of them. The rest lose real turning points, with
-  objective gaps up to 3e-4 and paths up to 0.35 apart in max-norm, and no error
-  is raised. Even plain long-only problems fail on 4 of 12 (n = 10 to 100). Two bugs explain all
-  of it:
+  BLdP code is exact on only 21 of them. The rest fail the check, with objective
+  gaps up to 3e-4 and paths up to 0.35 apart in max-norm, and no error is raised.
+  Even plain long-only problems fail on 4 of 12 (n = 10 to 100), all from the
+  first defect below. The check compares the two paths as functions of λ, so it
+  counts two different defects, and only the first one loses portfolios:
   1. **Stale blocked weights.** When a free asset hits a bound, `_solve` sets the
      working vector `w[i] = bound`. `_get_matrices` then reads the blocked weights
      from `self.w[-1]`, the *previous* turning point. The new point is solved with
@@ -144,16 +145,31 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
      found the bordered variant cycling on the same 9 of 30 problems with or
      without both fixes. Reading the
      blocked weights from the working vector (`bldp-fix-w`, a two-method subclass)
-     makes 52 of the 57 exact.
-  2. **A zero-tolerance purge.** `_purge_excess` deletes a turning point whenever a
-     later one has a strictly higher `μ'w`. Where `μ'w` is flat, rounding makes it
-     rise by about 1e-14, and a true vertex is deleted. With a 1e-12 relative
-     tolerance as well (`bldp-fix-wp`), 56 of 57 are exact with gaps ≤ 7e-13. The
+     makes 52 of the 57 exact. This bug is user-visible: the PyPortfolioOpt issue
+     [#750](https://github.com/PyPortfolio/PyPortfolioOpt/issues/750) reports it
+     independently, with `max_sharpe` silently suboptimal in 22 of 300 random
+     problems.
+  2. **A zero-tolerance purge, which loses only λ labels.** `_purge_excess` deletes
+     a turning point whenever a later one has a strictly higher `μ'w`. Where `μ'w`
+     is flat, rounding makes it rise by about 1e-14. Along an exact trace, though,
+     `μ'w` is flat only where the weights are constant, since
+     `d(μ'w)/dλ = μ'(dw/dλ)` vanishes only when `dw/dλ = 0`. So every point the
+     purge deletes is a copy of a kept turning point. With the first bug fixed,
+     it deletes 34 points in 17 of the 57 problems, and every one matches a kept
+     point to within 1.1e-11. No portfolio is lost, and `max_sharpe`, which
+     interpolates by weight and never reads λ, is unchanged. What is lost is the
+     λ at which the weights stop being constant. The check here reads the path
+     in λ, so it scores this as an error; PyPortfolioOpt's
+     public methods never see it. This was first reported here as a bug that
+     deletes true vertices; the reporter of #750 showed otherwise, and the
+     correction is posted there. With a 1e-12 relative tolerance as well
+     (`bldp-fix-wp`), 56 of 57 are exact as λ-paths with gaps ≤ 7e-13. The
      remaining case cycles at κ = 1e16.
 
   With both fixes, BLdP and cvxcla trace the same path to 1e-8 on every one of
-  these problems except the two below. The defects are in the implementation,
-  not in the algorithm.
+  these problems except the two below. Only the first fix is needed for the same
+  set of portfolios. The defects are in the implementation, not in the
+  algorithm.
 - **Degenerate inputs break BLdP; cvxcla handles every one.** cvxcla is exact on all 30
   problems in the all-equal, tied, duplicated and rank-deficient families. BLdP,
   with or without the two fixes:
@@ -177,15 +193,15 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
     3 problems and goes wrong near λ = 0 on the third (gap 2e-6).
   - *Infeasible bounds* (`sum(uB) < 1`): `IndexError` from `_init_algo` walking
     off the asset list. cvxcla raises `InfeasibleProblemError`.
-- **Which degrades first with conditioning?** With both bugs fixed, BLdP's
+- **Which degrades first with conditioning?** With both fixes, BLdP's
   explicit inverse holds up surprisingly well: gaps ≤ 4e-13 up to κ = 1e14, and
   one cycle at 1e16. cvxcla stays exact up to 1e12. At κ = 1e14 and 1e16 it has
   one problem each with a gap of 5e-8 and 8e-8. That is on a segment at
   λ ≈ 1e-10, where its weights are 2e-3 off the QP's along a near-null direction
   of Σ, while BLdP-fixed and the QP agree to 1e-14. As shipped, BLdP is wrong
-  from κ = 1e2 because of the two bugs.
+  from κ = 1e2 because of the two defects.
 - **Not measured:** the 2013 paper's own code as published rather than
-  PyPortfolioOpt's descendant (whether bugs 1 and 2 are in the original is not
+  PyPortfolioOpt's descendant (whether defects 1 and 2 are in the original is not
   checked here), the Markowitz–Todd 10-asset example, n > 100, and constraint
   classes beyond a budget and box bounds (BLdP supports nothing else).
 
@@ -197,8 +213,8 @@ row. It uses the K = 10 factor problems of track 1, n = 20 to 320, 3 seeds × 3
 repeats, each in a fresh process, on the same M4 Pro, Python 3.12 and numpy 2.4.6
 stack. It asks which parts of the gap are cvxcla's to claim.
 
-- **Correcting BLdP does not shrink the gap.** With both track-2 bugs fixed, BLdP
-  is 4–9% *slower* than as shipped, because it keeps the turning points the purge
+- **Correcting BLdP does not shrink the gap.** With both track-2 fixes, BLdP
+  is 4–9% *slower* than as shipped, because it keeps the turning points the purges
   used to delete. The gap against a correct BLdP is 3.5× at n = 20 and 150× at
   n = 320, against 3.1× and 144× for the shipped code. Track 1's ratios therefore
   stand, but they were measured against code that returns a wrong frontier on many
@@ -282,8 +298,8 @@ should *not* be solved:
 - It re-derives every candidate event from its own bordered system, about n
   times the work per turning point that the algorithm needs (track 3).
 - It compares λ values with no tolerance, so it can cycle (track 1).
-- It hides infeasible turning points by deleting them, which turns two bugs into
-  a silently wrong frontier (track 2).
+- It hides infeasible turning points by deleting them, which turns the stale-weight
+  bug into a silently wrong frontier (track 2).
 
 ### `cvxcla`
 
