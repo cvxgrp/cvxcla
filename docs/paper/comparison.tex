@@ -100,10 +100,12 @@ PyPortfolioOpt~\cite{pypfopt}, through which most practitioners use it today.
 \cvxcla{}~\cite{cvxcla,cvxclasoftware} is a later implementation of the same algorithm. It
 states each segment of the frontier as the KKT system of a parametric quadratic
 program and adds structured covariance backends and handling of degenerate
-cases. Its software paper~\cite[Appendix~C]{cvxcla} already relates the two:
-it notes the per-candidate inverse, reports that PyPortfolioOpt misses some
-turning points, and gives a 39-line CLA written with the KKT conditions. This
-note measures what that appendix states. It is new in four respects: it
+cases. The preprint of its software paper~\cite[Appendix~C]{cvxcla} already
+related the two: it noted the per-candidate inverse, reported that
+PyPortfolioOpt misses some turning points, and gave a 39-line CLA written with
+the KKT conditions. This note replaces that appendix and measures what it
+stated; the 39-line CLA is now Appendix~\ref{app:kktcla}. It is new in four
+respects: it
 decomposes the runtime gap factor by factor, separating the explicit inverse,
 the event formula and the Python interpreter; it checks both implementations
 against an independent solver on 90 problems, including degenerate and
@@ -572,7 +574,8 @@ example. Its formulation, the KKT system of a parametric quadratic program, is
 the one used in the parametric-programming and homotopy literature, including
 the LASSO path~\cite{schmelzer2026}. It is also the shorter one: written with
 the KKT conditions, a complete CLA for BLdP's problem class takes 39 lines of
-NumPy, against about 180 for the trace in PyPortfolioOpt~\cite[Appendix~C]{cvxcla}.
+NumPy (Appendix~\ref{app:kktcla}), against about 180 for the trace in
+PyPortfolioOpt.
 The \cvxcla{} package itself is larger, because of its checks, backends and
 constraint classes.
 
@@ -609,7 +612,7 @@ constraint classes.
       & First open-source CLA in Python; widely used through PyPortfolioOpt. \\
     Code size & KKT formulation
       & 39 lines of NumPy for BLdP's problem class, against about 180 for
-        PyPortfolioOpt's trace~\cite[Appendix~C]{cvxcla}; the \cvxcla{}
+        PyPortfolioOpt's trace (Appendix~\ref{app:kktcla}); the \cvxcla{}
         package is larger because of its checks and features. \\
     \bottomrule
   \end{tabularx}
@@ -736,5 +739,76 @@ T.~Schmelzer and T.~Hastie.
 
 \end{thebibliography}
 \endgroup
+
+\appendix
+
+\section{A complete CLA in 39 lines}\label{app:kktcla}
+
+Written with the KKT conditions, the CLA is short. Listing~\ref{lst:kktcla} is
+a complete CLA for BLdP's problem class, problem~\eqref{eq:qp}, in 39 lines of
+NumPy. Each segment costs one bordered solve for the free weights
+$w_F = a + \lambda b$ and the budget multiplier, and every event is read off
+that solve: a free weight reaches a bound at $\lambda = (u_i - a_i)/b_i$ or
+$(\ell_i - a_i)/b_i$, and a blocked weight is freed where its reduced cost
+$\gamma_i + \lambda\delta_i$ changes sign, at $\lambda = -\gamma_i/\delta_i$.
+This is the vectorised event search of Section~\ref{sec:runtime}. Events are
+compared with a relative tolerance, and a weight that leaves the free set is
+set to its bound before the next solve, so neither defect of
+Section~\ref{sec:correctness} can arise.
+
+On random 10-factor long-only problems with $n = 20, 40, \dots, 640$ the
+listing returns \cvxcla{}'s turning points
+($21, 42, 81, 159, 323, 641$) to $10^{-13}$, in time of the same order as
+\cvxcla{}'s dense backend. It refuses rather than mis-solves infeasible
+bounds, a tied largest expected return and a numerically singular free block;
+\cvxcla{} handles the last two (Section~\ref{sec:degenerate}). The test
+\repofile{tests/test_comparison_listing.py} runs the listing as printed here
+and checks these claims.
+
+\begin{figure}[ht]
+\begin{lstlisting}[style=py,basicstyle=\ttfamily\footnotesize]
+import numpy as np
+
+def cla(mu, S, lo, up, tol=1e-9):
+    """Turning points (lam, w) of max lam mu'w - w'Sw/2, 1'w=1, lo<=w<=up."""
+    n, w, rest = len(mu), lo.astype(float), 1.0 - lo.sum()
+    for i in np.argsort(-mu, kind="stable"):   # first turning point
+        take = min(up[i] - lo[i], rest)
+        w[i], rest = w[i] + take, rest - take
+        if rest <= 0:
+            break
+    if rest > 0 or (n > 1 and np.partition(mu, -2)[-2] == mu.max()):
+        raise ValueError("infeasible bounds, or a tied largest return")
+    F, lam, last, path = np.arange(n) == i, np.inf, -1, [(np.inf, w.copy())]
+    while True:                                # one KKT solve per segment
+        B, m, one = ~F, F.sum(), np.ones(F.sum())
+        K = np.block([[S[np.ix_(F, F)], one[:, None]], [one, 0.0]])
+        rhs = np.c_[np.r_[-S[np.ix_(F, B)] @ w[B], 1 - w[B].sum()],
+                    np.r_[mu[F], 0.0]]
+        x = np.linalg.solve(K, rhs)            # w_F = a + lam b, nu likewise
+        a, b = w.copy(), np.zeros(n)
+        a[F], b[F] = x[:m, 0], x[:m, 1]
+        gam, dlt = S @ a + x[m, 0], S @ b - mu + x[m, 1]  # reduced cost
+        with np.errstate(divide="ignore", invalid="ignore"):
+            hit = np.where(F, np.where(b < 0, up - a, lo - a) / b, -gam / dlt)
+        live = np.where(F, abs(b) > tol,
+                        np.where(w <= lo, dlt > tol, dlt < -tol) & (lo < up))
+        if last >= 0:
+            live[last] = False                 # the asset that just flipped
+        hit = np.where(live & (hit <= lam * (1 + tol)), hit, -np.inf)
+        k = int(np.argmax(hit))                # ties: lowest index
+        if hit[k] <= 0:
+            return [*path, (0.0, a)]
+        lam, w = hit[k], a + hit[k] * b
+        if np.any((w < lo - 1e-8) | (w > up + 1e-8)):
+            raise np.linalg.LinAlgError("free block numerically singular")
+        if F[k]:
+            w[k] = up[k] if b[k] < 0 else lo[k]  # leaving weight on its bound
+        F[k], last = not F[k], k
+        path.append((lam, w.copy()))
+\end{lstlisting}
+\caption{A complete CLA for box bounds and one budget row, written with the
+  KKT conditions.}\label{lst:kktcla}
+\end{figure}
 
 \end{document}
