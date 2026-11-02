@@ -41,6 +41,13 @@ points, weights and lambdas can be compared directly. This script does three thi
    repeated points (BLdP emits some) and points that lie on a segment harmless,
    while a missing or misplaced vertex or a wrong lambda still shows.
 
+   Two traces also give the *same set of portfolios* when every turning point of
+   each lies within ``1e-8`` (max-norm) of the other's frontier, the polyline
+   through its turning points in weight space. This never reads lambda, so it
+   separates defects that lose portfolios from those that only drop or move a
+   lambda label: a point the zero-tolerance purge deletes is a copy of a kept one
+   (see below), and fails the path test without failing this one.
+
 2. **Independent validation.** Each finished trace is checked against CVXPY/Clarabel
    at tolerance ``1e-12``, not against the other implementation: the weights are read
    off the trace at every finite turning point and at every segment midpoint
@@ -82,8 +89,11 @@ weights from the working vector instead and changes nothing else.
 a *later* point has a strictly higher expected return, ``mu'w_i < mu'w_j``. Along an
 exact trace ``mu'w`` never increases, but where it is flat (a point held still over
 a lambda interval, a repeated point) rounding makes it rise by about ``1e-14``, and
-the purge deletes a true turning point. ``bldp-fix-wp`` compares with a relative
-tolerance of ``1e-12`` instead.
+the purge deletes the point. ``mu'w`` is flat only where the weights are constant
+(``d(mu'w)/dlambda = mu'(dw/dlambda)`` vanishes only when ``dw/dlambda = 0``), so the
+deleted point is a copy of a kept one: no portfolio is lost, only the lambda at which
+the weights start to move again. It fails the path test, not the same-set test.
+``bldp-fix-wp`` compares with a relative tolerance of ``1e-12`` instead.
 
 The BLdP traces run through the statement-for-statement copy of PyPortfolioOpt's
 ``_solve`` in ``bldp_gap.py``, which adds only the step cap; without it a cycling
@@ -396,13 +406,47 @@ def path(weights: np.ndarray, lambdas: np.ndarray, at: np.ndarray) -> np.ndarray
     return np.stack([np.interp(at, lam, w[:, j]) for j in range(w.shape[1])], axis=1)
 
 
+def _frontier(weights: np.ndarray, lambdas: np.ndarray) -> np.ndarray:
+    """A trace's turning points as rows, ordered from lambda = inf down to 0."""
+    return weights[np.argsort(-lambdas, kind="stable")]
+
+
+def _off_polyline(points: np.ndarray, vertices: np.ndarray) -> float:
+    """Largest max-norm distance from any of ``points`` to the polyline through ``vertices``."""
+    if len(vertices) == 1:
+        return float(np.abs(points - vertices[0]).max())
+    a, d = vertices[:-1], np.diff(vertices, axis=0)
+    dd = np.einsum("kj,kj->k", d, d)
+    worst = 0.0
+    for p in points:
+        t = np.divide(np.einsum("kj,kj->k", p - a, d), dd, out=np.zeros_like(dd), where=dd > 0)
+        foot = a + np.clip(t, 0.0, 1.0)[:, None] * d
+        worst = max(worst, float(np.abs(p - foot).max(axis=1).min()))
+    return worst
+
+
 def agreement(a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.ndarray]) -> dict[str, object]:
-    """Return the exact sup-norm distance between two traces' paths ``w(lambda)``."""
+    """Compare two traces as paths ``w(lambda)`` and as sets of portfolios.
+
+    ``distance`` is the exact sup-norm distance between the paths in lambda. ``missing``
+    is how far ``b``'s turning points lie off ``a``'s frontier in weight space, and
+    ``extra`` how far ``a``'s lie off ``b``'s; neither reads lambda, so a dropped lambda
+    label does not count, while a lost or misplaced turning point does.
+    """
     (wa, la), (wb, lb) = a, b
     at = np.union1d(la[np.isfinite(la)], lb[np.isfinite(lb)])
     dist = max(float(np.abs(wa[0] - wb[0]).max()), float(np.abs(path(wa, la, at) - path(wb, lb, at)).max()))
     points = (len(distinct(wa, la)[0]), len(distinct(wb, lb)[0]))
-    return {"agree": dist <= AGREE_TOL, "points": points, "distance": dist}
+    fa, fb = _frontier(wa, la), _frontier(wb, lb)
+    missing, extra = _off_polyline(fb, fa), _off_polyline(fa, fb)
+    return {
+        "agree": dist <= AGREE_TOL,
+        "points": points,
+        "distance": dist,
+        "same_set": max(missing, extra) <= AGREE_TOL,
+        "missing": missing,
+        "extra": extra,
+    }
 
 
 def check(p: Problem) -> dict[str, object]:
@@ -451,6 +495,7 @@ def report(env: dict[str, object], results: dict[str, list[dict[str, object]]], 
         print(f"  {k:14s}: {v}")
     print()
     print("summary: number of problems per verdict (exact / wrong / cycled / raised)")
+    print("  then, against cvxcla: same path w(lambda) / same set of portfolios (lambda not read)")
     agree_cols = [f"{i}=cvxcla" for i in BLDP]
     print(
         f"  {'family':15s} {'problems':>8s}  "
@@ -465,8 +510,8 @@ def report(env: dict[str, object], results: dict[str, list[dict[str, object]]], 
             cells.append(f"{c['exact']:>3d} /{c['wrong']:>3d} /{c['cycled']:>3d} /{raised:>3d}")
         agree = []
         for impl in BLDP:
-            pair = [r["pairs"][f"{impl}|cvxcla"]["agree"] for r in rows if f"{impl}|cvxcla" in r["pairs"]]
-            agree.append(f"{sum(pair)} of {len(pair)}")
+            pair = [r["pairs"][f"{impl}|cvxcla"] for r in rows if f"{impl}|cvxcla" in r["pairs"]]
+            agree.append(f"{sum(a['agree'] for a in pair)} / {sum(a['same_set'] for a in pair)} of {len(pair)}")
         print(
             f"  {family:15s} {len(rows):>8d}  "
             + "  ".join(f"{c:>21s}" for c in cells)
@@ -490,7 +535,9 @@ def report(env: dict[str, object], results: dict[str, list[dict[str, object]]], 
             for name, a in r["pairs"].items():
                 print(
                     f"      {name:20s} {'agree' if a['agree'] else 'DISAGREE'}: distinct points {a['points'][0]} "
-                    f"vs {a['points'][1]}, path distance {a['distance']:.1e}"
+                    f"vs {a['points'][1]}, path distance {a['distance']:.1e}; "
+                    f"{'same' if a['same_set'] else 'DIFFERENT'} portfolios: "
+                    f"cvxcla's off this frontier {a['missing']:.1e}, this one's off cvxcla's {a['extra']:.1e}"
                 )
 
     if "conditioning" in results:

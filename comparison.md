@@ -42,6 +42,16 @@ choices:
 | Constraints | Box bounds + single (budget) equality only (inputs: `mean, covar, lB, uB`) | Arbitrary `m` linear equality constraints `A w = b` |
 | Degeneracy handling | No general anti-cycling rule; a single hack (`mean[-1]+=1e-5`) for all-equal means | Bland-style lowest-index tie-break + √ε slope floor (§4.3–4.4) |
 
+### A deliberate choice of formulation
+
+The root of most differences is a choice BLdP made knowingly. They name the
+Karush–Kuhn–Tucker conditions as one way to handle the inequality-constrained
+problem (Bailey and López de Prado 2013, p. 173) and instead "divide and conquer"
+it into unconstrained problems on the free assets. Without multipliers on the
+bounds, deciding which blocked asset to free takes a fresh solve per candidate,
+each inserted into closed-form Lagrange expressions for the single budget row. In
+cvxcla the same decision is the sign of `γ_i + λ δ_i` from one solve per segment.
+
 ### The central claim checks out
 
 `cvxcla`'s most load-bearing §8/§9.3 claim — that PyPortfolioOpt "recomputes
@@ -89,7 +99,7 @@ over seeds is within ±10%.
   without an inverse. A phase profile of the shipped code agrees: the
   addition-branch inverses take 8% of the trace at n = 20 and 41% at n = 640. The
   slicing takes 27–40%, and the λ formula plus the removal branch most of the
-  rest. The last factor is cvxcla's own cost relative to a ~100-line vectorised
+  rest. The last factor is cvxcla's own cost relative to a minimal vectorised
   CLA: cvxcla is 3× *slower* at n = 20 (validation and guards), and 1.9× faster at
   n = 640 (a block-eliminated solve instead of an explicit inverse).
 - **Maintaining the inverse pays off at scale, in both codes.** Updating the
@@ -128,11 +138,14 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
 
 - **On generic problems the shipped code is often wrong.** cvxcla is exact on all
   57 feasible non-degenerate problems except two at κ ≥ 1e14 (below). The shipped
-  BLdP code is exact on only 21 of them. The rest fail the check, with objective
-  gaps up to 3e-4 and paths up to 0.35 apart in max-norm, and no error is raised.
-  Even plain long-only problems fail on 4 of 12 (n = 10 to 100), all from the
-  first defect below. The check compares the two paths as functions of λ, so it
-  counts two different defects, and only the first one loses portfolios:
+  BLdP code loses real turning points on 37 of them and does not terminate on
+  one more (κ = 1e16); no error is raised. Compared with cvxcla in weight space,
+  without reading λ, its frontier skips true turning points by 2.7e-4 to 0.13 in a
+  weight, and every point it does return lies on the true frontier. Even plain
+  long-only problems lose turning points on 4 of 12 (n = 10 to 100). The exact
+  check against the QP, which reads the path as a function of λ, gives a similar
+  count (exact on 21 of 57) but mixes two different defects, and only the first one
+  loses portfolios:
   1. **Stale blocked weights.** When a free asset hits a bound, `_solve` sets the
      working vector `w[i] = bound`. `_get_matrices` then reads the blocked weights
      from `self.w[-1]`, the *previous* turning point. The new point is solved with
@@ -145,7 +158,10 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
      found the bordered variant cycling on the same 9 of 30 problems with or
      without both fixes. Reading the
      blocked weights from the working vector (`bldp-fix-w`, a two-method subclass)
-     makes 52 of the 57 exact. This bug is user-visible: the PyPortfolioOpt issue
+     makes 52 of the 57 exact as λ-paths, and gives cvxcla's set of portfolios on
+     every problem that terminates (56 of 57; the two at κ ≥ 1e14 where cvxcla
+     itself is off are the exceptions in the other direction). This bug is
+     user-visible: the PyPortfolioOpt issue
      [#750](https://github.com/PyPortfolio/PyPortfolioOpt/issues/750) reports it
      independently, with `max_sharpe` silently suboptimal in 22 of 300 random
      problems.
@@ -240,7 +256,8 @@ stack. It asks which parts of the gap are cvxcla's to claim.
   once per step, is flat at 1.2–1.5× (n^−0.1). A Python loop is not what makes
   BLdP slow.
 - **What cvxcla's architecture is entitled to claim.** None of the formula factor
-  is specific to cvxcla: a ~100-line vectorised CLA (`vec-fresh`) has it too.
+  is specific to cvxcla: a minimal vectorised CLA (`vec-fresh`, in
+  `experiments/inverse_cla.py`) has it too.
   cvxcla's own contribution is the last column. It is 4.3× *slower* than the
   minimal code at n = 20 and 1.24× faster at n = 320, crossing over near n = 250.
   A cProfile of cvxcla shows where its extra time goes:
@@ -309,8 +326,14 @@ should *not* be solved:
   or a multiplier changes sign. That is the language of the parametric-QP and
   homotopy literature. The payoff is transferable understanding. The same
   `ParametricProblem` / `trace` engine runs the LARS/LASSO homotopy, with the
-  same four events under different names (README). BLdP's bespoke λ formulas,
-  re-derived per candidate, teach none of that structure.
+  same four events under different names (README). BLdP's per-candidate λ
+  formulas, by their authors' choice, do not expose that structure.
+- **Shorter, too.** Written with the KKT conditions, a complete CLA for BLdP's
+  problem class takes 39 lines of NumPy, against about 180 for the trace in
+  PyPortfolioOpt (Appendix C of the cvxcla paper,
+  [doi:10.2139/ssrn.7583179](https://doi.org/10.2139/ssrn.7583179)). The cvxcla
+  package itself is larger, because of its checks, backends and constraint
+  classes.
 - **Scale demonstrated.** BLdP only ever runs its n = 10 toy example. `cvxcla`
   shows n = 640 benchmarks, an n = 20,000 factor stress test, and a real
   n = 494 S&P 500 frontier.
