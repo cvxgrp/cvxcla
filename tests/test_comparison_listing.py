@@ -65,6 +65,7 @@ def _path_distance(a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.nda
     """
 
     def at(weights: np.ndarray, lambdas: np.ndarray, grid: np.ndarray) -> np.ndarray:
+        """Interpolate the path (weights, lambdas) at each lambda in grid."""
         finite = np.isfinite(lambdas)
         order = np.argsort(lambdas[finite], kind="stable")
         lam, w = lambdas[finite][order], weights[finite][order]
@@ -119,6 +120,7 @@ def test_factor_problems_match_cvxcla_and_the_quoted_counts(cla: Callable) -> No
 
 
 def _other_problems() -> list:
+    """Shorting, binding-cap and ill-conditioned problems as pytest params (mu, cov, lo, up, tol)."""
     rng = np.random.default_rng(1)
     q, _ = np.linalg.qr(rng.standard_normal((20, 20)))
     ill = (q * np.geomspace(1.0, 1e-10, 20)) @ q.T
@@ -146,6 +148,7 @@ def test_other_problems_match_cvxcla(
 
 
 def _refusals() -> list:
+    """Inputs the listing must refuse, as pytest params (args, expected exception)."""
     rng = np.random.default_rng(2)
     n = 20
     cov, mu = _factor_cov(rng, n, 5), rng.uniform(0.0, 1.0, n)
