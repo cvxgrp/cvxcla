@@ -222,8 +222,16 @@ running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
   set `w[i_in]=bi_in`, and `purgeExcess` compares with `mu<mu_`. The `TypeError`
   failures on tied means are Python 3's: Python 2 lets `None` compare below
   every number, so the 2013 code proceeds there; what it returns was not tested.
-- **Not measured:** the Markowitz–Todd 10-asset example, n > 100, and constraint
-  classes beyond a budget and box bounds (BLdP supports nothing else).
+- **BLdP's own example.** [`experiments/markowitz_todd.py`](experiments/markowitz_todd.py)
+  runs the Markowitz–Todd 10-asset example of BLdP's Tables 1–2. Shipped BLdP,
+  BLdP with the stale-weight fix and cvxcla all reproduce Table 2 to its 3 printed
+  decimals, the maximum Sharpe ratio 4.4535 at risk 0.2274 and the minimum-variance
+  risk 0.2052, are exact against the QP, and agree with each other to 3e-14. No
+  weight leaves the free set along this frontier (the free set grows from 0 to 10
+  assets), so the step in which the stale-weight defect acts is never taken. The
+  one example BLdP validated on could not have revealed it.
+- **Not measured:** n > 100, and constraint classes beyond a budget and box bounds
+  (BLdP supports nothing else).
 
 ### Measured: is the comparison apples to apples? (#869, track 3)
 
@@ -310,9 +318,10 @@ stack. It asks which parts of the gap are cvxcla's to claim.
   `CLA` and is widely cited and used. That impact is real, whatever the code's
   quality.
 - **A reference answer.** It reproduces the canonical Markowitz–Todd 10-asset
-  example to 15 significant figures. One example is a narrow check, though:
-  track 2 found the code wrong on 4 of 12 ordinary long-only problems from
-  n = 10 up.
+  example to 15 significant figures, and so do the shipped code and cvxcla today
+  (track 2). One example is a narrow check, though: no weight leaves the free set
+  on that frontier, so it never exercises the stale-weight defect, and track 2
+  found the code wrong on 4 of 12 ordinary long-only problems from n = 10 up.
 
 It has no pedagogical edge. As code to learn from, it shows how a parametric QP
 should *not* be solved:
