@@ -100,17 +100,17 @@ PyPortfolioOpt~\cite{pypfopt}, through which most practitioners use it today.
 \cvxcla{}~\cite{cvxcla,cvxclasoftware} is a later implementation of the same algorithm. It
 states each segment of the frontier as the KKT system of a parametric quadratic
 program and adds structured covariance backends and handling of degenerate
-cases. The preprint of its software paper~\cite[Appendix~C]{cvxcla} already
-related the two: it noted the per-candidate inverse, reported that
+cases. A first preprint of its software paper~\cite{cvxcla} already related
+the two in an appendix: it noted the per-candidate inverse, reported that
 PyPortfolioOpt misses some turning points, and gave a 39-line CLA written with
-the KKT conditions. This note replaces that appendix and measures what it
-stated; the 39-line CLA is now Appendix~\ref{app:kktcla}. It is new in four
-respects: it
+the KKT conditions. The software paper no longer contains that comparison; this
+note takes it over and measures what it stated, and the 39-line CLA is
+Appendix~\ref{app:kktcla}. It is new in four respects: it
 decomposes the runtime gap factor by factor, separating the explicit inverse,
 the event formula and the Python interpreter; it checks both implementations
 against an independent solver on 90 problems, including degenerate and
 ill-conditioned ones; it attributes each wrong frontier to a defect; and it
-corrects the appendix on one point, since the second defect deletes only copies
+corrects that first account on one point, since the second defect deletes only copies
 of turning points that are kept (Section~\ref{sec:correctness}).
 
 \paragraph{What is tested.} We run PyPortfolioOpt~1.6.0's \code{CLA}, the

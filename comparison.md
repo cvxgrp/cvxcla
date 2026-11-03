@@ -343,8 +343,7 @@ should *not* be solved:
   formulas, by their authors' choice, do not expose that structure.
 - **Shorter, too.** Written with the KKT conditions, a complete CLA for BLdP's
   problem class takes 39 lines of NumPy, against about 180 for the trace in
-  PyPortfolioOpt (Appendix C of the cvxcla paper,
-  [doi:10.2139/ssrn.7583179](https://doi.org/10.2139/ssrn.7583179)). The cvxcla
+  PyPortfolioOpt (Appendix A of the LaTeX note `docs/paper/comparison.tex`). The cvxcla
   package itself is larger, because of its checks, backends and constraint
   classes.
 - **Scale demonstrated.** BLdP only ever runs its n = 10 toy example. `cvxcla`
