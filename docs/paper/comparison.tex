@@ -69,25 +69,28 @@
 \maketitle
 
 \begin{abstract}
-  Bailey and López de Prado (2013) published the first documented open-source
-  implementation of Markowitz's Critical Line Algorithm (CLA) in a scientific
-  language, and through PyPortfolioOpt it remains widely used. We
-  compare it with \cvxcla{}, a later implementation of the same algorithm, in
-  three reproducible experiments. First, the runtime gap grows with problem
+  This note is a companion to the \cvxcla{} software paper. Bailey and López
+  de Prado (2013) published the first documented open-source implementation of
+  Markowitz's Critical Line Algorithm (CLA) in a scientific language, as a
+  readable reference rather than a fast solver, and through the Python~3 port
+  in PyPortfolioOpt it remains widely used. We compare that port with
+  \cvxcla{}, a later implementation of the same algorithm, in three
+  reproducible experiments. First, the runtime gap grows with problem
   size, from $2.8\times$ at $n = 20$ to $418\times$ at $n = 640$. It is
   explained mainly by the event search, which evaluates each candidate asset
   from its own linear system and so does about $n$ times the necessary work
   per turning point. The explicit inverse that is usually blamed accounts for
   at most $1.6\times$. Any vectorised implementation removes most of the gap,
   so only a small part of it can be attributed to \cvxcla{}'s design. Second,
-  compared in weight space with \cvxcla{}, itself checked against an
-  independent convex solver, the shipped code loses turning points on 37 of 57
-  well-posed problems, by up to $0.13$ in a weight, and does not terminate on
-  one more. The cause is a single defect, stale blocked weights, which has also
-  been reported independently to PyPortfolioOpt; a second defect only drops
-  parameter labels. Third, the shipped code raises errors or
-  returns incomplete frontiers on degenerate inputs that \cvxcla{} handles.
-  Both defects can be fixed with small changes, and we give them.
+  checked against an independent convex solver alone, the shipped code returns
+  an incomplete frontier on 32 of 57 well-posed problems, missing portfolios by
+  up to $0.13$ in a weight, and does not terminate on one more. The cause is a
+  single defect, stale blocked weights, which has also been reported
+  independently to PyPortfolioOpt; a second defect only drops parameter
+  labels. With a two-method fix, every frontier the code returns passes the
+  same check, and at condition numbers of $10^{14}$ and above the corrected
+  code is more accurate than \cvxcla{}. Third, the shipped code raises errors
+  or returns incomplete frontiers on degenerate inputs that \cvxcla{} handles.
 \end{abstract}
 
 \begin{flushleft}
@@ -293,18 +296,28 @@ their spread is within $\pm 10\%$. The first runtime experiment uses \cvxcla{}
 \paragraph{Correctness.} Both implementations receive the same $\mu$,
 $\Sigma$, $\ell$ and $u$. Each trace is checked on its own against
 CVXPY~1.9.3~\cite{cvxpy} with Clarabel~0.11.1~\cite{clarabel} at tolerance
-$10^{-12}$, at every turning point and at every segment midpoint, and the two
-paths $w(\lambda)$ are compared directly. A trace is \emph{exact} if it is
-feasible to $10^{-9}$, runs from $\lambda = \infty$ to 0, and has a relative
-objective gap below $10^{-8}$ everywhere. Because this test reads the path as
-a function of $\lambda$, we also compare frontiers in weight space: two traces
-give the \emph{same set of portfolios} if every turning point of each lies
-within $10^{-8}$ in max-norm of the polyline through the other's turning
-points. This comparison never reads $\lambda$. There are 90 problems in eight
+$10^{-12}$; neither implementation serves as the reference for the other.
+The primary test reads neither $\lambda$ nor the other implementation: a
+trace is \emph{efficient} if every turning point and every chord midpoint of
+its polyline in weight space is a minimum-variance portfolio for its own
+expected return (CVXPY solves $\min \tfrac12 w^\top\Sigma w$ subject to
+$\mu^\top w \ge \mu^\top w_{\text{probe}}$ and the constraints; excess
+variance below $10^{-8}$ relative to $1 + v^\star$), and if the polyline runs
+from a maximum-return portfolio to the global minimum-variance one. A lost
+turning point makes a chord cut a corner of the frontier, so its midpoint has
+excess variance. A second test reads the path as a function of $\lambda$: a
+trace is \emph{exact} if it is feasible to $10^{-9}$, runs from
+$\lambda = \infty$ to 0, and has a relative objective gap below $10^{-8}$ at
+every turning point and segment midpoint. Finally, to locate disagreements,
+we compare the two traces in weight space: they give the \emph{same set of
+portfolios} if every turning point of each lies within $10^{-8}$ in max-norm
+of the polyline through the other's turning points. There are 90 problems in eight
 families, over 3 seeds: generic long-only, shorting, a conditioning sweep from
 $\kappa = 10^{2}$ to $10^{16}$, bounds that bind exactly, all-equal means, tied
 means, duplicated assets and rank-deficient sample covariances. The first four
-families contain 57 feasible, non-degenerate problems.
+families contain 57 feasible, non-degenerate problems. The conditioning sweep
+probes numerical robustness; covariance matrices estimated from returns with
+$\kappa \ge 10^{12}$ would be regularised before use, not optimised over.
 
 \section{Runtime}\label{sec:runtime}
 
@@ -434,31 +447,44 @@ taken: the example could not have revealed it.
 
 \paragraph{Generic problems.}
 
-\cvxcla{} is exact on all 57 well-posed problems except two at
-$\kappa \ge 10^{14}$ (Section~\ref{sec:conditioning}). Compared with it in
-weight space, the shipped BLdP code gives the same set of portfolios on 19 of
-the 57 problems. On 37 it skips true turning points, by between
-$2.7 \times 10^{-4}$ and $0.13$ in a weight, and on one ($\kappa = 10^{16}$)
-it does not terminate; no error is raised. Every point it returns lies on the
-true frontier: the code loses turning points but does not add wrong ones.
-Table~\ref{tab:families} breaks the result down by family. Even among plain
-long-only problems, 4 of 12 lose turning points ($n = 10$ to 100).
+Checked against the solver alone, the shipped BLdP code returns the
+efficient frontier on 24 of the 57 problems. On 32 a chord cuts a corner of
+the frontier, and on one ($\kappa = 10^{16}$) the code does not terminate; no
+error is raised. Table~\ref{tab:families} breaks the result down by family.
+Even among plain long-only problems, 4 of 12 fail ($n = 10$ to 100). \cvxcla{}
+passes the same check on 55 of the 57, failing two at $\kappa \ge 10^{14}$
+(Section~\ref{sec:conditioning}).
+
+Comparing the two traces in weight space shows what goes wrong. On all 32
+failing problems the shipped code skips turning points of \cvxcla{}'s
+frontier, by between $2.7 \times 10^{-4}$ and $0.13$ in a weight. Every point
+it returns lies on that frontier: the code loses turning points but does not
+add wrong ones. The comparison finds lost turning points on five more
+problems, at $\kappa \ge 10^{10}$, where the corrected BLdP code agrees with
+\cvxcla{}. There the skipped corners move the weights by about $0.02$, but
+along near-null directions of $\Sigma$, so the excess variance stays below the
+tolerance of the independent test, which counts these five as efficient.
 
 \begin{table}[ht]
   \centering
   \small
-  \caption{Problems on which BLdP gives \cvxcla{}'s set of portfolios, as
-    shipped and with the fix for stale blocked weights.}\label{tab:families}
-  \begin{tabular}{lrr}
+  \caption{Traces that are the efficient frontier, checked against the
+    solver alone (``efficient''), and, for shipped BLdP, traces that give
+    \cvxcla{}'s set of portfolios.}\label{tab:families}
+  \begin{tabular}{lrrrr}
     \toprule
-    Family & as shipped & stale-weight fix \\
+    & \multicolumn{2}{c}{BLdP as shipped}
+    & \shortstack[r]{BLdP with\\stale-weight fix}
+    & \cvxcla{} \\
+    \cmidrule(lr){2-3}
+    Family & efficient & as \cvxcla{} & efficient & efficient \\
     \midrule
-    Long-only        & 8/12 & 12/12 \\
-    Shorting         & 5/9  & 9/9   \\
-    Conditioning     & 0/24 & 21/24 \\
-    Binding bounds   & 6/12 & 12/12 \\
+    Long-only        & 8/12  & 8/12  & 12/12 & 12/12 \\
+    Shorting         & 5/9   & 5/9   & 9/9   & 9/9   \\
+    Conditioning     & 5/24  & 0/24  & 23/24 & 22/24 \\
+    Binding bounds   & 6/12  & 6/12  & 12/12 & 12/12 \\
     \midrule
-    Total            & 19/57 & 54/57 \\
+    Total            & 24/57 & 19/57 & 56/57 & 55/57 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -476,11 +502,11 @@ off by exactly $u_i - w_{\text{prev},i}$ (for example $-4.1 \times 10^{-2}$).
 The method \code{\_purge\_num\_err} then removes it as infeasible, and a true
 turning point is lost. All four long-only failures come from this defect.
 Reading the blocked weights from the working vector, a change to two methods,
-gives \cvxcla{}'s set of portfolios on 54 of the 57 problems. The other three
-are the cycle at $\kappa = 10^{16}$ and the two problems at
-$\kappa \ge 10^{14}$ where \cvxcla{} itself is off and the corrected BLdP
-agrees with the QP (Section~\ref{sec:conditioning}). As paths in $\lambda$,
-52 of the 57 are exact. The defect has been reported independently
+makes every frontier the code returns pass the independent check: 56 of the
+57, the last being the cycle at $\kappa = 10^{16}$. That includes the two
+problems at $\kappa \ge 10^{14}$ where \cvxcla{} itself fails
+(Section~\ref{sec:conditioning}). On the other 54 it gives \cvxcla{}'s set of
+portfolios. As paths in $\lambda$, 52 of the 57 are exact. The defect has been reported independently
 in PyPortfolioOpt issue
 \href{https://github.com/PyPortfolio/PyPortfolioOpt/issues/750}{\#750}, where
 it makes \code{max\_sharpe} return a suboptimal portfolio in 22 of 300 random
