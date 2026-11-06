@@ -292,19 +292,19 @@ class TestFrontierMutationHardening:
         assert list(frontier) == []
 
     def test_interpolate_point_count_two_points(self, mean_cov):
-        """interpolate() yields exactly num-1 points per segment (one segment here)."""
+        """interpolate() yields the first point plus num-1 points per segment (one segment here)."""
         mean, covariance = mean_cov
         points = [
             FrontierPoint(weights=np.array([0.2, 0.3, 0.5])),
             FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
         ]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        # linspace(0, 1, num) drops lamb == 0, so num-1 points per adjacent pair.
-        assert len(frontier.interpolate()) == 99  # default num=100
-        assert len(frontier.interpolate(num=10)) == 9
+        # The first point, then linspace(0, 1, num) without lamb == 0 for each pair.
+        assert len(frontier.interpolate()) == 100  # default num=100
+        assert len(frontier.interpolate(num=10)) == 10
 
     def test_interpolate_point_count_three_points(self, mean_cov):
-        """Three points -> two adjacent segments -> 2*(num-1) interpolated points.
+        """Three points -> two adjacent segments -> 1 + 2*(num-1) interpolated points.
 
         Pins the adjacent-pair slicing ``zip(weights[0:-1], weights[1:])``.
         """
@@ -315,7 +315,25 @@ class TestFrontierMutationHardening:
             FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
         ]
         frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
-        assert len(frontier.interpolate(num=100)) == 198
+        assert len(frontier.interpolate(num=100)) == 199
+
+    def test_interpolate_keeps_both_ends(self, mean_cov):
+        """The interpolated frontier starts at the first and ends at the last point."""
+        mean, covariance = mean_cov
+        points = [
+            FrontierPoint(weights=np.array([0.2, 0.3, 0.5])),
+            FrontierPoint(weights=np.array([0.3, 0.4, 0.3])),
+            FrontierPoint(weights=np.array([0.5, 0.3, 0.2])),
+        ]
+        frontier = Frontier(mean=mean, covariance=covariance, frontier=points)
+        dense = frontier.interpolate(num=7)
+        assert np.allclose(dense.weights[0], points[0].weights)
+        assert np.allclose(dense.weights[-1], points[-1].weights)
+
+    def test_interpolate_empty_frontier(self, mean_cov):
+        """An empty frontier interpolates to an empty frontier."""
+        mean, covariance = mean_cov
+        assert len(Frontier(mean=mean, covariance=covariance).interpolate()) == 0
 
     def test_interpolated_weights_are_convex_combinations(self, mean_cov):
         """Every interpolated weight lies between the two endpoint weights.
@@ -442,32 +460,55 @@ class TestPlotFigure:
         return Frontier(mean=mean, covariance=covariance, frontier=points)
 
     def test_plot_defaults(self, frontier):
-        """Default plot: variance x-axis, markers on, correct titles, trace, and data."""
+        """Default plot: variance x-axis, the interpolated curve, and the turning points."""
         pytest.importorskip("plotly")
         fig = frontier.plot()
 
         assert fig.layout.xaxis.title.text == "Expected variance"
         assert fig.layout.yaxis.title.text == "Expected Return"
-        trace = fig.data[0]
-        assert trace.name == "Efficient Frontier"
-        assert trace.mode == "lines+markers"
-        assert np.allclose(np.asarray(trace.x), frontier.variance)
-        assert np.allclose(np.asarray(trace.y), frontier.returns)
+        curve, turning = fig.data
+        assert curve.name == "Efficient Frontier"
+        assert curve.mode == "lines"
+        dense = frontier.interpolate(num=50)
+        assert np.allclose(np.asarray(curve.x), dense.variance)
+        assert np.allclose(np.asarray(curve.y), dense.returns)
+        assert turning.name == "Turning points"
+        assert turning.mode == "markers"
+        assert np.allclose(np.asarray(turning.x), frontier.variance)
+        assert np.allclose(np.asarray(turning.y), frontier.returns)
 
     def test_plot_volatility_axis(self, frontier):
         """volatility=True switches the x-axis title and data to volatility."""
         pytest.importorskip("plotly")
-        fig = frontier.plot(volatility=True)
+        fig = frontier.plot(volatility=True, num=11)
 
         assert fig.layout.xaxis.title.text == "Expected volatility"
-        assert np.allclose(np.asarray(fig.data[0].x), frontier.volatility)
+        assert np.allclose(np.asarray(fig.data[0].x), frontier.interpolate(num=11).volatility)
+        assert np.allclose(np.asarray(fig.data[1].x), frontier.volatility)
 
     def test_plot_without_markers(self, frontier):
-        """markers=False produces a lines-only trace."""
+        """markers=False draws the curve only."""
         pytest.importorskip("plotly")
         fig = frontier.plot(markers=False)
 
+        assert len(fig.data) == 1
         assert fig.data[0].mode == "lines"
+
+    @pytest.mark.parametrize("volatility", [False, True])
+    def test_plot_curve_is_not_the_chord(self, frontier, volatility):
+        """Between turning points the curve bends left of the straight chord.
+
+        Variance is strictly convex along a segment (Sigma is positive definite and
+        the weights differ), so the midpoint portfolio has a smaller variance and
+        volatility than the chord's midpoint, at the same expected return.
+        """
+        pytest.importorskip("plotly")
+        fig = frontier.plot(volatility=volatility, num=3)
+        x = np.asarray(fig.data[0].x)
+        y = np.asarray(fig.data[0].y)
+        assert len(x) == 3
+        assert np.isclose(y[1], 0.5 * (y[0] + y[2]))
+        assert x[1] < 0.5 * (x[0] + x[2]) - 1e-6
 
 
 class TestMaxSharpeDegenerate:
