@@ -203,13 +203,16 @@ class Frontier:
     def interpolate(self, num: int = 100) -> Frontier:
         """Interpolate the frontier with additional points between existing points.
 
-        This method creates a new Frontier object with additional points interpolated
-        between the existing points. This is useful for creating a smoother representation
-        of the efficient frontier for visualization or analysis.
+        The weights are linear in lambda between adjacent turning points, so convex
+        combinations of the two are exactly the frontier portfolios in between. Their
+        return and variance are not linear in each other (variance is quadratic along a
+        segment), so a smooth plot of the frontier needs these points; straight lines
+        between the turning points would lie to the right of the frontier.
 
         Args:
-            num: The number of points to use in the interpolation. The method will create
-                 num-1 new points between each pair of adjacent existing points.
+            num: The number of points per segment, both ends included. The result is
+                 the first point followed by num-1 points for each adjacent pair, ending
+                 with the last point.
 
         Returns:
             A new Frontier object with the interpolated points.
@@ -225,7 +228,7 @@ class Frontier:
             ...     ],
             ... )
             >>> len(frontier.interpolate(num=10))
-            9
+            10
 
             One adjacent pair yields ``num - 1`` points, and every interpolated
             point is a convex combination of its neighbours -- so a budget
@@ -238,7 +241,9 @@ class Frontier:
         """
 
         def _interpolate() -> Iterator[FrontierPoint]:
-            """Yield interpolated frontier points between each adjacent pair."""
+            """Yield the first point, then the interpolated points of each adjacent pair."""
+            if len(self.frontier) > 0:
+                yield FrontierPoint(weights=self.weights[0])
             for w_right, w_left in zip(self.weights[0:-1], self.weights[1:], strict=False):  # pragma: no mutate
                 for lamb in np.linspace(0, 1, num):
                     if lamb > 0:
@@ -403,16 +408,20 @@ class Frontier:
                     best = (float(sharpe), w0 + t * delta)
         return best
 
-    def plot(self, volatility: bool = False, markers: bool = True) -> go.Figure:
+    def plot(self, volatility: bool = False, markers: bool = True, num: int = 50) -> go.Figure:
         """Plot the efficient frontier.
 
-        This function creates a line plot of the efficient frontier, with expected return
-        on the y-axis and either variance or volatility on the x-axis.
+        Expected return goes on the y-axis and variance or volatility on the x-axis. The
+        curve is drawn through ``num`` frontier portfolios per segment (see
+        :meth:`interpolate`), not by straight lines between the turning points: along a
+        segment the frontier is a parabola in (variance, return) and a hyperbola in
+        (volatility, return).
 
         Args:
             volatility: If True, plot volatility (standard deviation) on the x-axis.
                        If False, plot variance on the x-axis.
-            markers: If True, show markers at each point on the frontier.
+            markers: If True, mark the turning points in a second trace.
+            num: Points per segment for the curve, both ends included.
 
         Returns:
             A plotly Figure object that can be displayed or saved.
@@ -424,17 +433,17 @@ class Frontier:
             msg = "Plotting requires plotly. Install it with: pip install cvxcla[plot]"
             raise ImportError(msg) from e
 
+        def x_of(frontier: Frontier) -> np.ndarray:
+            return frontier.volatility if volatility else frontier.variance
+
+        curve = self.interpolate(num=num)
         fig = go.Figure()
-
-        x = self.volatility if volatility else self.variance
-        axis_title = "Expected volatility" if volatility else "Expected variance"
-
-        fig.add_trace(
-            go.Scatter(x=x, y=self.returns, mode="lines+markers" if markers else "lines", name="Efficient Frontier")
-        )
+        fig.add_trace(go.Scatter(x=x_of(curve), y=curve.returns, mode="lines", name="Efficient Frontier"))
+        if markers:
+            fig.add_trace(go.Scatter(x=x_of(self), y=self.returns, mode="markers", name="Turning points"))
 
         fig.update_layout(
-            xaxis_title=axis_title,
+            xaxis_title="Expected volatility" if volatility else "Expected variance",
             yaxis_title="Expected Return",
         )
 
