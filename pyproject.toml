@@ -37,9 +37,9 @@ Repository = "https://github.com/cvxgrp/cvxcla"
 [dependency-groups]
 dev = [
     "loguru==0.7.3",
-    "mosek==11.2.7",
+    "mosek==11.2.8",
     "marimo==0.25.2",
-    "pandas==3.1.0",
+    "pandas==3.1.1",
     # Portfolio analytics for the notebooks/experiments: turns a frontier
     # portfolio's realised return series into stats and plots. Never imported
     # from src/, hence dev-only.
