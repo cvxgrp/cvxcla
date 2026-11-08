@@ -43,8 +43,10 @@ checked, with numpy alone and independently of both libraries:
 
 Each run happens in a freshly spawned interpreter with a timeout (the PyPortfolioOpt
 loop has no iteration cap, so a cycling trace would otherwise never return). The
-time reported is the median of ``--repeats`` traces after one untimed warm-up
-(a trace slower than five seconds is timed once, without a warm-up).
+clock starts only after an untimed warm-up on a tiny problem, so building the
+environment and the first imports are never measured. The time reported is the
+median of ``--repeats`` traces after one untimed full-size warm-up (a trace slower
+than five seconds is timed once).
 
 Usage::
 
@@ -56,6 +58,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.metadata as md
 import multiprocessing
 import os
@@ -247,22 +250,33 @@ def worker(library: str, scenario: Scenario, seed: int, repeats: int) -> dict[st
     else:
         problem = scenario.build(rng, scenario.n)
 
-    def run() -> tuple[np.ndarray, np.ndarray]:
+    def run(problem: dict[str, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
         if library == "pypfopt":
             return trace_pypfopt(problem)
         return trace_cvxcla(problem, factor_operator=factor_operator)
 
+    # Untimed warm-up on a tiny problem, before any clock starts: the first imports in a
+    # fresh environment (bytecode compilation, the OS scanning new native libraries) can
+    # take tens of seconds and must not be charged to whichever scenario happens to run first.
+    tiny_rng = np.random.default_rng(seed)
+    tiny = factor(tiny_rng, 10)
+    if factor_operator:
+        d, u, delta = _factor_model(tiny_rng, 10)
+        tiny = {"mean": tiny["mean"], "ub": tiny["ub"], "factors": {"d": d, "u": u, "delta": delta}}
+    with contextlib.suppress(Exception):  # a failure is reported by the timed runs below
+        run(tiny)
+
     try:
         start = time.perf_counter()
-        points, lambdas = run()
+        points, lambdas = run(problem)
         times = [time.perf_counter() - start]
-        if times[0] > SLOW:  # a slow trace: its warm-up is the measurement
+        if times[0] > SLOW:  # a slow trace is timed once
             repeats = 0
         else:
-            times = []
+            times = []  # the first full-size trace was a warm-up
         for _ in range(repeats):
             start = time.perf_counter()
-            points, lambdas = run()
+            points, lambdas = run(problem)
             times.append(time.perf_counter() - start)
     except Exception as exc:  # report a failure as a result rather than crash  # noqa: BLE001
         return {"status": type(exc).__name__}
