@@ -66,6 +66,15 @@ points, weights and lambdas can be compared directly. This script does three thi
                   has no iteration cap of its own);
    ``<Error>``    raised (the exception type is shown).
 
+   A third check reads neither lambda nor the other implementation: a trace is
+   ``efficient`` when every vertex and chord midpoint of its polyline in weight space
+   is a minimum-variance portfolio for its own expected return (Clarabel solves
+   ``min 1/2 w'Sigma w`` s.t. ``mu'w >= mu'w_probe``; variance excess below ``1e-8``
+   relative to ``1 + v*``), and the polyline runs from a maximum-return portfolio to
+   the global minimum-variance one. A lost turning point makes a chord cut a corner,
+   so its midpoint has excess variance. The test is blind to a corner cut along a
+   near-null direction of Sigma, where the excess falls below the tolerance.
+
 3. **Degenerate inputs.** Beyond generic problems, families aimed at the weak spots
    ``comparison.md`` names: all-equal and tied expected returns, duplicated assets,
    rank-deficient sample covariances, a conditioning sweep (``cond(Sigma)`` from
@@ -392,6 +401,65 @@ def validate(p: Problem, weights: np.ndarray, lambdas: np.ndarray) -> dict[str, 
     }
 
 
+def min_variance_at(p: Problem) -> Callable[[float | None], float]:
+    """Return a solver for ``min 1/2 w'Sigma w`` s.t. ``mu'w >= r`` (``r=None``: no return floor)."""
+    n = len(p["mean"])
+    w, r = cp.Variable(n), cp.Parameter()
+    base = [cp.sum(w) == 1, w >= p["lb"], w <= p["ub"]]
+    objective = cp.Minimize(0.5 * cp.quad_form(w, cp.psd_wrap(p["cov"])))
+    floored, free = cp.Problem(objective, [*base, p["mean"] @ w >= r]), cp.Problem(objective, base)
+
+    def solve(level: float | None) -> float:
+        prob = free if level is None else floored
+        if level is not None:
+            r.value = level
+        try:
+            prob.solve(solver=cp.CLARABEL, tol_gap_abs=1e-12, tol_gap_rel=1e-12, tol_feas=1e-12)
+        except cp.error.SolverError:
+            # At the maximum return the floor leaves a single face, which the interior-point
+            # solver can fail on; lower the floor by a relative 1e-12 and retry.
+            r.value = level - 1e-12 * (1 + abs(level))
+            prob.solve(solver=cp.CLARABEL, tol_gap_abs=1e-12, tol_gap_rel=1e-12, tol_feas=1e-12)
+        return 0.5 * float(w.value @ p["cov"] @ w.value)
+
+    return solve
+
+
+def efficient(p: Problem, weights: np.ndarray, lambdas: np.ndarray) -> dict[str, object]:
+    """Check, without reading lambda or another implementation, that a trace is the efficient frontier.
+
+    The trace's turning points, ordered from lambda = inf down to 0, define a polyline
+    in weight space. It is the efficient frontier when (a) every vertex and every chord
+    midpoint is a minimum-variance portfolio for its own expected return, which Clarabel
+    checks by solving ``min 1/2 w'Sigma w`` s.t. ``mu'w >= mu'w_probe`` and the
+    constraints; and (b) it runs from a maximum-return portfolio to the global
+    minimum-variance one. A lost turning point makes the chord across it cut a corner,
+    so its midpoint has excess variance; a truncated frontier fails (b). ``excess`` is
+    the largest variance excess relative to ``1 + v*``, as for the objective gap.
+    """
+    w_all, _ = distinct(_frontier(weights, lambdas), np.zeros(len(weights)))
+
+    def var(w: np.ndarray) -> float:
+        return 0.5 * float(w @ p["cov"] @ w)
+
+    solve = min_variance_at(p)
+    probes = [*w_all, *(0.5 * (a + b) for a, b in pairwise(w_all))]
+    excess = 0.0
+    for w in probes:
+        v_star = solve(float(p["mean"] @ w))
+        excess = max(excess, (var(w) - v_star) / (1 + abs(v_star)))
+    top = float(p["mean"] @ qp(p, np.inf))
+    v_min = solve(None)
+    reaches_top = float(p["mean"] @ w_all[0]) >= top - FEAS_TOL * (1 + abs(top))
+    reaches_bottom = (var(w_all[-1]) - v_min) / (1 + abs(v_min)) <= GAP_TOL
+    return {
+        "efficient": bool(excess <= GAP_TOL and reaches_top and reaches_bottom),
+        "excess": excess,
+        "reaches_top": reaches_top,
+        "reaches_bottom": reaches_bottom,
+    }
+
+
 def distinct(weights: np.ndarray, lambdas: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Drop turning points that repeat the previous portfolio (to max-norm 1e-12)."""
     keep = np.r_[True, np.abs(np.diff(weights, axis=0)).max(axis=1) > 1e-12]
@@ -462,6 +530,7 @@ def check(p: Problem) -> dict[str, object]:
             verdicts[impl] = {"status": type(exc).__name__, "message": str(exc).splitlines()[0][:120]}
         else:
             verdicts[impl] = validate(p, *traces[impl])
+            verdicts[impl].update(efficient(p, *traces[impl]))
     pairs = {
         f"{a}|{b}": agreement(traces[a], traces[b]) for a in BLDP for b in ["cvxcla"] if a in traces and b in traces
     }
@@ -517,6 +586,16 @@ def report(env: dict[str, object], results: dict[str, list[dict[str, object]]], 
             + "  ".join(f"{c:>21s}" for c in cells)
             + "".join(f"  {a:>18s}" for a in agree)
         )
+
+    print()
+    print("independent of lambda and of cvxcla: traces that are the efficient frontier (Clarabel), of those finished")
+    print(f"  {'family':15s} " + "".join(f"{i:>14s}" for i in IMPLEMENTATIONS))
+    for family, rows in results.items():
+        cells = []
+        for impl in IMPLEMENTATIONS:
+            done = [r["verdicts"][impl] for r in rows if "efficient" in r["verdicts"][impl]]
+            cells.append(f"{sum(v['efficient'] for v in done)} of {len(done)}")
+        print(f"  {family:15s} " + "".join(f"{c:>14s}" for c in cells))
 
     print()
     print("cases (all of them with --verbose; otherwise only those not exact everywhere or not agreeing)")
