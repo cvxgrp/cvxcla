@@ -14,7 +14,8 @@ Run it with one command, no clone and no virtual environment needed::
 
     uv run https://raw.githubusercontent.com/cvxgrp/cvxcla/main/benchmark.py
 
-and paste the block it prints at the end into the results discussion.
+and paste the block it prints at the end into
+https://github.com/cvxgrp/cvxcla/discussions/1010.
 
 Both libraries compute the *entire* efficient frontier of
 
@@ -72,7 +73,7 @@ AGREE_TOL = 1e-6
 KKT_TOL = 1e-6
 FEAS_TOL = 1e-8
 SLOW = 5.0  # seconds; a warm-up slower than this is not repeated
-RESULTS_URL = "https://github.com/cvxgrp/cvxcla/discussions"
+RESULTS_URL = "https://github.com/cvxgrp/cvxcla/discussions/1010"
 THREAD_VARS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS")
 
 
