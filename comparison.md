@@ -133,7 +133,10 @@ checks each trace on its own against CVXPY 1.9.3 / Clarabel 0.11.1 at tolerance
 paths `w(λ)` exactly. Both use the same λ convention. There are 90 problems in
 eight families over 3 seeds: generic, shorting, all-equal means, tied means,
 duplicated assets, rank-deficient sample covariances, a conditioning sweep from
-1e2 to 1e16, and bounds that bind exactly. "Exact" means feasible to 1e-9, λ
+1e2 to 1e16, and bounds that bind exactly. Generic, shorting, conditioning and
+binding bounds contain 57 feasible non-degenerate problems plus 3 with
+infeasible bounds (Σ uB < 1, in the binding family); the other four families
+contain the 30 degenerate problems. "Exact" means feasible to 1e-9, λ
 running from ∞ to 0, and a relative objective gap below 1e-8 everywhere.
 
 - **On generic problems the shipped code is often wrong.** cvxcla is exact on all

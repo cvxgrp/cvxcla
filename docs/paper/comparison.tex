@@ -25,6 +25,8 @@
   pdfdisplaydoctitle=true
 }
 \usepackage{listings}
+% Every float of type figure is a code listing, and the text calls them listings.
+\renewcommand{\figurename}{Listing}
 
 \definecolor{codebg}{RGB}{255,253,231}
 \definecolor{coderule}{RGB}{240,228,170}
@@ -315,7 +317,10 @@ of the polyline through the other's turning points. There are 90 problems in eig
 families, over 3 seeds: generic long-only, shorting, a conditioning sweep from
 $\kappa = 10^{2}$ to $10^{16}$, bounds that bind exactly, all-equal means, tied
 means, duplicated assets and rank-deficient sample covariances. The first four
-families contain 57 feasible, non-degenerate problems. The conditioning sweep
+families contain 60 problems: 57 feasible, non-degenerate ones and, among the
+binding bounds, 3 with infeasible bounds ($\sum_i u_i < 1$), which are
+discussed in Section~\ref{sec:degenerate}. The last four families contain the
+30 degenerate problems. The conditioning sweep
 probes numerical robustness; covariance matrices estimated from returns with
 $\kappa \ge 10^{12}$ would be regularised before use, not optimised over.
 
@@ -346,8 +351,9 @@ rest.
 \begin{table}[ht]
   \centering
   \small
-  \caption{Factors of the runtime gap. Each column changes one thing; their
-    product is the total.}\label{tab:gap}
+  \caption{Factors of the runtime gap. Each column changes one thing; the
+    total is the product of the unrounded factors, so the rounded factors
+    shown may not multiply to it exactly.}\label{tab:gap}
   \begin{tabular}{rrrrr}
     \toprule
     $n$ & \shortstack[r]{inverse $\to$ bordered\\update, loop kept}
@@ -370,7 +376,10 @@ CLA that uses the vectorised formula but visits the candidates in a Python
 loop. It also adds the effect of fixing the defects of
 Section~\ref{sec:correctness}, which makes BLdP 4--9\% slower because it keeps
 turning points the shipped code deleted. The gap against the corrected code is
-$3.5\times$ at $n = 20$ and $150\times$ at $n = 320$.
+$3.5\times$ at $n = 20$ and $150\times$ at $n = 320$. Table~\ref{tab:fair} is a
+separate run, with \cvxcla{}~2.7.0 rather than 2.6.0
+(Section~\ref{sec:setup}), so its totals differ slightly from those of
+Table~\ref{tab:gap}. As there, the total is the product of the unrounded factors.
 
 \begin{table}[ht]
   \centering
@@ -557,12 +566,12 @@ changes, behaves as follows.
     (gap $0.25$). \cvxcla{} starts at the minimiser on that face.
   \item \emph{Duplicated assets and rank-deficient $\Sigma$.} It raises
     \code{LinAlgError} on 8 of 9 duplicated problems (PyPortfolioOpt issue
-    \#737) and \code{TypeError} on the 3 problems with fewer observations than
-    $n/2$. When an exact duplicate of the top asset enters later, the inverse
+    \#737) and, of the 6 rank-deficient problems, \code{TypeError} on the 3
+    with 8 observations for 20 assets. When an exact duplicate of the top asset enters later, the inverse
     of the singular free block (condition number $1.5 \times 10^{16}$) does
     not raise. Every later point misses the budget and is removed, so the
-    frontier ends at $\lambda = 11.4$ instead of 0. With 30 observations for
-    40 assets, the corrected code is exact on 2 of 3 problems and deviates
+    frontier ends at $\lambda = 11.4$ instead of 0. On the other 3
+    rank-deficient problems, with 30 observations for 40 assets, the corrected code is exact on 2 of 3 problems and deviates
     near $\lambda = 0$ on the third (gap $2 \times 10^{-6}$).
   \item \emph{Infeasible bounds} ($\sum_i u_i < 1$). It raises
     \code{IndexError} while constructing the first turning point. \cvxcla{}
@@ -584,9 +593,11 @@ defects of Section~\ref{sec:correctness}.
 BLdP compares $\lambda$ values without a tolerance and its main loop has no
 iteration limit. With bordered updates, which change $\lambda$ by about
 $10^{-15}$, an asset can leave and re-enter at the same $\lambda$ indefinitely:
-5 of 18 runs of that variant did not terminate. The shipped code terminated on
-all 18 problems. This cycling is independent of the two defects: the bordered
-variant cycles on the same 9 of 30 problems with or without the changes.
+on the 18 runtime problems of Section~\ref{sec:runtime} (six sizes, three
+seeds each), that variant did not terminate on 5, while the shipped code
+terminated on all 18. This cycling is independent of the two defects: in a
+separate check on 30 problems of the same kind, the bordered variant cycles on
+the same 9 with or without the changes.
 
 \section{Discussion}\label{sec:discussion}
 
