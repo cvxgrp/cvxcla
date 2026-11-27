@@ -50,7 +50,7 @@ dev = [
     "polars==1.44.2",
 ]
 test = [
-    "pytest>=7.0",
+    "pytest>=9.0",
     "pytest-timeout>=2.3",
     "hypothesis>=6.100",
 ]
